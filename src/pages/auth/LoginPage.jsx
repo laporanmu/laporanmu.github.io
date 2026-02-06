@@ -1,22 +1,41 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faEnvelope, faLock, faArrowRight, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { faEnvelope, faLock, faArrowRight, faSpinner, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [errorMessage, setErrorMessage] = useState('')
     const { signIn, isDemoMode } = useAuth()
     const { addToast } = useToast()
     const navigate = useNavigate()
 
+    const emailInputRef = useRef(null)
+
+    useEffect(() => {
+        emailInputRef.current?.focus()
+    }, [])
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (!email || !password) {
-            addToast('Silakan isi email dan password', 'warning')
+            const msg = 'Silakan isi email dan password'
+            setErrorMessage(msg)
+            addToast(msg, 'warning')
+            return
+        }
+
+        // Simple format check before hitting backend
+        const emailPattern = /\S+@\S+\.\S+/
+        if (!emailPattern.test(email)) {
+            const msg = 'Format email tidak valid'
+            setErrorMessage(msg)
+            addToast(msg, 'warning')
             return
         }
 
@@ -25,11 +44,15 @@ export default function LoginPage() {
         setLoading(false)
 
         if (error) {
-            addToast(error.message, 'error')
-        } else {
-            addToast('Login berhasil! Selamat datang.', 'success')
-            navigate('/dashboard')
+            const msg = error.message || 'Login gagal, periksa kembali email dan password.'
+            setErrorMessage(msg)
+            addToast(msg, 'error')
+            return
         }
+
+        setErrorMessage('')
+        addToast('Login berhasil! Selamat datang.', 'success')
+        navigate('/dashboard')
     }
 
     return (
@@ -113,19 +136,36 @@ export default function LoginPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="nama@sekolah.id"
-                                className="input-field w-full"
+                                ref={emailInputRef}
+                                className="input px-4 py-3 w-full"
                             />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium mb-2">Password</label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                                className="input-field w-full"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="input px-4 py-3 w-full pr-10"
+                                    aria-invalid={!!errorMessage}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(prev => !prev)}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                                >
+                                    <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                                </button>
+                            </div>
+                            {errorMessage && (
+                                <p className="mt-1 text-xs text-red-500">
+                                    {errorMessage}
+                                </p>
+                            )}
                         </div>
 
 
@@ -173,3 +213,4 @@ export default function LoginPage() {
         </div >
     )
 }
+

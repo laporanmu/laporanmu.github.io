@@ -30,12 +30,26 @@ export default function ParentCheckPage() {
     const [pin, setPin] = useState('')
     const [loading, setLoading] = useState(false)
     const [student, setStudent] = useState(null)
+    const [errorMessage, setErrorMessage] = useState('')
     const { addToast } = useToast()
+
+    const formatCode = (value) => {
+        const raw = value.replace(/-/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11)
+        const part1 = raw.slice(0, 3)
+        const part2 = raw.slice(3, 7)
+        const part3 = raw.slice(7, 11)
+        let formatted = part1
+        if (part2) formatted += '-' + part2
+        if (part3) formatted += '-' + part3
+        return formatted
+    }
 
     const handleCheck = async (e) => {
         e.preventDefault()
         if (!code || !pin) {
-            addToast('Silakan isi kode registrasi dan PIN', 'warning')
+            const msg = 'Silakan isi kode registrasi dan PIN'
+            setErrorMessage(msg)
+            addToast(msg, 'warning')
             return
         }
 
@@ -51,16 +65,21 @@ export default function ParentCheckPage() {
 
         if (found) {
             setStudent(found)
+            setErrorMessage('')
             addToast('Data ditemukan!', 'success')
-        } else {
-            addToast('Kode registrasi atau PIN tidak valid', 'error')
+            return
         }
+
+        const msg = 'Kode registrasi atau PIN tidak valid'
+        setErrorMessage(msg)
+        addToast(msg, 'error')
     }
 
     const handleReset = () => {
         setStudent(null)
         setCode('')
         setPin('')
+        setErrorMessage('')
     }
 
     if (student) {
@@ -223,13 +242,18 @@ export default function ParentCheckPage() {
                     <form onSubmit={handleCheck} className="space-y-5">
                         <div>
                             <label className="block text-sm font-medium mb-2">Kode Registrasi</label>
-                            <input
-                                type="text"
-                                value={code}
-                                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                                placeholder="REG-XXXX-XXXX"
-                                className="input-field uppercase tracking-wide font-medium w-full"
-                            />
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[var(--color-text-muted)]">
+                                    <FontAwesomeIcon icon={faIdCard} />
+                                </span>
+                                <input
+                                    type="text"
+                                    value={code}
+                                    onChange={(e) => setCode(formatCode(e.target.value))}
+                                    placeholder="REG-XXXX-XXXX"
+                                    className="input pl-10 pr-3 py-3 uppercase tracking-wide font-medium w-full"
+                                />
+                            </div>
                             <p className="text-xs text-[var(--color-text-muted)] mt-1.5 flex justify-between">
                                 <span>Contoh: REG-7K3Q-9P2X</span>
                             </p>
@@ -237,15 +261,27 @@ export default function ParentCheckPage() {
 
                         <div>
                             <label className="block text-sm font-medium mb-2">PIN (4 Digit)</label>
-                            <input
-                                type="password"
-                                value={pin}
-                                onChange={(e) => setPin(e.target.value.slice(0, 4))}
-                                placeholder="••••"
-                                maxLength={4}
-                                className="input-field tracking-[0.5em] text-center font-bold text-lg w-full"
-                            />
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[var(--color-text-muted)]">
+                                    <FontAwesomeIcon icon={faKey} />
+                                </span>
+                                <input
+                                    type="password"
+                                    value={pin}
+                                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                    placeholder="••••"
+                                    maxLength={4}
+                                    className="input pl-10 pr-3 py-3 tracking-[0.5em] text-center font-bold text-lg w-full"
+                                    aria-invalid={!!errorMessage}
+                                />
+                            </div>
                         </div>
+
+                        {errorMessage && (
+                            <p className="text-xs text-red-500 -mt-2">
+                                {errorMessage}
+                            </p>
+                        )}
 
 
                         <button
@@ -254,10 +290,13 @@ export default function ParentCheckPage() {
                             className="btn btn-primary w-full py-3.5 font-bold shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all hover:-translate-y-0.5"
                         >
                             {loading ? (
-                                <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                                <>
+                                    <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
+                                    Memeriksa data...
+                                </>
                             ) : (
                                 <>
-                                    <FontAwesomeIcon icon={faSearch} />
+                                    <FontAwesomeIcon icon={faSearch} className="mr-2" />
                                     Cek Data
                                 </>
                             )}
@@ -301,3 +340,4 @@ export default function ParentCheckPage() {
         </div >
     )
 }
+
