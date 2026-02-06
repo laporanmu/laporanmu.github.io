@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faSearch, faFilter, faFileExport, faEye, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '../../components/layout/DashboardLayout'
-import Modal from '../../components/ui/Modal'
-import { useToast } from '../../context/ToastContext'
-import { useAuth } from '../../context/AuthContext'
+import DashboardLayout from '../components/layout/DashboardLayout'
+import Modal from '../components/ui/Modal'
+import { useToast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
 
 const DEMO_REPORTS = [
     { id: 1, student: 'Ahmad Rizki Pratama', class: 'XII IPA 1', type: 'Terlambat', points: -5, teacher: 'Budi Santoso', date: '2024-01-20', time: '08:15', notes: 'Terlambat 15 menit' },
@@ -75,7 +75,13 @@ export default function ReportsPage() {
                 <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 relative">
                         <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari siswa atau jenis..." className="input pl-10" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Cari siswa atau jenis..."
+                            className="input-field pl-10"
+                        />
                     </div>
                     <div className="flex gap-2">
                         <button className="btn btn-secondary"><FontAwesomeIcon icon={faFilter} /> Filter</button>
@@ -112,10 +118,49 @@ export default function ReportsPage() {
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Buat Laporan Baru">
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div><label className="block text-sm font-medium mb-2">Nama Siswa</label><input type="text" value={formData.student} onChange={(e) => setFormData({ ...formData, student: e.target.value })} placeholder="Ketik nama siswa..." className="input" /></div>
-                    <div><label className="block text-sm font-medium mb-2">Kelas</label><input type="text" value={formData.class} onChange={(e) => setFormData({ ...formData, class: e.target.value })} placeholder="e.g. XII IPA 1" className="input" /></div>
-                    <div><label className="block text-sm font-medium mb-2">Jenis</label><select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="input"><option value="">Pilih jenis...</option>{VIOLATION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                    <div><label className="block text-sm font-medium mb-2">Catatan (Opsional)</label><textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Tambahkan catatan..." className="input" rows={3} /></div>
+                    <div>
+                        <label className="block text-sm font-medium mb-2">Nama Siswa</label>
+                        <input
+                            type="text"
+                            value={formData.student}
+                            onChange={(e) => setFormData({ ...formData, student: e.target.value })}
+                            placeholder="Ketik nama siswa..."
+                            className="input-field"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-2">Kelas</label>
+                        <input
+                            type="text"
+                            value={formData.class}
+                            onChange={(e) => setFormData({ ...formData, class: e.target.value })}
+                            placeholder="e.g. XII IPA 1"
+                            className="input-field"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-2">Jenis</label>
+                        <select
+                            value={formData.type}
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                            className="select-field"
+                        >
+                            <option value="">Pilih jenis...</option>
+                            {VIOLATION_TYPES.map(t => (
+                                <option key={t} value={t}>{t}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-2">Catatan (Opsional)</label>
+                        <textarea
+                            value={formData.notes}
+                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                            placeholder="Tambahkan catatan..."
+                            className="textarea-field"
+                            rows={3}
+                        />
+                    </div>
                     <div className="flex justify-end gap-3 pt-4"><button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">Batal</button><button type="submit" className="btn btn-primary">Simpan</button></div>
                 </form>
             </Modal>

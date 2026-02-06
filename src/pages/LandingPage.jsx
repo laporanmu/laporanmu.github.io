@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -10,6 +11,8 @@ import {
     faBell,
     faMoon,
     faSun,
+    faBars,
+    faTimes,
 } from '@fortawesome/free-solid-svg-icons'
 import { useTheme } from '../context/ThemeContext'
 
@@ -48,94 +51,182 @@ const FEATURES = [
 
 export default function LandingPage() {
     const { isDark, toggleTheme } = useTheme()
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     return (
-        <div className="min-h-screen">
+        <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
             {/* Navbar */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--color-surface)]/80 backdrop-blur-lg 
-        border-b border-[var(--color-border)]">
+            <nav className="fixed w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-md z-50 border-b border-gray-100 dark:border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
-                        <Link to="/" className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 
-                flex items-center justify-center">
+                        <Link to="/" className="flex items-center gap-2">
+                            <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center">
                                 <span className="text-white font-bold text-lg">L</span>
                             </div>
-                            <span className="font-bold text-xl gradient-text">Laporanmu</span>
+                            <span className="font-bold text-xl text-gray-900 dark:text-white tracking-tight">Laporanmu</span>
                         </Link>
 
-                        {/* Right Actions */}
-                        <div className="flex items-center gap-3">
+                        {/* Desktop Nav */}
+                        <div className="hidden md:flex items-center gap-8">
+                            <a href="#fitur" className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm transition-colors">
+                                Fitur
+                            </a>
+                            <a href="#alur" className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm transition-colors">
+                                Cara Kerja
+                            </a>
+                            <a href="#kontak" className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm transition-colors">
+                                Kontak
+                            </a>
+                        </div>
+
+                        {/* Desktop Actions */}
+                        <div className="hidden md:flex items-center gap-4">
                             <button
                                 onClick={toggleTheme}
-                                className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+                                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-300 transition-colors"
+                                aria-label="Toggle theme"
                             >
                                 <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
                             </button>
-                            <Link to="/check" className="btn btn-secondary text-sm hidden sm:inline-flex">
+                            <Link
+                                to="/check"
+                                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 hover:border-gray-300 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-800 transition-all"
+                            >
                                 Cek Data Siswa
                             </Link>
-                            <Link to="/login" className="btn btn-primary text-sm">
+                            <Link
+                                to="/login"
+                                className="inline-flex items-center px-4 py-2 text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-400/40 hover:shadow-indigo-500/60 hover:-translate-y-0.5 transition-all"
+                            >
+                                Login Staff
+                            </Link>
+                        </div>
+
+                        {/* Mobile Toggle */}
+                        <div className="flex items-center gap-3 md:hidden">
+                            <button
+                                onClick={toggleTheme}
+                                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-300 transition-colors"
+                                aria-label="Toggle theme"
+                            >
+                                <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
+                            </button>
+                            <button
+                                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                                aria-label="Toggle navigation"
+                            >
+                                <FontAwesomeIcon icon={isMobileMenuOpen ? faTimes : faBars} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile Menu */}
+                {isMobileMenuOpen && (
+                    <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+                        <div className="flex flex-col gap-3">
+                            <a
+                                href="#fitur"
+                                className="py-2 text-sm font-medium text-gray-700 dark:text-gray-200"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                Fitur
+                            </a>
+                            <a
+                                href="#alur"
+                                className="py-2 text-sm font-medium text-gray-700 dark:text-gray-200"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                Cara Kerja
+                            </a>
+                            <a
+                                href="#kontak"
+                                className="py-2 text-sm font-medium text-gray-700 dark:text-gray-200"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                Kontak
+                            </a>
+                            <div className="h-px bg-gray-200 dark:bg-gray-800 my-2" />
+                            <Link
+                                to="/check"
+                                className="btn-secondary w-full justify-center text-sm rounded-xl"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                Cek Data Siswa
+                            </Link>
+                            <Link
+                                to="/login"
+                                className="btn-primary w-full justify-center text-sm rounded-xl"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
                                 Login Staff
                             </Link>
                         </div>
                     </div>
-                </div>
+                )}
             </nav>
 
             {/* Hero Section */}
-            <section className="pt-32 pb-20 px-4 relative overflow-hidden">
-                {/* Background Decoration */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl" />
-                    <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+            <section className="pt-28 lg:pt-40 pb-16 lg:pb-24 relative overflow-hidden">
+                {/* Background orbs */}
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                    <div className="absolute -top-32 -right-32 w-[480px] h-[480px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-3xl" />
+                    <div className="absolute -bottom-40 -left-40 w-[520px] h-[520px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-3xl" />
                 </div>
 
-                <div className="max-w-7xl mx-auto relative">
-                    <div className="text-center max-w-3xl mx-auto">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500/10 
-              border border-indigo-500/30 rounded-full text-sm text-indigo-600 dark:text-indigo-400 mb-6">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-3xl mx-auto text-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs sm:text-sm font-semibold mb-8">
                             <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
                             </span>
-                            Sistem Manajemen Perilaku Siswa #1
+                            Sistem Manajemen Perilaku Siswa
                         </div>
 
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-                            Kelola <span className="gradient-text">Perilaku Siswa</span><br />
-                            dengan Mudah & Modern
+                        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-6 leading-tight">
+                            Kelola Perilaku Siswa
+                            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mt-1">
+                                Secara Terukur & Transparan
+                            </span>
                         </h1>
 
-                        <p className="text-lg text-[var(--color-text-muted)] mb-8 max-w-2xl mx-auto">
-                            Platform digital terlengkap untuk mencatat, memantau, dan mengelola
-                            data perilaku siswa. Bantu guru fokus mendidik, bukan sibuk administrasi.
+                        <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto leading-relaxed">
+                            Laporanmu membantu sekolah mencatat, memantau, dan menganalisis perilaku siswa dengan mudah.
+                            Guru tetap fokus mendidik, wali murid mendapat informasi yang jelas dan real-time.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <Link to="/login" className="btn btn-primary px-8 py-3">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
+                            <Link
+                                to="/login"
+                                className="group flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold text-sm sm:text-base shadow-xl shadow-gray-900/10 dark:shadow-white/10 hover:-translate-y-0.5 hover:shadow-2xl transition-all"
+                            >
                                 Mulai Sekarang
-                                <FontAwesomeIcon icon={faArrowRight} />
+                                <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </Link>
-                            <Link to="/check" className="btn btn-secondary px-8 py-3">
+                            <Link
+                                to="/check"
+                                className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white/70 dark:bg-gray-900/60 text-gray-800 dark:text-gray-100 font-semibold text-sm sm:text-base hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+                            >
                                 Saya Wali Murid
                             </Link>
                         </div>
 
                         {/* Stats */}
-                        <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
-                            <div>
-                                <p className="text-3xl font-bold gradient-text">500+</p>
-                                <p className="text-sm text-[var(--color-text-muted)]">Sekolah</p>
+                        <div className="mt-12 grid grid-cols-3 gap-4 max-w-md mx-auto">
+                            <div className="text-center">
+                                <p className="text-2xl sm:text-3xl font-bold text-indigo-600">500+</p>
+                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Sekolah</p>
                             </div>
-                            <div>
-                                <p className="text-3xl font-bold gradient-text">50K+</p>
-                                <p className="text-sm text-[var(--color-text-muted)]">Siswa</p>
+                            <div className="text-center">
+                                <p className="text-2xl sm:text-3xl font-bold text-indigo-600">50K+</p>
+                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Siswa</p>
                             </div>
-                            <div>
-                                <p className="text-3xl font-bold gradient-text">99%</p>
-                                <p className="text-sm text-[var(--color-text-muted)]">Kepuasan</p>
+                            <div className="text-center">
+                                <p className="text-2xl sm:text-3xl font-bold text-indigo-600">99%</p>
+                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Kepuasan</p>
                             </div>
                         </div>
                     </div>
@@ -143,52 +234,104 @@ export default function LandingPage() {
             </section>
 
             {/* Features Section */}
-            <section className="py-20 px-4 bg-[var(--color-surface-alt)]">
-                <div className="max-w-7xl mx-auto">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                            Fitur <span className="gradient-text">Lengkap</span> untuk Sekolah Modern
+            <section id="fitur" className="py-20 bg-gray-50 dark:bg-gray-900/60">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-12">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                            Fitur Utama Laporanmu
                         </h2>
-                        <p className="text-[var(--color-text-muted)] max-w-2xl mx-auto">
-                            Semua yang Anda butuhkan untuk mengelola perilaku siswa dalam satu platform terintegrasi.
+                        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                            Semua yang Anda butuhkan untuk mengelola perilaku siswa, dari pencatatan hingga pelaporan ke wali murid.
                         </p>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                         {FEATURES.map((feature, idx) => (
-                            <div key={idx} className="card group hover:border-indigo-500/50 transition-all duration-300">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 
-                  flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform">
+                            <div
+                                key={idx}
+                                className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 dark:border-gray-800 transition-all duration-200"
+                            >
+                                <div className="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-300 mb-4">
                                     <FontAwesomeIcon icon={feature.icon} className="text-lg" />
                                 </div>
-                                <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
-                                <p className="text-[var(--color-text-muted)] text-sm">{feature.description}</p>
+                                <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">
+                                    {feature.title}
+                                </h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                    {feature.description}
+                                </p>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* CTA Section */}
-            <section className="py-20 px-4">
-                <div className="max-w-4xl mx-auto">
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-8 sm:p-12">
-                        {/* Decorative */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+            {/* How it works Section */}
+            <section id="alur" className="py-20 bg-white dark:bg-gray-900">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-12">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                            Alur Kerja yang Sederhana
+                        </h2>
+                        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                            Dirancang untuk memudahkan guru, BK, dan wali murid berkolaborasi dalam membina perilaku siswa.
+                        </p>
+                    </div>
 
-                        <div className="relative text-center">
-                            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-                                Siap Memulai?
-                            </h2>
-                            <p className="text-white/80 mb-8 max-w-lg mx-auto">
-                                Bergabung dengan ratusan sekolah yang sudah menggunakan Laporanmu
-                                untuk mengelola perilaku siswa dengan lebih efektif.
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <div className="card bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 border-indigo-200 dark:border-indigo-700">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                                Untuk Guru & BK
+                            </h3>
+                            <p className="text-sm text-gray-700 dark:text-gray-200 mb-4">
+                                Catat setiap pelanggaran maupun prestasi siswa hanya dalam beberapa klik.
                             </p>
-                            <Link to="/login" className="inline-flex items-center gap-2 px-8 py-3 bg-white 
-                text-indigo-600 font-semibold rounded-lg hover:bg-white/90 transition-colors shadow-xl">
-                                Login Sekarang
-                                <FontAwesomeIcon icon={faArrowRight} />
+                            <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                                <li>✓ Form laporan cepat dengan pilihan jenis pelanggaran/prestasi.</li>
+                                <li>✓ Data langsung tersimpan dan terakumulasi menjadi poin siswa.</li>
+                                <li>✓ Ringkasan harian dan mingguan di dashboard.</li>
+                            </ul>
+                        </div>
+                        <div className="card bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-700">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                                Untuk Wali Murid
+                            </h3>
+                            <p className="text-sm text-gray-700 dark:text-gray-200 mb-4">
+                                Pantau perkembangan perilaku anak tanpa harus login akun kompleks.
+                            </p>
+                            <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                                <li>✓ Akses data dengan kode unik siswa.</li>
+                                <li>✓ Riwayat pelanggaran & prestasi yang rapi dan mudah dipahami.</li>
+                                <li>✓ Membantu komunikasi yang lebih baik antara rumah dan sekolah.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* CTA Section */}
+            <section className="py-20">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="rounded-3xl bg-gradient-to-r from-indigo-600 to-purple-600 p-8 sm:p-12 text-center text-white shadow-xl">
+                        <h2 className="text-2xl sm:text-3xl font-bold mb-4">
+                            Siap Memulai dengan Laporanmu?
+                        </h2>
+                        <p className="text-sm sm:text-base text-indigo-100 mb-8 max-w-xl mx-auto">
+                            Bergabung dengan ratusan sekolah yang sudah lebih mudah mengelola perilaku siswa dan berkomunikasi dengan wali murid.
+                        </p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                            <Link
+                                to="/login"
+                                className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-white text-indigo-600 font-semibold text-sm sm:text-base hover:bg-gray-100 transition-colors"
+                            >
+                                Login Staff
+                                <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4" />
+                            </Link>
+                            <Link
+                                to="/check"
+                                className="inline-flex items-center justify-center px-8 py-3 rounded-xl border border-indigo-200/70 text-white text-sm sm:text-base hover:bg-indigo-700/70 transition-colors"
+                            >
+                                Cek Data Siswa
                             </Link>
                         </div>
                     </div>
@@ -196,18 +339,50 @@ export default function LandingPage() {
             </section>
 
             {/* Footer */}
-            <footer className="py-8 px-4 border-t border-[var(--color-border)]">
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 
-              flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">L</span>
+            <footer id="kontak" className="bg-gray-50 dark:bg-gray-900/70 border-t border-gray-200 dark:border-gray-800 py-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid md:grid-cols-3 gap-8 mb-8">
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="w-8 h-8 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center">
+                                    <span className="text-white dark:text-gray-900 font-bold text-sm">L</span>
+                                </div>
+                                <span className="font-semibold text-lg text-gray-900 dark:text-white">
+                                    Laporanmu
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm">
+                                Platform sederhana untuk membantu sekolah mengelola perilaku siswa secara profesional dan transparan.
+                            </p>
                         </div>
-                        <span className="font-semibold">Laporanmu</span>
+
+                        <div>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
+                                Kontak
+                            </h4>
+                            <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                <li>Email: support@laporanmu.app</li>
+                                <li>Telepon: +62 812-0000-0000</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
+                                Informasi
+                            </h4>
+                            <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                <li>Manajemen perilaku siswa</li>
+                                <li>Portal wali murid</li>
+                                <li>Analitik & laporan sekolah</li>
+                            </ul>
+                        </div>
                     </div>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        © 2024 Laporanmu. All rights reserved.
-                    </p>
+
+                    <div className="border-t border-gray-200 dark:border-gray-800 pt-6 text-center">
+                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
+                            © 2024 Laporanmu. All rights reserved.
+                        </p>
+                    </div>
                 </div>
             </footer>
         </div>
