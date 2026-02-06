@@ -245,19 +245,19 @@ export default function LandingPage() {
                         </p>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                         {FEATURES.map((feature, idx) => (
                             <div
                                 key={idx}
-                                className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 dark:border-gray-800 transition-all duration-200"
+                                className="relative flex flex-col h-full rounded-3xl bg-white dark:bg-gray-900 shadow-[0_12px_40px_rgba(15,23,42,0.06)] border border-indigo-50 dark:border-gray-800 px-6 py-6 sm:px-7 sm:py-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(15,23,42,0.12)]"
                             >
-                                <div className="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-300 mb-4">
-                                    <FontAwesomeIcon icon={feature.icon} className="text-lg" />
+                                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 flex items-center justify-center mb-4 shadow-sm">
+                                    <FontAwesomeIcon icon={feature.icon} className="text-base sm:text-lg" />
                                 </div>
-                                <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">
+                                <h3 className="font-semibold text-base sm:text-lg mb-1.5 text-gray-900 dark:text-white">
                                     {feature.title}
                                 </h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                                     {feature.description}
                                 </p>
                             </div>
