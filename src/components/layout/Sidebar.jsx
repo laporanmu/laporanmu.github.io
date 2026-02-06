@@ -79,11 +79,11 @@ export default function Sidebar({ isOpen, onClose }) {
             >
                 {/* Logo */}
                 <div className="h-16 flex items-center gap-3 px-5 border-b border-[var(--color-border)]">
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center">
                         <span className="text-white font-bold text-lg">L</span>
                     </div>
                     <div>
-                        <h1 className="font-bold text-lg gradient-text">Laporanmu</h1>
+                        <h1 className="font-bold text-lg text-[var(--color-text)]">Laporanmu</h1>
                         <p className="text-xs text-[var(--color-text-muted)]">Student Behavior System</p>
                     </div>
                 </div>
@@ -178,7 +178,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
                     {/* User Info & Logout */}
                     <div className="flex items-center gap-3 p-3 bg-[var(--color-surface-alt)] rounded-lg">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 
+                        <div className="w-9 h-9 rounded-full bg-indigo-600 
               flex items-center justify-center text-white font-medium text-sm">
                             {profile?.name?.charAt(0) || 'U'}
                         </div>
