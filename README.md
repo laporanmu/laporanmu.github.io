@@ -25,26 +25,6 @@
 - Node.js 18+
 - npm or yarn
 
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/laporanmu.github.io.git
-cd laporanmu.github.io
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-### Production Build
-
-```bash
-npm run build
-```
-
 ## 🎮 Demo Mode
 
 The app works without Supabase in demo mode. Use these credentials:

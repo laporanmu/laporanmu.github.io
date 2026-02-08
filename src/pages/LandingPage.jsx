@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -13,6 +13,7 @@ import {
     faSun,
     faBars,
     faTimes,
+    faCheckCircle,
 } from '@fortawesome/free-solid-svg-icons'
 import { useTheme } from '../context/ThemeContext'
 
@@ -103,18 +104,18 @@ export default function LandingPage() {
                             </Link>
                         </div>
 
-                        {/* Mobile Toggle */}
-                        <div className="flex items-center gap-3 md:hidden">
+                        {/* Mobile Actions */}
+                        <div className="flex items-center gap-2 md:hidden">
                             <button
                                 onClick={toggleTheme}
-                                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-300 transition-colors"
+                                className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-300 transition-all active:scale-95"
                                 aria-label="Toggle theme"
                             >
                                 <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
                             </button>
                             <button
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                                className="p-2.5 rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 active:scale-95 transition-all w-11 h-11 flex items-center justify-center"
                                 aria-label="Toggle navigation"
                             >
                                 <FontAwesomeIcon icon={isMobileMenuOpen ? faTimes : faBars} />
@@ -123,49 +124,54 @@ export default function LandingPage() {
                     </div>
                 </div>
 
-                {/* Mobile Menu */}
-                {isMobileMenuOpen && (
-                    <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
-                        <div className="flex flex-col gap-3">
+                {/* Mobile Menu Overlay */}
+                <div className={`fixed inset-0 z-40 md:hidden transition-all duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                    <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+                    <div className={`absolute right-4 top-20 w-64 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 p-4 transition-all duration-300 transform ${isMobileMenuOpen ? 'translate-y-0' : '-translate-y-10'}`}>
+                        <div className="flex flex-col gap-1">
                             <a
                                 href="#fitur"
-                                className="py-2 text-sm font-medium text-gray-700 dark:text-gray-200"
+                                className="flex items-center px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 transition-colors"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
-                                Fitur
+                                Fitur Utama
                             </a>
                             <a
                                 href="#alur"
-                                className="py-2 text-sm font-medium text-gray-700 dark:text-gray-200"
+                                className="flex items-center px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 transition-colors"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 Cara Kerja
                             </a>
                             <a
                                 href="#kontak"
-                                className="py-2 text-sm font-medium text-gray-700 dark:text-gray-200"
+                                className="flex items-center px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 transition-colors"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
-                                Kontak
+                                Kontak Kami
                             </a>
-                            <div className="h-px bg-gray-200 dark:bg-gray-800 my-2" />
-                            <Link
-                                to="/check"
-                                className="btn-secondary w-full justify-center text-sm rounded-xl"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                Cek Data Siswa
-                            </Link>
-                            <Link
-                                to="/login"
-                                className="btn-primary w-full justify-center text-sm rounded-xl"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                Login Staff
-                            </Link>
+                            <div className="h-px bg-gray-100 dark:bg-gray-800 my-2 mx-4" />
+
+                            <div className="flex flex-col gap-2 mt-1">
+                                <Link
+                                    to="/check"
+                                    className="flex items-center justify-center px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold text-sm border border-gray-200 dark:border-gray-700 active:scale-95 transition-all"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    Cek Data Siswa
+                                </Link>
+                                <Link
+                                    to="/login"
+                                    className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    Login Staff
+                                    <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
+                                </Link>
+                            </div>
                         </div>
                     </div>
-                )}
+                </div>
             </nav>
 
             {/* Hero Section */}
@@ -212,22 +218,6 @@ export default function LandingPage() {
                             >
                                 Saya Wali Murid
                             </Link>
-                        </div>
-
-                        {/* Stats */}
-                        <div className="mt-12 grid grid-cols-3 gap-4 max-w-md mx-auto">
-                            <div className="text-center">
-                                <p className="text-2xl sm:text-3xl font-bold text-indigo-600">500+</p>
-                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Sekolah</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-2xl sm:text-3xl font-bold text-indigo-600">50K+</p>
-                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Siswa</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-2xl sm:text-3xl font-bold text-indigo-600">99%</p>
-                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Kepuasan</p>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -286,10 +276,19 @@ export default function LandingPage() {
                             <p className="text-sm text-gray-700 dark:text-gray-200 mb-4">
                                 Catat setiap pelanggaran maupun prestasi siswa hanya dalam beberapa klik.
                             </p>
-                            <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-200">
-                                <li>✓ Form laporan cepat dengan pilihan jenis pelanggaran/prestasi.</li>
-                                <li>✓ Data langsung tersimpan dan terakumulasi menjadi poin siswa.</li>
-                                <li>✓ Ringkasan harian dan mingguan di dashboard.</li>
+                            <ul className="space-y-2.5 text-sm text-gray-700 dark:text-gray-200">
+                                <li className="flex items-start gap-2.5">
+                                    <FontAwesomeIcon icon={faCheckCircle} className="text-indigo-500 mt-0.5 shrink-0" />
+                                    <span>Form laporan cepat dengan pilihan jenis pelanggaran/prestasi.</span>
+                                </li>
+                                <li className="flex items-start gap-2.5">
+                                    <FontAwesomeIcon icon={faCheckCircle} className="text-indigo-500 mt-0.5 shrink-0" />
+                                    <span>Data langsung tersimpan dan terakumulasi menjadi poin siswa.</span>
+                                </li>
+                                <li className="flex items-start gap-2.5">
+                                    <FontAwesomeIcon icon={faCheckCircle} className="text-indigo-500 mt-0.5 shrink-0" />
+                                    <span>Ringkasan harian dan mingguan di dashboard.</span>
+                                </li>
                             </ul>
                         </div>
                         <div className="card bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-700">
@@ -299,10 +298,19 @@ export default function LandingPage() {
                             <p className="text-sm text-gray-700 dark:text-gray-200 mb-4">
                                 Pantau perkembangan perilaku anak tanpa harus login akun kompleks.
                             </p>
-                            <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-200">
-                                <li>✓ Akses data dengan kode unik siswa.</li>
-                                <li>✓ Riwayat pelanggaran & prestasi yang rapi dan mudah dipahami.</li>
-                                <li>✓ Membantu komunikasi yang lebih baik antara rumah dan sekolah.</li>
+                            <ul className="space-y-2.5 text-sm text-gray-700 dark:text-gray-200">
+                                <li className="flex items-start gap-2.5">
+                                    <FontAwesomeIcon icon={faCheckCircle} className="text-purple-500 mt-0.5 shrink-0" />
+                                    <span>Akses data dengan kode unik siswa.</span>
+                                </li>
+                                <li className="flex items-start gap-2.5">
+                                    <FontAwesomeIcon icon={faCheckCircle} className="text-purple-500 mt-0.5 shrink-0" />
+                                    <span>Riwayat pelanggaran & prestasi yang rapi dan mudah dipahami.</span>
+                                </li>
+                                <li className="flex items-start gap-2.5">
+                                    <FontAwesomeIcon icon={faCheckCircle} className="text-purple-500 mt-0.5 shrink-0" />
+                                    <span>Membantu komunikasi yang lebih baik antara rumah dan sekolah.</span>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -380,7 +388,7 @@ export default function LandingPage() {
 
                     <div className="border-t border-gray-200 dark:border-gray-800 pt-6 text-center">
                         <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
-                            © 2024 Laporanmu. All rights reserved.
+                            © 2026 Laporanmu. All rights reserved.
                         </p>
                     </div>
                 </div>

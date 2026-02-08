@@ -460,84 +460,90 @@ export default function StudentsPage() {
             >
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <section className="space-y-4">
-                        <h4 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border)] pb-2">
-                            Identitas Siswa
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border)] pb-2">
+                            IDENTITAS SISWA
                         </h4>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-[var(--color-text)]">Nama Lengkap</label>
-                            <input
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="Masukkan nama siswa"
-                                className="input-field w-full"
-                                autoFocus
-                            />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-2 text-[var(--color-text)]">Jenis Kelamin</label>
-                                <div className="grid grid-cols-2 gap-3">
+                                <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">Nama Lengkap</label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="Masukkan nama siswa"
+                                    className="input-field"
+                                    autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">Jenis Kelamin</label>
+                                <div className="flex gap-2 flex-wrap">
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, gender: 'L' })}
-                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${formData.gender === 'L'
-                                            ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                            : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                                        className={`inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border-2 font-medium text-sm transition-all ${formData.gender === 'L'
+                                            ? 'bg-blue-600 border-blue-600 text-white'
+                                            : 'bg-white dark:bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-blue-300 dark:hover:border-blue-600'
                                             }`}
                                     >
-                                        <FontAwesomeIcon icon={faMars} className="text-lg mb-1" />
-                                        <span className="text-xs font-medium">Laki-laki</span>
+                                        <FontAwesomeIcon icon={faMars} />
+                                        <span>Laki-laki</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, gender: 'P' })}
-                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${formData.gender === 'P'
-                                            ? 'border-pink-500 bg-pink-50 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
-                                            : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-pink-300 hover:bg-pink-50/50 dark:hover:bg-pink-900/10'
+                                        className={`inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border-2 font-medium text-sm transition-all ${formData.gender === 'P'
+                                            ? 'bg-blue-600 border-blue-600 text-white'
+                                            : 'bg-white dark:bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-blue-300 dark:hover:border-blue-600'
                                             }`}
                                     >
-                                        <FontAwesomeIcon icon={faVenus} className="text-lg mb-1" />
-                                        <span className="text-xs font-medium">Perempuan</span>
+                                        <FontAwesomeIcon icon={faVenus} />
+                                        <span>Perempuan</span>
                                     </button>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-2 text-[var(--color-text)]">Kelas</label>
+                                <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">Kelas</label>
                                 <select
                                     value={formData.class}
                                     onChange={(e) => setFormData({ ...formData, class: e.target.value })}
-                                    className="select-field w-full"
+                                    className="select-field"
+                                    disabled={loadingClasses}
                                 >
                                     <option value="">Pilih Kelas</option>
-                                    {classNames.map(cls => (
-                                        <option key={cls} value={cls}>{cls}</option>
-                                    ))}
+                                    {classesList.map((c) => {
+                                        const name = typeof c === 'string' ? c : c.name
+                                        const value = typeof c === 'string' ? c : c.name
+                                        return <option key={value} value={value}>{name}</option>
+                                    })}
                                 </select>
-                                {loadingClasses && classNames.length === 0 && (
-                                    <p className="text-xs text-[var(--color-text-muted)] mt-1">Memuat data kelas...</p>
+                                {loadingClasses && (
+                                    <p className="text-xs text-[var(--color-text-muted)] mt-1">Memuat data kelas dari database...</p>
+                                )}
+                                {!loadingClasses && classesList.length === 0 && (
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Belum ada data kelas. Tambah dulu di Data Kelas.</p>
                                 )}
                             </div>
                         </div>
                     </section>
 
                     <section className="space-y-4">
-                        <h4 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border)] pb-2">
-                            Kontak Wali
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border)] pb-2">
+                            KONTAK WALI
                         </h4>
                         <div>
-                            <label className="block text-sm font-medium mb-2 text-[var(--color-text)]">No. HP Wali Murid</label>
+                            <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">No. HP Wali Murid</label>
                             <input
                                 type="tel"
                                 value={formData.phone}
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 placeholder="08xxxxxxxxxx"
-                                className="input-field w-full"
+                                className="input-field"
                             />
                         </div>
                     </section>
 
-                    <div className="flex justify-end gap-3 pt-2 border-t border-[var(--color-border)]">
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
                         <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">
                             Batal
                         </button>

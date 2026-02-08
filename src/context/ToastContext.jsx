@@ -38,22 +38,22 @@ export function ToastProvider({ children }) {
             {children}
 
             {/* Toast Container */}
-            <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full">
+            <div className="fixed top-4 right-4 left-4 sm:left-auto z-[100] flex flex-col gap-2 sm:max-w-xs">
                 {toasts.map(toast => {
                     const config = TOAST_TYPES[toast.type] || TOAST_TYPES.info
                     return (
                         <div
                             key={toast.id}
                             className={`${config.className} ${toast.exiting ? 'toast-exit' : 'toast-enter'} 
-                text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3`}
+                text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-xl flex items-center gap-3 border border-white/10`}
                         >
-                            <FontAwesomeIcon icon={config.icon} className="text-lg" />
-                            <span className="flex-1 text-sm font-medium">{toast.message}</span>
+                            <FontAwesomeIcon icon={config.icon} className="text-base sm:text-lg" />
+                            <span className="flex-1 text-[11px] sm:text-sm font-semibold">{toast.message}</span>
                             <button
                                 onClick={() => removeToast(toast.id)}
-                                className="text-white/80 hover:text-white transition-colors"
+                                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
                             >
-                                <FontAwesomeIcon icon={faXmark} />
+                                <FontAwesomeIcon icon={faXmark} className="text-xs" />
                             </button>
                         </div>
                     )
