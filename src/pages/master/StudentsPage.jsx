@@ -1,29 +1,28 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faPlus,
     faSearch,
     faEdit,
     faTrash,
-    faFileExport,
-    faFileImport,
     faFilter,
     faMars,
     faVenus,
     faDownload,
     faUpload,
-    faTimes
+    faTimes,
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
+import { supabase } from '../../lib/supabase'
 
-// Shared Demo Classes (In a real app, this would come from an API/Context)
-const AVAILABLE_CLASSES = [
+// Fallback bila DB belum ada / demo mode
+const FALLBACK_CLASS_NAMES = [
     'X MIPA 1', 'X MIPA 2', 'X MIPA 3',
     'XI IPA 1', 'XI IPA 2', 'XI IPS 1',
-    'XII IPA 1', 'XII IPA 2', 'XII IPS 1'
+    'XII IPA 1', 'XII IPA 2', 'XII IPS 1',
 ]
 
 // Demo data with Gender
@@ -35,31 +34,79 @@ const DEMO_STUDENTS = [
     { id: 5, code: 'REG-2Q7U-5W8B', name: 'Eko Prasetyo', gender: 'L', class: 'XI MIPA 1', points: 0, phone: '081234567894' },
 ]
 
+const SORT_OPTIONS = [
+    { value: 'name_asc', label: 'Nama A–Z' },
+    { value: 'name_desc', label: 'Nama Z–A' },
+    { value: 'class_asc', label: 'Kelas A–Z' },
+    { value: 'points_desc', label: 'Poin tertinggi' },
+    { value: 'points_asc', label: 'Poin terendah' },
+]
+
 export default function StudentsPage() {
     const [students, setStudents] = useState(DEMO_STUDENTS)
+    const [classesList, setClassesList] = useState([]) // { id, name }[] dari DB atau fallback
     const [searchQuery, setSearchQuery] = useState('')
     const [filterClass, setFilterClass] = useState('')
+    const [filterGender, setFilterGender] = useState('') // '', 'L', 'P'
+    const [sortBy, setSortBy] = useState('name_asc')
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [selectedStudent, setSelectedStudent] = useState(null)
     const [studentToDelete, setStudentToDelete] = useState(null)
     const [formData, setFormData] = useState({ name: '', gender: 'L', class: '', phone: '' })
+    const [loadingClasses, setLoadingClasses] = useState(true)
 
-    // Import helper
     const fileInputRef = useRef(null)
     const { addToast } = useToast()
 
-    // Enhanced Filter Logic
-    const filteredStudents = students.filter(s => {
-        const matchesSearch =
-            s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            s.class.toLowerCase().includes(searchQuery.toLowerCase())
+    // Ambil data kelas dari database (table classes)
+    useEffect(() => {
+        async function loadClasses() {
+            if (supabase) {
+                try {
+                    const { data, error } = await supabase
+                        .from('classes')
+                        .select('id, name')
+                        .order('name')
+                    if (!error && data?.length) {
+                        setClassesList(data)
+                    } else {
+                        setClassesList(FALLBACK_CLASS_NAMES.map((name, i) => ({ id: String(i), name })))
+                    }
+                } catch {
+                    setClassesList(FALLBACK_CLASS_NAMES.map((name, i) => ({ id: String(i), name })))
+                }
+            } else {
+                setClassesList(FALLBACK_CLASS_NAMES.map((name, i) => ({ id: String(i), name })))
+            }
+            setLoadingClasses(false)
+        }
+        loadClasses()
+    }, [])
 
-        const matchesClass = filterClass ? s.class === filterClass : true
+    const classNames = classesList.map(c => (typeof c === 'string' ? c : c.name))
 
-        return matchesSearch && matchesClass
-    })
+    // Filter + Sort
+    const filteredStudents = students
+        .filter(s => {
+            const matchesSearch =
+                s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                s.class.toLowerCase().includes(searchQuery.toLowerCase())
+            const matchesClass = filterClass ? s.class === filterClass : true
+            const matchesGender = filterGender ? s.gender === filterGender : true
+            return matchesSearch && matchesClass && matchesGender
+        })
+        .sort((a, b) => {
+            switch (sortBy) {
+                case 'name_asc': return (a.name || '').localeCompare(b.name || '')
+                case 'name_desc': return (b.name || '').localeCompare(a.name || '')
+                case 'class_asc': return (a.class || '').localeCompare(b.class || '')
+                case 'points_desc': return (b.points ?? 0) - (a.points ?? 0)
+                case 'points_asc': return (a.points ?? 0) - (b.points ?? 0)
+                default: return 0
+            }
+        })
 
     const generateCode = () => {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -226,51 +273,83 @@ export default function StudentsPage() {
                 </div>
             </div>
 
-            {/* Filters */}
+            {/* Filters & Sort */}
             <div className="card mb-6 p-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                    {/* Search */}
-                    <div className="flex-1 relative">
-                        <FontAwesomeIcon
-                            icon={faSearch}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-                        />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Cari nama, kode registrasi..."
-                            className="input-field pl-10 w-full"
-                        />
-                    </div>
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col md:flex-row gap-4 flex-wrap">
+                        {/* Search */}
+                        <div className="flex-1 min-w-[200px] relative">
+                            <FontAwesomeIcon
+                                icon={faSearch}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+                            />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Cari nama, kode registrasi, kelas..."
+                                className="input-field pl-10 w-full"
+                            />
+                        </div>
 
-                    {/* Class Filter */}
-                    <div className="w-full md:w-48 relative">
-                        <FontAwesomeIcon
-                            icon={faFilter}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-                        />
-                        <select
-                            value={filterClass}
-                            onChange={(e) => setFilterClass(e.target.value)}
-                            className="select-field pl-10 w-full appearance-none"
-                        >
-                            <option value="">Semua Kelas</option>
-                            {AVAILABLE_CLASSES.map(cls => (
-                                <option key={cls} value={cls}>{cls}</option>
-                            ))}
-                        </select>
-                    </div>
+                        {/* Class Filter */}
+                        <div className="w-full md:w-44 relative">
+                            <FontAwesomeIcon
+                                icon={faFilter}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none"
+                            />
+                            <select
+                                value={filterClass}
+                                onChange={(e) => setFilterClass(e.target.value)}
+                                className="select-field pl-10 w-full appearance-none"
+                            >
+                                <option value="">Semua Kelas</option>
+                                {classNames.map(cls => (
+                                    <option key={cls} value={cls}>{cls}</option>
+                                ))}
+                            </select>
+                        </div>
 
-                    {/* Reset Filter */}
-                    {(searchQuery || filterClass) && (
-                        <button
-                            onClick={() => { setSearchQuery(''); setFilterClass('') }}
-                            className="btn btn-ghost text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10"
-                        >
-                            <FontAwesomeIcon icon={faTimes} />
-                            Reset
-                        </button>
+                        {/* Gender Filter */}
+                        <div className="w-full md:w-40">
+                            <select
+                                value={filterGender}
+                                onChange={(e) => setFilterGender(e.target.value)}
+                                className="select-field w-full"
+                            >
+                                <option value="">Semua Gender</option>
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                        </div>
+
+                        {/* Sort */}
+                        <div className="w-full md:w-48">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="select-field w-full"
+                            >
+                                {SORT_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {(searchQuery || filterClass || filterGender) && (
+                            <button
+                                onClick={() => { setSearchQuery(''); setFilterClass(''); setFilterGender('') }}
+                                className="btn btn-ghost text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 shrink-0"
+                            >
+                                <FontAwesomeIcon icon={faTimes} />
+                                Reset Filter
+                            </button>
+                        )}
+                    </div>
+                    {(searchQuery || filterClass || filterGender) && (
+                        <p className="text-xs text-[var(--color-text-muted)]">
+                            Menampilkan {filteredStudents.length} dari {students.length} siswa
+                        </p>
                     )}
                 </div>
             </div>
@@ -356,9 +435,9 @@ export default function StudentsPage() {
                                     <div className="flex flex-col items-center justify-center text-[var(--color-text-muted)]">
                                         <FontAwesomeIcon icon={faSearch} className="text-4xl mb-3 opacity-20" />
                                         <p>Tidak ada data siswa ditemukan</p>
-                                        {(searchQuery || filterClass) && (
+                                        {(searchQuery || filterClass || filterGender) && (
                                             <button
-                                                onClick={() => { setSearchQuery(''); setFilterClass('') }}
+                                                onClick={() => { setSearchQuery(''); setFilterClass(''); setFilterGender('') }}
                                                 className="text-indigo-500 hover:underline mt-2 text-sm"
                                             >
                                                 Reset filter
@@ -372,90 +451,98 @@ export default function StudentsPage() {
                 </table>
             </div>
 
-            {/* Input Modal */}
+            {/* Input Modal - data kelas dari DB */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 title={selectedStudent ? 'Edit Siswa' : 'Tambah Siswa Baru'}
+                size="lg"
             >
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Nama Lengkap</label>
-                        <input
-                            type="text"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="Masukkan nama siswa"
-                            className="input-field w-full"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <section className="space-y-4">
+                        <h4 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border)] pb-2">
+                            Identitas Siswa
+                        </h4>
                         <div>
-                            <label className="block text-sm font-medium mb-2">Jenis Kelamin</label>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, gender: 'L' })}
-                                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${formData.gender === 'L'
-                                        ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 ring-1 ring-blue-500'
-                                        : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'
-                                        }`}
-                                >
-                                    <FontAwesomeIcon icon={faMars} className="text-lg mb-1" />
-                                    <span className="text-xs font-medium">Laki-laki</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, gender: 'P' })}
-                                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${formData.gender === 'P'
-                                        ? 'border-pink-500 bg-pink-50 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300 ring-1 ring-pink-500'
-                                        : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'
-                                        }`}
-                                >
-                                    <FontAwesomeIcon icon={faVenus} className="text-lg mb-1" />
-                                    <span className="text-xs font-medium">Perempuan</span>
-                                </button>
-                            </div>
+                            <label className="block text-sm font-medium mb-2 text-[var(--color-text)]">Nama Lengkap</label>
+                            <input
+                                type="text"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                placeholder="Masukkan nama siswa"
+                                className="input-field w-full"
+                                autoFocus
+                            />
                         </div>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Kelas</label>
-                            <div className="relative">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2 text-[var(--color-text)]">Jenis Kelamin</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, gender: 'L' })}
+                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${formData.gender === 'L'
+                                            ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                            : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                                            }`}
+                                    >
+                                        <FontAwesomeIcon icon={faMars} className="text-lg mb-1" />
+                                        <span className="text-xs font-medium">Laki-laki</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, gender: 'P' })}
+                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${formData.gender === 'P'
+                                            ? 'border-pink-500 bg-pink-50 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300'
+                                            : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-pink-300 hover:bg-pink-50/50 dark:hover:bg-pink-900/10'
+                                            }`}
+                                    >
+                                        <FontAwesomeIcon icon={faVenus} className="text-lg mb-1" />
+                                        <span className="text-xs font-medium">Perempuan</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-2 text-[var(--color-text)]">Kelas</label>
                                 <select
                                     value={formData.class}
                                     onChange={(e) => setFormData({ ...formData, class: e.target.value })}
-                                    className="select-field w-full appearance-none h-[70px] sm:h-[74px] flex items-center"
+                                    className="select-field w-full"
                                 >
                                     <option value="">Pilih Kelas</option>
-                                    {AVAILABLE_CLASSES.map(cls => (
+                                    {classNames.map(cls => (
                                         <option key={cls} value={cls}>{cls}</option>
                                     ))}
                                 </select>
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </div>
+                                {loadingClasses && classNames.length === 0 && (
+                                    <p className="text-xs text-[var(--color-text-muted)] mt-1">Memuat data kelas...</p>
+                                )}
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <div>
-                        <label className="block text-sm font-medium mb-2">No. HP Wali Murid</label>
-                        <input
-                            type="tel"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            placeholder="08xxxxxxxxxx"
-                            className="input-field w-full"
-                        />
-                    </div>
+                    <section className="space-y-4">
+                        <h4 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border)] pb-2">
+                            Kontak Wali
+                        </h4>
+                        <div>
+                            <label className="block text-sm font-medium mb-2 text-[var(--color-text)]">No. HP Wali Murid</label>
+                            <input
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                placeholder="08xxxxxxxxxx"
+                                className="input-field w-full"
+                            />
+                        </div>
+                    </section>
 
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="flex justify-end gap-3 pt-2 border-t border-[var(--color-border)]">
                         <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">
                             Batal
                         </button>
                         <button type="submit" className="btn btn-primary">
-                            {selectedStudent ? 'Update' : 'Simpan'}
+                            {selectedStudent ? 'Simpan Perubahan' : 'Simpan Siswa'}
                         </button>
                     </div>
                 </form>
