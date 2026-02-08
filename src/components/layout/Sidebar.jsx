@@ -13,12 +13,9 @@ import {
     faSchool,
     faExclamationTriangle,
     faCalendarAlt,
-    faMoon,
-    faSun,
 } from '@fortawesome/free-solid-svg-icons'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
 
 const MENU_ITEMS = [
@@ -42,7 +39,6 @@ const ADMIN_MENU = { path: '/developer', icon: faCode, label: 'Developer' }
 
 export default function Sidebar({ isOpen, onClose }) {
     const { profile, signOut, isDemoMode } = useAuth()
-    const { isDark, toggleTheme } = useTheme()
     const { addToast } = useToast()
     const navigate = useNavigate()
     const [expandedMenus, setExpandedMenus] = useState(['Master Data'])
@@ -163,37 +159,17 @@ export default function Sidebar({ isOpen, onClose }) {
                     </ul>
                 </nav>
 
-                {/* Footer */}
-                <div className="p-3 border-t border-[var(--color-border)] space-y-2">
-                    {/* Theme Toggle */}
+                {/* Footer - Logout only (profile & theme ada di navbar) */}
+                <div className="p-3 border-t border-[var(--color-border)]">
                     <button
-                        onClick={toggleTheme}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
-              text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] 
-              hover:text-[var(--color-text)] transition-colors"
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm
+              text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-500 transition-colors font-medium"
+                        title="Logout"
                     >
-                        <FontAwesomeIcon icon={isDark ? faSun : faMoon} className="w-4" />
-                        {isDark ? 'Mode Terang' : 'Mode Gelap'}
+                        <FontAwesomeIcon icon={faSignOutAlt} className="w-4" />
+                        Keluar
                     </button>
-
-                    {/* User Info & Logout */}
-                    <div className="flex items-center gap-3 p-3 bg-[var(--color-surface-alt)] rounded-lg">
-                        <div className="w-9 h-9 rounded-full bg-indigo-600 
-              flex items-center justify-center text-white font-medium text-sm">
-                            {profile?.name?.charAt(0) || 'U'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{profile?.name || 'User'}</p>
-                            <p className="text-xs text-[var(--color-text-muted)] capitalize">{profile?.role || 'Staff'}</p>
-                        </div>
-                        <button
-                            onClick={handleLogout}
-                            className="p-2 text-[var(--color-text-muted)] hover:text-red-500 transition-colors"
-                            title="Logout"
-                        >
-                            <FontAwesomeIcon icon={faSignOutAlt} />
-                        </button>
-                    </div>
                 </div>
             </aside>
         </>
