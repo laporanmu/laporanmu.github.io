@@ -62,12 +62,12 @@ export default function DashboardPage() {
     return (
         <DashboardLayout title="Dashboard">
             {/* Welcome */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold mb-1">
+            <div className="mb-5">
+                <h1 className="text-xl font-bold mb-1">
                     Selamat Datang, {profile?.name?.split(' ')[0] || 'User'}! 👋
                 </h1>
-                <p className="text-[var(--color-text-muted)]">
-                    Berikut ringkasan aktivitas perilaku siswa hari ini.
+                <p className="text-[var(--color-text-muted)] text-[11px] font-medium uppercase tracking-widest">
+                    RINGKASAN AKTIVITAS PERILAKU SISWA HARI INI
                 </p>
             </div>
 
@@ -81,17 +81,17 @@ export default function DashboardPage() {
             {/* Charts Row */}
             <div className="grid lg:grid-cols-3 gap-6 mb-6">
                 {/* Line Chart */}
-                <div className="lg:col-span-2 card">
+                <div className="lg:col-span-2 bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold">Tren Mingguan</h3>
-                        <div className="flex items-center gap-4 text-sm">
-                            <span className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-red-500" />
-                                Pelanggaran
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Tren Mingguan</h3>
+                        <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-tight">
+                            <span className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-red-500" />
+                                <span className="text-gray-500">Pelanggaran</span>
                             </span>
-                            <span className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-emerald-500" />
-                                Prestasi
+                            <span className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                <span className="text-gray-500">Prestasi</span>
                             </span>
                         </div>
                     </div>
@@ -128,8 +128,8 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Pie Chart */}
-                <div className="card">
-                    <h3 className="font-semibold mb-4">Jenis Pelanggaran</h3>
+                <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-4 shadow-sm">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Jenis Pelanggaran</h3>
                     <div className="h-48">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -152,9 +152,9 @@ export default function DashboardPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-4">
                         {PIE_DATA.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-sm">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                                <span className="text-[var(--color-text-muted)]">{item.name}</span>
+                            <div key={idx} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                                <span className="text-gray-500">{item.name}</span>
                             </div>
                         ))}
                     </div>
@@ -164,36 +164,36 @@ export default function DashboardPage() {
             {/* Recent Reports & Quick Actions */}
             <div className="grid lg:grid-cols-3 gap-6">
                 {/* Recent Reports */}
-                <div className="lg:col-span-2 card">
+                <div className="lg:col-span-2 bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold">Laporan Terbaru</h3>
-                        <Link to="/reports" className="text-sm text-indigo-500 hover:text-indigo-600">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Laporan Terbaru</h3>
+                        <Link to="/reports" className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest">
                             Lihat Semua →
                         </Link>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         {RECENT_REPORTS.map((report) => (
                             <div
                                 key={report.id}
-                                className="flex items-center justify-between p-3 bg-[var(--color-surface-alt)] rounded-lg"
+                                className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-lg group hover:border-indigo-200 transition-all"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-black shadow-sm
                     ${report.points > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
                                         {report.points > 0 ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
                                     </div>
                                     <div>
-                                        <p className="font-medium text-sm">{report.student}</p>
-                                        <p className="text-xs text-[var(--color-text-muted)]">
+                                        <p className="font-bold text-[13px] text-gray-900 dark:text-white leading-tight">{report.student}</p>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight mt-0.5">
                                             {report.class} • {report.type}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className={`font-semibold text-sm ${report.points > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                        {report.points > 0 ? '+' : ''}{report.points} poin
+                                    <p className={`font-black text-[12px] uppercase tracking-tighter ${report.points > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                        {report.points > 0 ? '+' : ''}{report.points} POIN
                                     </p>
-                                    <p className="text-xs text-[var(--color-text-muted)]">{report.time}</p>
+                                    <p className="text-[9px] text-gray-400 font-bold">{report.time}</p>
                                 </div>
                             </div>
                         ))}
@@ -201,48 +201,48 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="card">
-                    <h3 className="font-semibold mb-4">Aksi Cepat</h3>
-                    <div className="space-y-3">
+                <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-4 shadow-sm">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Aksi Cepat</h3>
+                    <div className="space-y-2">
                         <Link
                             to="/reports/new"
-                            className="flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-500 to-purple-600 
-                rounded-xl text-white hover:opacity-90 transition-opacity"
+                            className="flex items-center gap-3 p-3 bg-gradient-to-r from-indigo-500 to-purple-600 
+                rounded-xl text-white hover:shadow-lg hover:shadow-indigo-500/20 transition-all active:scale-95"
                         >
-                            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
                                 <FontAwesomeIcon icon={faPlus} />
                             </div>
                             <div>
-                                <p className="font-medium">Buat Laporan</p>
-                                <p className="text-sm text-white/80">Input pelanggaran/prestasi</p>
+                                <p className="font-bold text-sm uppercase tracking-tight">Buat Laporan</p>
+                                <p className="text-[10px] text-white/70 font-bold font-medium">PELANGGARAN / PRESTASI</p>
                             </div>
                         </Link>
 
                         <Link
                             to="/master/students"
-                            className="flex items-center gap-3 p-4 bg-[var(--color-surface-alt)] 
-                rounded-xl hover:bg-[var(--color-border)] transition-colors"
+                            className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800
+                rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
-                            <div className="w-10 h-10 bg-blue-500/10 text-blue-500 rounded-lg flex items-center justify-center">
+                            <div className="w-9 h-9 bg-blue-500/10 text-blue-600 rounded-lg flex items-center justify-center">
                                 <FontAwesomeIcon icon={faUsers} />
                             </div>
                             <div>
-                                <p className="font-medium">Data Siswa</p>
-                                <p className="text-sm text-[var(--color-text-muted)]">Kelola data siswa</p>
+                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-tight">Data Siswa</p>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">KELOLA DATABASE SISWA</p>
                             </div>
                         </Link>
 
                         <Link
                             to="/reports"
-                            className="flex items-center gap-3 p-4 bg-[var(--color-surface-alt)] 
-                rounded-xl hover:bg-[var(--color-border)] transition-colors"
+                            className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800
+                rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
-                            <div className="w-10 h-10 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center">
+                            <div className="w-9 h-9 bg-amber-500/10 text-amber-600 rounded-lg flex items-center justify-center">
                                 <FontAwesomeIcon icon={faClipboardList} />
                             </div>
                             <div>
-                                <p className="font-medium">Semua Laporan</p>
-                                <p className="text-sm text-[var(--color-text-muted)]">Lihat riwayat lengkap</p>
+                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-tight">Semua Laporan</p>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">LIHAT RIWAYAT LENGKAP</p>
                             </div>
                         </Link>
                     </div>

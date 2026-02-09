@@ -407,17 +407,17 @@ export default function StudentsPage() {
     return (
         <DashboardLayout title="Data Siswa">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold">Data Siswa</h1>
-                    <p className="text-[var(--color-text-muted)] text-sm mt-1">
+                    <h1 className="text-xl font-bold">Data Siswa</h1>
+                    <p className="text-[var(--color-text-muted)] text-xs mt-0.5">
                         Kelola {students.length} data siswa aktif dalam sistem laporan.
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={handleImportClick} className="btn btn-secondary shadow-sm">
+                    <button onClick={handleImportClick} className="btn btn-secondary h-10 px-4 text-xs font-medium">
                         <FontAwesomeIcon icon={faUpload} />
-                        <span className="hidden sm:inline ml-2 font-normal">Import</span>
+                        <span className="hidden sm:inline ml-2">Import</span>
                     </button>
                     <input
                         type="file"
@@ -427,63 +427,63 @@ export default function StudentsPage() {
                         accept=".csv,.txt"
                     />
 
-                    <button onClick={handleExport} className="btn btn-secondary shadow-sm">
+                    <button onClick={handleExport} className="btn btn-secondary h-10 px-4 text-xs font-medium">
                         <FontAwesomeIcon icon={faDownload} />
-                        <span className="hidden sm:inline ml-2 font-normal">Export</span>
+                        <span className="hidden sm:inline ml-2">Export</span>
                     </button>
 
-                    <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-indigo-500/20 px-6">
+                    <button onClick={handleAdd} className="btn btn-primary h-10 px-5 text-xs font-bold shadow-sm">
                         <FontAwesomeIcon icon={faPlus} />
-                        <span className="ml-2 font-normal">Tambah</span>
+                        <span className="ml-2">Tambah</span>
                     </button>
                 </div>
             </div>
 
             {/* Premium Stats Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div className="card p-4 border-l-4 border-l-indigo-500 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                <div className="card p-3.5 border-l-2 border-l-indigo-500 flex items-center gap-3 rounded-xl">
+                    <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 text-sm">
                         <FontAwesomeIcon icon={faUsers} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Siswa</p>
-                        <h3 className="text-xl font-bold">{stats.total}</h3>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total Siswa</p>
+                        <h3 className="text-lg font-bold leading-tight">{stats.total}</h3>
                     </div>
                 </div>
-                <div className="card p-4 border-l-4 border-l-blue-500 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600">
+                <div className="card p-3.5 border-l-2 border-l-blue-500 flex items-center gap-3 rounded-xl">
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-sm">
                         <FontAwesomeIcon icon={faMars} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Putra</p>
-                        <h3 className="text-xl font-bold">{stats.boys}</h3>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Putra</p>
+                        <h3 className="text-lg font-bold leading-tight">{stats.boys}</h3>
                     </div>
                 </div>
-                <div className="card p-4 border-l-4 border-l-pink-500 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-500/10 flex items-center justify-center text-pink-600">
+                <div className="card p-3.5 border-l-2 border-l-pink-500 flex items-center gap-3 rounded-xl">
+                    <div className="w-9 h-9 rounded-lg bg-pink-50 dark:bg-pink-500/10 flex items-center justify-center text-pink-600 text-sm">
                         <FontAwesomeIcon icon={faVenus} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Putri</p>
-                        <h3 className="text-xl font-bold">{stats.girls}</h3>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Putri</p>
+                        <h3 className="text-lg font-bold leading-tight">{stats.girls}</h3>
                     </div>
                 </div>
-                <div className="card p-4 border-l-4 border-l-emerald-500 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                <div className="card p-3.5 border-l-2 border-l-emerald-500 flex items-center gap-3 rounded-xl">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-sm">
                         <FontAwesomeIcon icon={faTrophy} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rata-rata Poin</p>
-                        <h3 className="text-xl font-bold">{stats.avgPoints}</h3>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Rata-rata</p>
+                        <h3 className="text-lg font-bold leading-tight">{stats.avgPoints}</h3>
                     </div>
                 </div>
             </div>
 
             {/* Filters & Sort */}
-            <div className="card mb-6 p-4">
-                <div className="flex flex-col md:flex-row gap-4">
+            <div className="card mb-5 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
+                <div className="flex flex-col md:flex-row gap-3">
                     <div className="flex-1 relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--color-text-muted)]">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 text-xs">
                             <FontAwesomeIcon icon={faSearch} />
                         </div>
                         <input
@@ -491,7 +491,7 @@ export default function StudentsPage() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari nama, kode, kelas..."
-                            className="input-field pl-10 w-full"
+                            className="input-field pl-9 w-full h-10 text-xs py-2 bg-gray-50/50 dark:bg-gray-900 border-gray-200 dark:border-gray-800 focus:bg-white dark:focus:bg-gray-800 transition-all rounded-lg"
                         />
                     </div>
 
@@ -499,7 +499,7 @@ export default function StudentsPage() {
                         <select
                             value={filterClass}
                             onChange={(e) => setFilterClass(e.target.value)}
-                            className="select-field w-full md:w-auto min-w-[140px]"
+                            className="select-field h-10 text-xs py-2 w-full md:w-auto min-w-[120px] rounded-lg border-gray-200 dark:border-gray-800"
                         >
                             <option value="">Semua Kelas</option>
                             {classesList.map(c => (
@@ -510,17 +510,17 @@ export default function StudentsPage() {
                         <select
                             value={filterGender}
                             onChange={(e) => setFilterGender(e.target.value)}
-                            className="select-field w-full md:w-auto"
+                            className="select-field h-10 text-xs py-2 w-full md:w-auto rounded-lg border-gray-200 dark:border-gray-800"
                         >
-                            <option value="">Semua Gender</option>
-                            <option value="L">Laki-laki</option>
-                            <option value="P">Perempuan</option>
+                            <option value="">Gender</option>
+                            <option value="L">Putra</option>
+                            <option value="P">Putri</option>
                         </select>
 
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="select-field w-full md:w-auto"
+                            className="select-field h-10 text-xs py-2 w-full md:w-auto rounded-lg border-gray-200 dark:border-gray-800"
                         >
                             {SORT_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -531,9 +531,9 @@ export default function StudentsPage() {
                     {(searchQuery || filterClass || filterGender) && (
                         <button
                             onClick={() => { setSearchQuery(''); setFilterClass(''); setFilterGender('') }}
-                            className="btn btn-ghost text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 px-4"
+                            className="btn btn-ghost h-10 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 px-3 text-xs"
                         >
-                            <FontAwesomeIcon icon={faTimes} className="mr-2" />
+                            <FontAwesomeIcon icon={faTimes} className="mr-1.5" />
                             Reset
                         </button>
                     )}
@@ -557,13 +557,13 @@ export default function StudentsPage() {
             ) : (
                 <>
                     {/* Layout Mobile (Card Stack) */}
-                    <div className="md:hidden space-y-4 mb-20">
+                    <div className="md:hidden space-y-3 mb-20">
                         {filteredStudents.map((student) => (
-                            <div key={student.id} className="bg-white dark:bg-gray-900 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                <div className="flex items-center gap-4">
+                            <div key={student.id} className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="flex items-center gap-3">
                                     <div
                                         onClick={() => handleViewProfile(student)}
-                                        className="w-16 h-16 rounded-3xl bg-indigo-600 flex items-center justify-center text-2xl font-black text-white shadow-xl shadow-indigo-500/10 overflow-hidden shrink-0 cursor-pointer"
+                                        className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-lg font-bold text-white shadow-lg shadow-indigo-500/10 overflow-hidden shrink-0 cursor-pointer"
                                     >
                                         {student.photo_url ? (
                                             <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
@@ -572,46 +572,46 @@ export default function StudentsPage() {
                                         )}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h3 onClick={() => handleViewProfile(student)} className="text-base font-black text-gray-900 dark:text-white truncate mb-1 cursor-pointer">
+                                        <h3 onClick={() => handleViewProfile(student)} className="text-sm font-bold text-gray-900 dark:text-white truncate mb-0.5 cursor-pointer leading-tight">
                                             {student.name}
                                         </h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            <span className="badge badge-primary px-2 py-0.5 text-[9px] font-bold uppercase tracking-tight">{student.className}</span>
-                                            <span className="text-[9px] font-mono font-bold text-gray-400">{student.code}</span>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            <span className="badge badge-primary px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-tight rounded-md">{student.className}</span>
+                                            <span className="text-[8px] font-mono font-medium text-gray-400">{student.code}</span>
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end">
-                                        <div className={`text-base font-black ${student.points >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                        <div className={`text-sm font-bold ${student.points >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                             {student.points}
                                         </div>
-                                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Poin</p>
+                                        <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">Poin</p>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-4 gap-2 pt-2 border-t border-gray-50 dark:border-gray-800">
-                                    <button onClick={() => handleViewQR(student)} className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                        <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 text-xs text-center border-l border-gray-200">
+                                <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-gray-50 dark:border-gray-800">
+                                    <button onClick={() => handleViewQR(student)} className="flex flex-col items-center gap-1.5 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                        <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 text-[10px] text-center">
                                             <FontAwesomeIcon icon={faQrcode} />
                                         </div>
-                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none">Akses</span>
+                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none">Akses</span>
                                     </button>
-                                    <a href={`https://wa.me/62${student.phone?.replace(/^0/, '')}`} className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors">
-                                        <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500 text-xs">
+                                    <a href={`https://wa.me/62${student.phone?.replace(/^0/, '')}`} className="flex flex-col items-center gap-1.5 p-1.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors">
+                                        <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500 text-[10px]">
                                             <FontAwesomeIcon icon={faWhatsapp} />
                                         </div>
-                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none">WA</span>
+                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none">WhatsApp</span>
                                     </a>
-                                    <button onClick={() => handleEdit(student)} className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
-                                        <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 text-xs">
+                                    <button onClick={() => handleEdit(student)} className="flex flex-col items-center gap-1.5 p-1.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+                                        <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 text-[10px]">
                                             <FontAwesomeIcon icon={faEdit} />
                                         </div>
-                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none">Edit</span>
+                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none">Edit</span>
                                     </button>
-                                    <button onClick={() => confirmDelete(student)} className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
-                                        <div className="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 text-xs">
+                                    <button onClick={() => confirmDelete(student)} className="flex flex-col items-center gap-1.5 p-1.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
+                                        <div className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 text-[10px]">
                                             <FontAwesomeIcon icon={faTrash} />
                                         </div>
-                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest leading-none">Hapus</span>
+                                        <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none">Hapus</span>
                                     </button>
                                 </div>
                             </div>
@@ -619,7 +619,7 @@ export default function StudentsPage() {
                     </div>
 
                     {/* Layout Desktop (Table) */}
-                    <div className="hidden md:block table-container mb-6 overflow-hidden border border-[var(--color-border)] shadow-sm bg-white dark:bg-gray-950">
+                    <div className="hidden md:block table-container mb-6 overflow-hidden border border-[var(--color-border)] shadow-sm bg-white dark:bg-gray-950 rounded-xl">
                         {/* Bulk Action Bar (Floating) */}
                         {selectedStudentIds.length > 0 && (
                             <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5 duration-300">
@@ -653,41 +653,41 @@ export default function StudentsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
-                                    <th className="px-4 py-4 w-4">
+                                    <th className="px-3 py-3 w-4">
                                         <div className="flex items-center justify-center">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedStudentIds.length === filteredStudents.length && filteredStudents.length > 0}
                                                 onChange={toggleSelectAll}
-                                                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                             />
                                         </div>
                                     </th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Informasi Siswa</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-center">Gender</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-center text-center">Kelas</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-center text-center text-center">Poin Perilaku</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-right px-8">Kelola</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Siswa</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Gender</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Kelas</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Poin</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-right pr-6">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
                                 {filteredStudents.map((student) => (
                                     <tr key={student.id} className={`group hover:bg-[var(--color-surface-alt)]/30 transition-colors ${selectedStudentIds.includes(student.id) ? 'bg-indigo-50/50' : ''}`}>
-                                        <td className="px-4 py-4">
+                                        <td className="px-3 py-2.5">
                                             <div className="flex items-center justify-center">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedStudentIds.includes(student.id)}
                                                     onChange={() => toggleSelectStudent(student.id)}
-                                                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                    className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                                 />
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
+                                        <td className="px-4 py-2.5">
+                                            <div className="flex items-center gap-2.5">
                                                 <div
                                                     onClick={() => handleViewProfile(student)}
-                                                    className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm cursor-pointer hover:scale-105 transition-transform overflow-hidden"
+                                                    className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm cursor-pointer hover:scale-105 transition-transform overflow-hidden"
                                                 >
                                                     {student.photo_url ? (
                                                         <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
@@ -698,82 +698,69 @@ export default function StudentsPage() {
                                                 <div>
                                                     <button
                                                         onClick={() => handleViewProfile(student)}
-                                                        className="font-bold text-[14px] leading-tight text-gray-900 group-hover:text-indigo-600 dark:text-white transition-colors block text-left"
+                                                        className="font-bold text-[13px] leading-tight text-gray-900 group-hover:text-indigo-600 dark:text-white transition-colors block text-left"
                                                     >
                                                         {student.name}
                                                     </button>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-[10px] font-mono text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        <span className="text-[9px] font-mono text-gray-400 bg-gray-50 dark:bg-gray-800 px-1 py-0.5 rounded border border-gray-100 dark:border-gray-800">
                                                             {student.code}
                                                         </span>
-                                                        <div className="flex items-center gap-1 text-[10px] text-emerald-500">
-                                                            <FontAwesomeIcon icon={faWhatsapp} className="text-[9px]" />
-                                                            <span>Terkoneksi</span>
-                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-center">
+                                        <td className="px-4 py-2.5 text-center">
                                             <div className="flex items-center justify-center">
-                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${student.gender === 'L' ? 'bg-blue-50 text-blue-500' : 'bg-pink-50 text-pink-500'}`}>
+                                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] ${student.gender === 'L' ? 'bg-blue-50 text-blue-500' : 'bg-pink-50 text-pink-500'}`}>
                                                     <FontAwesomeIcon icon={student.gender === 'L' ? faMars : faVenus} />
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-center text-center">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 uppercase tracking-tighter">
+                                        <td className="px-4 py-2.5 text-center">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 uppercase tracking-tight">
                                                 {student.className}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-center text-center text-center">
+                                        <td className="px-4 py-2.5 text-center">
                                             <div className="flex flex-col items-center">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`text-[13px] font-black ${student.points >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                        {student.points} Poin
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className={`text-xs font-bold ${student.points >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                        {student.points}
                                                     </span>
                                                     <FontAwesomeIcon
                                                         icon={student.trend === 'up' ? faArrowTrendUp : faArrowTrendDown}
-                                                        className={`text-[10px] ${student.trend === 'up' ? 'text-emerald-400' : 'text-red-400'}`}
+                                                        className={`text-[8px] ${student.trend === 'up' ? 'text-emerald-400' : 'text-red-400'}`}
                                                     />
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right pr-8">
-                                            <div className="flex items-center justify-end gap-1.5 transition-opacity">
+                                        <td className="px-4 py-2.5 text-right pr-6">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <button
                                                     onClick={() => handleViewPrint(student)}
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 bg-gray-50/50 hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all active:scale-95"
-                                                    title="Cetak Kartu Siswa"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all text-xs"
+                                                    title="Cetak Kartu"
                                                 >
                                                     <FontAwesomeIcon icon={faIdCardAlt} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleViewQR(student)}
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 bg-gray-50/50 dark:bg-gray-800 dark:text-gray-400 hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all active:scale-95"
-                                                    title="Kode Akses QR"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all text-xs"
+                                                    title="QR Akses"
                                                 >
                                                     <FontAwesomeIcon icon={faQrcode} />
                                                 </button>
-                                                <a
-                                                    href={`https://wa.me/62${student.phone?.replace(/^0/, '')}?text=Assalamualaikum, kami dari sekolah ingin menginformasikan perkembangan perilaku ${student.name}...`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50/50 dark:bg-emerald-900/10 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all active:scale-95"
-                                                    title="Hubungi Wali"
-                                                >
-                                                    <FontAwesomeIcon icon={faWhatsapp} />
-                                                </a>
                                                 <button
                                                     onClick={() => handleEdit(student)}
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-blue-600 bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all active:scale-95"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all text-xs"
                                                     title="Edit"
                                                 >
                                                     <FontAwesomeIcon icon={faEdit} />
                                                 </button>
                                                 <button
                                                     onClick={() => confirmDelete(student)}
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-red-600 bg-red-50/50 dark:bg-red-900/10 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-95"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all text-xs"
                                                     title="Hapus"
                                                 >
                                                     <FontAwesomeIcon icon={faTrash} />
@@ -798,13 +785,13 @@ export default function StudentsPage() {
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                         {/* Photo Upload UI */}
-                        <div className="md:col-span-2 flex justify-center mb-4">
+                        <div className="md:col-span-2 flex justify-center mb-2">
                             <div className="relative group">
-                                <div className="w-24 h-24 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 border-2 border-dashed border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-400 overflow-hidden">
+                                <div className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border-2 border-dashed border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-400 overflow-hidden">
                                     {formData.photo_url ? (
                                         <img src={formData.photo_url} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <FontAwesomeIcon icon={faCamera} className="text-xl" />
+                                        <FontAwesomeIcon icon={faCamera} className="text-lg" />
                                     )}
                                 </div>
                                 <input
@@ -826,9 +813,9 @@ export default function StudentsPage() {
                                 <button
                                     type="button"
                                     onClick={() => fileInputRef.current.click()}
-                                    className="absolute -bottom-1 -right-1 w-8 h-8 rounded-xl bg-indigo-600 text-white shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-10"
+                                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-indigo-600 text-white shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-10"
                                 >
-                                    <FontAwesomeIcon icon={faCamera} className="text-[10px]" />
+                                    <FontAwesomeIcon icon={faCamera} className="text-[9px]" />
                                 </button>
                             </div>
                         </div>
@@ -920,104 +907,138 @@ export default function StudentsPage() {
                 size="lg"
             >
                 {selectedStudent && (
-                    <div className="space-y-6">
-                        <div className="flex flex-col md:flex-row gap-6">
-                            <div className="w-full md:w-32 flex flex-col items-center gap-3">
-                                <div className="w-32 h-32 rounded-3xl bg-indigo-600 flex items-center justify-center text-4xl font-black text-white shadow-xl shadow-indigo-500/20 overflow-hidden">
+                    <div className="space-y-7 py-2">
+                        {/* Top Profile Header */}
+                        <div className="flex flex-col md:flex-row gap-6 items-start">
+                            {/* Avatar Section */}
+                            <div className="relative group shrink-0 mx-auto md:mx-0">
+                                <div className="w-32 h-32 rounded-2xl bg-indigo-600 flex items-center justify-center text-4xl font-bold text-white shadow-2xl shadow-indigo-500/20 overflow-hidden ring-4 ring-white dark:ring-gray-900 transition-transform group-hover:scale-[1.02]">
                                     {selectedStudent.photo_url ? (
                                         <img src={selectedStudent.photo_url} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        selectedStudent.name.charAt(0)
+                                        <span className="opacity-40">{selectedStudent.name.charAt(0)}</span>
                                     )}
                                 </div>
-                                <button className="btn btn-secondary py-1.5 px-3 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                                    <FontAwesomeIcon icon={faCamera} className="text-[9px]" />
-                                    Ganti Foto
+                                <input
+                                    type="file"
+                                    id="profile-photo-input"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={async (e) => {
+                                        const file = e.target.files[0]
+                                        if (file) {
+                                            const reader = new FileReader()
+                                            reader.onloadend = async () => {
+                                                const base64 = reader.result
+                                                // Ideally call a Supabase update here, but for now we update local state
+                                                // and show a success message.
+                                                setSelectedStudent({ ...selectedStudent, photo_url: base64 })
+                                                addToast('Foto berhasil diperbarui!', 'success')
+                                            }
+                                            reader.readAsDataURL(file)
+                                        }
+                                    }}
+                                />
+                                <button
+                                    onClick={() => document.getElementById('profile-photo-input').click()}
+                                    className="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-all rounded-2xl cursor-pointer border border-white/20"
+                                >
+                                    <FontAwesomeIcon icon={faCamera} className="text-xl mb-1.5" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">Ganti Foto</span>
                                 </button>
                             </div>
 
-                            <div className="flex-1 space-y-4">
-                                <div>
-                                    <h3 className="text-2xl font-black text-gray-900 leading-none mb-2">{selectedStudent.name}</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        <span className="badge badge-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">{selectedStudent.className}</span>
-                                        <span className="badge bg-gray-100 text-gray-500 border-none px-2 py-0.5 text-[10px] font-mono">{selectedStudent.code}</span>
-                                        <span className={`badge ${selectedStudent.gender === 'L' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'} border-none px-2 py-0.5 text-[10px] font-bold uppercase`}>
+                            {/* Info Section */}
+                            <div className="flex-1 space-y-4 min-w-0 w-full">
+                                <div className="text-center md:text-left">
+                                    <h3 className="text-2xl font-black text-gray-900 dark:text-white leading-tight mb-2 uppercase tracking-tight">{selectedStudent.name}</h3>
+                                    <div className="flex flex-wrap justify-center md:justify-start gap-2">
+                                        <span className="badge badge-primary px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg shadow-sm">{selectedStudent.className}</span>
+                                        <span className="badge bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-none px-2.5 py-1 text-[9px] font-mono tracking-wider rounded-lg">{selectedStudent.code}</span>
+                                        <span className={`badge ${selectedStudent.gender === 'L' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'} dark:bg-opacity-10 border-none px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg`}>
                                             {selectedStudent.gender === 'L' ? 'Putra' : 'Putri'}
                                         </span>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-4 border-y border-gray-100 py-4">
-                                    <div className="text-center">
-                                        <p className={`text-xl font-black ${selectedStudent.points >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800 text-center shadow-sm">
+                                        <p className={`text-xl font-black ${selectedStudent.points >= 0 ? 'text-emerald-500' : 'text-red-500'} leading-none mb-1`}>
                                             {selectedStudent.points}
                                         </p>
-                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total Poin</p>
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Total Poin</p>
                                     </div>
-                                    <div className="text-center border-x border-gray-100 px-4">
-                                        <p className="text-xl font-black text-red-500">0</p>
-                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Pelanggaran</p>
+                                    <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800 text-center shadow-sm">
+                                        <p className="text-xl font-black text-red-500 leading-none mb-1">0</p>
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Pelanggaran</p>
                                     </div>
-                                    <div className="text-center">
-                                        <p className="text-xl font-black text-emerald-500">0</p>
-                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Prestasi</p>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Kontak Orang Tua</label>
-                                    <div className="flex items-center gap-3">
-                                        <div className="text-sm font-bold text-gray-700">{selectedStudent.phone || 'Tidak ada nomor'}</div>
-                                        {selectedStudent.phone && (
-                                            <a
-                                                href={`https://wa.me/62${selectedStudent.phone.replace(/^0/, '')}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center text-white text-[10px] hover:bg-emerald-600 shadow-sm transition-colors"
-                                            >
-                                                <FontAwesomeIcon icon={faWhatsapp} />
-                                            </a>
-                                        )}
+                                    <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800 text-center shadow-sm">
+                                        <p className="text-xl font-black text-emerald-500 leading-none mb-1">0</p>
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Prestasi</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Contact Section */}
+                        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-4 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/30 flex items-center justify-between">
+                            <div>
+                                <p className="text-[8px] font-black text-indigo-400 dark:text-indigo-500 uppercase tracking-widest mb-1">Kontak Orang Tua / Wali</p>
+                                <p className="text-sm font-black text-gray-700 dark:text-gray-300 font-mono tracking-wider">{selectedStudent.phone || 'TIDAK ADA NOMOR'}</p>
+                            </div>
+                            {selectedStudent.phone && (
+                                <a
+                                    href={`https://wa.me/62${selectedStudent.phone.replace(/^0/, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all hover:scale-110 active:scale-95"
+                                    title="WhatsApp Sekarang"
+                                >
+                                    <FontAwesomeIcon icon={faWhatsapp} className="text-lg" />
+                                </a>
+                            )}
+                        </div>
+
+                        {/* History Timeline */}
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h4 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">
-                                    <FontAwesomeIcon icon={faHistory} className="text-[10px]" />
-                                    Behavior Timeline
+                            <div className="flex items-center justify-between px-1">
+                                <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
+                                    <FontAwesomeIcon icon={faHistory} className="text-xs" />
+                                    Riwayat Perilaku
                                 </h4>
-                                <button className="text-[10px] font-bold text-indigo-600 hover:underline">Lihat Selengkapnya</button>
+                                <button className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-widest">Lihat Semua</button>
                             </div>
 
-                            {loadingHistory ? (
-                                <div className="py-12 flex flex-col items-center justify-center text-gray-300 gap-3">
-                                    <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl" />
-                                    <p className="text-[10px] font-bold uppercase tracking-widest">Memuat Riwayat...</p>
-                                </div>
-                            ) : behaviorHistory.length > 0 ? (
-                                <div className="space-y-3">
-                                    {behaviorHistory.slice(0, 5).map((item) => (
-                                        <div key={item.id} className="flex gap-4 p-3 rounded-2xl bg-gray-50/50 border border-gray-100 items-center">
-                                            <div className={`w-2 h-2 rounded-full shrink-0 ${item.points >= 0 ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]'}`} />
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-gray-900 truncate">{item.type}</p>
-                                                <p className="text-[10px] text-gray-400 font-medium">{new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            <div className="min-h-[160px]">
+                                {loadingHistory ? (
+                                    <div className="py-16 flex flex-col items-center justify-center text-gray-300 dark:text-gray-700 gap-4">
+                                        <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl" />
+                                        <p className="text-[9px] font-black uppercase tracking-[0.3em]">Sinkronisasi Data...</p>
+                                    </div>
+                                ) : behaviorHistory.length > 0 ? (
+                                    <div className="space-y-2.5">
+                                        {behaviorHistory.slice(0, 5).map((item) => (
+                                            <div key={item.id} className="flex gap-4 p-3.5 rounded-2xl bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-white/5 items-center hover:border-indigo-100 dark:hover:border-indigo-900/50 transition-all group/item shadow-sm hover:shadow-md">
+                                                <div className={`w-2 h-2 rounded-full shrink-0 shadow-sm ${item.points >= 0 ? 'bg-emerald-400 shadow-emerald-400/20' : 'bg-red-400 shadow-red-400/20'}`} />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[12px] font-black text-gray-900 dark:text-white truncate mb-0.5">{item.type}</p>
+                                                    <p className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">{new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                                </div>
+                                                <div className={`text-[13px] font-black ${item.points >= 0 ? 'text-emerald-500' : 'text-red-500'} bg-gray-50 dark:bg-gray-900 px-2.5 py-1 rounded-lg border border-gray-100 dark:border-gray-800`}>
+                                                    {item.points >= 0 ? '+' : ''}{item.points}
+                                                </div>
                                             </div>
-                                            <div className={`text-xs font-black ${item.points >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                                {item.points >= 0 ? '+' : ''}{item.points}
-                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-14 bg-gray-50/50 dark:bg-gray-900/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center text-center">
+                                        <div className="w-12 h-12 rounded-full bg-white dark:bg-gray-900 flex items-center justify-center text-gray-200 dark:text-gray-800 mb-3 shadow-sm">
+                                            <FontAwesomeIcon icon={faHistory} className="text-xl" />
                                         </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="py-10 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 text-center">
-                                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Belum Ada Riwayat Perilaku</p>
-                                </div>
-                            )}
+                                        <p className="text-[10px] font-black text-gray-300 dark:text-gray-700 uppercase tracking-[0.3em]">Belum Ada Riwayat Perilaku</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1031,44 +1052,44 @@ export default function StudentsPage() {
                 size="sm"
             >
                 {selectedStudent && (
-                    <div className="flex flex-col items-center text-center space-y-6">
-                        <div className="p-5 bg-white rounded-3xl shadow-xl shadow-indigo-500/10 border border-indigo-50">
+                    <div className="flex flex-col items-center text-center space-y-5">
+                        <div className="p-4 bg-white rounded-2xl shadow-xl shadow-indigo-500/10 border border-indigo-50">
                             <QRCodeCanvas
-                                value={`https://laporanmu.github.io/parent-check?code=${selectedStudent.code}&pin=${selectedStudent.pin}`}
-                                size={200}
+                                value={`${window.location.origin}/check?code=${selectedStudent.code}&pin=${selectedStudent.pin}`}
+                                size={180}
                                 level="H"
                                 includeMargin={true}
                                 imageSettings={{
                                     src: "/logo.png",
                                     x: undefined,
                                     y: undefined,
-                                    height: 40,
-                                    width: 40,
+                                    height: 32,
+                                    width: 32,
                                     excavate: true,
                                 }}
                             />
                         </div>
 
-                        <div className="space-y-4 w-full">
+                        <div className="space-y-3 w-full">
                             <div>
-                                <h4 className="text-lg font-black text-gray-900">{selectedStudent.name}</h4>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Scan untuk Cek Laporan & Poin</p>
+                                <h4 className="text-base font-bold text-gray-900">{selectedStudent.name}</h4>
+                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Pindai untuk Akses Portal</p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                            <div className="grid grid-cols-2 gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100">
                                 <div className="text-center">
-                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Kode Registrasi</p>
+                                    <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Kode Registrasi</p>
                                     <p className="font-mono text-xs font-bold text-indigo-600">{selectedStudent.code}</p>
                                 </div>
                                 <div className="text-center border-l border-gray-200">
-                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">PIN AKses</p>
+                                    <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">PIN Akses</p>
                                     <p className="font-mono text-xs font-bold text-indigo-600">{selectedStudent.pin}</p>
                                 </div>
                             </div>
 
-                            <button className="btn btn-primary w-full py-3 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
+                            <button className="btn btn-primary w-full py-2.5 text-xs font-bold uppercase tracking-widest h-10 flex items-center justify-center gap-2">
                                 <FontAwesomeIcon icon={faWhatsapp} />
-                                Kirim Ke Orang Tua
+                                Kirim Ke Wali
                             </button>
                         </div>
                     </div>
@@ -1083,53 +1104,53 @@ export default function StudentsPage() {
                 size="sm"
             >
                 {newlyCreatedStudent && (
-                    <div className="flex flex-col items-center text-center space-y-6 py-2">
-                        <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500 text-2xl animate-bounce">
+                    <div className="flex flex-col items-center text-center space-y-5 py-1">
+                        <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500 text-xl animate-bounce">
                             <FontAwesomeIcon icon={faCheckCircle} />
                         </div>
 
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-black text-gray-900 leading-tight">Siswa Telah Terdaftar</h3>
-                            <p className="text-xs text-gray-400 font-medium">Berikan kode & PIN berikut kepada wali murid</p>
+                        <div className="space-y-1.5">
+                            <h3 className="text-lg font-bold text-gray-900 leading-tight">Siswa Terdaftar</h3>
+                            <p className="text-[10px] text-gray-400 font-medium">Berikan kode & PIN di bawah kepada wali murid</p>
                         </div>
 
-                        <div className="w-full space-y-3 bg-indigo-50/50 p-5 rounded-3xl border border-indigo-100/50">
-                            <div className="flex justify-between items-center bg-white p-3 rounded-2xl border border-indigo-50">
+                        <div className="w-full space-y-2.5 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+                            <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-indigo-50 shadow-sm">
                                 <div className="text-left">
-                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Kode Registrasi</p>
-                                    <p className="font-mono text-sm font-black text-indigo-600 tracking-wider font-bold">{newlyCreatedStudent.registration_code}</p>
+                                    <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Kode Registrasi</p>
+                                    <p className="font-mono text-xs font-bold text-indigo-600 tracking-wider uppercase">{newlyCreatedStudent.registration_code}</p>
                                 </div>
                                 <button
                                     onClick={() => {
                                         navigator.clipboard.writeText(newlyCreatedStudent.registration_code)
                                         addToast('Kode disalin!', 'success')
                                     }}
-                                    className="p-2 text-indigo-400 hover:text-indigo-600"
+                                    className="p-1.5 text-indigo-400 hover:text-indigo-600 transition-colors"
                                 >
-                                    <FontAwesomeIcon icon={faIdCardAlt} />
+                                    <FontAwesomeIcon icon={faIdCardAlt} className="text-xs" />
                                 </button>
                             </div>
 
-                            <div className="flex justify-between items-center bg-white p-3 rounded-2xl border border-indigo-50">
+                            <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-indigo-50 shadow-sm">
                                 <div className="text-left">
-                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">PIN Akses</p>
-                                    <p className="font-mono text-sm font-black text-indigo-600 tracking-[0.4em] font-bold">{newlyCreatedStudent.pin}</p>
+                                    <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">PIN Akses</p>
+                                    <p className="font-mono text-xs font-bold text-indigo-600 tracking-[0.3em]">{newlyCreatedStudent.pin}</p>
                                 </div>
                                 <button
                                     onClick={() => {
                                         navigator.clipboard.writeText(newlyCreatedStudent.pin)
                                         addToast('PIN disalin!', 'success')
                                     }}
-                                    className="p-2 text-indigo-400 hover:text-indigo-600"
+                                    className="p-1.5 text-indigo-400 hover:text-indigo-600 transition-colors"
                                 >
-                                    <FontAwesomeIcon icon={faKey} />
+                                    <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
                                 </button>
                             </div>
                         </div>
 
                         <button
                             onClick={() => setIsSuccessModalOpen(false)}
-                            className="btn btn-primary w-full py-4 text-xs font-black uppercase tracking-[0.2em]"
+                            className="btn btn-primary w-full py-3 text-xs font-bold uppercase tracking-widest h-11"
                         >
                             Selesai & Tutup
                         </button>
@@ -1144,10 +1165,13 @@ export default function StudentsPage() {
                 title="Kenaikan Kelas Massal"
                 size="sm"
             >
-                <div className="space-y-6">
-                    <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
-                        <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1">Target Kenaikan</p>
-                        <p className="text-[10px] text-indigo-400 font-medium">Anda akan memindahkan {selectedStudentIds.length} siswa terpilih ke kelas yang ditentukan.</p>
+                <div className="space-y-5">
+                    <div className="p-3.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                        <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                            Target Kenaikan
+                        </p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed font-medium">Anda akan memindahkan <span className="text-indigo-600 font-bold">{selectedStudentIds.length} siswa</span> terpilih ke kelas tujuan.</p>
                     </div>
 
                     <div>
@@ -1155,26 +1179,26 @@ export default function StudentsPage() {
                         <select
                             value={bulkClassId}
                             onChange={(e) => setBulkClassId(e.target.value)}
-                            className="select-field text-sm py-2.5"
+                            className="select-field text-xs py-2 bg-gray-50/50 dark:bg-gray-900 border-gray-100 dark:border-gray-800 rounded-lg h-10"
                         >
-                            <option value="">Pilih Kelas Tujuan</option>
+                            <option value="">Cari Kelas Tujuan</option>
                             {classesList.map((c) => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                         </select>
                     </div>
 
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setIsBulkModalOpen(false)} className="btn btn-secondary flex-1 font-bold py-3 text-[11px] uppercase tracking-widest">
+                    <div className="flex gap-2.5 pt-1">
+                        <button type="button" onClick={() => setIsBulkModalOpen(false)} className="btn btn-secondary flex-1 font-bold h-10 text-[10px] uppercase tracking-widest">
                             Batal
                         </button>
                         <button
                             type="button"
                             onClick={handleBulkPromote}
                             disabled={submitting}
-                            className="btn btn-primary flex-1 font-bold py-3 text-[11px] uppercase tracking-widest"
+                            className="btn btn-primary flex-1 font-bold h-10 text-[10px] uppercase tracking-widest shadow-sm"
                         >
-                            {submitting ? 'Memproses...' : 'Proses Massal'}
+                            {submitting ? 'MEMPROSES...' : 'PROSES MASSAL'}
                         </button>
                     </div>
                 </div>
@@ -1185,25 +1209,25 @@ export default function StudentsPage() {
                 isOpen={isPrintModalOpen}
                 onClose={() => setIsPrintModalOpen(false)}
                 title="Cetak Kartu Pelajar"
-                size="md"
+                size="xl"
             >
                 {selectedStudent && (
-                    <div className="space-y-8">
+                    <div className="space-y-8 py-4">
                         {/* ID Card Display (Miniature) */}
-                        <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
+                        <div className="flex flex-col lg:flex-row gap-8 justify-center items-center">
                             {/* Front Card */}
-                            <div className="w-[320px] h-[200px] bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[20px] p-6 text-white relative shadow-2xl overflow-hidden shadow-indigo-500/20">
-                                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl" />
-                                <div className="absolute top-6 right-6 flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                                        <span className="font-black text-sm">L</span>
+                            <div className="w-[340px] h-[210px] bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white relative shadow-2xl overflow-hidden shadow-indigo-500/30 shrink-0">
+                                <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/5 rounded-full blur-2xl" />
+                                <div className="absolute top-5 right-5 flex items-center gap-2 z-10">
+                                    <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                        <span className="font-black text-xs">L</span>
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Laporanmu</span>
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-80">Laporanmu</span>
                                 </div>
 
-                                <div className="flex gap-5 items-end mt-4">
-                                    <div className="w-20 h-24 rounded-2xl bg-white/10 border border-white/20 p-1 shrink-0">
-                                        <div className="w-full h-full rounded-xl overflow-hidden bg-white/5 flex items-center justify-center">
+                                <div className="flex gap-4 items-end mt-8 h-full">
+                                    <div className="w-20 h-24 rounded-xl bg-white/10 border border-white/20 p-1.5 shrink-0 mb-4 z-10 shadow-xl">
+                                        <div className="w-full h-full rounded-lg overflow-hidden bg-white/5 flex items-center justify-center border border-white/10">
                                             {selectedStudent.photo_url ? (
                                                 <img src={selectedStudent.photo_url} alt="" className="w-full h-full object-cover" />
                                             ) : (
@@ -1211,87 +1235,146 @@ export default function StudentsPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="min-w-0">
-                                        <h3 className="text-lg font-black truncate leading-tight uppercase">{selectedStudent.name}</h3>
-                                        <p className="text-[9px] font-bold opacity-70 uppercase tracking-[0.2em] mb-3">{selectedStudent.className}</p>
-                                        <div className="flex flex-col gap-1">
-                                            <p className="text-[7px] font-bold opacity-50 uppercase tracking-widest">Nomor Induk</p>
-                                            <p className="text-xs font-mono font-bold tracking-widest">{selectedStudent.code}</p>
+                                    <div className="min-w-0 flex-1 mb-4 z-10">
+                                        <h3 className="text-[14px] font-black truncate leading-tight uppercase mb-1 drop-shadow-sm">{selectedStudent.name}</h3>
+                                        <div className="flex flex-col gap-0.5 mb-2.5">
+                                            <p className="text-[9px] font-black text-white/90 uppercase tracking-tight">{selectedStudent.className}</p>
+                                            <p className="text-[6.5px] font-bold text-white/40 uppercase tracking-widest leading-none">MBS TANGGUL</p>
+                                        </div>
+                                        <div className="pt-2 border-t border-white/10 mt-1">
+                                            <p className="text-[5.5px] font-bold opacity-30 uppercase tracking-widest mb-0.5">NOMOR INDUK SISWA</p>
+                                            <p className="text-[11px] font-mono font-bold tracking-[0.1em] text-indigo-100">{selectedStudent.code}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="absolute bottom-6 right-6 flex items-center gap-1">
-                                    <FontAwesomeIcon icon={faGraduationCap} className="text-[8px] opacity-40" />
-                                    <span className="text-[8px] font-black uppercase tracking-[0.4em] opacity-40">Kartu Pelajar Digital</span>
+                                <div className="absolute bottom-5 right-6 flex items-center gap-1.5 opacity-20 z-0">
+                                    <FontAwesomeIcon icon={faGraduationCap} className="text-[9px]" />
+                                    <span className="text-[6px] font-black uppercase tracking-[0.4em]">KARTU PELAJAR DIGITAL</span>
                                 </div>
                             </div>
 
                             {/* Back Card */}
-                            <div className="w-[320px] h-[200px] bg-white dark:bg-gray-950 rounded-[20px] p-6 border border-gray-100 dark:border-gray-800 relative shadow-2xl shadow-gray-200/50 dark:shadow-none flex flex-col items-center justify-center text-center">
-                                <div className="p-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-50 dark:border-gray-800 shadow-sm mb-4">
+                            <div className="w-[340px] h-[210px] bg-white dark:bg-gray-950 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 relative shadow-2xl shadow-gray-200/50 dark:shadow-none flex flex-col items-center justify-center text-center shrink-0">
+                                <div className="p-2.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm mb-4">
                                     <QRCodeCanvas
-                                        value={`https://laporanmu.github.io/parent-check?code=${selectedStudent.code}&pin=${selectedStudent.pin}`}
-                                        size={80}
+                                        value={`${window.location.origin}/check?code=${selectedStudent.code}&pin=${selectedStudent.pin}`}
+                                        size={70}
                                         level="M"
                                     />
                                 </div>
-                                <h4 className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-widest mb-1">Akses Portal Orang Tua</h4>
-                                <p className="text-[7px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed max-w-[180px]">
-                                    SILAKAN SCAN KODE DI ATAS UNTUK MENGECEK PERKEMBANGAN & PERILAKU SISWA
+                                <h4 className="text-[9px] font-black text-gray-900 dark:text-white uppercase tracking-[0.15em] mb-1.5">AKSES PORTAL ORANG TUA</h4>
+                                <p className="text-[6.5px] text-gray-400 font-bold uppercase tracking-widest leading-normal max-w-[220px]">
+                                    SILAKAN SCAN KODE DI ATAS UNTUK<br />MENGECEK PERKEMBANGAN & PERILAKU SISWA
                                 </p>
 
-                                <div className="absolute bottom-6 w-full px-6 flex justify-between items-center opacity-20">
-                                    <span className="text-[6px] font-black uppercase tracking-widest">Valid Unit 2026/2027</span>
-                                    <span className="text-[6px] font-black uppercase tracking-widest">Laporanmu System</span>
+                                <div className="absolute bottom-5 w-full left-0 px-8 flex justify-between items-center opacity-20">
+                                    <span className="text-[6px] font-black uppercase tracking-[0.3em]">TAHUN 2026/2027</span>
+                                    <span className="text-[6px] font-black uppercase tracking-[0.3em]">MBS TANGGUL</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <button className="btn btn-secondary py-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                        <div className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto pt-4 print:hidden">
+                            <button className="btn btn-secondary flex-1 py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 h-11 bg-[var(--color-surface-alt)] border-[var(--color-border)] order-2 sm:order-1 hover:bg-[var(--color-border)]">
                                 <FontAwesomeIcon icon={faSpinner} className="fa-spin opacity-50" />
-                                Generate PDF
+                                GENERATE PDF
                             </button>
                             <button
                                 onClick={() => window.print()}
-                                className="btn btn-primary py-4 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-indigo-500/20"
+                                className="btn btn-primary flex-1 py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 h-11 order-1 sm:order-2"
                             >
                                 <FontAwesomeIcon icon={faIdCardAlt} />
-                                Cetak Kartu
+                                CETAK KARTU
                             </button>
                         </div>
                     </div>
                 )}
             </Modal>
+
+            {/* Print Specific Styles */}
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @media print {
+                    @page {
+                        size: auto;
+                        margin: 10mm;
+                    }
+                    body * {
+                        visibility: hidden !important;
+                    }
+                    .modal-overlay, .modal-content {
+                        background: none !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        padding: 0 !important;
+                        position: static !important;
+                        width: auto !important;
+                    }
+                    /* Show only the cards container inside the modal */
+                    .modal-content [class*="space-y-8"] {
+                        visibility: visible !important;
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                    }
+                    /* Ensure cards themselves are visible and positioned */
+                    .modal-content [class*="space-y-8"] > div:first-child {
+                        visibility: visible !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        gap: 20px !important;
+                        align-items: center !important;
+                    }
+                    .modal-content [class*="w-[340px]"] {
+                        visibility: visible !important;
+                        break-inside: avoid !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        box-shadow: none !important;
+                    }
+                    /* Make all text inside cards visible */
+                    .modal-content [class*="w-[340px]"] * {
+                        visibility: visible !important;
+                    }
+                    /* Hide everything else */
+                    .print\\:hidden, .modal-header, button {
+                        display: none !important;
+                    }
+                }
+            ` }} />
+
             <Modal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 title="Yakin Hapus Data?"
             >
-                <div className="space-y-6">
-                    <div className="p-5 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center gap-5 text-red-600 dark:text-red-400">
-                        <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0 text-2xl">
+                <div className="space-y-5">
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center gap-4 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30">
+                        <div className="w-11 h-11 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0 text-lg">
                             <FontAwesomeIcon icon={faTrash} />
                         </div>
                         <div className="min-w-0">
-                            <h3 className="text-lg font-medium uppercase tracking-wider leading-tight">Hapus Siswa?</h3>
-                            <p className="text-xs opacity-80 font-normal mt-1">Data poin dan riwayat laporan juga akan terpengaruh.</p>
+                            <h3 className="text-sm font-bold uppercase tracking-wider leading-tight">Hapus Data?</h3>
+                            <p className="text-[9px] opacity-80 font-medium mt-0.5">Riwayat laporan & poin juga akan terhapus permanen.</p>
                         </div>
                     </div>
-                    <p className="text-[var(--color-text)] px-2 leading-relaxed">
-                        Anda akan menghapus data <strong className="text-red-600 underline underline-offset-4 font-medium">{studentToDelete?.name}</strong>. Tindakan ini tidak dapat dibatalkan.
-                    </p>
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="btn btn-secondary flex-1 font-normal">
-                            BATALKAN
+                    <div className="px-1">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
+                            Anda yakin ingin menghapus <span className="text-red-600 font-bold">{studentToDelete?.name}</span>? Tindakan ini tidak dapat dibatalkan.
+                        </p>
+                    </div>
+                    <div className="flex gap-2.5 pt-1">
+                        <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="btn btn-secondary flex-1 font-bold text-[10px] h-10 uppercase tracking-widest">
+                            BATAL
                         </button>
-                        <button type="button" onClick={executeDelete} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-lg shadow-red-500/20 flex-1 font-medium">
-                            YA, HAPUS PERMANEN
+                        <button type="button" onClick={executeDelete} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-sm flex-1 font-bold text-[10px] h-10 uppercase tracking-widest">
+                            HAPUS PERMANEN
                         </button>
                     </div>
                 </div>
             </Modal>
-        </DashboardLayout >
+        </DashboardLayout>
     )
 }

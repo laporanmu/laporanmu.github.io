@@ -34,7 +34,7 @@ export default function DashboardLayout({ children, title }) {
             <div className="flex-1 flex flex-col lg:ml-[var(--sidebar-width)]">
                 {/* Top Bar */}
                 <header className="sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-                    <div className="px-4 lg:px-6 py-3 flex items-center justify-between">
+                    <div className="px-4 lg:px-6 py-2.5 flex items-center justify-between">
                         {/* Left */}
                         <div className="flex items-center gap-4">
                             <button
@@ -42,13 +42,13 @@ export default function DashboardLayout({ children, title }) {
                                 className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
                                 aria-label="Buka menu"
                             >
-                                <FontAwesomeIcon icon={faBars} className="text-lg" />
+                                <FontAwesomeIcon icon={faBars} className="text-base" />
                             </button>
                             <div>
-                                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                                <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-none">
                                     {derivedTitle}
                                 </h2>
-                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                                <p className="text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500 font-medium mt-0.5">
                                     {today}
                                 </p>
                             </div>
@@ -76,14 +76,14 @@ export default function DashboardLayout({ children, title }) {
 
                             {/* User */}
                             <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-gray-200 dark:border-gray-800">
-                                <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-semibold">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-[11px] font-black shadow-sm">
                                     {profile?.name?.charAt(0) || 'U'}
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[140px]">
+                                    <span className="text-[13px] font-bold text-gray-900 dark:text-white truncate max-w-[140px] leading-tight">
                                         {profile?.name || 'User'}
                                     </span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                                    <span className="text-[10px] text-gray-400 dark:text-gray-500 capitalize font-bold tracking-tight">
                                         {profile?.role || 'Staff'}
                                     </span>
                                 </div>
@@ -93,7 +93,7 @@ export default function DashboardLayout({ children, title }) {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 px-4 lg:px-6 py-5">
+                <main className="flex-1 px-4 lg:px-6 py-4">
                     {children}
                 </main>
             </div>

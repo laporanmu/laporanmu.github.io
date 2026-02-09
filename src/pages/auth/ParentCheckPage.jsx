@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faIdCard, faKey, faSearch, faSpinner, faArrowLeft, faPhone, faSun, faMoon } from '@fortawesome/free-solid-svg-icons'
@@ -19,25 +19,22 @@ export default function ParentCheckPage() {
     const { addToast } = useToast()
     const { isDark, toggleTheme } = useTheme()
 
-    const formatCode = (value) => {
-        const raw = value.replace(/-/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11)
-        const part1 = raw.slice(0, 3)
-        const part2 = raw.slice(3, 7)
-        const part3 = raw.slice(7, 11)
-        let formatted = part1
-        if (part2) formatted += '-' + part2
-        if (part3) formatted += '-' + part3
-        return formatted
-    }
+    // Support Auto-Login from QR Code
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const urlCode = params.get('code')
+        const urlPin = params.get('pin')
 
-    const handleCheck = async (e) => {
-        e.preventDefault()
-        if (!code || !pin) {
-            const msg = 'Silakan isi kode registrasi dan PIN'
-            setErrorMessage(msg)
-            addToast(msg, 'warning')
-            return
+        if (urlCode && urlPin) {
+            setCode(urlCode)
+            setPin(urlPin)
+            // Trigger check automatically
+            performCheck(urlCode, urlPin)
         }
+    }, [])
+
+    const performCheck = async (checkCode, checkPin) => {
+        if (!checkCode || !checkPin) return
 
         setLoading(true)
         setErrorMessage('')
@@ -50,8 +47,8 @@ export default function ParentCheckPage() {
                     *,
                     classes (id, name)
                 `)
-                .eq('registration_code', code)
-                .eq('pin', pin)
+                .eq('registration_code', checkCode)
+                .eq('pin', checkPin)
                 .single()
 
             if (studentError || !studentData) {
@@ -96,6 +93,22 @@ export default function ParentCheckPage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const formatCode = (value) => {
+        const raw = value.replace(/-/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11)
+        const part1 = raw.slice(0, 3)
+        const part2 = raw.slice(3, 7)
+        const part3 = raw.slice(7, 11)
+        let formatted = part1
+        if (part2) formatted += '-' + part2
+        if (part3) formatted += '-' + part3
+        return formatted
+    }
+
+    const handleCheck = async (e) => {
+        e.preventDefault()
+        performCheck(code, pin)
     }
 
     const handleReset = () => {

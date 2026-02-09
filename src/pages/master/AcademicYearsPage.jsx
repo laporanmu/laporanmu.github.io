@@ -33,41 +33,91 @@ export default function AcademicYearsPage() {
 
     return (
         <DashboardLayout title="Tahun Pelajaran">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div><h1 className="text-2xl font-bold">Tahun Pelajaran</h1><p className="text-[var(--color-text-muted)]">Kelola tahun pelajaran dan semester aktif</p></div>
-                <button onClick={handleAdd} className="btn btn-primary"><FontAwesomeIcon icon={faPlus} /> Tambah</button>
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                <div>
+                    <h1 className="text-xl font-bold">Tahun Pelajaran</h1>
+                    <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5">Kelola tahun pelajaran dan semester aktif dalam sistem.</p>
+                </div>
+                <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-indigo-500/20 h-10 text-xs font-bold px-4">
+                    <FontAwesomeIcon icon={faPlus} />
+                    <span className="ml-2 uppercase tracking-widest">TAMBAH</span>
+                </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {years.map(year => (
-                    <div key={year.id} className={`card flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${year.isActive ? 'border-2 border-indigo-500' : ''}`}>
-                        <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold ${year.isActive ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white' : 'bg-[var(--color-surface-alt)]'}`}>
+                    <div key={year.id} className={`bg-white dark:bg-gray-950 border rounded-xl p-4 shadow-sm transition-all hover:shadow-md relative overflow-hidden group ${year.isActive ? 'border-2 border-indigo-500' : 'border-[var(--color-border)]'}`}>
+                        {year.isActive && (
+                            <div className="absolute top-0 right-0">
+                                <span className="bg-indigo-500 text-white text-[9px] font-black px-3 py-1 rounded-bl-lg uppercase tracking-widest">AKTIF</span>
+                            </div>
+                        )}
+                        <div className="flex items-start gap-4">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 shadow-inner ${year.isActive ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white' : 'bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 text-gray-400'}`}>
                                 {year.name.slice(2, 4)}
                             </div>
-                            <div>
-                                <h3 className="font-semibold flex items-center gap-2">{year.name} - {year.semester} {year.isActive && <span className="badge badge-success">Aktif</span>}</h3>
-                                <p className="text-sm text-[var(--color-text-muted)]">{year.startDate} s/d {year.endDate}</p>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 truncate">
+                                    {year.name}
+                                </h3>
+                                <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mt-0.5">{year.semester} SEMESTER</p>
+                                <div className="text-[10px] text-gray-400 font-medium mt-2 flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-200"></div>
+                                    {year.startDate} <span className="text-[8px]">Hingga</span> {year.endDate}
+                                </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {!year.isActive && <button onClick={() => handleSetActive(year)} className="btn btn-secondary text-sm">Aktifkan</button>}
-                            <button onClick={() => handleEdit(year)} className="p-2 text-[var(--color-text-muted)] hover:text-indigo-500"><FontAwesomeIcon icon={faEdit} /></button>
-                            <button onClick={() => handleDelete(year)} className="p-2 text-[var(--color-text-muted)] hover:text-red-500"><FontAwesomeIcon icon={faTrash} /></button>
+
+                        <div className="flex items-center justify-between gap-2 mt-4 pt-4 border-t border-gray-50 dark:border-gray-900">
+                            {!year.isActive ? (
+                                <button onClick={() => handleSetActive(year)} className="text-[9px] font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest">Aktifkan Sekarang</button>
+                            ) : (
+                                <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                                    Sistem Sedang Digunakan
+                                </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => handleEdit(year)} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all text-[10px]" title="Edit">
+                                    <FontAwesomeIcon icon={faEdit} />
+                                </button>
+                                <button onClick={() => handleDelete(year)} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all text-[10px]" title="Hapus">
+                                    <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedItem ? 'Edit Tahun Pelajaran' : 'Tambah Tahun Pelajaran'}>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedItem ? 'Update Tahun Pelajaran' : 'Tahun Pelajaran Baru'} size="sm">
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div><label className="block text-sm font-medium mb-2">Tahun Pelajaran</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. 2024/2025" className="input" /></div>
-                    <div><label className="block text-sm font-medium mb-2">Semester</label><select value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} className="input"><option value="Ganjil">Ganjil</option><option value="Genap">Genap</option></select></div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div><label className="block text-sm font-medium mb-2">Tanggal Mulai</label><input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} className="input" /></div>
-                        <div><label className="block text-sm font-medium mb-2">Tanggal Selesai</label><input type="date" value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} className="input" /></div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Tahun Pelajaran</label>
+                        <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. 2024/2025" className="input-field font-bold text-xs py-2.5 h-10" />
                     </div>
-                    <div className="flex justify-end gap-3 pt-4"><button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">Batal</button><button type="submit" className="btn btn-primary">{selectedItem ? 'Update' : 'Simpan'}</button></div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Semester</label>
+                        <select value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} className="select-field font-bold text-xs py-2 h-10">
+                            <option value="Ganjil">Ganjil</option>
+                            <option value="Genap">Genap</option>
+                        </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Tanggal Mulai</label>
+                            <input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} className="input-field font-bold text-xs py-2 h-10" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Tanggal Selesai</label>
+                            <input type="date" value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} className="input-field font-bold text-xs py-2 h-10" />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary font-bold py-2 text-xs h-10 px-6 uppercase tracking-widest">Batal</button>
+                        <button type="submit" className="btn btn-primary px-8 font-bold shadow-md shadow-indigo-500/20 py-2 text-xs h-10 uppercase tracking-widest">{selectedItem ? 'UPDATE' : 'SIMPAN'}</button>
+                    </div>
                 </form>
             </Modal>
         </DashboardLayout>
