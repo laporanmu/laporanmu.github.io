@@ -61,107 +61,115 @@ export default function ReportsPage() {
 
     return (
         <DashboardLayout title="Laporan Perilaku">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
                 <div>
-                    <h1 className="text-2xl font-bold">Laporan Perilaku</h1>
-                    <p className="text-[var(--color-text-muted)]">Rekam dan pantau perilaku siswa</p>
+                    <h1 className="text-xl font-bold">Laporan Perilaku</h1>
+                    <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium">Rekam dan pantau perilaku siswa secara real-time.</p>
                 </div>
-                <button onClick={handleAdd} className="btn btn-primary">
-                    <FontAwesomeIcon icon={faPlus} /> Buat Laporan
+                <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-indigo-500/20 h-10 text-xs font-bold px-4">
+                    <FontAwesomeIcon icon={faPlus} />
+                    <span className="ml-2 uppercase tracking-widest">BUAT LAPORAN</span>
                 </button>
             </div>
 
-            <div className="card mb-6">
+            <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl mb-5 p-3.5 shadow-sm">
                 <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1 relative">
-                        <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                    <div className="flex-1 relative font-normal">
+                        <FontAwesomeIcon icon={faSearch} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari siswa atau jenis..."
-                            className="input-field pl-10"
+                            className="input-field pl-10 h-10 text-xs"
                         />
                     </div>
                     <div className="flex gap-2">
-                        <button className="btn btn-secondary"><FontAwesomeIcon icon={faFilter} /> Filter</button>
-                        <button className="btn btn-secondary"><FontAwesomeIcon icon={faFileExport} /> Export</button>
+                        <button className="btn btn-secondary h-10 px-4 text-xs font-bold uppercase tracking-widest"><FontAwesomeIcon icon={faFilter} className="mr-2" /> Filter</button>
+                        <button className="btn btn-secondary h-10 px-4 text-xs font-bold uppercase tracking-widest"><FontAwesomeIcon icon={faFileExport} className="mr-2" /> Export</button>
                     </div>
                 </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {filteredReports.map(report => (
-                    <div key={report.id} className={`card border-l-4 ${report.points > 0 ? 'border-l-emerald-500' : 'border-l-red-500'}`}>
+                    <div key={report.id} className={`bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-3.5 shadow-sm border-l-4 transition-all hover:border-l-8 ${report.points > 0 ? 'border-l-emerald-500' : 'border-l-red-500'}`}>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="flex items-start gap-4">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${report.points > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
-                                    <FontAwesomeIcon icon={report.points > 0 ? faArrowUp : faArrowDown} />
+                            <div className="flex items-start gap-3.5">
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm ${report.points > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                                    <FontAwesomeIcon icon={report.points > 0 ? faArrowUp : faArrowDown} className="text-xs" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold">{report.student}</h3>
-                                    <p className="text-sm text-[var(--color-text-muted)]">{report.class} • {report.type}</p>
-                                    {report.notes && <p className="text-sm text-[var(--color-text-muted)] mt-1">"{report.notes}"</p>}
+                                    <h3 className="font-bold text-[14px] text-gray-900 dark:text-white leading-tight">{report.student}</h3>
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight mt-0.5">{report.class} • {report.type}</p>
+                                    {report.notes && <p className="text-[11px] text-gray-500 italic mt-2 py-1.5 px-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-100 dark:border-gray-800">"{report.notes}"</p>}
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <span className={`badge ${report.points > 0 ? 'badge-success' : 'badge-danger'}`}>
-                                    {report.points > 0 ? '+' : ''}{report.points} poin
+                            <div className="text-right shrink-0">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter ${report.points > 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' : 'bg-red-50 text-red-600 dark:bg-red-900/20'}`}>
+                                    {report.points > 0 ? '+' : ''}{report.points} POIN
                                 </span>
-                                <p className="text-xs text-[var(--color-text-muted)] mt-1">{report.date} {report.time}</p>
-                                <p className="text-xs text-[var(--color-text-muted)]">oleh {report.teacher}</p>
+                                <div className="mt-2 space-y-0.5">
+                                    <p className="text-[10px] text-gray-400 font-bold">{report.date} • {report.time}</p>
+                                    <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest leading-none">OLEH {report.teacher}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Buat Laporan Baru">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Buat Laporan Baru" size="md">
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Nama Siswa</label>
-                        <input
-                            type="text"
-                            value={formData.student}
-                            onChange={(e) => setFormData({ ...formData, student: e.target.value })}
-                            placeholder="Ketik nama siswa..."
-                            className="input-field"
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nama Siswa</label>
+                            <input
+                                type="text"
+                                value={formData.student}
+                                onChange={(e) => setFormData({ ...formData, student: e.target.value })}
+                                placeholder="Ketik nama siswa..."
+                                className="input-field font-bold text-xs py-2.5 h-10"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Kelas</label>
+                            <input
+                                type="text"
+                                value={formData.class}
+                                onChange={(e) => setFormData({ ...formData, class: e.target.value })}
+                                placeholder="e.g. XII IPA 1"
+                                className="input-field font-bold text-xs py-2.5 h-10"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Jenis Laporan</label>
+                            <select
+                                value={formData.type}
+                                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                className="select-field font-bold text-xs py-2 h-10"
+                            >
+                                <option value="">Pilih jenis...</option>
+                                {VIOLATION_TYPES.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Catatan Tambahan (Opsional)</label>
+                            <textarea
+                                value={formData.notes}
+                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                placeholder="Tambahkan informasi pendukung..."
+                                className="textarea-field font-medium text-xs py-2.5"
+                                rows={3}
+                            />
+                        </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Kelas</label>
-                        <input
-                            type="text"
-                            value={formData.class}
-                            onChange={(e) => setFormData({ ...formData, class: e.target.value })}
-                            placeholder="e.g. XII IPA 1"
-                            className="input-field"
-                        />
+                    <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary font-bold py-2 text-xs h-10 px-6 uppercase tracking-widest">Batal</button>
+                        <button type="submit" className="btn btn-primary px-8 font-bold shadow-md shadow-indigo-500/20 py-2 text-xs h-10 uppercase tracking-widest">SIMPAN LAPORAN</button>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Jenis</label>
-                        <select
-                            value={formData.type}
-                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                            className="select-field"
-                        >
-                            <option value="">Pilih jenis...</option>
-                            {VIOLATION_TYPES.map(t => (
-                                <option key={t} value={t}>{t}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Catatan (Opsional)</label>
-                        <textarea
-                            value={formData.notes}
-                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                            placeholder="Tambahkan catatan..."
-                            className="textarea-field"
-                            rows={3}
-                        />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4"><button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">Batal</button><button type="submit" className="btn btn-primary">Simpan</button></div>
                 </form>
             </Modal>
         </DashboardLayout>

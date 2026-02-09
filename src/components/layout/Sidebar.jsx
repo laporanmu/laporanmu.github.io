@@ -74,13 +74,13 @@ export default function Sidebar({ isOpen, onClose }) {
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
             >
                 {/* Logo */}
-                <div className="h-16 flex items-center gap-3 px-5 border-b border-[var(--color-border)]">
-                    <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">L</span>
+                <div className="h-14 flex items-center gap-3 px-5 border-b border-[var(--color-border)]">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <span className="text-white font-black text-sm">L</span>
                     </div>
-                    <div>
-                        <h1 className="font-bold text-lg text-[var(--color-text)]">Laporanmu</h1>
-                        <p className="text-xs text-[var(--color-text-muted)]">Student Behavior System</p>
+                    <div className="min-w-0">
+                        <h1 className="font-bold text-[15px] text-[var(--color-text)] leading-none truncate">Laporanmu</h1>
+                        <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-tighter mt-0.5 truncate text-indigo-500">Student Behavior</p>
                     </div>
                 </div>
 
@@ -102,13 +102,13 @@ export default function Sidebar({ isOpen, onClose }) {
                                     <div>
                                         <button
                                             onClick={() => toggleMenu(item.label)}
-                                            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg 
-                        text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] 
-                        hover:text-[var(--color-text)] transition-colors"
+                                            className="w-full flex items-center justify-between px-3 py-2 rounded-lg 
+                        text-[var(--color-text-muted)] hover:bg-gray-50 dark:hover:bg-gray-900 
+                        hover:text-indigo-600 transition-all font-bold group/btn"
                                         >
                                             <span className="flex items-center gap-3">
-                                                <FontAwesomeIcon icon={item.icon} className="w-4" />
-                                                <span className="text-sm font-medium">{item.label}</span>
+                                                <FontAwesomeIcon icon={item.icon} className="w-4 text-xs group-hover/btn:scale-110 transition-transform" />
+                                                <span className="text-xs uppercase tracking-tight">{item.label}</span>
                                             </span>
                                             <FontAwesomeIcon
                                                 icon={faChevronDown}
@@ -116,21 +116,21 @@ export default function Sidebar({ isOpen, onClose }) {
                                             />
                                         </button>
                                         {expandedMenus.includes(item.label) && (
-                                            <ul className="mt-1 ml-4 pl-4 border-l border-[var(--color-border)] space-y-1">
+                                            <ul className="mt-1 ml-3.5 pl-3.5 border-l border-gray-100 dark:border-gray-800 space-y-0.5">
                                                 {item.children.map((child, childIdx) => (
                                                     <li key={childIdx}>
                                                         <NavLink
                                                             to={child.path}
                                                             onClick={onClose}
                                                             className={({ isActive }) =>
-                                                                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
+                                                                `flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-bold transition-all uppercase tracking-tight
                                 ${isActive
-                                                                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium'
-                                                                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text)]'
+                                                                    ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                                                                    : 'text-gray-400 dark:text-gray-500 hover:text-indigo-500'
                                                                 }`
                                                             }
                                                         >
-                                                            <FontAwesomeIcon icon={child.icon} className="w-4" />
+                                                            <FontAwesomeIcon icon={child.icon} className="w-3" />
                                                             {child.label}
                                                         </NavLink>
                                                     </li>
@@ -143,10 +143,10 @@ export default function Sidebar({ isOpen, onClose }) {
                                         to={item.path}
                                         onClick={onClose}
                                         className={({ isActive }) =>
-                                            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                                            `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-bold transition-all uppercase tracking-tight
                       ${isActive
-                                                ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium'
-                                                : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text)]'
+                                                ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                                                : 'text-gray-400 dark:text-gray-500 hover:text-indigo-500'
                                             }`
                                         }
                                     >
