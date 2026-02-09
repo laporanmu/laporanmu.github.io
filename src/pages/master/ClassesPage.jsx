@@ -351,17 +351,17 @@ export default function ClassesPage() {
                                             <div className="flex items-center justify-end gap-1">
                                                 <button
                                                     onClick={() => handleEdit(cls)}
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all active:scale-90"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all active:scale-90"
                                                     title="Edit"
                                                 >
-                                                    <FontAwesomeIcon icon={faEdit} />
+                                                    <FontAwesomeIcon icon={faEdit} className="text-sm" />
                                                 </button>
                                                 <button
                                                     onClick={() => confirmDelete(cls)}
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90"
                                                     title="Hapus"
                                                 >
-                                                    <FontAwesomeIcon icon={faTrash} />
+                                                    <FontAwesomeIcon icon={faTrash} className="text-sm" />
                                                 </button>
                                             </div>
                                         </td>
@@ -374,32 +374,32 @@ export default function ClassesPage() {
             )}
 
             {/* Create/Edit Modal */}
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedItem ? 'Edit Kelas' : 'Tambah Kelas Baru'} size="lg">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <section className="space-y-4">
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedItem ? 'Edit Kelas' : 'Tambah Kelas Baru'} size="md">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <section className="space-y-3">
+                        <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-indigo-600 dark:text-indigo-400 border-b border-[var(--color-border)] pb-1.5 flex items-center gap-2">
                             <FontAwesomeIcon icon={faBuilding} className="text-indigo-500" /> Identitas Kelas
                         </h4>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className="block text-sm font-bold text-[var(--color-text)] mb-2">Nama Kelas <span className="text-red-500">*</span></label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1.5 ml-1">Nama Kelas <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="Contoh: 7A, 8B, X IPA 1"
-                                    className="input-field font-bold"
+                                    className="input-field font-medium text-sm py-2"
                                     autoFocus
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-[var(--color-text)] mb-2">Tingkat (Level)</label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1.5 ml-1">Tingkat (Level)</label>
                                 <select
                                     value={formData.level}
                                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                                    className="select-field"
+                                    className="select-field font-medium text-sm py-2"
                                 >
                                     <option value="">Pilih Tingkat</option>
                                     {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
@@ -407,16 +407,16 @@ export default function ClassesPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
                             <div>
-                                <label className="block text-sm font-bold text-[var(--color-text)] mb-2">Program</label>
-                                <div className="flex gap-2 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1.5 ml-1">Program</label>
+                                <div className="flex gap-1.5 p-1 bg-[var(--color-surface-alt)] rounded-lg border border-[var(--color-border)]">
                                     {PROGRAMS.map(prog => (
                                         <button
                                             key={prog}
                                             type="button"
                                             onClick={() => setFormData({ ...formData, program: prog })}
-                                            className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-bold transition-all
+                                            className={`flex-1 py-1.5 px-3 rounded-md text-[10px] font-bold transition-all
                                                 ${formData.program === prog
                                                     ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-sm ring-1 ring-black/5'
                                                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
@@ -429,57 +429,57 @@ export default function ClassesPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-[var(--color-text)] mb-2">Gender Khusus</label>
-                                <div className="flex gap-2 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1.5 ml-1">Gender Khusus</label>
+                                <div className="flex gap-1.5 p-1 bg-[var(--color-surface-alt)] rounded-lg border border-[var(--color-border)]">
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, gender_type: formData.gender_type === 'Putra' ? '' : 'Putra' })}
-                                        className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2
+                                        className={`flex-1 py-1.5 px-3 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-2
                                             ${formData.gender_type === 'Putra'
                                                 ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm ring-1 ring-black/5'
                                                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
                                             }`}
                                     >
-                                        <FontAwesomeIcon icon={faVenusMars} className="text-xs" /> Putra
+                                        <FontAwesomeIcon icon={faVenusMars} className="text-[9px]" /> Putra
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, gender_type: formData.gender_type === 'Putri' ? '' : 'Putri' })}
-                                        className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2
+                                        className={`flex-1 py-1.5 px-3 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-2
                                             ${formData.gender_type === 'Putri'
                                                 ? 'bg-white dark:bg-pink-600 text-pink-600 dark:text-white shadow-sm ring-1 ring-black/5'
                                                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
                                             }`}
                                     >
-                                        <FontAwesomeIcon icon={faVenusMars} className="text-xs" /> Putri
+                                        <FontAwesomeIcon icon={faVenusMars} className="text-[9px]" /> Putri
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <section className="space-y-4">
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
+                    <section className="space-y-3 pt-1">
+                        <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-indigo-600 dark:text-indigo-400 border-b border-[var(--color-border)] pb-1.5 flex items-center gap-2">
                             <FontAwesomeIcon icon={faSchool} className="text-indigo-500" /> Wali & Akademik
                         </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
                             <div>
-                                <label className="block text-sm font-bold text-[var(--color-text)] mb-2">Wali Kelas</label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1.5 ml-1">Wali Kelas</label>
                                 <select
                                     value={formData.homeroom_teacher_id}
                                     onChange={(e) => setFormData({ ...formData, homeroom_teacher_id: e.target.value })}
-                                    className="select-field"
+                                    className="select-field font-medium text-sm py-2"
                                 >
                                     <option value="">Pilih Wali Kelas</option>
                                     {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-[var(--color-text)] mb-2">Tahun Ajaran</label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1.5 ml-1">Tahun Ajaran</label>
                                 <select
                                     value={formData.academic_year_id}
                                     onChange={(e) => setFormData({ ...formData, academic_year_id: e.target.value })}
-                                    className="select-field"
+                                    className="select-field font-medium text-sm py-2"
                                 >
                                     <option value="">Pilih Tahun Ajaran</option>
                                     {academicYearsList.map(y => <option key={y.id} value={y.id}>{y.label || y.name}</option>)}
@@ -488,9 +488,9 @@ export default function ClassesPage() {
                         </div>
                     </section>
 
-                    <div className="flex justify-end gap-3 pt-6 border-t border-[var(--color-border)]">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary font-bold">Batal</button>
-                        <button type="submit" className="btn btn-primary px-8 font-extrabold shadow-lg shadow-indigo-500/30">{selectedItem ? 'Update Kelas' : 'Simpan Kelas'}</button>
+                    <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary font-bold py-2 text-xs">Batal</button>
+                        <button type="submit" className="btn btn-primary px-8 font-bold shadow-md shadow-indigo-500/20 py-2 text-xs">{selectedItem ? 'UPDATE KELAS' : 'SIMPAN KELAS'}</button>
                     </div>
                 </form>
             </Modal>
@@ -498,13 +498,13 @@ export default function ClassesPage() {
             {/* Custom Delete Confirmation Modal */}
             <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Konfirmasi Hapus">
                 <div className="space-y-6">
-                    <div className="p-5 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center gap-5 text-red-600 dark:text-red-400">
-                        <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0 text-2xl">
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center gap-4 text-red-600 dark:text-red-400">
+                        <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0 text-xl">
                             <FontAwesomeIcon icon={faTrash} />
                         </div>
                         <div>
-                            <h3 className="text-lg font-black uppercase tracking-wider">Hapus Kelas?</h3>
-                            <p className="text-sm opacity-80 font-medium">Tindakan ini permanen dan tidak bisa dibatalkan.</p>
+                            <h3 className="text-sm font-bold uppercase tracking-wider">Hapus Kelas?</h3>
+                            <p className="text-[10px] opacity-80 font-medium">Tindakan ini permanen dan tidak bisa dibatalkan.</p>
                         </div>
                     </div>
                     <p className="text-[var(--color-text)] leading-relaxed px-2">
@@ -512,11 +512,11 @@ export default function ClassesPage() {
                         <br />
                         <span className="text-sm text-[var(--color-text-muted)] mt-2 block italic">Semua data siswa dalam kelas ini mungkin akan kehilangan referensi kelas.</span>
                     </p>
-                    <div className="flex justify-stretch gap-3 pt-2">
-                        <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="btn btn-secondary flex-1 font-bold">
-                            Batalkan
+                    <div className="flex justify-stretch gap-2 pt-2">
+                        <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="btn btn-secondary flex-1 font-bold py-2 text-xs">
+                            BATALKAN
                         </button>
-                        <button type="button" onClick={executeDelete} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-xl shadow-red-500/20 flex-1 font-black">
+                        <button type="button" onClick={executeDelete} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-lg shadow-red-500/20 flex-1 font-bold py-2 text-xs">
                             YA, HAPUS
                         </button>
                     </div>
