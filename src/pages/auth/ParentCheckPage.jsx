@@ -5,26 +5,10 @@ import { faIdCard, faKey, faSearch, faSpinner, faArrowLeft, faPhone, faSun, faMo
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { useToast } from '../../context/ToastContext'
 import { useTheme } from '../../context/ThemeContext'
+import { supabase } from '../../lib/supabase'
 
 // Demo data for parent check
-const DEMO_STUDENTS = [
-    {
-        id: 1,
-        code: 'REG-7K3Q-9P2X',
-        pin: '1234',
-        name: 'Ahmad Rizki Pratama',
-        class: 'XII IPA 1',
-        photo: null,
-        points: -15,
-        reports: [
-            { id: 1, date: '2024-01-15', type: 'Terlambat', points: -5, teacher: 'Ibu Sari' },
-            { id: 2, date: '2024-01-20', type: 'Tidak mengerjakan PR', points: -10, teacher: 'Bapak Budi' },
-        ],
-        achievements: [
-            { id: 1, date: '2024-01-10', type: 'Juara Kelas', points: 20, teacher: 'Wali Kelas' },
-        ],
-    },
-]
+// Demo data removed - using Supabase live
 
 export default function ParentCheckPage() {
     const [code, setCode] = useState('')
@@ -56,25 +40,62 @@ export default function ParentCheckPage() {
         }
 
         setLoading(true)
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        setErrorMessage('')
 
-        const found = DEMO_STUDENTS.find(s =>
-            s.code.toLowerCase() === code.toLowerCase() && s.pin === pin
-        )
+        try {
+            // Fetch student with class info
+            const { data: studentData, error: studentError } = await supabase
+                .from('students')
+                .select(`
+                    *,
+                    classes (id, name)
+                `)
+                .eq('registration_code', code)
+                .eq('pin', pin)
+                .single()
 
-        setLoading(false)
+            if (studentError || !studentData) {
+                throw new Error('Kode registrasi atau PIN tidak valid')
+            }
 
-        if (found) {
-            setStudent(found)
-            setErrorMessage('')
+            // Fetch behavior history
+            const { data: historyData, error: historyError } = await supabase
+                .from('behavior_reports')
+                .select('*')
+                .eq('student_id', studentData.id)
+                .order('created_at', { ascending: false })
+
+            const reports = (historyData || []).filter(h => h.points < 0).map(h => ({
+                id: h.id,
+                date: new Date(h.created_at).toLocaleDateString('id-ID'),
+                type: h.type,
+                points: h.points,
+                teacher: h.teacher_name || 'Staff Sekolah'
+            }))
+
+            const achievements = (historyData || []).filter(h => h.points >= 0).map(h => ({
+                id: h.id,
+                date: new Date(h.created_at).toLocaleDateString('id-ID'),
+                type: h.type,
+                points: h.points,
+                teacher: h.teacher_name || 'Staff Sekolah'
+            }))
+
+            setStudent({
+                ...studentData,
+                class: studentData.classes?.name || '-',
+                points: studentData.total_points || 0,
+                reports,
+                achievements
+            })
+
             addToast('Data ditemukan!', 'success')
-            return
+        } catch (err) {
+            setErrorMessage(err.message)
+            addToast(err.message, 'error')
+        } finally {
+            setLoading(false)
         }
-
-        const msg = 'Kode registrasi atau PIN tidak valid'
-        setErrorMessage(msg)
-        addToast(msg, 'error')
     }
 
     const handleReset = () => {
@@ -113,8 +134,12 @@ export default function ParentCheckPage() {
                     {/* Compact Profile Card */}
                     <div className="bg-white dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
                         <div className="flex items-center gap-4 mb-4">
-                            <div className="w-16 h-16 rounded-xl bg-indigo-600 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-indigo-600/10 shrink-0">
-                                {student.name.charAt(0)}
+                            <div className="w-16 h-16 rounded-xl bg-indigo-600 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-indigo-600/10 shrink-0 overflow-hidden">
+                                {student.photo_url ? (
+                                    <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    student.name.charAt(0)
+                                )}
                             </div>
                             <div className="min-w-0 flex-1">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate leading-tight mb-1">{student.name}</h2>
@@ -123,7 +148,7 @@ export default function ParentCheckPage() {
                                         {student.class}
                                     </span>
                                     <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500">
-                                        {student.code}
+                                        {student.registration_code}
                                     </span>
                                 </div>
                             </div>
@@ -329,12 +354,9 @@ export default function ParentCheckPage() {
                         <div className="text-[10px] font-medium text-gray-400 dark:text-gray-500 text-center flex flex-col gap-0.5">
                             <p className="flex items-center justify-center gap-1.5 opacity-60">
                                 <span className="w-1 h-1 rounded-full bg-indigo-500" />
-                                INFO DEMO AKSES
+                                PORTAL RESMI SEKOLAH
                             </p>
-                            <div className="flex items-center justify-center gap-3 mt-0.5">
-                                <span>KODE: <b className="text-gray-600 dark:text-gray-300">REG-7K3Q-9P2X</b></span>
-                                <span>PIN: <b className="text-gray-600 dark:text-gray-300">1234</b></span>
-                            </div>
+                            <p className="mt-1">Dapatkan Kode & PIN dari Wali Kelas</p>
                         </div>
                     </div>
                 </div>
