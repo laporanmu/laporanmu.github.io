@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faIdCard, faKey, faSearch, faSpinner, faArrowLeft, faPhone, faSun, faMoon } from '@fortawesome/free-solid-svg-icons'
@@ -7,34 +7,28 @@ import { useToast } from '../../context/ToastContext'
 import { useTheme } from '../../context/ThemeContext'
 import { supabase } from '../../lib/supabase'
 
-// Demo data for parent check
-// Demo data removed - using Supabase live
-
 export default function ParentCheckPage() {
     const [code, setCode] = useState('')
     const [pin, setPin] = useState('')
     const [loading, setLoading] = useState(false)
+    const [autoChecking, setAutoChecking] = useState(false)
     const [student, setStudent] = useState(null)
     const [errorMessage, setErrorMessage] = useState('')
     const { addToast } = useToast()
     const { isDark, toggleTheme } = useTheme()
 
-    // Support Auto-Login from QR Code
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search)
-        const urlCode = params.get('code')
-        const urlPin = params.get('pin')
-
-        if (urlCode && urlPin) {
-            setCode(urlCode)
-            setPin(urlPin)
-            // Trigger check automatically
-            performCheck(urlCode, urlPin)
+    // Memoized perform check function
+    const performCheck = useCallback(async (checkCode, checkPin) => {
+        if (!checkCode || !checkPin) {
+            setErrorMessage('Kode registrasi dan PIN harus diisi')
+            return
         }
-    }, [])
 
-    const performCheck = async (checkCode, checkPin) => {
-        if (!checkCode || !checkPin) return
+        // Normalize input - remove spaces, ensure uppercase
+        const normalizedCode = checkCode.trim().toUpperCase()
+        const normalizedPin = checkPin.trim()
+
+        console.log('🔍 Checking with:', { code: normalizedCode, pin: normalizedPin })
 
         setLoading(true)
         setErrorMessage('')
@@ -47,12 +41,14 @@ export default function ParentCheckPage() {
                     *,
                     classes (id, name)
                 `)
-                .eq('registration_code', checkCode)
-                .eq('pin', checkPin)
+                .eq('registration_code', normalizedCode)
+                .eq('pin', normalizedPin)
                 .single()
 
+            console.log('📊 Student query result:', { studentData, studentError })
+
             if (studentError || !studentData) {
-                throw new Error('Kode registrasi atau PIN tidak valid')
+                throw new Error('Kode registrasi atau PIN tidak valid. Pastikan Anda memasukkan data yang benar.')
             }
 
             // Fetch behavior history
@@ -61,6 +57,8 @@ export default function ParentCheckPage() {
                 .select('*')
                 .eq('student_id', studentData.id)
                 .order('created_at', { ascending: false })
+
+            console.log('📜 History query result:', { count: historyData?.length || 0, historyError })
 
             const reports = (historyData || []).filter(h => h.points < 0).map(h => ({
                 id: h.id,
@@ -86,14 +84,36 @@ export default function ParentCheckPage() {
                 achievements
             })
 
-            addToast('Data ditemukan!', 'success')
+            addToast('Data siswa berhasil ditemukan!', 'success')
         } catch (err) {
+            console.error('❌ Check error:', err)
             setErrorMessage(err.message)
             addToast(err.message, 'error')
         } finally {
             setLoading(false)
+            setAutoChecking(false)
         }
-    }
+    }, [addToast])
+
+    // Support Auto-Login from QR Code - FIXED
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const urlCode = params.get('code')
+        const urlPin = params.get('pin')
+
+        console.log('🔗 URL Params detected:', { urlCode, urlPin })
+
+        if (urlCode && urlPin) {
+            setCode(urlCode)
+            setPin(urlPin)
+            setAutoChecking(true)
+            
+            // Add small delay to ensure state is set
+            setTimeout(() => {
+                performCheck(urlCode, urlPin)
+            }, 300)
+        }
+    }, [performCheck])
 
     const formatCode = (value) => {
         const raw = value.replace(/-/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11)
@@ -116,6 +136,29 @@ export default function ParentCheckPage() {
         setCode('')
         setPin('')
         setErrorMessage('')
+        
+        // Clear URL params
+        window.history.replaceState({}, '', '/check')
+    }
+
+    // Auto-checking loading screen
+    if (autoChecking) {
+        return (
+            <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col items-center justify-center p-4 font-poppins">
+                <div className="text-center animate-in fade-in zoom-in-95 duration-500">
+                    <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-600/20 mx-auto mb-4">
+                        <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-white" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Memuat Data Siswa...</h3>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Mohon tunggu sebentar</p>
+                    <div className="mt-6 flex items-center justify-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     if (student) {
@@ -339,9 +382,11 @@ export default function ParentCheckPage() {
                         </div>
 
                         {errorMessage && (
-                            <p className="text-[10px] font-medium text-red-500 px-1">
-                                {errorMessage}
-                            </p>
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-xl p-3">
+                                <p className="text-[11px] font-medium text-red-600 dark:text-red-400 leading-relaxed">
+                                    {errorMessage}
+                                </p>
+                            </div>
                         )}
 
                         <button
@@ -389,4 +434,3 @@ export default function ParentCheckPage() {
         </div>
     )
 }
-
