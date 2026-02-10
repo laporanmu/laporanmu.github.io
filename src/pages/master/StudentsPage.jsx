@@ -1204,7 +1204,7 @@ export default function StudentsPage() {
                 </div>
             </Modal>
 
-            {/* Modal Cetak Kartu Siswa */}
+            {/* Modal Cetak Kartu Siswa - FIXED VERSION */}
             <Modal
                 isOpen={isPrintModalOpen}
                 onClose={() => setIsPrintModalOpen(false)}
@@ -1213,20 +1213,25 @@ export default function StudentsPage() {
             >
                 {selectedStudent && (
                     <div className="space-y-8 py-4">
-                        {/* ID Card Display (Miniature) */}
-                        <div className="flex flex-col lg:flex-row gap-8 justify-center items-center">
+                        {/* ID Card Display - Fixed Layout */}
+                        <div id="printable-cards" className="flex flex-col lg:flex-row gap-6 justify-center items-start">
                             {/* Front Card */}
-                            <div className="w-[340px] h-[210px] bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white relative shadow-2xl overflow-hidden shadow-indigo-500/30 shrink-0">
+                            <div className="w-[340px] h-[215px] bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl text-white relative shadow-2xl overflow-hidden shadow-indigo-500/30 shrink-0">
+                                {/* Background Decoration */}
                                 <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/5 rounded-full blur-2xl" />
-                                <div className="absolute top-5 right-5 flex items-center gap-2 z-10">
-                                    <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
-                                        <span className="font-black text-xs">L</span>
+                                
+                                {/* Header Logo */}
+                                <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                                    <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                        <span className="font-black text-[10px]">L</span>
                                     </div>
-                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-80">Laporanmu</span>
+                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-80">Laporanmu</span>
                                 </div>
 
-                                <div className="flex gap-4 items-end mt-8 h-full">
-                                    <div className="w-20 h-24 rounded-xl bg-white/10 border border-white/20 p-1.5 shrink-0 mb-4 z-10 shadow-xl">
+                                {/* Main Content Area */}
+                                <div className="absolute top-12 left-5 right-5 bottom-10 flex gap-3.5 z-10">
+                                    {/* Photo Section */}
+                                    <div className="w-[72px] h-[90px] rounded-xl bg-white/10 border border-white/20 p-1.5 shrink-0 shadow-xl">
                                         <div className="w-full h-full rounded-lg overflow-hidden bg-white/5 flex items-center justify-center border border-white/10">
                                             {selectedStudent.photo_url ? (
                                                 <img src={selectedStudent.photo_url} alt="" className="w-full h-full object-cover" />
@@ -1235,42 +1240,51 @@ export default function StudentsPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="min-w-0 flex-1 mb-4 z-10">
-                                        <h3 className="text-[14px] font-black truncate leading-tight uppercase mb-1 drop-shadow-sm">{selectedStudent.name}</h3>
-                                        <div className="flex flex-col gap-0.5 mb-2.5">
-                                            <p className="text-[9px] font-black text-white/90 uppercase tracking-tight">{selectedStudent.className}</p>
-                                            <p className="text-[6.5px] font-bold text-white/40 uppercase tracking-widest leading-none">MBS TANGGUL</p>
+
+                                    {/* Info Section */}
+                                    <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">
+                                        <div>
+                                            <h3 className="text-[13px] font-black leading-[1.2] uppercase mb-1.5 drop-shadow-sm line-clamp-2">{selectedStudent.name}</h3>
+                                            <div className="space-y-0.5">
+                                                <p className="text-[10px] font-black text-white/90 uppercase tracking-tight leading-tight">{selectedStudent.className}</p>
+                                                <p className="text-[7px] font-bold text-white/40 uppercase tracking-widest leading-none">MBS TANGGUL</p>
+                                            </div>
                                         </div>
-                                        <div className="pt-2 border-t border-white/10 mt-1">
-                                            <p className="text-[5.5px] font-bold opacity-30 uppercase tracking-widest mb-0.5">NOMOR INDUK SISWA</p>
-                                            <p className="text-[11px] font-mono font-bold tracking-[0.1em] text-indigo-100">{selectedStudent.code}</p>
+                                        
+                                        <div className="pt-2 border-t border-white/10">
+                                            <p className="text-[6px] font-bold opacity-30 uppercase tracking-widest mb-0.5 leading-none">NOMOR INDUK</p>
+                                            <p className="text-[10px] font-mono font-bold tracking-wider text-indigo-100 leading-tight">{selectedStudent.code}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="absolute bottom-5 right-6 flex items-center gap-1.5 opacity-20 z-0">
-                                    <FontAwesomeIcon icon={faGraduationCap} className="text-[9px]" />
-                                    <span className="text-[6px] font-black uppercase tracking-[0.4em]">KARTU PELAJAR DIGITAL</span>
+                                {/* Footer Watermark */}
+                                <div className="absolute bottom-3 left-5 right-5 flex items-center justify-between opacity-20">
+                                    <div className="flex items-center gap-1">
+                                        <FontAwesomeIcon icon={faGraduationCap} className="text-[8px]" />
+                                        <span className="text-[6px] font-black uppercase tracking-[0.3em]">KARTU PELAJAR</span>
+                                    </div>
+                                    <span className="text-[6px] font-black uppercase tracking-[0.2em]">2026/2027</span>
                                 </div>
                             </div>
 
                             {/* Back Card */}
-                            <div className="w-[340px] h-[210px] bg-white dark:bg-gray-950 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 relative shadow-2xl shadow-gray-200/50 dark:shadow-none flex flex-col items-center justify-center text-center shrink-0">
-                                <div className="p-2.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm mb-4">
+                            <div className="w-[340px] h-[215px] bg-white dark:bg-gray-950 rounded-2xl border border-gray-100 dark:border-gray-800 relative shadow-2xl shadow-gray-200/50 dark:shadow-none flex flex-col items-center justify-center text-center shrink-0 p-5">
+                                <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm mb-3.5">
                                     <QRCodeCanvas
                                         value={`${window.location.origin}/check?code=${selectedStudent.code}&pin=${selectedStudent.pin}`}
-                                        size={70}
+                                        size={85}
                                         level="M"
                                     />
                                 </div>
-                                <h4 className="text-[9px] font-black text-gray-900 dark:text-white uppercase tracking-[0.15em] mb-1.5">AKSES PORTAL ORANG TUA</h4>
-                                <p className="text-[6.5px] text-gray-400 font-bold uppercase tracking-widest leading-normal max-w-[220px]">
-                                    SILAKAN SCAN KODE DI ATAS UNTUK<br />MENGECEK PERKEMBANGAN & PERILAKU SISWA
+                                <h4 className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-[0.15em] mb-1.5 leading-tight">AKSES PORTAL ORANG TUA</h4>
+                                <p className="text-[7px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed max-w-[240px]">
+                                    Silakan scan kode di atas untuk<br />mengecek perkembangan siswa
                                 </p>
 
-                                <div className="absolute bottom-5 w-full left-0 px-8 flex justify-between items-center opacity-20">
-                                    <span className="text-[6px] font-black uppercase tracking-[0.3em]">TAHUN 2026/2027</span>
-                                    <span className="text-[6px] font-black uppercase tracking-[0.3em]">MBS TANGGUL</span>
+                                <div className="absolute bottom-4 w-full left-0 px-6 flex justify-between items-center opacity-20">
+                                    <span className="text-[6px] font-black uppercase tracking-[0.25em]">TAHUN 2026/2027</span>
+                                    <span className="text-[6px] font-black uppercase tracking-[0.25em]">MBS TANGGUL</span>
                                 </div>
                             </div>
                         </div>
@@ -1292,7 +1306,7 @@ export default function StudentsPage() {
                 )}
             </Modal>
 
-            {/* Print Specific Styles */}
+            {/* Print Specific Styles - FIXED VERSION */}
             <style dangerouslySetInnerHTML={{
                 __html: `
                 @media print {
@@ -1300,46 +1314,40 @@ export default function StudentsPage() {
                         size: auto;
                         margin: 10mm;
                     }
+                    
+                    /* Hide everything first */
                     body * {
                         visibility: hidden !important;
                     }
-                    .modal-overlay, .modal-content {
-                        background: none !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                        padding: 0 !important;
-                        position: static !important;
-                        width: auto !important;
-                    }
-                    /* Show only the cards container inside the modal */
-                    .modal-content [class*="space-y-8"] {
+                    
+                    /* Show only printable cards container */
+                    #printable-cards,
+                    #printable-cards * {
                         visibility: visible !important;
+                    }
+                    
+                    /* Position cards for print */
+                    #printable-cards {
                         position: absolute !important;
                         left: 0 !important;
                         top: 0 !important;
                         width: 100% !important;
-                    }
-                    /* Ensure cards themselves are visible and positioned */
-                    .modal-content [class*="space-y-8"] > div:first-child {
-                        visibility: visible !important;
                         display: flex !important;
                         flex-direction: column !important;
-                        gap: 20px !important;
+                        gap: 20mm !important;
                         align-items: center !important;
                     }
-                    .modal-content [class*="w-[340px]"] {
-                        visibility: visible !important;
-                        break-inside: avoid !important;
+                    
+                    /* Ensure cards maintain exact color */
+                    #printable-cards > div {
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                         box-shadow: none !important;
+                        page-break-inside: avoid !important;
                     }
-                    /* Make all text inside cards visible */
-                    .modal-content [class*="w-[340px]"] * {
-                        visibility: visible !important;
-                    }
-                    /* Hide everything else */
-                    .print\\:hidden, .modal-header, button {
+                    
+                    /* Hide all buttons */
+                    button {
                         display: none !important;
                     }
                 }
