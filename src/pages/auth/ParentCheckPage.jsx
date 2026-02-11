@@ -421,7 +421,7 @@ export default function ParentCheckPage() {
                     </div>
                 </div>
 
-                <div className="mt-auto pt-8 flex flex-col items-center gap-5">
+                <div className="pt-8 flex flex-col items-center gap-5">
                     <Link to="/login" className="flex items-center gap-2 group">
                         <span className="text-sm text-gray-400 dark:text-gray-500">Staff sekolah?</span>
                         <span className="text-sm font-bold text-indigo-500 dark:text-indigo-400 group-hover:underline">Login di sini</span>
