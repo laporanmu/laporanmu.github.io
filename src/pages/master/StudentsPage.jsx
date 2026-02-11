@@ -1219,7 +1219,7 @@ export default function StudentsPage() {
                             <div className="w-[340px] h-[215px] bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl text-white relative shadow-2xl overflow-hidden shadow-indigo-500/30 shrink-0">
                                 {/* Background Decoration */}
                                 <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/5 rounded-full blur-2xl" />
-                                
+
                                 {/* Header Logo */}
                                 <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
                                     <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
@@ -1250,7 +1250,7 @@ export default function StudentsPage() {
                                                 <p className="text-[7px] font-bold text-white/40 uppercase tracking-widest leading-none">MBS TANGGUL</p>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="pt-2 border-t border-white/10">
                                             <p className="text-[6px] font-bold opacity-30 uppercase tracking-widest mb-0.5 leading-none">NOMOR INDUK</p>
                                             <p className="text-[10px] font-mono font-bold tracking-wider text-indigo-100 leading-tight">{selectedStudent.code}</p>
