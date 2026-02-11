@@ -17,6 +17,7 @@ import {
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
+import { useSidebar } from '../../context/SidebarContext'
 
 const MENU_ITEMS = [
     { path: '/dashboard', icon: faHome, label: 'Dashboard' },
@@ -40,10 +41,13 @@ const ADMIN_MENU = { path: '/developer', icon: faCode, label: 'Developer' }
 export default function Sidebar({ isOpen, onClose }) {
     const { profile, signOut, isDemoMode } = useAuth()
     const { addToast } = useToast()
+    const { isCollapsed } = useSidebar()
     const navigate = useNavigate()
     const [expandedMenus, setExpandedMenus] = useState(['Master Data'])
+    const [hoveredSubmenu, setHoveredSubmenu] = useState(null)
 
     const toggleMenu = (label) => {
+        if (isCollapsed) return
         setExpandedMenus(prev =>
             prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
         )
@@ -67,75 +71,131 @@ export default function Sidebar({ isOpen, onClose }) {
                 />
             )}
 
-            {/* Sidebar */}
+            {/* Sidebar - Collapsible */}
             <aside
-                className={`fixed top-0 left-0 h-full w-[var(--sidebar-width)] bg-[var(--color-surface)] 
-          border-r border-[var(--color-border)] z-50 transition-transform duration-300 flex flex-col
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+                className={`fixed top-0 left-0 h-full bg-[var(--color-surface)] 
+          border-r border-[var(--color-border)] z-50 flex flex-col
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
+          transition-all duration-300 ease-in-out
+          ${isCollapsed ? 'w-[70px]' : 'w-[var(--sidebar-width)]'}`}
             >
-                {/* Logo */}
-                <div className="h-14 flex items-center gap-3 px-5 border-b border-[var(--color-border)]">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                        <span className="text-white font-black text-sm">L</span>
+                {/* Logo - Adaptive */}
+                <div className={`h-14 flex items-center border-b border-[var(--color-border)] overflow-hidden
+                    ${isCollapsed ? 'justify-center px-2' : 'gap-2.5 px-4'}`}>
+                    <div className={`rounded-lg bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/10 shrink-0
+                        ${isCollapsed ? 'w-9 h-9' : 'w-7 h-7'}`}>
+                        <span className={`text-white font-black ${isCollapsed ? 'text-sm' : 'text-xs'}`}>L</span>
                     </div>
-                    <div className="min-w-0">
-                        <h1 className="font-bold text-[15px] text-[var(--color-text)] leading-none truncate">Laporanmu</h1>
-                        <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-tighter mt-0.5 truncate text-indigo-500">Student Behavior</p>
-                    </div>
+                    {!isCollapsed && (
+                        <div className="min-w-0 animate-in fade-in slide-in-from-left-2 duration-200">
+                            <h1 className="font-bold text-sm text-[var(--color-text)] leading-none truncate">Laporanmu</h1>
+                            <p className="text-[8px] text-indigo-500 font-bold uppercase tracking-wider mt-0.5 truncate">Behavior System</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Demo Mode Banner */}
-                {isDemoMode && (
-                    <div className="mx-4 mt-4 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                            🎮 Mode Demo Aktif
+                {isDemoMode && !isCollapsed && (
+                    <div className="mx-3 mt-3 px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg animate-in fade-in duration-200">
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold tracking-wider">
+                            🎮 MODE DEMO
                         </p>
                     </div>
                 )}
 
-                {/* Menu */}
-                <nav className="flex-1 overflow-y-auto py-4 px-3">
-                    <ul className="space-y-1">
+                {/* Menu - Adaptive */}
+                <nav className="flex-1 overflow-y-auto py-3 px-2.5">
+                    <ul className="space-y-0.5">
                         {menuItems.map((item, idx) => (
-                            <li key={idx}>
+                            <li
+                                key={idx}
+                                className="relative"
+                                onMouseEnter={() => isCollapsed && item.children && setHoveredSubmenu(item.label)}
+                                onMouseLeave={() => isCollapsed && setHoveredSubmenu(null)}
+                            >
                                 {item.children ? (
                                     <div>
                                         <button
                                             onClick={() => toggleMenu(item.label)}
-                                            className="w-full flex items-center justify-between px-3 py-2 rounded-lg 
+                                            className={`w-full flex items-center rounded-lg 
                         text-[var(--color-text-muted)] hover:bg-gray-50 dark:hover:bg-gray-900 
-                        hover:text-indigo-600 transition-all font-bold group/btn"
+                        hover:text-indigo-600 transition-all font-bold group/btn
+                        ${isCollapsed ? 'justify-center px-2.5 py-2.5' : 'justify-between px-2.5 py-2'}`}
+                                            title={isCollapsed ? item.label : ''}
                                         >
-                                            <span className="flex items-center gap-3">
-                                                <FontAwesomeIcon icon={item.icon} className="w-4 text-xs group-hover/btn:scale-110 transition-transform" />
-                                                <span className="text-xs uppercase tracking-tight">{item.label}</span>
+                                            <span className={`flex items-center ${isCollapsed ? '' : 'gap-2.5'}`}>
+                                                <FontAwesomeIcon icon={item.icon} className="w-3.5 text-[11px] group-hover/btn:scale-110 transition-transform" />
+                                                {!isCollapsed && <span className="text-[11px] uppercase tracking-tight">{item.label}</span>}
                                             </span>
-                                            <FontAwesomeIcon
-                                                icon={faChevronDown}
-                                                className={`w-3 transition-transform ${expandedMenus.includes(item.label) ? 'rotate-180' : ''}`}
-                                            />
+                                            {!isCollapsed && (
+                                                <FontAwesomeIcon
+                                                    icon={faChevronDown}
+                                                    className={`w-2.5 text-[10px] transition-transform ${expandedMenus.includes(item.label) ? 'rotate-180' : ''}`}
+                                                />
+                                            )}
                                         </button>
-                                        {expandedMenus.includes(item.label) && (
-                                            <ul className="mt-1 ml-3.5 pl-3.5 border-l border-gray-100 dark:border-gray-800 space-y-0.5">
+
+                                        {/* Regular Submenu (Expanded) */}
+                                        {!isCollapsed && expandedMenus.includes(item.label) && (
+                                            <ul className="mt-0.5 ml-3 pl-2.5 border-l border-gray-200 dark:border-gray-800 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
                                                 {item.children.map((child, childIdx) => (
                                                     <li key={childIdx}>
                                                         <NavLink
                                                             to={child.path}
                                                             onClick={onClose}
                                                             className={({ isActive }) =>
-                                                                `flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-bold transition-all uppercase tracking-tight
+                                                                `flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight
                                 ${isActive
                                                                     ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                                                                    : 'text-gray-400 dark:text-gray-500 hover:text-indigo-500'
+                                                                    : 'text-gray-400 dark:text-gray-500 hover:text-indigo-500 hover:bg-gray-50 dark:hover:bg-gray-900'
                                                                 }`
                                                             }
                                                         >
-                                                            <FontAwesomeIcon icon={child.icon} className="w-3" />
+                                                            <FontAwesomeIcon icon={child.icon} className="w-3 text-[10px]" />
                                                             {child.label}
                                                         </NavLink>
                                                     </li>
                                                 ))}
                                             </ul>
+                                        )}
+
+                                        {/* Popover Submenu (Collapsed) */}
+                                        {isCollapsed && hoveredSubmenu === item.label && (
+                                            <div
+                                                className="fixed left-[70px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl py-2 min-w-[220px] z-[60] animate-in fade-in slide-in-from-left-2 duration-200"
+                                                style={{
+                                                    top: `${14 + (idx * 48) + 12}px` // 14px header + idx*48px spacing + 12px offset
+                                                }}
+                                            >
+                                                {/* Header */}
+                                                <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <FontAwesomeIcon icon={item.icon} className="text-indigo-500 text-xs" />
+                                                        <p className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tight">{item.label}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Menu Items */}
+                                                <div className="py-1">
+                                                    {item.children.map((child, childIdx) => (
+                                                        <NavLink
+                                                            key={childIdx}
+                                                            to={child.path}
+                                                            onClick={onClose}
+                                                            className={({ isActive }) =>
+                                                                `flex items-center gap-3 px-3 py-2 text-xs font-bold transition-all
+                                ${isActive
+                                                                    ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                                                                    : 'text-gray-600 dark:text-gray-400 hover:text-indigo-500 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                                                }`}
+                                                            title={isCollapsed ? child.label : child.label}
+                                                        >
+                                                            <FontAwesomeIcon icon={child.icon} className="w-3.5 text-xs" />
+                                                            <span className="tracking-tight">{child.label}</span>
+                                                        </NavLink>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 ) : (
@@ -143,15 +203,16 @@ export default function Sidebar({ isOpen, onClose }) {
                                         to={item.path}
                                         onClick={onClose}
                                         className={({ isActive }) =>
-                                            `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-bold transition-all uppercase tracking-tight
+                                            `flex items-center rounded-lg text-[11px] font-bold transition-all uppercase tracking-tight
+                      ${isCollapsed ? 'justify-center px-2.5 py-2.5' : 'gap-2.5 px-2.5 py-2'}
                       ${isActive
                                                 ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                                                : 'text-gray-400 dark:text-gray-500 hover:text-indigo-500'
-                                            }`
-                                        }
+                                                : 'text-gray-400 dark:text-gray-500 hover:text-indigo-500 hover:bg-gray-50 dark:hover:bg-gray-900'
+                                            }`}
+                                        title={isCollapsed ? item.label : ''}
                                     >
-                                        <FontAwesomeIcon icon={item.icon} className="w-4" />
-                                        {item.label}
+                                        <FontAwesomeIcon icon={item.icon} className="w-3.5 text-[11px]" />
+                                        {!isCollapsed && item.label}
                                     </NavLink>
                                 )}
                             </li>
@@ -159,19 +220,21 @@ export default function Sidebar({ isOpen, onClose }) {
                     </ul>
                 </nav>
 
-                {/* Footer - Logout only (profile & theme ada di navbar) */}
-                <div className="p-3 border-t border-[var(--color-border)]">
+                {/* Footer - Logout */}
+                <div className="p-2.5 border-t border-[var(--color-border)]">
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm
-              text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-500 transition-colors font-medium"
-                        title="Logout"
+                        className={`w-full flex items-center rounded-lg text-[11px]
+              text-gray-400 dark:text-gray-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-500 
+              transition-colors font-bold uppercase tracking-tight
+              ${isCollapsed ? 'justify-center px-2.5 py-2.5' : 'justify-center gap-2 px-2.5 py-2'}`}
+                        title={isCollapsed ? 'Keluar' : ''}
                     >
-                        <FontAwesomeIcon icon={faSignOutAlt} className="w-4" />
-                        Keluar
+                        <FontAwesomeIcon icon={faSignOutAlt} className="w-3.5 text-[11px]" />
+                        {!isCollapsed && 'Keluar'}
                     </button>
                 </div>
-            </aside>
+            </aside >
         </>
     )
 }

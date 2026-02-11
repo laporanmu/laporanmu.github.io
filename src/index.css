@@ -19,7 +19,7 @@
   --color-text: #1f2937;
   --color-text-muted: #6b7280;
   --color-border: #e5e7eb;
-  --sidebar-width: 260px;
+  --sidebar-width: 240px;
 }
 
 .dark {
@@ -309,6 +309,7 @@ tr:hover td {
 /* -------------------------------------------------------------------------- */
 
 @layer base {
+
   /* Smooth theme transitions */
   :root {
     --theme-transition: 200ms;
@@ -325,6 +326,7 @@ tr:hover td {
 
   /* Respect reduced motion preference */
   @media (prefers-reduced-motion: reduce) {
+
     *,
     *::before,
     *::after {
@@ -335,19 +337,23 @@ tr:hover td {
 
   /* Dark mode scrollbar */
   .dark ::-webkit-scrollbar-track {
-    background-color: #1f2937; /* gray-800 */
+    background-color: #1f2937;
+    /* gray-800 */
   }
 
   .dark ::-webkit-scrollbar-thumb {
-    background-color: #4b5563; /* gray-600 */
+    background-color: #4b5563;
+    /* gray-600 */
   }
 
   .dark ::-webkit-scrollbar-thumb:hover {
-    background-color: #6b7280; /* gray-500 */
+    background-color: #6b7280;
+    /* gray-500 */
   }
 }
 
 @layer components {
+
   /* Button styles */
   .btn {
     display: inline-flex;
@@ -386,7 +392,7 @@ tr:hover td {
     border: 1px solid #e5e7eb;
     padding: 1.5rem;
   }
-  
+
   .dark .card {
     background-color: #1f2937;
     border-color: #374151;
@@ -401,7 +407,7 @@ tr:hover td {
     border-radius: 0.5rem;
     color: #111827;
   }
-  
+
   .dark .input {
     background-color: #374151;
     border-color: #4b5563;
@@ -426,17 +432,21 @@ tr:hover td {
     border-radius: 0.5rem;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
+
   .dark .input-field {
     color: #f9fafb;
     background-color: #374151;
     border-color: #4b5563;
   }
+
   .input-field::placeholder {
     color: #9ca3af;
   }
+
   .dark .input-field::placeholder {
     color: #6b7280;
   }
+
   .input-field:focus {
     outline: none;
     border-color: #3b82f6;
@@ -459,12 +469,14 @@ tr:hover td {
     background-size: 1.25rem;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
+
   .dark .select-field {
     color: #f9fafb;
     background-color: #374151;
     border-color: #4b5563;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
   }
+
   .select-field:focus {
     outline: none;
     border-color: #3b82f6;
@@ -483,11 +495,13 @@ tr:hover td {
     resize: none;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
+
   .dark .textarea-field {
     color: #f9fafb;
     background-color: #374151;
     border-color: #4b5563;
   }
+
   .textarea-field:focus {
     outline: none;
     border-color: #3b82f6;
@@ -511,6 +525,7 @@ tr:hover td {
 }
 
 @layer utilities {
+
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
