@@ -1,5 +1,5 @@
-/* Google Font - Poppins */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
 
@@ -7,37 +7,41 @@
 
 /* Custom CSS Variables for theming (Dark Mode supported) */
 :root {
-  --color-primary: #6366f1;
-  --color-primary-dark: #4f46e5;
-  --color-secondary: #22d3ee;
-  --color-accent: #f472b6;
+  --color-primary: #4f46e5;      /* Indigo 600 - sleek and modern */
+  --color-primary-dark: #3730a3; /* Indigo 800 */
+  --color-secondary: #0ea5e9;    /* Sky 500 */
+  --color-accent: #8b5cf6;       /* Violet 500 */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
   --color-surface: #ffffff;
-  --color-surface-alt: #f9fafb;
-  --color-text: #1f2937;
-  --color-text-muted: #6b7280;
-  --color-border: #e5e7eb;
-  --sidebar-width: 240px;
+  --color-surface-alt: #f8fafc;  /* Slate 50 */
+  --color-text: #0f172a;         /* Slate 900 */
+  --color-text-muted: #64748b;   /* Slate 500 */
+  --color-border: #e2e8f0;       /* Slate 200 */
+  --sidebar-width: 260px;
 }
 
 .dark {
-  --color-surface: #111827;
-  --color-surface-alt: #1f2937;
-  --color-text: #f9fafb;
-  --color-text-muted: #9ca3af;
-  --color-border: #374151;
+  --color-surface: #020617;      /* Slate 950 - premium dark */
+  --color-surface-alt: #0f172a;  /* Slate 900 */
+  --color-text: #f8fafc;         /* Slate 50 */
+  --color-text-muted: #94a3b8;   /* Slate 400 */
+  --color-border: #1e293b;       /* Slate 800 */
 }
 
 body {
-  font-family: 'Poppins', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   background-color: var(--color-surface);
   color: var(--color-text);
   margin: 0;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: 'Outfit', system-ui, sans-serif;
 }
 
 /* Scrollbar Styling */
@@ -110,39 +114,46 @@ body {
   animation: slideOut 0.3s ease-in forwards;
 }
 
-/* Glass Effect */
+/* Premium Glass Effect */
 .glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
 }
 
 .dark .glass {
-  background: rgba(17, 24, 39, 0.7);
-  border: 1px solid rgba(55, 65, 81, 0.5);
+  background: rgba(2, 6, 23, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
 
 /* Gradient Text */
 .gradient-text {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Button Styles */
+/* Button Styles - Premium Feel */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   font-weight: 500;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease;
+  border-radius: 0.75rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   border: none;
   font-size: 0.875rem;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn:disabled {

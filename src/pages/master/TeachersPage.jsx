@@ -63,71 +63,72 @@ export default function TeachersPage() {
 
     return (
         <DashboardLayout title="Data Guru">
-            {/* Header Area */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-xl font-bold">Data Guru</h1>
-                    <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium">Kelola data guru dan staff pengajar di sekolah ini.</p>
+                    <h1 className="text-2xl font-black font-heading text-[var(--color-text)] tracking-tight">Data Guru</h1>
+                    <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">
+                        Kelola data guru dan staff pengajar di sekolah ini.
+                    </p>
                 </div>
-                <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-indigo-500/20 h-10 text-xs font-bold px-4">
+                <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-[var(--color-primary)]/20 h-11 text-xs font-bold px-5 rounded-full">
                     <FontAwesomeIcon icon={faPlus} />
                     <span className="ml-2 uppercase tracking-widest">TAMBAH GURU</span>
                 </button>
             </div>
 
             {/* Filter Area */}
-            <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl mb-5 p-3.5 shadow-sm">
-                <div className="relative font-normal">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                        <FontAwesomeIcon icon={faSearch} className="text-xs" />
+            <div className="glass rounded-[1.5rem] mb-6 p-4 border border-[var(--color-border)]">
+                <div className="relative font-normal group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[var(--color-text-muted)] transition-colors group-focus-within:text-[var(--color-primary)]">
+                        <FontAwesomeIcon icon={faSearch} className="text-sm" />
                     </div>
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Cari nama atau mata pelajaran..."
-                        className="input-field pl-10 w-full h-10 text-xs"
+                        className="input-field pl-11 w-full h-11 text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                     />
                 </div>
             </div>
 
             {/* Table Area */}
-            <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl overflow-hidden shadow-sm">
+            <div className="glass rounded-[1.5rem] overflow-hidden border border-[var(--color-border)] shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Nama Guru</th>
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Mata Pelajaran</th>
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Email</th>
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Kontak</th>
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-right pr-6">Aksi</th>
+                            <tr className="bg-[var(--color-surface-alt)]/50 border-b border-[var(--color-border)] backdrop-blur-sm">
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Nama Guru</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Mata Pelajaran</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Email</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Kontak</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-right pr-6">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
                             {filteredTeachers.map(teacher => (
                                 <tr key={teacher.id} className="hover:bg-[var(--color-surface-alt)]/30 transition-colors group">
-                                    <td className="px-5 py-3">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-600 flex items-center justify-center text-white text-[10px] font-black shrink-0 shadow-sm">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm">
                                                 {teacher.name.charAt(0)}
                                             </div>
-                                            <span className="font-bold text-[13px] text-gray-900 dark:text-white truncate">{teacher.name}</span>
+                                            <span className="font-bold text-sm text-[var(--color-text)] truncate">{teacher.name}</span>
                                         </div>
                                     </td>
-                                    <td className="px-5 py-3 text-[12px] text-gray-600 dark:text-gray-400 font-medium">
-                                        <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-md text-[10px] font-bold">
+                                    <td className="px-6 py-4 text-[13px] text-[var(--color-text-muted)] font-medium">
+                                        <span className="px-2.5 py-1 bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-none rounded-md text-[11px] font-bold tracking-tight uppercase">
                                             {teacher.subject}
                                         </span>
                                     </td>
-                                    <td className="px-5 py-3 text-[11px] text-gray-500 dark:text-gray-400 font-medium lowercase italic">{teacher.email}</td>
-                                    <td className="px-5 py-3 text-[11px] text-gray-500 dark:text-gray-400 font-bold">{teacher.phone}</td>
-                                    <td className="px-5 py-3 text-right pr-4">
-                                        <div className="flex items-center justify-end gap-0.5">
-                                            <button onClick={() => handleEdit(teacher)} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all text-xs" title="Edit">
+                                    <td className="px-6 py-4 text-xs text-[var(--color-text-muted)] font-medium lowercase italic opacity-80">{teacher.email}</td>
+                                    <td className="px-6 py-4 text-xs text-[var(--color-text)] font-bold">{teacher.phone}</td>
+                                    <td className="px-6 py-4 text-right pr-6">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button onClick={() => handleEdit(teacher)} className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm" title="Edit">
                                                 <FontAwesomeIcon icon={faEdit} />
                                             </button>
-                                            <button onClick={() => handleDelete(teacher)} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all text-xs" title="Hapus">
+                                            <button onClick={() => handleDelete(teacher)} className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Hapus">
                                                 <FontAwesomeIcon icon={faTrash} />
                                             </button>
                                         </div>
@@ -140,28 +141,28 @@ export default function TeachersPage() {
             </div>
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedItem ? 'Update Data Guru' : 'Guru Baru'} size="md">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="md:col-span-2">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nama Lengkap</label>
-                            <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nama lengkap dengan gelar" className="input-field font-bold text-xs py-2.5 h-10" />
+                            <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Nama Lengkap</label>
+                            <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nama lengkap dengan gelar" className="input-field font-bold text-sm py-2.5 h-11" />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Mata Pelajaran</label>
-                            <input type="text" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} placeholder="e.g. Matematika" className="input-field font-bold text-xs py-2.5 h-10" />
+                            <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Mata Pelajaran</label>
+                            <input type="text" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} placeholder="e.g. Matematika" className="input-field font-bold text-sm py-2.5 h-11" />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">No. HP / WA</label>
-                            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="08xxxxxxxxxx" className="input-field font-bold text-xs py-2.5 h-10" />
+                            <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">No. HP / WA</label>
+                            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="08xxxxxxxxxx" className="input-field font-bold text-sm py-2.5 h-11" />
                         </div>
                         <div className="md:col-span-2">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Email Sekolah</label>
-                            <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@sekolah.id" className="input-field font-bold text-xs py-2.5 h-10" />
+                            <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Email Sekolah</label>
+                            <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@sekolah.id" className="input-field font-bold text-sm py-2.5 h-11" />
                         </div>
                     </div>
-                    <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary font-bold py-2 text-xs h-10 px-6 uppercase tracking-widest">Batal</button>
-                        <button type="submit" className="btn btn-primary px-8 font-bold shadow-md shadow-indigo-500/20 py-2 text-xs h-10 uppercase tracking-widest">{selectedItem ? 'UPDATE' : 'SIMPAN'}</button>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary font-bold py-2 text-xs h-11 px-6 uppercase tracking-widest rounded-xl">BATAL</button>
+                        <button type="submit" className="btn btn-primary px-8 font-bold shadow-lg shadow-[var(--color-primary)]/20 py-2 text-xs h-11 uppercase tracking-widest rounded-xl">{selectedItem ? 'UPDATE' : 'SIMPAN'}</button>
                     </div>
                 </form>
             </Modal>

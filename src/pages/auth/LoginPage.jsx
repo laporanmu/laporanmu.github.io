@@ -49,28 +49,35 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4 py-8 transition-colors">
-            <div className="w-full max-w-[420px] space-y-6">
+        <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface)] relative overflow-hidden px-4 py-8 transition-colors">
+            {/* Ambient Background Glows */}
+            <div className="absolute inset-0 pointer-events-none z-0">
+                <div className="absolute top-[10%] -left-[10%] w-[400px] h-[400px] rounded-full bg-[var(--color-primary)]/10 blur-[80px]" />
+                <div className="absolute bottom-[10%] -right-[10%] w-[500px] h-[500px] rounded-full bg-[var(--color-accent)]/10 blur-[100px]" />
+            </div>
+
+            <div className="w-full max-w-[420px] space-y-6 relative z-10">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2.5 group">
-                        <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                            <span className="text-white font-semibold text-base">L</span>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                            <span className="text-white font-bold font-heading text-lg">L</span>
                         </div>
-                        <span className="text-lg font-semibold text-gray-800 dark:text-white">Laporanmu</span>
+                        <span className="font-heading font-bold text-xl text-[var(--color-text)]">Laporan<span className="text-[var(--color-primary)]">mu</span></span>
                     </Link>
                     <button
                         onClick={toggleTheme}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 transition-all"
+                        aria-label="Toggle theme"
                     >
                         <FontAwesomeIcon icon={isDark ? faSun : faMoon} className="text-sm" />
                     </button>
                 </div>
 
                 {/* Title */}
-                <div>
-                    <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Masuk ke akun Anda</h1>
-                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Portal khusus staff & guru sekolah</p>
+                <div className="text-center sm:text-left mt-8 mb-4">
+                    <h1 className="text-2xl font-bold font-heading text-[var(--color-text)] mb-2">Masuk ke Akun Anda</h1>
+                    <p className="text-sm text-[var(--color-text-muted)]">Portal khusus staff & guru sekolah</p>
                 </div>
 
                 {/* Demo Mode */}
@@ -90,60 +97,63 @@ export default function LoginPage() {
                 )}
 
                 {/* Form Card */}
-                <div className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-200 dark:border-gray-800">
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Email</label>
+                <div className="glass rounded-[2rem] p-6 sm:p-8">
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider pl-1">Email</label>
                             <div className="relative">
-                                <FontAwesomeIcon icon={faEnvelope} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-300 dark:text-gray-600" />
+                                <FontAwesomeIcon icon={faEnvelope} className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[var(--color-text-muted)] opacity-70" />
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="nama@sekolah.id"
                                     ref={emailInputRef}
-                                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 rounded-lg pl-10 pr-3.5 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-600 transition-all outline-none"
+                                    className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-50 transition-all outline-none"
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Password</label>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider pl-1">Password</label>
                             <div className="relative">
-                                <FontAwesomeIcon icon={faLock} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-300 dark:text-gray-600" />
+                                <FontAwesomeIcon icon={faLock} className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[var(--color-text-muted)] opacity-70" />
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 rounded-lg pl-10 pr-10 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-600 transition-all outline-none"
+                                    className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl pl-11 pr-12 py-3.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-50 transition-all outline-none"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(prev => !prev)}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                                     aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
                                 >
-                                    <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="text-xs" />
+                                    <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="text-sm" />
                                 </button>
                             </div>
                         </div>
 
                         {errorMessage && (
-                            <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-3.5 py-2.5 rounded-lg">
-                                {errorMessage}
-                            </p>
+                            <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0">!</div>
+                                <p className="text-xs font-medium text-red-500">
+                                    {errorMessage}
+                                </p>
+                            </div>
                         )}
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-indigo-600 text-white text-sm font-medium transition-all ${loading ? 'opacity-70' : 'hover:bg-indigo-700 active:scale-[0.98]'}`}
+                            className={`btn btn-primary w-full py-3.5 mt-2 shadow-lg shadow-[var(--color-primary)]/20 ${loading ? 'opacity-70' : ''}`}
                         >
                             {loading ? (
                                 <><FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm" /> Memproses...</>
                             ) : (
-                                <>Masuk <FontAwesomeIcon icon={faArrowRight} className="text-sm" /></>
+                                <>Masuk <FontAwesomeIcon icon={faArrowRight} className="text-sm ml-1" /></>
                             )}
                         </button>
                     </form>
