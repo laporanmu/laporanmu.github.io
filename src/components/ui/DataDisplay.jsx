@@ -2,24 +2,23 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 export function StatCard({ icon, label, value, trend, trendUp, color = 'indigo' }) {
     const colorClasses = {
-        indigo: 'from-indigo-500 to-purple-600',
-        green: 'from-emerald-500 to-teal-600',
-        amber: 'from-amber-500 to-orange-600',
-        red: 'from-red-500 to-rose-600',
-        blue: 'from-blue-500 to-cyan-600',
+        indigo: 'from-[var(--color-primary)] to-[var(--color-accent)]',
+        green: 'from-emerald-500 to-teal-500',
+        amber: 'from-amber-500 to-orange-500',
+        red: 'from-red-500 to-rose-500',
+        blue: 'from-[var(--color-secondary)] to-cyan-500',
     }
 
     return (
-        <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-3.5 flex items-start gap-3.5 shadow-sm group hover:shadow-md transition-all">
-            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${colorClasses[color]} 
-        flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0`}>
-                <FontAwesomeIcon icon={icon} className="text-base" />
+        <div className="glass rounded-[1.5rem] p-5 flex items-start gap-4 group hover:border-[var(--color-primary)]/30 transition-all">
+            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colorClasses[color]} flex items-center justify-center text-white shadow-lg shadow-indigo-500/10 group-hover:scale-105 transition-transform shrink-0`}>
+                <FontAwesomeIcon icon={icon} className="text-xl" />
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-gray-400 dark:text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-0.5 truncate">{label}</p>
-                <p className="text-xl font-black text-gray-900 dark:text-white leading-tight">{value}</p>
+                <p className="text-[var(--color-text-muted)] text-[10px] font-bold uppercase tracking-widest mb-1 truncate">{label}</p>
+                <p className="text-2xl font-bold font-heading text-[var(--color-text)] leading-none mb-2">{value}</p>
                 {trend && (
-                    <p className={`text-[10px] font-bold mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ${trendUp ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' : 'bg-red-50 text-red-600 dark:bg-red-900/20'}`}>
+                    <p className={`text-[10px] font-bold inline-flex items-center gap-1.5 rounded-lg px-2 py-1 ${trendUp ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
                         <span>{trendUp ? '↑' : '↓'}</span> {trend}
                     </p>
                 )}
@@ -58,8 +57,11 @@ export function DataTable({ columns, data, onRowClick, loading, emptyMessage = '
 
     if (!data || data.length === 0) {
         return (
-            <div className="card text-center py-12">
-                <p className="text-[var(--color-text-muted)]">{emptyMessage}</p>
+            <div className="glass text-center py-16 rounded-2xl">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)]">
+                    <span className="text-2xl">👀</span>
+                </div>
+                <p className="text-[var(--color-text-muted)] font-medium text-sm">{emptyMessage}</p>
             </div>
         )
     }
@@ -96,16 +98,20 @@ export function DataTable({ columns, data, onRowClick, loading, emptyMessage = '
 
 export function EmptyState({ icon, title, description, action }) {
     return (
-        <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl text-center py-12 px-6 shadow-sm">
-            {icon && (
-                <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800
-          flex items-center justify-center text-gray-400">
-                    <FontAwesomeIcon icon={icon} className="text-xl" />
-                </div>
-            )}
-            <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1.5">{title}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto font-medium">{description}</p>
-            {action}
+        <div className="glass rounded-[2rem] text-center py-16 px-6 relative overflow-hidden">
+            {/* Ambient Background Glow for Empty State */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[var(--color-primary)]/5 rounded-full blur-[80px] pointer-events-none" />
+
+            <div className="relative z-10">
+                {icon && (
+                    <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[var(--color-surface-alt)] to-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-primary)] shadow-lg shadow-[var(--color-primary)]/5">
+                        <FontAwesomeIcon icon={icon} className="text-3xl" />
+                    </div>
+                )}
+                <h3 className="text-xl font-bold font-heading text-[var(--color-text)] mb-2">{title}</h3>
+                <p className="text-sm text-[var(--color-text-muted)] mb-8 max-w-sm mx-auto">{description}</p>
+                {action}
+            </div>
         </div>
     )
 }

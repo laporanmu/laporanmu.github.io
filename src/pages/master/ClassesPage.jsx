@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBed, faMars, faVenus, faPlus, faEdit, faTrash, faSearch, faSchool, faFilter, faLayerGroup, faVenusMars, faBuilding, faUserTie, faCalendarAlt, faUsers } from '@fortawesome/free-solid-svg-icons'
+import { faPlus, faSearch, faEdit, faTrash, faTimes, faSpinner, faBuilding, faMars, faVenus, faSchool, faBed, faCalendarAlt, faUsers } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
@@ -238,126 +238,126 @@ export default function ClassesPage() {
     return (
         <DashboardLayout title="Data Kelas">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-xl font-bold">Data Kelas</h1>
-                    <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5">
+                    <h1 className="text-2xl font-black font-heading text-[var(--color-text)] tracking-tight">Data Kelas</h1>
+                    <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">
                         Total {classes.length} kelas aktif didefinisikan dalam sistem.
                     </p>
                 </div>
-                <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-indigo-500/20 h-10 text-xs font-bold px-4">
+                <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-[var(--color-primary)]/20 h-11 text-xs font-bold px-5 rounded-full">
                     <FontAwesomeIcon icon={faPlus} />
                     <span className="ml-2">TAMBAH KELAS</span>
                 </button>
             </div>
 
             {/* Filters */}
-            <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl mb-5 p-3.5 shadow-sm">
+            <div className="glass rounded-[1.5rem] mb-6 p-4 border border-[var(--color-border)]">
                 <div className="flex flex-col md:flex-row gap-4 items-center">
-                    <div className="flex-1 relative w-full">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                            <FontAwesomeIcon icon={faSearch} className="text-xs" />
+                    <div className="flex-1 relative w-full group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[var(--color-text-muted)] transition-colors group-focus-within:text-[var(--color-primary)]">
+                            <FontAwesomeIcon icon={faSearch} className="text-sm" />
                         </div>
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari nama kelas, wali..."
-                            className="input-field pl-10 w-full h-10 text-xs"
+                            className="input-field pl-11 w-full h-11 text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                         />
                     </div>
                 </div>
             </div>
 
             {loading ? (
-                <div className="card py-20 flex flex-col items-center justify-center">
-                    <span className="loading loading-spinner loading-lg text-primary"></span>
-                    <p className="text-[var(--color-text-muted)] mt-4 font-medium">Memuat data kelas...</p>
+                <div className="glass rounded-[2rem] py-24 flex flex-col items-center justify-center border border-[var(--color-border)]">
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin text-4xl text-[var(--color-primary)] opacity-50 mb-4" />
+                    <p className="text-[var(--color-text-muted)] font-bold tracking-[0.2em] uppercase text-xs">Memuat data kelas...</p>
                 </div>
             ) : filteredClasses.length === 0 ? (
-                <div className="card py-16 text-center">
-                    <div className="w-20 h-20 bg-[var(--color-surface-alt)] rounded-full flex items-center justify-center mx-auto mb-4 text-[var(--color-text-muted)]">
-                        <FontAwesomeIcon icon={faSchool} className="text-3xl" />
+                <div className="glass rounded-[2rem] py-20 text-center border-dashed border-2 border-[var(--color-border)]">
+                    <div className="w-24 h-24 bg-gradient-to-br from-[var(--color-surface-alt)] to-[var(--color-surface)] rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                        <FontAwesomeIcon icon={faSchool} className="text-4xl text-[var(--color-text-muted)] opacity-50" />
                     </div>
-                    <h3 className="text-xl font-bold text-[var(--color-text)]">Tidak ada data ditemukan</h3>
-                    <p className="text-[var(--color-text-muted)] mb-6">Coba gunakan kata kunci lain atau tambah kelas baru.</p>
-                    <button onClick={handleAdd} className="btn btn-primary px-8">Tambah Kelas</button>
+                    <h3 className="text-2xl font-bold font-heading text-[var(--color-text)] mb-2">Tidak ada data ditemukan</h3>
+                    <p className="text-[var(--color-text-muted)] text-sm mb-6 max-w-sm mx-auto">Coba gunakan kata kunci lain atau tambah kelas baru.</p>
+                    <button onClick={handleAdd} className="btn btn-primary px-8 rounded-full">Tambah Kelas</button>
                 </div>
             ) : (
-                <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl overflow-hidden shadow-sm">
+                <div className="glass rounded-[1.5rem] overflow-hidden border border-[var(--color-border)] shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
-                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Nama Kelas</th>
-                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Tingkat</th>
-                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Program</th>
-                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Gender</th>
-                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Wali Kelas</th>
-                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Siswa</th>
-                                    <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-right pr-6">Aksi</th>
+                                <tr className="bg-[var(--color-surface-alt)]/50 border-b border-[var(--color-border)] backdrop-blur-sm">
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Nama Kelas</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Tingkat</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Program</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Gender</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Wali Kelas</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Siswa</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-right pr-6">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
                                 {filteredClasses.map((cls) => (
                                     <tr key={cls.id} className="hover:bg-[var(--color-surface-alt)]/30 transition-colors group">
-                                        <td className="px-5 py-3">
-                                            <span className="font-bold text-[13px] text-gray-900 dark:text-white">{cls.name}</span>
+                                        <td className="px-6 py-4">
+                                            <span className="font-bold text-sm text-[var(--color-text)]">{cls.name}</span>
                                         </td>
-                                        <td className="px-5 py-3 text-center">
-                                            <span className="badge badge-primary px-2 py-0.5 text-[10px] uppercase font-bold tracking-tight rounded-md">Lvl {cls.grade}</span>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="badge badge-primary px-2.5 py-1 text-[11px] uppercase font-bold tracking-tight rounded-md bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-none">Lvl {cls.grade}</span>
                                         </td>
-                                        <td className="px-5 py-3 text-center">
+                                        <td className="px-6 py-4 text-center">
                                             {cls.major.includes('Boarding') ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 text-[10px] font-bold border border-amber-200/50 uppercase tracking-tight">
-                                                    <FontAwesomeIcon icon={faBed} className="text-[9px]" /> Boarding
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-bold border border-amber-500/20 uppercase tracking-tight">
+                                                    <FontAwesomeIcon icon={faBed} className="text-[10px]" /> Boarding
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-[10px] font-bold border border-slate-200/50 uppercase tracking-tight">
-                                                    <FontAwesomeIcon icon={faBuilding} className="text-[9px]" /> Reguler
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[11px] font-bold border border-[var(--color-border)] uppercase tracking-tight">
+                                                    <FontAwesomeIcon icon={faBuilding} className="text-[10px]" /> Reguler
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-5 py-3 text-center">
+                                        <td className="px-6 py-4 text-center">
                                             {cls.major.includes('Putra') ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 text-[10px] font-bold border border-blue-200/50 uppercase tracking-tight">
-                                                    <FontAwesomeIcon icon={faMars} className="text-[9px]" /> Putra
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-500/20 uppercase tracking-tight">
+                                                    <FontAwesomeIcon icon={faMars} className="text-[10px]" /> Putra
                                                 </span>
                                             ) : cls.major.includes('Putri') ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-pink-50 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400 text-[10px] font-bold border border-pink-200/50 uppercase tracking-tight">
-                                                    <FontAwesomeIcon icon={faVenus} className="text-[9px]" /> Putri
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-pink-500/10 text-pink-600 dark:text-pink-400 text-[11px] font-bold border border-pink-500/20 uppercase tracking-tight">
+                                                    <FontAwesomeIcon icon={faVenus} className="text-[10px]" /> Putri
                                                 </span>
                                             ) : (
-                                                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">— CAMPUR —</span>
+                                                <span className="text-[var(--color-text-muted)] text-[11px] font-bold uppercase tracking-widest opacity-60">— CAMPUR —</span>
                                             )}
                                         </td>
-                                        <td className="px-5 py-3">
-                                            <div className="flex items-center gap-1.5 text-[13px] font-bold text-gray-900 dark:text-white">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2 text-sm font-bold text-[var(--color-text)]">
                                                 <span className="truncate">{cls.teacherName}</span>
                                             </div>
-                                            <div className="text-[9px] text-gray-400 flex items-center gap-1 mt-0.5 font-mono font-medium">
-                                                <FontAwesomeIcon icon={faCalendarAlt} className="text-[8px]" />
+                                            <div className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1.5 mt-1 font-mono font-medium opacity-80">
+                                                <FontAwesomeIcon icon={faCalendarAlt} className="text-[9px]" />
                                                 {cls.academicYearName}
                                             </div>
                                         </td>
-                                        <td className="px-5 py-3 text-center">
-                                            <div className="inline-flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 px-2.5 py-1 rounded-md text-[11px] font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-gray-800">
-                                                <FontAwesomeIcon icon={faUsers} className="text-[10px] text-indigo-500" />
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="inline-flex items-center gap-2 bg-[var(--color-surface-alt)] px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--color-text)] border border-[var(--color-border)]">
+                                                <FontAwesomeIcon icon={faUsers} className="text-[11px] text-[var(--color-primary)]" />
                                                 {cls.students}
                                             </div>
                                         </td>
-                                        <td className="px-5 py-3 text-right pr-6">
-                                            <div className="flex items-center justify-end gap-0.5">
+                                        <td className="px-6 py-4 text-right pr-6">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <button
                                                     onClick={() => handleEdit(cls)}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all text-xs"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm"
                                                     title="Edit"
                                                 >
                                                     <FontAwesomeIcon icon={faEdit} />
                                                 </button>
                                                 <button
                                                     onClick={() => confirmDelete(cls)}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all text-xs"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"
                                                     title="Hapus"
                                                 >
                                                     <FontAwesomeIcon icon={faTrash} />
@@ -374,31 +374,31 @@ export default function ClassesPage() {
 
             {/* Create/Edit Modal */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedItem ? 'Edit Kelas' : 'Tambah Kelas Baru'} size="md">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <section className="space-y-3">
-                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 border-b border-gray-100 dark:border-gray-800 pb-1.5 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faBuilding} className="text-[9px]" /> Identitas Kelas
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <section className="space-y-4">
+                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-primary)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faBuilding} className="text-[12px]" /> Identitas Kelas
                         </h4>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Nama Kelas <span className="text-red-500">*</span></label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Nama Kelas <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="Contoh: 7A, 8B"
-                                    className="input-field font-bold text-xs py-2.5 h-10"
+                                    className="input-field font-bold text-sm py-2.5 h-11"
                                     autoFocus
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Tingkat (Level)</label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Tingkat (Level)</label>
                                 <select
                                     value={formData.level}
                                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                                    className="select-field font-bold text-xs py-2 h-10"
+                                    className="select-field font-bold text-sm py-2 h-11"
                                 >
                                     <option value="">Pilih Tingkat</option>
                                     {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
@@ -406,19 +406,19 @@ export default function ClassesPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Program</label>
-                                <div className="flex gap-1 p-1 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Program</label>
+                                <div className="flex gap-1 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
                                     {PROGRAMS.map(prog => (
                                         <button
                                             key={prog}
                                             type="button"
                                             onClick={() => setFormData({ ...formData, program: prog })}
-                                            className={`flex-1 py-1.5 rounded-md text-[9px] font-bold transition-all uppercase tracking-tighter
+                                            className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all uppercase tracking-tight
                                                 ${formData.program === prog
-                                                    ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-sm ring-1 ring-black/5'
-                                                    : 'text-gray-400 hover:text-gray-600'
+                                                    ? 'bg-[var(--color-primary)] text-white shadow-md'
+                                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
                                                 }`}
                                         >
                                             {prog}
@@ -428,57 +428,57 @@ export default function ClassesPage() {
                             </div>
 
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Gender Khusus</label>
-                                <div className="flex gap-1 p-1 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Gender Khusus</label>
+                                <div className="flex gap-1 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, gender_type: formData.gender_type === 'Putra' ? '' : 'Putra' })}
-                                        className={`flex-1 py-1.5 rounded-md text-[9px] font-bold transition-all flex items-center justify-center gap-1.5 uppercase tracking-tighter
+                                        className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 uppercase tracking-tight
                                             ${formData.gender_type === 'Putra'
-                                                ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm ring-1 ring-black/5'
-                                                : 'text-gray-400 hover:text-gray-600'
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
                                             }`}
                                     >
-                                        <FontAwesomeIcon icon={faMars} className="text-[8px]" /> Putra
+                                        <FontAwesomeIcon icon={faMars} className="text-[10px]" /> Putra
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, gender_type: formData.gender_type === 'Putri' ? '' : 'Putri' })}
-                                        className={`flex-1 py-1.5 rounded-md text-[9px] font-bold transition-all flex items-center justify-center gap-1.5 uppercase tracking-tighter
+                                        className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 uppercase tracking-tight
                                             ${formData.gender_type === 'Putri'
-                                                ? 'bg-white dark:bg-pink-600 text-pink-600 dark:text-white shadow-sm ring-1 ring-black/5'
-                                                : 'text-gray-400 hover:text-gray-600'
+                                                ? 'bg-pink-600 text-white shadow-md'
+                                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
                                             }`}
                                     >
-                                        <FontAwesomeIcon icon={faVenus} className="text-[8px]" /> Putri
+                                        <FontAwesomeIcon icon={faVenus} className="text-[10px]" /> Putri
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <section className="space-y-3 pt-1">
-                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 border-b border-gray-100 dark:border-gray-800 pb-1.5 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faSchool} className="text-[9px]" /> Wali & Akademik
+                    <section className="space-y-4 pt-2">
+                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-primary)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faSchool} className="text-[12px]" /> Wali & Akademik
                         </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Wali Kelas</label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Wali Kelas</label>
                                 <select
                                     value={formData.homeroom_teacher_id}
                                     onChange={(e) => setFormData({ ...formData, homeroom_teacher_id: e.target.value })}
-                                    className="select-field font-bold text-xs py-2 h-10"
+                                    className="select-field font-bold text-sm py-2 h-11"
                                 >
                                     <option value="">Pilih Wali Kelas</option>
                                     {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Tahun Ajaran</label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Tahun Ajaran</label>
                                 <select
                                     value={formData.academic_year_id}
                                     onChange={(e) => setFormData({ ...formData, academic_year_id: e.target.value })}
-                                    className="select-field font-bold text-xs py-2 h-10"
+                                    className="select-field font-bold text-sm py-2 h-11"
                                 >
                                     <option value="">Pilih Tahun Ajaran</option>
                                     {academicYearsList.map(y => <option key={y.id} value={y.id}>{y.label || y.name}</option>)}
@@ -497,27 +497,27 @@ export default function ClassesPage() {
             {/* Custom Delete Confirmation Modal */}
             <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Konfirmasi Hapus">
                 <div className="space-y-5">
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center gap-4 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30">
-                        <div className="w-11 h-11 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0 text-lg">
+                    <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-5 text-red-500 border border-red-500/20">
+                        <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl">
                             <FontAwesomeIcon icon={faTrash} />
                         </div>
                         <div>
                             <h3 className="text-sm font-bold uppercase tracking-wider leading-tight">Hapus Kelas?</h3>
-                            <p className="text-[9px] opacity-80 font-medium mt-0.5">Tindakan ini permanen dan tidak bisa dibatalkan.</p>
+                            <p className="text-[10px] opacity-80 font-medium mt-1">Tindakan ini permanen dan tidak bisa dibatalkan.</p>
                         </div>
                     </div>
-                    <div className="px-1">
-                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
-                            Apakah Anda yakin ingin menghapus kelas <strong className="text-red-600 font-bold">{itemToDelete?.name}</strong>?
+                    <div className="px-2">
+                        <p className="text-sm text-[var(--color-text)] leading-relaxed font-medium">
+                            Apakah Anda yakin ingin menghapus kelas <strong className="text-red-500 font-bold">{itemToDelete?.name}</strong>?
                             <br />
-                            <span className="text-[10px] text-gray-400 mt-2 block italic">Semua data siswa dalam kelas ini mungkin akan kehilangan referensi kelas.</span>
+                            <span className="text-[11px] text-[var(--color-text-muted)] mt-3 block italic">Semua data siswa dalam kelas ini mungkin akan kehilangan referensi kelas.</span>
                         </p>
                     </div>
-                    <div className="flex gap-2.5 pt-1">
-                        <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="btn btn-secondary flex-1 font-bold h-10 text-[10px] uppercase tracking-widest">
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="btn btn-secondary flex-1 font-bold h-11 text-xs uppercase tracking-widest rounded-xl">
                             BATAL
                         </button>
-                        <button type="button" onClick={executeDelete} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-sm flex-1 font-bold h-10 text-[10px] uppercase tracking-widest">
+                        <button type="button" onClick={executeDelete} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-lg shadow-red-500/20 flex-1 font-bold h-11 text-xs uppercase tracking-widest rounded-xl">
                             YA, HAPUS
                         </button>
                     </div>

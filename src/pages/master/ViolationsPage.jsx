@@ -101,73 +101,73 @@ export default function ViolationsPage() {
     return (
         <DashboardLayout title="Jenis Pelanggaran & Prestasi">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-xl font-bold">Poin Perilaku</h1>
-                    <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5">
+                    <h1 className="text-2xl font-black font-heading text-[var(--color-text)] tracking-tight">Poin Perilaku</h1>
+                    <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">
                         Konfigurasi bobot poin untuk setiap jenis pelanggaran dan prestasi siswa.
                     </p>
                 </div>
-                <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-indigo-500/20 h-10 text-xs font-bold px-4">
+                <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-[var(--color-primary)]/20 h-11 text-xs font-bold px-5 rounded-full">
                     <FontAwesomeIcon icon={faPlus} />
                     <span className="ml-2">TAMBAH KONFIGURASI</span>
                 </button>
             </div>
 
             {/* Premium Stats Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-                <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-3.5 border-l-4 border-l-indigo-500 flex items-center gap-3.5 shadow-sm">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div className="glass rounded-[1.5rem] p-5 border-t-[3px] border-t-[var(--color-primary)] flex items-center gap-4 group hover:border-t-4 transition-all hover:bg-[var(--color-primary)]/5">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 dark:from-[var(--color-primary)]/20 dark:to-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-primary)] text-xl group-hover:scale-110 transition-transform">
                         <FontAwesomeIcon icon={faShieldAlt} />
                     </div>
                     <div>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total Tipe</p>
-                        <h3 className="text-lg font-bold leading-tight">{stats.total}</h3>
+                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Total Tipe</p>
+                        <h3 className="text-2xl font-black font-heading leading-none text-[var(--color-text)]">{stats.total}</h3>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-3.5 border-l-4 border-l-red-500 flex items-center gap-3.5 shadow-sm">
-                    <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center text-lg">
+                <div className="glass rounded-[1.5rem] p-5 border-t-[3px] border-t-red-500 flex items-center gap-4 group hover:border-t-4 transition-all hover:bg-red-500/5">
+                    <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 text-xl group-hover:scale-110 transition-transform">
                         <FontAwesomeIcon icon={faGavel} />
                     </div>
                     <div>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Pelanggaran</p>
-                        <h3 className="text-lg font-bold leading-tight">{stats.violations}</h3>
+                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Pelanggaran</p>
+                        <h3 className="text-2xl font-black font-heading leading-none text-[var(--color-text)]">{stats.violations}</h3>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-3.5 border-l-4 border-l-emerald-500 flex items-center gap-3.5 shadow-sm">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg">
+                <div className="glass rounded-[1.5rem] p-5 border-t-[3px] border-t-emerald-500 flex items-center gap-4 group hover:border-t-4 transition-all hover:bg-emerald-500/5">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-xl group-hover:scale-110 transition-transform">
                         <FontAwesomeIcon icon={faTrophy} />
                     </div>
                     <div>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Prestasi</p>
-                        <h3 className="text-lg font-bold leading-tight">{stats.achievements}</h3>
+                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Prestasi</p>
+                        <h3 className="text-2xl font-black font-heading leading-none text-[var(--color-text)]">{stats.achievements}</h3>
                     </div>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl mb-5 p-3.5 shadow-sm">
+            <div className="glass rounded-[1.5rem] mb-6 p-4 border border-[var(--color-border)]">
                 <div className="flex flex-col sm:flex-row gap-4 items-center">
-                    <div className="flex-1 relative w-full font-normal">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                            <FontAwesomeIcon icon={faSearch} className="text-xs" />
+                    <div className="flex-1 relative w-full font-normal group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[var(--color-text-muted)] transition-colors group-focus-within:text-[var(--color-primary)]">
+                            <FontAwesomeIcon icon={faSearch} className="text-sm" />
                         </div>
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari nama pelanggaran atau prestasi..."
-                            className="input-field pl-10 w-full h-10 text-xs"
+                            className="input-field pl-11 w-full h-11 text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                         />
                     </div>
                     <div className="relative w-full sm:w-64">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                            <FontAwesomeIcon icon={faFilter} className="text-xs" />
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[var(--color-text-muted)]">
+                            <FontAwesomeIcon icon={faFilter} className="text-sm" />
                         </div>
                         <select
                             value={filterCategory}
                             onChange={(e) => setFilterCategory(e.target.value)}
-                            className="select-field pl-10 w-full font-bold text-xs h-10"
+                            className="select-field pl-11 w-full font-bold text-sm h-11 bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] rounded-xl"
                         >
                             <option value="">Semua Kategori</option>
                             {CATEGORIES.map(cat => (
@@ -179,57 +179,57 @@ export default function ViolationsPage() {
             </div>
 
             {/* Table Layout */}
-            <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl overflow-hidden shadow-sm">
+            <div className="glass rounded-[1.5rem] overflow-hidden border border-[var(--color-border)] shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Deskripsi</th>
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Kategori</th>
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Tipe Poin</th>
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Bobot</th>
-                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-right pr-6">Aksi</th>
+                            <tr className="bg-[var(--color-surface-alt)]/50 border-b border-[var(--color-border)] backdrop-blur-sm">
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Deskripsi</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Kategori</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Tipe Poin</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Bobot</th>
+                                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-right pr-6">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
                             {filteredViolations.map((item) => (
                                 <tr key={item.id} className="hover:bg-[var(--color-surface-alt)]/30 transition-colors group">
-                                    <td className="px-5 py-3">
-                                        <div className="font-bold text-[13px] text-gray-900 dark:text-white leading-tight">{item.name}</div>
+                                    <td className="px-6 py-4">
+                                        <div className="font-bold text-sm text-[var(--color-text)] leading-tight">{item.name}</div>
                                     </td>
-                                    <td className="px-5 py-3 text-center">
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-bold tracking-widest uppercase border border-slate-200/50">
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-bold tracking-widest uppercase border border-[var(--color-border)]">
                                             {item.category}
                                         </span>
                                     </td>
-                                    <td className="px-5 py-3 text-center">
+                                    <td className="px-6 py-4 text-center">
                                         {item.isNegative ? (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 text-[10px] font-bold uppercase tracking-tight">
-                                                <FontAwesomeIcon icon={faExclamationTriangle} className="text-[8px]" /> Pelanggaran
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 text-[11px] font-bold uppercase tracking-tight border border-red-500/20">
+                                                <FontAwesomeIcon icon={faExclamationTriangle} className="text-[10px]" /> Pelanggaran
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-tight">
-                                                <FontAwesomeIcon icon={faCheckCircle} className="text-[8px]" /> Prestasi
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-tight border border-emerald-500/20">
+                                                <FontAwesomeIcon icon={faCheckCircle} className="text-[10px]" /> Prestasi
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-5 py-3 text-center">
-                                        <div className={`text-[12px] font-bold uppercase tracking-tighter ${item.isNegative ? 'text-red-500' : 'text-emerald-500'}`}>
+                                    <td className="px-6 py-4 text-center">
+                                        <div className={`text-sm font-black uppercase tracking-tighter ${item.isNegative ? 'text-red-500' : 'text-emerald-500'}`}>
                                             {item.points > 0 ? '+' : ''}{item.points} POIN
                                         </div>
                                     </td>
-                                    <td className="px-5 py-3 text-right pr-4">
-                                        <div className="flex items-center justify-end gap-0.5">
+                                    <td className="px-6 py-4 text-right pr-4">
+                                        <div className="flex items-center justify-end gap-1">
                                             <button
                                                 onClick={() => handleEdit(item)}
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all text-xs"
+                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm"
                                                 title="Edit"
                                             >
                                                 <FontAwesomeIcon icon={faEdit} />
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(item)}
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all text-xs"
+                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"
                                                 title="Hapus"
                                             >
                                                 <FontAwesomeIcon icon={faTrash} />
@@ -250,67 +250,67 @@ export default function ViolationsPage() {
                 title={selectedItem ? 'Pembaruan Konfigurasi' : 'Konfigurasi Poin Baru'}
                 size="md"
             >
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <section className="space-y-3">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <section className="space-y-4">
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Deskripsi Poin</label>
+                            <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Deskripsi Poin</label>
                             <input
                                 type="text"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 placeholder="Contoh: Terlambat, Juara Kelas, dll"
-                                className="input-field font-bold text-xs py-2.5 h-10"
+                                className="input-field font-bold text-sm py-2.5 h-11"
                                 autoFocus
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="md:col-span-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Tipe Akumulasi</label>
-                                <div className="flex gap-1 p-1 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Tipe Akumulasi</label>
+                                <div className="flex gap-2 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, isNegative: true })}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-[9px] font-bold transition-all uppercase tracking-tighter ${formData.isNegative
-                                            ? 'bg-red-500 text-white shadow-sm'
-                                            : 'text-gray-400 hover:text-gray-600'
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[11px] font-bold transition-all uppercase tracking-tight ${formData.isNegative
+                                            ? 'bg-red-500 text-white shadow-md shadow-red-500/20'
+                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
                                             }`}
                                     >
-                                        <FontAwesomeIcon icon={faGavel} className="text-[9px]" />
+                                        <FontAwesomeIcon icon={faGavel} className="text-[12px]" />
                                         <span>PELANGGARAN (-)</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, isNegative: false })}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-[9px] font-bold transition-all uppercase tracking-tighter ${!formData.isNegative
-                                            ? 'bg-emerald-500 text-white shadow-sm'
-                                            : 'text-gray-400 hover:text-gray-600'
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[11px] font-bold transition-all uppercase tracking-tight ${!formData.isNegative
+                                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
                                             }`}
                                     >
-                                        <FontAwesomeIcon icon={faTrophy} className="text-[9px]" />
+                                        <FontAwesomeIcon icon={faTrophy} className="text-[12px]" />
                                         <span>PRESTASI (+)</span>
                                     </button>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Bobot Poin</label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Bobot Poin</label>
                                 <input
                                     type="number"
                                     value={formData.points}
                                     onChange={(e) => setFormData({ ...formData, points: e.target.value })}
                                     placeholder="5"
                                     min="1"
-                                    className="input-field font-bold text-xs py-2 h-10"
+                                    className="input-field font-bold text-sm py-2 h-11"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Kategori</label>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Kategori</label>
                                 <select
                                     value={formData.category}
                                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    className="select-field font-bold text-xs py-2 h-10"
+                                    className="select-field font-bold text-sm py-2 h-11"
                                 >
                                     {CATEGORIES.map(cat => (
                                         <option key={cat} value={cat}>{cat}</option>
@@ -320,11 +320,11 @@ export default function ViolationsPage() {
                         </div>
                     </section>
 
-                    <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary font-bold py-2 text-xs h-10 px-6 uppercase tracking-widest">
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary font-bold py-2 text-xs h-11 px-6 uppercase tracking-widest rounded-xl">
                             BATAL
                         </button>
-                        <button type="submit" disabled={submitting} className="btn btn-primary px-8 font-bold shadow-md shadow-indigo-500/20 py-2 text-xs h-10 uppercase tracking-widest">
+                        <button type="submit" disabled={submitting} className="btn btn-primary px-8 font-bold shadow-lg shadow-[var(--color-primary)]/20 py-2 text-xs h-11 uppercase tracking-widest rounded-xl">
                             {submitting ? (
                                 <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
                             ) : (

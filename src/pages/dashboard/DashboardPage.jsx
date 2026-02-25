@@ -2,11 +2,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faUsers,
     faClipboardList,
-    faExclamationTriangle,
-    faTrophy,
     faArrowUp,
     faArrowDown,
     faPlus,
+    faArrowRight,
+    faExclamationTriangle,
+    faTrophy
 } from '@fortawesome/free-solid-svg-icons'
 import { Link } from 'react-router-dom'
 import {
@@ -81,17 +82,17 @@ export default function DashboardPage() {
             {/* Charts Row */}
             <div className="grid lg:grid-cols-3 gap-6 mb-6">
                 {/* Line Chart */}
-                <div className="lg:col-span-2 bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-4 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Tren Mingguan</h3>
-                        <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-tight">
+                <div className="lg:col-span-2 glass rounded-[1.5rem] p-5 flex flex-col">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Tren Mingguan</h3>
+                        <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
                             <span className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-red-500" />
-                                <span className="text-gray-500">Pelanggaran</span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50" />
+                                <span className="text-[var(--color-text-muted)]">Pelanggaran</span>
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                <span className="text-gray-500">Prestasi</span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
+                                <span className="text-[var(--color-text-muted)]">Prestasi</span>
                             </span>
                         </div>
                     </div>
@@ -128,8 +129,8 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Pie Chart */}
-                <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-4 shadow-sm">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Jenis Pelanggaran</h3>
+                <div className="glass rounded-[1.5rem] p-5 flex flex-col">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-6">Jenis Pelanggaran</h3>
                     <div className="h-48">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -150,11 +151,11 @@ export default function DashboardPage() {
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 mt-4">
+                    <div className="grid grid-cols-2 gap-3 mt-6">
                         {PIE_DATA.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight">
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                                <span className="text-gray-500">{item.name}</span>
+                            <div key={idx} className="flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-widest">
+                                <span className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: item.color, boxShadow: `0 2px 8px ${item.color}40` }} />
+                                <span className="text-[var(--color-text-muted)] truncate">{item.name}</span>
                             </div>
                         ))}
                     </div>
@@ -164,36 +165,36 @@ export default function DashboardPage() {
             {/* Recent Reports & Quick Actions */}
             <div className="grid lg:grid-cols-3 gap-6">
                 {/* Recent Reports */}
-                <div className="lg:col-span-2 bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-4 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Laporan Terbaru</h3>
-                        <Link to="/reports" className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest">
-                            Lihat Semua →
+                <div className="lg:col-span-2 glass rounded-[1.5rem] p-5">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Laporan Terbaru</h3>
+                        <Link to="/reports" className="text-[10px] font-black text-[var(--color-primary)] hover:text-[var(--color-accent)] uppercase tracking-widest transition-colors flex items-center gap-1">
+                            Lihat Semua <FontAwesomeIcon icon={faArrowRight} className="text-[8px]" />
                         </Link>
                     </div>
                     <div className="space-y-2">
                         {RECENT_REPORTS.map((report) => (
                             <div
                                 key={report.id}
-                                className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-lg group hover:border-indigo-200 transition-all"
+                                className="flex items-center justify-between p-3.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl group hover:border-[var(--color-primary)]/30 transition-all"
                             >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-black shadow-sm
-                    ${report.points > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white text-[12px] font-black shadow-lg
+                    ${report.points > 0 ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/20' : 'bg-gradient-to-br from-red-500 to-rose-500 shadow-red-500/20'}`}>
                                         {report.points > 0 ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-[13px] text-gray-900 dark:text-white leading-tight">{report.student}</p>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight mt-0.5">
-                                            {report.class} • {report.type}
+                                        <p className="font-bold text-[14px] text-[var(--color-text)] leading-tight mb-0.5">{report.student}</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">
+                                            {report.class} <span className="opacity-40 mx-1">•</span> {report.type}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className={`font-black text-[12px] uppercase tracking-tighter ${report.points > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                    <p className={`font-black text-[12px] font-mono tracking-tighter ${report.points > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                         {report.points > 0 ? '+' : ''}{report.points} POIN
                                     </p>
-                                    <p className="text-[9px] text-gray-400 font-bold">{report.time}</p>
+                                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-1 uppercase tracking-widest">{report.time}</p>
                                 </div>
                             </div>
                         ))}
@@ -201,48 +202,48 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-white dark:bg-gray-950 border border-[var(--color-border)] rounded-xl p-4 shadow-sm">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Aksi Cepat</h3>
-                    <div className="space-y-2">
+                <div className="glass rounded-[1.5rem] p-5">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-6">Aksi Cepat</h3>
+                    <div className="space-y-3">
                         <Link
                             to="/reports/new"
-                            className="flex items-center gap-3 p-3 bg-gradient-to-r from-indigo-500 to-purple-600 
-                rounded-xl text-white hover:shadow-lg hover:shadow-indigo-500/20 transition-all active:scale-95"
+                            className="flex items-center gap-4 p-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] 
+                rounded-xl text-white shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5 transition-all"
                         >
-                            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
-                                <FontAwesomeIcon icon={faPlus} />
+                            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                                <FontAwesomeIcon icon={faPlus} className="text-lg" />
                             </div>
                             <div>
-                                <p className="font-bold text-sm uppercase tracking-tight">Buat Laporan</p>
-                                <p className="text-[10px] text-white/70 font-bold font-medium">PELANGGARAN / PRESTASI</p>
+                                <p className="font-bold text-sm font-heading leading-tight mb-0.5">Buat Laporan</p>
+                                <p className="text-[10px] text-white/80 font-bold uppercase tracking-widest">PELANGGARAN / PRESTASI</p>
                             </div>
                         </Link>
 
                         <Link
                             to="/master/students"
-                            className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800
-                rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-center gap-4 p-4 bg-[var(--color-surface)] border border-[var(--color-border)]
+                rounded-xl hover:border-[var(--color-primary)]/30 group transition-all"
                         >
-                            <div className="w-9 h-9 bg-blue-500/10 text-blue-600 rounded-lg flex items-center justify-center">
-                                <FontAwesomeIcon icon={faUsers} />
+                            <div className="w-10 h-10 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <FontAwesomeIcon icon={faUsers} className="text-lg" />
                             </div>
                             <div>
-                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-tight">Data Siswa</p>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">KELOLA DATABASE SISWA</p>
+                                <p className="font-bold text-sm text-[var(--color-text)] font-heading leading-tight mb-0.5">Data Siswa</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">KELOLA DATABASE SISWA</p>
                             </div>
                         </Link>
 
                         <Link
                             to="/reports"
-                            className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800
-                rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-center gap-4 p-4 bg-[var(--color-surface)] border border-[var(--color-border)]
+                rounded-xl hover:border-[var(--color-primary)]/30 group transition-all"
                         >
-                            <div className="w-9 h-9 bg-amber-500/10 text-amber-600 rounded-lg flex items-center justify-center">
-                                <FontAwesomeIcon icon={faClipboardList} />
+                            <div className="w-10 h-10 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <FontAwesomeIcon icon={faClipboardList} className="text-lg" />
                             </div>
                             <div>
-                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-tight">Semua Laporan</p>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">LIHAT RIWAYAT LENGKAP</p>
+                                <p className="font-bold text-sm text-[var(--color-text)] font-heading leading-tight mb-0.5">Semua Laporan</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">LIHAT RIWAYAT LENGKAP</p>
                             </div>
                         </Link>
                     </div>
