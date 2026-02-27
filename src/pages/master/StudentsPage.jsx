@@ -23,7 +23,15 @@ import {
     faChevronLeft,
     faChevronRight,
     faAnglesLeft,
-    faAnglesRight
+    faAnglesRight,
+    faTriangleExclamation,
+    faPrint,
+    faFilter,
+    faXmark,
+    faSliders,
+    faTableList,
+    faSchool,
+    faBullhorn,
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -74,7 +82,7 @@ export default function StudentsPage() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [selectedStudent, setSelectedStudent] = useState(null)
     const [studentToDelete, setStudentToDelete] = useState(null)
-    const [formData, setFormData] = useState({ name: '', gender: 'L', class_id: '', phone: '', photo_url: '' })
+    const [formData, setFormData] = useState({ name: '', gender: 'L', class_id: '', phone: '', photo_url: '', nisn: '' })
     const [submitting, setSubmitting] = useState(false)
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
     const [isQRModalOpen, setIsQRModalOpen] = useState(false)
@@ -86,9 +94,18 @@ export default function StudentsPage() {
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
     const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false)
+    const [isBulkWAModalOpen, setIsBulkWAModalOpen] = useState(false)
     const [bulkClassId, setBulkClassId] = useState('')
-    const [globalStats, setGlobalStats] = useState({ total: 0, boys: 0, girls: 0, avgPoints: 0 })
+    const [globalStats, setGlobalStats] = useState({ total: 0, boys: 0, girls: 0, avgPoints: 0, worstClass: null })
     const [totalRows, setTotalRows] = useState(0)
+    const [lastReportMap, setLastReportMap] = useState({}) // studentId -> date string
+    // Filter poin range
+    const [filterPointMode, setFilterPointMode] = useState('') // '' | 'risk' | 'positive' | 'custom'
+    const [filterPointMin, setFilterPointMin] = useState('')
+    const [filterPointMax, setFilterPointMax] = useState('')
+    const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
+    // NIS/NISN in formData handled via formData extension
+    const RISK_THRESHOLD = -30
 
     // ✅ FIX: ref import dan ref foto dipisah (sebelumnya bentrok)
     const importFileInputRef = useRef(null)
@@ -146,17 +163,23 @@ export default function StudentsPage() {
                 const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
                 q = q.or(`name.ilike.%${s}%,registration_code.ilike.%${s}%`)
             }
+            // ✅ NEW: filter poin range
+            if (filterPointMode === 'risk') q = q.lt('total_points', RISK_THRESHOLD)
+            else if (filterPointMode === 'positive') q = q.gt('total_points', 0)
+            else if (filterPointMode === 'custom') {
+                if (filterPointMin !== '') q = q.gte('total_points', Number(filterPointMin))
+                if (filterPointMax !== '') q = q.lte('total_points', Number(filterPointMax))
+            }
 
             const { data: studentsData, error: studentsError, count } = await q
             if (studentsError) throw studentsError
 
-            // ✅ FIX: gunakan server count untuk totalRows yang akurat
             setTotalRows(count ?? 0)
 
-            // ✅ FIX: ambil stats global dari semua data (bukan hanya halaman aktif)
+            // ✅ Global stats — semua siswa
             const { data: statsData } = await supabase
                 .from('students')
-                .select('gender, total_points')
+                .select('id, gender, total_points, class_id, classes(name)')
             if (statsData) {
                 const total = statsData.length
                 const boys = statsData.filter(s => s.gender === 'L').length
@@ -164,12 +187,42 @@ export default function StudentsPage() {
                 const avgPoints = total > 0
                     ? Math.round(statsData.reduce((acc, s) => acc + (s.total_points || 0), 0) / total)
                     : 0
-                setGlobalStats({ total, boys, girls, avgPoints })
+
+                // ✅ NEW: hitung kelas dengan rata-rata poin terendah
+                const classBuckets = {}
+                statsData.forEach(s => {
+                    const cn = s.classes?.name || 'Tanpa Kelas'
+                    if (!classBuckets[cn]) classBuckets[cn] = []
+                    classBuckets[cn].push(s.total_points || 0)
+                })
+                let worstClass = null, worstAvg = Infinity
+                Object.entries(classBuckets).forEach(([name, pts]) => {
+                    const avg = pts.reduce((a, b) => a + b, 0) / pts.length
+                    if (avg < worstAvg) { worstAvg = avg; worstClass = { name, avg: Math.round(avg), count: pts.length } }
+                })
+
+                setGlobalStats({ total, boys, girls, avgPoints, worstClass })
+            }
+
+            // ✅ NEW: fetch last behavior report per student di halaman ini
+            const ids = (studentsData || []).map(s => s.id)
+            if (ids.length > 0) {
+                const { data: reportsData } = await supabase
+                    .from('behavior_reports')
+                    .select('student_id, created_at')
+                    .in('student_id', ids)
+                    .order('created_at', { ascending: false })
+                const map = {}
+                    ; (reportsData || []).forEach(r => {
+                        if (!map[r.student_id]) map[r.student_id] = r.created_at
+                    })
+                setLastReportMap(map)
+            } else {
+                setLastReportMap({})
             }
 
             const transformed = (studentsData || []).map(s => {
                 const pts = s.total_points ?? 0
-                // ✅ FIX: trend netral untuk poin 0
                 const trend = pts > 0 ? 'up' : pts < 0 ? 'down' : 'neutral'
                 return {
                     ...s,
@@ -212,7 +265,7 @@ export default function StudentsPage() {
     useEffect(() => {
         fetchData()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, pageSize, filterClass, filterGender, sortBy, debouncedSearch])
+    }, [page, pageSize, filterClass, filterGender, sortBy, debouncedSearch, filterPointMode, filterPointMin, filterPointMax])
 
     // ✅ FIX: hapus client-side filter/sort — sudah dilakukan server-side
     // students = data halaman aktif langsung dari Supabase
@@ -270,7 +323,7 @@ export default function StudentsPage() {
 
     const handleAdd = () => {
         setSelectedStudent(null)
-        setFormData({ name: '', gender: 'L', class_id: '', phone: '', photo_url: '' })
+        setFormData({ name: '', gender: 'L', class_id: '', phone: '', photo_url: '', nisn: '' })
         setIsModalOpen(true)
     }
 
@@ -281,7 +334,8 @@ export default function StudentsPage() {
             gender: student.gender || 'L',
             class_id: student.class_id || '',
             phone: student.phone || '',
-            photo_url: student.photo_url || ''
+            photo_url: student.photo_url || '',
+            nisn: student.nisn || ''
         })
         setIsModalOpen(true)
     }
@@ -323,7 +377,8 @@ export default function StudentsPage() {
             gender: formData.gender,
             class_id: formData.class_id,
             phone: formData.phone,
-            photo_url: formData.photo_url
+            photo_url: formData.photo_url,
+            nisn: formData.nisn || null,
         }
 
         try {
@@ -335,7 +390,8 @@ export default function StudentsPage() {
                         gender: formData.gender,
                         class_id: formData.class_id,
                         phone: formData.phone,
-                        photo_url: formData.photo_url
+                        photo_url: formData.photo_url,
+                        nisn: formData.nisn || null,
                     })
                     .eq('id', selectedStudent.id)
                 if (error) throw error
@@ -437,6 +493,111 @@ export default function StudentsPage() {
         setSelectedStudent(student)
         setIsPrintModalOpen(true)
     }
+
+    // ✅ NEW: Bulk WA — kirim notifikasi ke semua wali terpilih
+    const handleBulkWA = () => {
+        const targets = students.filter(s => selectedStudentIds.includes(s.id) && s.phone)
+        if (!targets.length) {
+            addToast('Tidak ada siswa terpilih yang memiliki nomor WA', 'warning')
+            return
+        }
+        setIsBulkWAModalOpen(true)
+    }
+
+    const openWAForStudent = (student, msg) => {
+        const phone = (student.phone || '').replace(/\D/g, '').replace(/^0/, '62')
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+        window.open(url, '_blank')
+    }
+
+    // ✅ NEW: Bulk print kartu PDF — semua siswa terpilih
+    const handleBulkPrint = async () => {
+        const targets = students.filter(s => selectedStudentIds.includes(s.id))
+        if (!targets.length) { addToast('Pilih siswa terlebih dahulu', 'warning'); return }
+
+        addToast('Menyiapkan PDF kartu...', 'info')
+        try {
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [215, 135] })
+            targets.forEach((s, idx) => {
+                if (idx > 0) doc.addPage()
+                // Card background
+                doc.setFillColor(55, 48, 163)
+                doc.roundedRect(10, 10, 195, 115, 8, 8, 'F')
+                // Name
+                doc.setTextColor(255, 255, 255)
+                doc.setFontSize(14)
+                doc.setFont('helvetica', 'bold')
+                doc.text(s.name, 20, 35)
+                // Class
+                doc.setFontSize(10)
+                doc.setFont('helvetica', 'normal')
+                doc.text(s.className || '-', 20, 44)
+                // Code
+                doc.setFontSize(9)
+                doc.text(`Kode: ${s.code || '-'}`, 20, 58)
+                doc.text(`PIN: ${s.pin || '-'}`, 20, 66)
+                if (s.nisn) doc.text(`NISN: ${s.nisn}`, 20, 74)
+                // Gender badge
+                doc.setFontSize(8)
+                doc.text(s.gender === 'L' ? 'PUTRA' : 'PUTRI', 20, 105)
+                // School label
+                doc.setFontSize(7)
+                doc.text('Laporanmu — Sistem Laporan Perilaku', 20, 118)
+            })
+            doc.save(`kartu_siswa_${new Date().toISOString().slice(0, 10)}.pdf`)
+            addToast(`${targets.length} kartu berhasil digenerate`, 'success')
+        } catch (e) {
+            console.error(e)
+            addToast('Gagal generate kartu PDF', 'error')
+        }
+    }
+
+    // ✅ NEW: Download template import xlsx
+    const handleDownloadTemplate = () => {
+        const templateData = [
+            { name: 'Contoh: Ahmad Rizki', gender: 'L', phone: '081234567890', class_name: 'XII IPA 1', nisn: '1234567890' },
+            { name: 'Contoh: Siti Aminah', gender: 'P', phone: '081234567891', class_name: 'XI IPS 2', nisn: '0987654321' },
+        ]
+        const ws = XLSX.utils.json_to_sheet(templateData)
+        ws['!cols'] = [{ wch: 25 }, { wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 15 }]
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Template')
+        const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = 'template_import_siswa.xlsx'
+        link.click()
+        addToast('Template berhasil didownload', 'success')
+    }
+
+    // ✅ Helper: format relative date
+    const formatRelativeDate = (isoString) => {
+        if (!isoString) return null
+        const d = new Date(isoString)
+        const now = new Date()
+        const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24))
+        if (diffDays === 0) return 'Hari ini'
+        if (diffDays === 1) return 'Kemarin'
+        if (diffDays < 7) return `${diffDays} hari lalu`
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)} minggu lalu`
+        if (diffDays < 365) return `${Math.floor(diffDays / 30)} bln lalu`
+        return `${Math.floor(diffDays / 365)} thn lalu`
+    }
+
+    // ✅ Helper: reset all filters
+    const resetAllFilters = () => {
+        setSearchQuery('')
+        setFilterClass('')
+        setFilterGender('')
+        setSortBy('name_asc')
+        setFilterPointMode('')
+        setFilterPointMin('')
+        setFilterPointMax('')
+        setSelectedStudentIds([])
+    }
+
+    const activeFilterCount = [filterClass, filterGender, filterPointMode, debouncedSearch].filter(Boolean).length
 
     // =========================================
     // ADVANCED IMPORT / EXPORT (ALL IN THIS FILE)
@@ -743,13 +904,13 @@ export default function StudentsPage() {
                     </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
                     <button
                         onClick={handleImportClick}
-                        className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest h-11 px-5 shadow-sm rounded-xl transition-all"
+                        className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest h-9 px-4 shadow-sm rounded-lg transition-all"
                     >
                         <FontAwesomeIcon icon={faUpload} />
-                        <span className="hidden sm:inline ml-2">Import</span>
+                        <span className="hidden sm:inline ml-1.5">Import</span>
                     </button>
 
                     <input
@@ -762,72 +923,95 @@ export default function StudentsPage() {
 
                     <button
                         onClick={() => setIsExportModalOpen(true)}
-                        className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest h-11 px-5 shadow-sm rounded-xl transition-all"
+                        className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest h-9 px-4 shadow-sm rounded-lg transition-all"
                     >
                         <FontAwesomeIcon icon={faDownload} />
-                        <span className="hidden sm:inline ml-2">Export</span>
+                        <span className="hidden sm:inline ml-1.5">Export</span>
                     </button>
 
                     <button
                         onClick={handleAdd}
-                        className="btn btn-primary h-11 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 rounded-xl transition-all hover:scale-[1.02]"
+                        className="btn btn-primary h-9 px-5 text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 rounded-lg transition-all hover:scale-[1.02]"
                     >
                         <FontAwesomeIcon icon={faPlus} />
-                        <span className="ml-2">Tambah</span>
+                        <span className="ml-1.5">Tambah</span>
                     </button>
                 </div>
             </div>
 
-            {/* Premium Stats Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="glass rounded-[1.5rem] p-5 border-t-[3px] border-t-[var(--color-primary)] flex items-center gap-4 group hover:border-t-4 transition-all hover:bg-[var(--color-primary)]/5">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 dark:from-[var(--color-primary)]/20 dark:to-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-primary)] text-xl group-hover:scale-110 transition-transform">
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+                <div className="glass rounded-[1.5rem] p-4 border-t-[3px] border-t-[var(--color-primary)] flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-[var(--color-primary)]/5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 flex items-center justify-center text-[var(--color-primary)] text-lg group-hover:scale-110 transition-transform shrink-0">
                         <FontAwesomeIcon icon={faUsers} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Total Siswa</p>
-                        <h3 className="text-2xl font-black font-heading leading-none text-[var(--color-text)]">{stats.total}</h3>
+                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">Total Siswa</p>
+                        <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{stats.total}</h3>
                     </div>
                 </div>
 
-                <div className="glass rounded-[1.5rem] p-5 border-t-[3px] border-t-blue-500 flex items-center gap-4 group hover:border-t-4 transition-all hover:bg-blue-500/5">
-                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 text-xl group-hover:scale-110 transition-transform">
+                <div className="glass rounded-[1.5rem] p-4 border-t-[3px] border-t-blue-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-blue-500/5">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 text-lg group-hover:scale-110 transition-transform shrink-0">
                         <FontAwesomeIcon icon={faMars} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Putra</p>
-                        <h3 className="text-2xl font-black font-heading leading-none text-[var(--color-text)]">{stats.boys}</h3>
+                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">Putra</p>
+                        <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{stats.boys}</h3>
                     </div>
                 </div>
 
-                <div className="glass rounded-[1.5rem] p-5 border-t-[3px] border-t-pink-500 flex items-center gap-4 group hover:border-t-4 transition-all hover:bg-pink-500/5">
-                    <div className="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500 text-xl group-hover:scale-110 transition-transform">
+                <div className="glass rounded-[1.5rem] p-4 border-t-[3px] border-t-pink-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-pink-500/5">
+                    <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500 text-lg group-hover:scale-110 transition-transform shrink-0">
                         <FontAwesomeIcon icon={faVenus} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Putri</p>
-                        <h3 className="text-2xl font-black font-heading leading-none text-[var(--color-text)]">{stats.girls}</h3>
+                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">Putri</p>
+                        <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{stats.girls}</h3>
                     </div>
                 </div>
 
-                <div className="glass rounded-[1.5rem] p-5 border-t-[3px] border-t-emerald-500 flex items-center gap-4 group hover:border-t-4 transition-all hover:bg-emerald-500/5">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-xl group-hover:scale-110 transition-transform">
+                <div className="glass rounded-[1.5rem] p-4 border-t-[3px] border-t-emerald-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-emerald-500/5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-lg group-hover:scale-110 transition-transform shrink-0">
                         <FontAwesomeIcon icon={faTrophy} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Rata-rata</p>
-                        <h3 className="text-2xl font-black font-heading leading-none text-[var(--color-text)]">{stats.avgPoints}</h3>
+                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">Rata-rata Poin</p>
+                        <h3 className={`text-xl font-black font-heading leading-none ${stats.avgPoints >= 0 ? 'text-[var(--color-text)]' : 'text-red-500'}`}>{stats.avgPoints}</h3>
+                    </div>
+                </div>
+
+                {/* ✅ NEW: Kelas Bermasalah */}
+                <div
+                    className="glass rounded-[1.5rem] p-4 border-t-[3px] border-t-red-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-red-500/5 cursor-pointer col-span-2 lg:col-span-1"
+                    onClick={() => { if (stats.worstClass) { setFilterClass(''); setFilterPointMode('risk') } }}
+                    title="Klik untuk filter siswa risiko"
+                >
+                    <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 text-lg group-hover:scale-110 transition-transform shrink-0">
+                        <FontAwesomeIcon icon={faTriangleExclamation} />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">Kelas Bermasalah</p>
+                        {stats.worstClass ? (
+                            <>
+                                <h3 className="text-sm font-black font-heading leading-none text-red-500 truncate">{stats.worstClass.name}</h3>
+                                <p className="text-[9px] text-[var(--color-text-muted)] mt-0.5">avg {stats.worstClass.avg} poin</p>
+                            </>
+                        ) : (
+                            <h3 className="text-sm font-black text-[var(--color-text-muted)]">-</h3>
+                        )}
                     </div>
                 </div>
             </div>
 
             {/* Filters & Sort */}
-            <div className="glass rounded-[1.5rem] mb-6 p-4 border border-[var(--color-border)] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-primary)]/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-transform group-hover:scale-110"></div>
+            <div className="glass rounded-[1.5rem] mb-4 p-4 border border-[var(--color-border)] relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-primary)]/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
 
+                {/* Row 1: Search + filters + toggle advanced */}
                 <div className="flex flex-col md:flex-row gap-3 relative z-10">
-                    <div className="flex-1 relative font-normal transition-all group-focus-within:text-[var(--color-primary)]">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm transition-colors">
+                    <div className="flex-1 relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
                             <FontAwesomeIcon icon={faSearch} />
                         </div>
                         <input
@@ -835,15 +1019,15 @@ export default function StudentsPage() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari nama, kode... (Esc untuk clear)"
-                            className="input-field pl-11 w-full h-11 text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
+                            className="input-field pl-11 w-full h-10 text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                         />
                     </div>
 
                     <div className="flex flex-wrap gap-2">
                         <select
                             value={filterClass}
-                            onChange={(e) => setFilterClass(e.target.value)}
-                            className="select-field h-11 text-sm py-2 px-4 w-full md:w-auto min-w-[120px] rounded-xl border-[var(--color-border)] bg-transparent focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_1rem_center] pr-10"
+                            onChange={(e) => { setFilterClass(e.target.value); setPage(1) }}
+                            className="select-field h-10 text-sm py-2 px-4 w-full md:w-auto min-w-[120px] rounded-xl border-[var(--color-border)] bg-transparent focus:border-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_0.75rem_center] pr-8"
                         >
                             <option value="">Semua Kelas</option>
                             {classesList.map(c => (
@@ -853,33 +1037,130 @@ export default function StudentsPage() {
 
                         <select
                             value={filterGender}
-                            onChange={(e) => setFilterGender(e.target.value)}
-                            className="select-field h-11 text-sm py-2 px-4 w-full md:w-auto rounded-xl border-[var(--color-border)] bg-transparent focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_1rem_center] pr-10"
+                            onChange={(e) => { setFilterGender(e.target.value); setPage(1) }}
+                            className="select-field h-10 text-sm py-2 px-4 w-full md:w-auto rounded-xl border-[var(--color-border)] bg-transparent focus:border-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_0.75rem_center] pr-8"
                         >
                             <option value="">Semua Gender</option>
-                            <option value="L">Putra (Laki-laki)</option>
-                            <option value="P">Putri (Perempuan)</option>
+                            <option value="L">Putra</option>
+                            <option value="P">Putri</option>
                         </select>
 
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="select-field h-11 text-sm py-2 px-4 w-full md:w-auto rounded-xl border-[var(--color-border)] bg-transparent focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_1rem_center] pr-10"
+                            className="select-field h-10 text-sm py-2 px-4 w-full md:w-auto rounded-xl border-[var(--color-border)] bg-transparent focus:border-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_0.75rem_center] pr-8"
                         >
                             {SORT_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                         </select>
+
+                        {/* Toggle advanced filter */}
+                        <button
+                            type="button"
+                            onClick={() => setShowAdvancedFilter(v => !v)}
+                            className={`h-10 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${showAdvancedFilter || filterPointMode ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                        >
+                            <FontAwesomeIcon icon={faSliders} />
+                            <span className="hidden sm:inline">Filter Poin</span>
+                            {filterPointMode && <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />}
+                        </button>
+
+                        {/* Reset all filters */}
+                        {activeFilterCount > 0 && (
+                            <button
+                                type="button"
+                                onClick={resetAllFilters}
+                                className="h-10 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-red-500/10 flex items-center gap-1.5"
+                            >
+                                <FontAwesomeIcon icon={faXmark} />
+                                <span className="hidden sm:inline">Reset ({activeFilterCount})</span>
+                            </button>
+                        )}
                     </div>
                 </div>
+
+                {/* Row 2: Advanced poin range filter */}
+                {showAdvancedFilter && (
+                    <div className="mt-3 pt-3 border-t border-[var(--color-border)] flex flex-wrap gap-2 items-center relative z-10">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Filter Poin:</span>
+                        {[
+                            { value: '', label: 'Semua' },
+                            { value: 'risk', label: '⚠ Risiko (< ' + RISK_THRESHOLD + ')' },
+                            { value: 'positive', label: '✓ Positif (> 0)' },
+                            { value: 'custom', label: 'Custom Range' },
+                        ].map(opt => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => { setFilterPointMode(opt.value); setPage(1) }}
+                                className={`h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${filterPointMode === opt.value ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                        {filterPointMode === 'custom' && (
+                            <div className="flex items-center gap-2 ml-1">
+                                <input
+                                    type="number"
+                                    value={filterPointMin}
+                                    onChange={(e) => { setFilterPointMin(e.target.value); setPage(1) }}
+                                    placeholder="Min"
+                                    className="input-field h-8 w-20 text-xs rounded-lg border-[var(--color-border)] bg-transparent text-center"
+                                />
+                                <span className="text-[var(--color-text-muted)] text-xs">–</span>
+                                <input
+                                    type="number"
+                                    value={filterPointMax}
+                                    onChange={(e) => { setFilterPointMax(e.target.value); setPage(1) }}
+                                    placeholder="Max"
+                                    className="input-field h-8 w-20 text-xs rounded-lg border-[var(--color-border)] bg-transparent text-center"
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Table / Loading */}
-
             {loading ? (
-                <div className="glass rounded-[1.5rem] p-10 border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)]">
-                    <FontAwesomeIcon icon={faSpinner} className="fa-spin mr-3" />
-                    Memuat data...
+                <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-[var(--color-surface-alt)]">
+                                <tr className="text-left text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                    <th className="px-6 py-4 w-10"></th>
+                                    <th className="px-6 py-4">Siswa</th>
+                                    <th className="px-6 py-4 text-center">Gender</th>
+                                    <th className="px-6 py-4 text-center">Kelas</th>
+                                    <th className="px-6 py-4 text-center">Poin</th>
+                                    <th className="px-6 py-4 text-center">Lap. Terakhir</th>
+                                    <th className="px-6 py-4 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Array.from({ length: 8 }).map((_, i) => (
+                                    <tr key={i} className="border-t border-[var(--color-border)]">
+                                        <td className="px-6 py-4"><div className="w-4 h-4 rounded bg-[var(--color-border)] animate-pulse" /></td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-[var(--color-border)] animate-pulse shrink-0" />
+                                                <div className="space-y-2">
+                                                    <div className="h-3 w-32 rounded bg-[var(--color-border)] animate-pulse" />
+                                                    <div className="h-2 w-24 rounded bg-[var(--color-border)] animate-pulse opacity-60" />
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4"><div className="w-8 h-8 rounded-lg bg-[var(--color-border)] animate-pulse mx-auto" /></td>
+                                        <td className="px-6 py-4"><div className="h-5 w-20 rounded-md bg-[var(--color-border)] animate-pulse mx-auto" /></td>
+                                        <td className="px-6 py-4"><div className="h-4 w-10 rounded bg-[var(--color-border)] animate-pulse mx-auto" /></td>
+                                        <td className="px-6 py-4"><div className="h-4 w-20 rounded bg-[var(--color-border)] animate-pulse mx-auto" /></td>
+                                        <td className="px-6 py-4"><div className="h-7 w-28 rounded-lg bg-[var(--color-border)] animate-pulse ml-auto" /></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             ) : (
                 <>
@@ -899,159 +1180,187 @@ export default function StudentsPage() {
                                         <th className="px-6 py-4 text-center">Gender</th>
                                         <th className="px-6 py-4 text-center">Kelas</th>
                                         <th className="px-6 py-4 text-center">Poin</th>
+                                        <th className="px-6 py-4 text-center">Lap. Terakhir</th>
                                         <th className="px-6 py-4 text-right">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {students.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-14 ">
+                                            <td colSpan={7} className="px-6 py-14 ">
                                                 <div className="flex flex-col items-center text-center gap-2">
-                                                    <div className="text-sm font-extrabold text-[var(--color-text)] mt-6">
-                                                        Data tidak ditemukan
-                                                    </div>
-                                                    <div className="text-xs font-bold text-[var(--color-text-muted)]">
-                                                        Coba ganti filter / kata kunci pencarian.
-                                                    </div>
-
+                                                    <FontAwesomeIcon icon={faTableList} className="text-3xl text-[var(--color-text-muted)] opacity-30 mb-2" />
+                                                    <div className="text-sm font-extrabold text-[var(--color-text)]">Data tidak ditemukan</div>
+                                                    <div className="text-xs font-bold text-[var(--color-text-muted)]">Coba ganti filter / kata kunci pencarian.</div>
                                                     <button
                                                         type="button"
-                                                        onClick={() => {
-                                                            setSearchQuery('')
-                                                            setFilterClass('')
-                                                            setFilterGender('')
-                                                            setSortBy('name_asc')
-                                                            setSelectedStudentIds([])
-                                                        }}
-                                                        className="mt-3 h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest
-                       border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4"
+                                                        onClick={resetAllFilters}
+                                                        className="mt-3 h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4"
                                                     >
-                                                        Reset filter
+                                                        Reset Semua Filter
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ) : (students.map((student) => (
-                                        <tr key={student.id} className="border-t border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedStudentIds.includes(student.id)}
-                                                    onChange={() => toggleSelectStudent(student.id)}
-                                                />
-                                            </td>
+                                    ) : (students.map((student) => {
+                                        const isRisk = student.points <= RISK_THRESHOLD
+                                        const lastReport = lastReportMap[student.id]
+                                        return (
+                                            <tr key={student.id} className={`border-t border-[var(--color-border)] transition-colors ${isRisk ? 'bg-red-500/[0.03] hover:bg-red-500/[0.06]' : 'hover:bg-[var(--color-surface-alt)]/40'}`}>
+                                                <td className="px-6 py-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedStudentIds.includes(student.id)}
+                                                        onChange={() => toggleSelectStudent(student.id)}
+                                                    />
+                                                </td>
 
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 flex items-center justify-center text-[var(--color-primary)] text-xs font-black shadow-sm overflow-hidden relative shrink-0">
-                                                        <div className="absolute inset-0 bg-white/20 blur-[2px] rounded-full scale-150 -translate-y-1/2 opacity-50"></div>
-                                                        {student.photo_url ? (
-                                                            <img src={student.photo_url} alt="" className="w-full h-full object-cover relative z-10" />
-                                                        ) : (
-                                                            <span className="relative z-10">{(student.name || 'S').charAt(0)}</span>
-                                                        )}
-                                                    </div>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black shadow-sm overflow-hidden relative shrink-0 ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]'}`}>
+                                                            <div className="absolute inset-0 bg-white/20 blur-[2px] rounded-full scale-150 -translate-y-1/2 opacity-50"></div>
+                                                            {student.photo_url ? (
+                                                                <img src={student.photo_url} alt="" className="w-full h-full object-cover relative z-10" />
+                                                            ) : (
+                                                                <span className="relative z-10">{(student.name || 'S').charAt(0)}</span>
+                                                            )}
+                                                        </div>
 
-                                                    <div className="pt-0.5 min-w-0">
-                                                        <button
-                                                            onClick={() => handleViewProfile(student)}
-                                                            className="font-bold text-sm leading-tight text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors block text-left mb-0.5 px-0.5 rounded-sm truncate"
-                                                        >
-                                                            {student.name}
-                                                        </button>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] font-mono text-[var(--color-text-muted)] italic opacity-80 leading-none">
-                                                                {student.code}
-                                                            </span>
+                                                        <div className="pt-0.5 min-w-0">
+                                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                                <button
+                                                                    onClick={() => handleViewProfile(student)}
+                                                                    className="font-bold text-sm leading-tight text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors text-left px-0.5 rounded-sm truncate"
+                                                                >
+                                                                    {student.name}
+                                                                </button>
+                                                                {isRisk && (
+                                                                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black bg-red-500/10 text-red-500 border border-red-500/20 uppercase tracking-widest">
+                                                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-[7px]" />
+                                                                        Risiko
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-mono text-[var(--color-text-muted)] italic opacity-80 leading-none">
+                                                                    {student.code}
+                                                                </span>
+                                                                {student.nisn && (
+                                                                    <span className="text-[9px] text-[var(--color-text-muted)] opacity-60 leading-none">NISN: {student.nisn}</span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center">
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs shadow-inner ${student.gender === 'L' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-pink-500/10 text-pink-500 border border-pink-500/20'}`}>
-                                                        <FontAwesomeIcon icon={student.gender === 'L' ? faMars : faVenus} />
+                                                <td className="px-6 py-4 text-center">
+                                                    <div className="flex items-center justify-center">
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs shadow-inner ${student.gender === 'L' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-pink-500/10 text-pink-500 border border-pink-500/20'}`}>
+                                                            <FontAwesomeIcon icon={student.gender === 'L' ? faMars : faVenus} />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-black bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20 uppercase tracking-widest leading-none">
-                                                    {student.className}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <span className={`text-sm font-black ${student.points >= 0 ? 'text-[var(--color-success)]' : 'text-red-500'}`}>
-                                                        {student.points}
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-black bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20 uppercase tracking-widest leading-none">
+                                                        {student.className}
                                                     </span>
-                                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shadow-inner ${student.trend === 'up' ? 'bg-[var(--color-success)]/10 text-[var(--color-success)] border border-[var(--color-success)]/20' : student.trend === 'down' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-gray-400/10 text-gray-400 border border-gray-400/20'}`}>
-                                                        <FontAwesomeIcon icon={student.trend === 'up' ? faArrowTrendUp : student.trend === 'down' ? faArrowTrendDown : faArrowTrendUp} className={`text-[9px] ${student.trend === 'neutral' ? 'opacity-0' : ''}`} />
-                                                    </div>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            <td className="px-6 py-4 text-right pr-6">
-                                                <div className="flex items-center justify-end gap-1.5">
-                                                    <button
-                                                        onClick={() => handleViewPrint(student)}
-                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm border hover:border-[var(--color-primary)]/20 border-transparent"
-                                                        title="Cetak Kartu"
-                                                    >
-                                                        <FontAwesomeIcon icon={faIdCardAlt} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleViewQR(student)}
-                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-indigo-500/10 transition-all text-sm border hover:border-indigo-500/20 border-transparent"
-                                                        title="QR Akses"
-                                                    >
-                                                        <FontAwesomeIcon icon={faQrcode} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleEdit(student)}
-                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm border hover:border-[var(--color-primary)]/20 border-transparent"
-                                                        title="Edit"
-                                                    >
-                                                        <FontAwesomeIcon icon={faEdit} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => confirmDelete(student)}
-                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm border hover:border-red-500/20 border-transparent"
-                                                        title="Hapus"
-                                                    >
-                                                        <FontAwesomeIcon icon={faTrash} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )))}
+                                                <td className="px-6 py-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span className={`text-sm font-black ${student.points > 0 ? 'text-[var(--color-success)]' : student.points < 0 ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>
+                                                            {student.points}
+                                                        </span>
+                                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shadow-inner ${student.trend === 'up' ? 'bg-[var(--color-success)]/10 text-[var(--color-success)] border border-[var(--color-success)]/20' : student.trend === 'down' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-gray-400/10 text-gray-400 border border-gray-400/20'}`}>
+                                                            <FontAwesomeIcon icon={student.trend === 'up' ? faArrowTrendUp : student.trend === 'down' ? faArrowTrendDown : faArrowTrendUp} className={`text-[9px] ${student.trend === 'neutral' ? 'opacity-0' : ''}`} />
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* ✅ NEW: Laporan terakhir */}
+                                                <td className="px-6 py-4 text-center">
+                                                    {lastReport ? (
+                                                        <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{formatRelativeDate(lastReport)}</span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">–</span>
+                                                    )}
+                                                </td>
+
+                                                <td className="px-6 py-4 text-right pr-6">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <button
+                                                            onClick={() => handleViewPrint(student)}
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm border hover:border-[var(--color-primary)]/20 border-transparent"
+                                                            title="Cetak Kartu"
+                                                        >
+                                                            <FontAwesomeIcon icon={faIdCardAlt} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleViewQR(student)}
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-indigo-500/10 transition-all text-sm border hover:border-indigo-500/20 border-transparent"
+                                                            title="QR Akses"
+                                                        >
+                                                            <FontAwesomeIcon icon={faQrcode} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleEdit(student)}
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm border hover:border-[var(--color-primary)]/20 border-transparent"
+                                                            title="Edit"
+                                                        >
+                                                            <FontAwesomeIcon icon={faEdit} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => confirmDelete(student)}
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm border hover:border-red-500/20 border-transparent"
+                                                            title="Hapus"
+                                                        >
+                                                            <FontAwesomeIcon icon={faTrash} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    }))}
                                 </tbody>
                             </table>
                         </div>
 
                         {/* Bulk action footer */}
                         {selectedStudentIds.length > 0 && (
-                            <div className="p-4 border-t border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--color-surface-alt)]/40">
+                            <div className="p-3 border-t border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[var(--color-surface-alt)]/40">
                                 <div className="text-xs font-bold text-[var(--color-text-muted)]">
                                     <span className="text-[var(--color-primary)] font-black">{selectedStudentIds.length}</span> siswa terpilih
                                     <span className="text-[var(--color-text-muted)]/60 ml-1">(halaman ini)</span>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={handleBulkWA}
+                                        className="btn bg-green-500/10 hover:bg-green-500 text-green-600 hover:text-white border border-green-500/20 h-8 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-1.5"
+                                    >
+                                        <FontAwesomeIcon icon={faWhatsapp} />
+                                        WA Wali
+                                    </button>
+                                    <button
+                                        onClick={handleBulkPrint}
+                                        className="btn bg-indigo-500/10 hover:bg-indigo-500 text-indigo-500 hover:text-white border border-indigo-500/20 h-8 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-1.5"
+                                    >
+                                        <FontAwesomeIcon icon={faPrint} />
+                                        Cetak Kartu
+                                    </button>
                                     <button
                                         onClick={() => setIsBulkDeleteModalOpen(true)}
-                                        className="btn bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 h-11 px-5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
+                                        className="btn bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 h-8 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-1.5"
                                     >
-                                        <FontAwesomeIcon icon={faTrash} className="mr-2" />
-                                        Hapus Terpilih
+                                        <FontAwesomeIcon icon={faTrash} />
+                                        Hapus
                                     </button>
                                     <button
                                         onClick={() => setIsBulkModalOpen(true)}
-                                        className="btn btn-primary h-11 px-6 text-[10px] font-black uppercase tracking-widest rounded-xl"
+                                        className="btn btn-primary h-8 px-4 text-[10px] font-black uppercase tracking-widest rounded-lg flex items-center gap-1.5"
                                     >
-                                        <FontAwesomeIcon icon={faGraduationCap} className="mr-2" />
-                                        Naik Kelas Massal
+                                        <FontAwesomeIcon icon={faGraduationCap} />
+                                        Naik Kelas
                                     </button>
                                 </div>
                             </div>
@@ -1206,9 +1515,20 @@ export default function StudentsPage() {
                 size="xl"
             >
                 <div className="space-y-4">
-                    <div className="text-xs text-[var(--color-text-muted)]">
-                        Support file: <b>.csv</b> / <b>.xlsx</b>. Header fleksibel:
-                        <b> name/nama</b>, <b> gender/jk</b>, <b> phone/no_hp</b>, <b> class_name/kelas</b>
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="text-xs text-[var(--color-text-muted)]">
+                            Support file: <b>.csv</b> / <b>.xlsx</b>. Header fleksibel:
+                            <b> name/nama</b>, <b> gender/jk</b>, <b> phone/no_hp</b>, <b> class_name/kelas</b>, <b> nisn</b>
+                        </div>
+                        {/* ✅ NEW: Download template button */}
+                        <button
+                            type="button"
+                            onClick={handleDownloadTemplate}
+                            className="shrink-0 btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest h-8 px-3 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                            <FontAwesomeIcon icon={faDownload} />
+                            Template
+                        </button>
                     </div>
 
                     {importIssues.length > 0 && (
@@ -1464,6 +1784,24 @@ export default function StudentsPage() {
                             />
                             {formData.phone && !isValidPhone(formData.phone) && (
                                 <p className="text-[10px] text-red-500 mt-1 ml-1">Format HP tidak valid (08/+62, 10–13 digit)</p>
+                            )}
+                        </div>
+
+                        {/* ✅ NEW: NISN */}
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5 ml-1">
+                                NISN <span className="normal-case font-normal opacity-60">(opsional)</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.nisn}
+                                onChange={(e) => setFormData({ ...formData, nisn: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                                placeholder="10 digit angka"
+                                maxLength={10}
+                                className="input-field text-sm py-2.5 rounded-xl border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-transparent font-mono tracking-wider"
+                            />
+                            {formData.nisn && formData.nisn.length !== 10 && (
+                                <p className="text-[10px] text-amber-500 mt-1 ml-1">NISN harus 10 digit ({formData.nisn.length}/10)</p>
                             )}
                         </div>
                     </div>
@@ -1874,6 +2212,74 @@ export default function StudentsPage() {
                     </div>
                 </div>
             </Modal>
+            {/* Bulk WA Modal */}
+            <Modal
+                isOpen={isBulkWAModalOpen}
+                onClose={() => setIsBulkWAModalOpen(false)}
+                title="Kirim WA ke Wali Murid"
+                size="md"
+            >
+                {(() => {
+                    const targets = students.filter(s => selectedStudentIds.includes(s.id))
+                    const withPhone = targets.filter(s => s.phone)
+                    const noPhone = targets.filter(s => !s.phone)
+                    const defaultMsg = `Yth. Bapak/Ibu Wali Murid,\nBerikut laporan poin perilaku putra/putri Anda di sistem Laporanmu. Silakan cek perkembangannya. Terima kasih.`
+                    return (
+                        <div className="space-y-4">
+                            <div className="p-3 bg-green-500/10 rounded-xl border border-green-500/20 flex items-center gap-3">
+                                <FontAwesomeIcon icon={faWhatsapp} className="text-green-600 text-xl shrink-0" />
+                                <div>
+                                    <p className="text-xs font-black text-green-700 dark:text-green-400">{withPhone.length} siswa siap dikirim</p>
+                                    {noPhone.length > 0 && <p className="text-[10px] text-[var(--color-text-muted)]">{noPhone.length} siswa tidak punya nomor WA</p>}
+                                </div>
+                            </div>
+
+                            <div className="max-h-48 overflow-auto space-y-1 border border-[var(--color-border)] rounded-xl p-3">
+                                {withPhone.map(s => (
+                                    <div key={s.id} className="flex items-center justify-between py-1 text-xs">
+                                        <span className="font-bold text-[var(--color-text)]">{s.name}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[var(--color-text-muted)]">{s.phone}</span>
+                                            <button
+                                                onClick={() => openWAForStudent(s, `Assalamu'alaikum, ini laporan poin ${s.name} (${s.className}): ${s.points} poin. Kode: ${s.code}`)}
+                                                className="h-6 px-2 rounded-md bg-green-500/10 text-green-600 text-[10px] font-black hover:bg-green-500/20 transition"
+                                            >
+                                                Kirim
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {noPhone.map(s => (
+                                    <div key={s.id} className="flex items-center justify-between py-1 text-xs opacity-40">
+                                        <span className="font-bold">{s.name}</span>
+                                        <span className="text-[10px]">Tidak ada nomor</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex gap-2 pt-2">
+                                <button
+                                    onClick={() => {
+                                        withPhone.forEach((s, i) => {
+                                            setTimeout(() => openWAForStudent(s, `Assalamu'alaikum Bapak/Ibu wali dari ${s.name} (${s.className}). Poin perilaku saat ini: ${s.points}. Kode siswa: ${s.code}.`), i * 800)
+                                        })
+                                        addToast(`Membuka ${withPhone.length} chat WA...`, 'success')
+                                    }}
+                                    disabled={!withPhone.length}
+                                    className="btn bg-green-500 hover:bg-green-600 text-white flex-1 h-10 text-[10px] font-black uppercase tracking-widest rounded-xl disabled:opacity-40"
+                                >
+                                    <FontAwesomeIcon icon={faBullhorn} className="mr-2" />
+                                    Kirim Semua ({withPhone.length})
+                                </button>
+                                <button onClick={() => setIsBulkWAModalOpen(false)} className="btn bg-[var(--color-surface-alt)] h-10 px-5 text-[10px] font-black uppercase rounded-xl">
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+                    )
+                })()}
+            </Modal>
+
             {/* Bulk Delete Modal */}
             <Modal
                 isOpen={isBulkDeleteModalOpen}
