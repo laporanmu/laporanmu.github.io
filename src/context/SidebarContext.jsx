@@ -4,25 +4,20 @@ const SidebarContext = createContext()
 
 export function SidebarProvider({ children }) {
     const [isCollapsed, setIsCollapsed] = useState(() => {
-        // Load from localStorage
         const saved = localStorage.getItem('sidebar_collapsed')
-        return saved ? JSON.parse(saved) : false
+        // default: true (icon-only rail)
+        return saved ? JSON.parse(saved) : true
     })
 
     useEffect(() => {
-        // Save to localStorage whenever it changes
         localStorage.setItem('sidebar_collapsed', JSON.stringify(isCollapsed))
-
-        // Update CSS variable for sidebar width
         document.documentElement.style.setProperty(
             '--sidebar-width',
-            isCollapsed ? '70px' : '240px'
+            isCollapsed ? '72px' : '240px'
         )
     }, [isCollapsed])
 
-    const toggleSidebar = () => {
-        setIsCollapsed(prev => !prev)
-    }
+    const toggleSidebar = () => setIsCollapsed((prev) => !prev)
 
     return (
         <SidebarContext.Provider value={{ isCollapsed, toggleSidebar }}>
@@ -32,9 +27,5 @@ export function SidebarProvider({ children }) {
 }
 
 export function useSidebar() {
-    const context = useContext(SidebarContext)
-    if (!context) {
-        throw new Error('useSidebar must be used within SidebarProvider')
-    }
-    return context
+    return useContext(SidebarContext)
 }

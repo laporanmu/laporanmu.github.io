@@ -12,6 +12,7 @@ import DashboardPage from './pages/dashboard/DashboardPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import DeveloperPage from './pages/DeveloperPage'
+import LogsPage from './pages/LogsPage'
 
 // Master Data Pages
 import StudentsPage from './pages/master/StudentsPage'
@@ -82,6 +83,7 @@ function AppRoutes() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/developer" element={<DeveloperPage />} />
+        <Route path="/logs" element={<LogsPage />} />
 
         {/* Master Data */}
         <Route path="/master/students" element={<StudentsPage />} />

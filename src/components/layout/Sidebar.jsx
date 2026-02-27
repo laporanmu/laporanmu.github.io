@@ -38,18 +38,28 @@ const MENU_ITEMS = [
 
 const ADMIN_MENU = { path: '/developer', icon: faCode, label: 'Developer' }
 
-export default function Sidebar({ isOpen, onClose }) {
+/**
+ * embedded=true  => desktop icon-rail (relative, no overlay, always collapsed)
+ * embedded=false => mobile drawer (fixed + overlay), always expanded for usability
+ */
+export default function Sidebar({ isOpen, onClose, embedded = false }) {
     const { profile, signOut, isDemoMode } = useAuth()
     const { addToast } = useToast()
     const { isCollapsed } = useSidebar()
     const navigate = useNavigate()
+
+    // desktop rail: icon-only
+    // mobile drawer: expanded
+    const effectiveCollapsed = embedded ? true : false
+
     const [expandedMenus, setExpandedMenus] = useState(['Master Data'])
     const [hoveredSubmenu, setHoveredSubmenu] = useState(null)
+    const [submenuPos, setSubmenuPos] = useState({ top: 0 })
 
     const toggleMenu = (label) => {
-        if (isCollapsed) return
-        setExpandedMenus(prev =>
-            prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+        if (effectiveCollapsed) return
+        setExpandedMenus((prev) =>
+            prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
         )
     }
 
@@ -63,81 +73,99 @@ export default function Sidebar({ isOpen, onClose }) {
 
     return (
         <>
-            {/* Overlay for mobile */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                    onClick={onClose}
-                />
+            {/* Overlay: only for mobile drawer */}
+            {!embedded && isOpen && (
+                <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />
             )}
 
-            {/* Sidebar - Collapsible */}
             <aside
-                className={`fixed top-0 left-0 h-full bg-[var(--color-surface)] 
-          border-r border-[var(--color-border)] z-50 flex flex-col
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
+                className={`
+          ${embedded ? 'relative h-full z-[80]' : 'fixed top-0 left-0 h-full z-50'}
+          bg-[var(--color-surface)] border-r border-[var(--color-border)] flex flex-col
+          ${embedded ? '' : (isOpen ? 'translate-x-0' : '-translate-x-full')}
           transition-all duration-300 ease-in-out
-          ${isCollapsed ? 'w-[70px]' : 'w-[var(--sidebar-width)]'}`}
+          ${embedded ? 'w-[72px]' : 'w-[240px]'}
+          ${embedded ? 'm-3 rounded-[22px] border shadow-sm' : ''}
+        `}
             >
-                {/* Logo - Adaptive */}
-                <div className={`h-14 flex items-center border-b border-[var(--color-border)] overflow-hidden
-                    ${isCollapsed ? 'justify-center px-2' : 'gap-2.5 px-4'}`}>
-                    <div className={`rounded-lg bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/10 shrink-0
-                        ${isCollapsed ? 'w-9 h-9' : 'w-7 h-7'}`}>
-                        <span className={`text-white font-black ${isCollapsed ? 'text-sm' : 'text-xs'}`}>L</span>
+                {/* Logo */}
+                <div
+                    className={`h-14 flex items-center border-b border-[var(--color-border)] overflow-hidden
+            ${effectiveCollapsed ? 'justify-center px-2' : 'gap-2.5 px-4'}`}
+                >
+                    <div
+                        className={`rounded-xl bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/10 shrink-0
+              ${effectiveCollapsed ? 'w-10 h-10' : 'w-8 h-8'}`}
+                        title="Laporanmu"
+                    >
+                        <span className={`text-white font-black ${effectiveCollapsed ? 'text-sm' : 'text-xs'}`}>L</span>
                     </div>
-                    {!isCollapsed && (
-                        <div className="min-w-0 animate-in fade-in slide-in-from-left-2 duration-200">
+
+                    {!effectiveCollapsed && (
+                        <div className="min-w-0">
                             <h1 className="font-bold text-sm text-[var(--color-text)] leading-none truncate">Laporanmu</h1>
-                            <p className="text-[8px] text-indigo-500 font-bold uppercase tracking-wider mt-0.5 truncate">Behavior System</p>
+                            <p className="text-[8px] text-indigo-500 font-bold uppercase tracking-wider mt-0.5 truncate">
+                                Behavior System
+                            </p>
                         </div>
                     )}
                 </div>
 
-                {/* Demo Mode Banner */}
-                {isDemoMode && !isCollapsed && (
-                    <div className="mx-3 mt-3 px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg animate-in fade-in duration-200">
+                {/* Demo Mode Banner (only drawer) */}
+                {isDemoMode && !effectiveCollapsed && (
+                    <div className="mx-3 mt-3 px-2.5 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                         <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold tracking-wider">
                             🎮 MODE DEMO
                         </p>
                     </div>
                 )}
 
-                {/* Menu - Adaptive */}
-                <nav className="flex-1 overflow-y-auto py-3 px-2.5">
+                {/* Menu */}
+                <nav className={`flex-1 overflow-y-auto py-3 ${effectiveCollapsed ? 'px-2' : 'px-2.5'}`}>
                     <ul className="space-y-0.5">
                         {menuItems.map((item, idx) => (
                             <li
                                 key={idx}
                                 className="relative"
-                                onMouseEnter={() => isCollapsed && item.children && setHoveredSubmenu(item.label)}
-                                onMouseLeave={() => isCollapsed && setHoveredSubmenu(null)}
+                                onMouseEnter={(e) => {
+                                    if (!effectiveCollapsed || !item.children) return
+                                    const rect = e.currentTarget.getBoundingClientRect()
+                                    // 8px biar turun dikit
+                                    setSubmenuPos({ top: rect.top + 8 })
+                                    setHoveredSubmenu(item.label)
+                                }}
+                                onMouseLeave={() => {
+                                    if (!effectiveCollapsed) return
+                                    setHoveredSubmenu(null)
+                                }}
                             >
                                 {item.children ? (
                                     <div>
                                         <button
                                             onClick={() => toggleMenu(item.label)}
-                                            className={`w-full flex items-center rounded-lg 
-                        text-[var(--color-text-muted)] hover:bg-gray-50 dark:hover:bg-gray-900 
+                                            className={`w-full flex items-center rounded-xl
+                        text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]
                         hover:text-indigo-600 transition-all font-bold group/btn
-                        ${isCollapsed ? 'justify-center px-2.5 py-2.5' : 'justify-between px-2.5 py-2'}`}
-                                            title={isCollapsed ? item.label : ''}
+                        ${effectiveCollapsed ? 'justify-center px-2.5 py-2.5' : 'justify-between px-3 py-2'}`}
+                                            title={effectiveCollapsed ? item.label : ''}
                                         >
-                                            <span className={`flex items-center ${isCollapsed ? '' : 'gap-2.5'}`}>
-                                                <FontAwesomeIcon icon={item.icon} className="w-3.5 text-[11px] group-hover/btn:scale-110 transition-transform" />
-                                                {!isCollapsed && <span className="text-[11px] uppercase tracking-tight">{item.label}</span>}
+                                            <span className={`flex items-center ${effectiveCollapsed ? '' : 'gap-2.5'}`}>
+                                                <FontAwesomeIcon icon={item.icon} className="w-4 text-[13px] group-hover/btn:scale-110 transition-transform" />
+                                                {!effectiveCollapsed && <span className="text-[11px] uppercase tracking-tight">{item.label}</span>}
                                             </span>
-                                            {!isCollapsed && (
+
+                                            {!effectiveCollapsed && (
                                                 <FontAwesomeIcon
                                                     icon={faChevronDown}
-                                                    className={`w-2.5 text-[10px] transition-transform ${expandedMenus.includes(item.label) ? 'rotate-180' : ''}`}
+                                                    className={`w-2.5 text-[10px] transition-transform ${expandedMenus.includes(item.label) ? 'rotate-180' : ''
+                                                        }`}
                                                 />
                                             )}
                                         </button>
 
-                                        {/* Regular Submenu (Expanded) */}
-                                        {!isCollapsed && expandedMenus.includes(item.label) && (
-                                            <ul className="mt-0.5 ml-3 pl-2.5 border-l border-gray-200 dark:border-gray-800 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        {/* Drawer submenu */}
+                                        {!effectiveCollapsed && expandedMenus.includes(item.label) && (
+                                            <ul className="mt-0.5 ml-3 pl-2.5 border-l border-gray-200 dark:border-gray-800 space-y-0.5">
                                                 {item.children.map((child, childIdx) => (
                                                     <li key={childIdx}>
                                                         <NavLink
@@ -159,23 +187,21 @@ export default function Sidebar({ isOpen, onClose }) {
                                             </ul>
                                         )}
 
-                                        {/* Popover Submenu (Collapsed) */}
-                                        {isCollapsed && hoveredSubmenu === item.label && (
+                                        {/* Rail popover submenu */}
+                                        {effectiveCollapsed && hoveredSubmenu === item.label && (
                                             <div
-                                                className="fixed left-[70px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl py-2 min-w-[220px] z-[60] animate-in fade-in slide-in-from-left-2 duration-200"
-                                                style={{
-                                                    top: `${14 + (idx * 48) + 12}px` // 14px header + idx*48px spacing + 12px offset
-                                                }}
+                                                className="fixed left-[96px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl py-2 min-w-[220px] z-[9999]"
+                                                style={{ top: submenuPos.top }}
                                             >
-                                                {/* Header */}
                                                 <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
                                                     <div className="flex items-center gap-2.5">
                                                         <FontAwesomeIcon icon={item.icon} className="text-indigo-500 text-xs" />
-                                                        <p className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tight">{item.label}</p>
+                                                        <p className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tight">
+                                                            {item.label}
+                                                        </p>
                                                     </div>
                                                 </div>
 
-                                                {/* Menu Items */}
                                                 <div className="py-1">
                                                     {item.children.map((child, childIdx) => (
                                                         <NavLink
@@ -187,8 +213,8 @@ export default function Sidebar({ isOpen, onClose }) {
                                 ${isActive
                                                                     ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
                                                                     : 'text-gray-600 dark:text-gray-400 hover:text-indigo-500 hover:bg-gray-50 dark:hover:bg-gray-800'
-                                                                }`}
-                                                            title={isCollapsed ? child.label : child.label}
+                                                                }`
+                                                            }
                                                         >
                                                             <FontAwesomeIcon icon={child.icon} className="w-3.5 text-xs" />
                                                             <span className="tracking-tight">{child.label}</span>
@@ -203,16 +229,17 @@ export default function Sidebar({ isOpen, onClose }) {
                                         to={item.path}
                                         onClick={onClose}
                                         className={({ isActive }) =>
-                                            `flex items-center rounded-lg text-[11px] font-bold transition-all uppercase tracking-tight
-                      ${isCollapsed ? 'justify-center px-2.5 py-2.5' : 'gap-2.5 px-2.5 py-2'}
+                                            `flex items-center rounded-xl font-bold transition-all
+                      ${effectiveCollapsed ? 'justify-center px-2.5 py-2.5' : 'gap-2.5 px-3 py-2'}
                       ${isActive
                                                 ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                                                : 'text-gray-400 dark:text-gray-500 hover:text-indigo-500 hover:bg-gray-50 dark:hover:bg-gray-900'
-                                            }`}
-                                        title={isCollapsed ? item.label : ''}
+                                                : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-indigo-600'
+                                            }`
+                                        }
+                                        title={effectiveCollapsed ? item.label : ''}
                                     >
-                                        <FontAwesomeIcon icon={item.icon} className="w-3.5 text-[11px]" />
-                                        {!isCollapsed && item.label}
+                                        <FontAwesomeIcon icon={item.icon} className="w-4 text-[13px]" />
+                                        {!effectiveCollapsed && <span className="text-[11px] uppercase tracking-tight">{item.label}</span>}
                                     </NavLink>
                                 )}
                             </li>
@@ -220,21 +247,20 @@ export default function Sidebar({ isOpen, onClose }) {
                     </ul>
                 </nav>
 
-                {/* Footer - Logout */}
-                <div className="p-2.5 border-t border-[var(--color-border)]">
+                {/* Footer actions */}
+                <div className={`border-t border-[var(--color-border)] ${effectiveCollapsed ? 'p-2' : 'p-3'}`}>
                     <button
                         onClick={handleLogout}
-                        className={`w-full flex items-center rounded-lg text-[11px]
-              text-gray-400 dark:text-gray-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-500 
-              transition-colors font-bold uppercase tracking-tight
-              ${isCollapsed ? 'justify-center px-2.5 py-2.5' : 'justify-center gap-2 px-2.5 py-2'}`}
-                        title={isCollapsed ? 'Keluar' : ''}
+                        className={`w-full flex items-center rounded-xl font-bold transition-all
+              ${effectiveCollapsed ? 'justify-center px-2.5 py-2.5' : 'gap-2.5 px-3 py-2'}
+              text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-red-500`}
+                        title={effectiveCollapsed ? 'Keluar' : ''}
                     >
-                        <FontAwesomeIcon icon={faSignOutAlt} className="w-3.5 text-[11px]" />
-                        {!isCollapsed && 'Keluar'}
+                        <FontAwesomeIcon icon={faSignOutAlt} className="w-4 text-[13px]" />
+                        {!effectiveCollapsed && <span className="text-[11px] uppercase tracking-tight">Keluar</span>}
                     </button>
                 </div>
-            </aside >
+            </aside>
         </>
     )
 }

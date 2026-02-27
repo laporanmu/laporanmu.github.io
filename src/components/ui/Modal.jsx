@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
@@ -14,6 +15,15 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         }
     }, [isOpen])
 
+    useEffect(() => {
+        if (!isOpen) return
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') onClose?.()
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [isOpen, onClose])
+
     if (!isOpen) return null
 
     const sizeClasses = {
@@ -24,27 +34,28 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         full: 'max-w-[95vw]',
     }
 
-    return (
-        <div className="modal-overlay" onClick={onClose}>
+    const node = (
+        <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
             <div
                 className={`modal-content ${sizeClasses[size]}`}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold">{title}</h3>
                     <button
                         onClick={onClose}
-                        className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] 
+                        className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]
               hover:bg-[var(--color-surface-alt)] rounded-lg transition-colors"
+                        aria-label="Close modal"
                     >
                         <FontAwesomeIcon icon={faXmark} />
                     </button>
                 </div>
 
-                {/* Content */}
                 <div>{children}</div>
             </div>
         </div>
     )
+
+    return createPortal(node, document.body)
 }
