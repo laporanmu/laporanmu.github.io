@@ -713,7 +713,7 @@ export default function StudentsPage() {
     const [loadingAudit, setLoadingAudit] = useState(false)
 
     // NEW: Template WA Customizable (Fitur 11)
-    const [waTemplate, setWaTemplate] = useState(`Assalamu'alaikum Bapak/Ibu wali dari {nama} ({kelas}).\nPoin perilaku saat ini: {poin}.\nKode siswa: {kode}.`)
+    const [waTemplate, setWaTemplate] = useState(`Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu wali dari ananda {nama}.\nKami sampaikan informasi terkini dari sistem *Laporanmu* — MBS Tanggul.\n\n*Data Akademik Ananda:*\n• Kelas : {kelas}\n• ID Reg : {kode}\n• Poin Perilaku : {poin} poin\n\n*Akses Portal Orang Tua:*\nPortal  : ${window.location.origin}/check\nPIN     : {pin}\n\nGunakan ID Reg & PIN untuk memantau perkembangan putera/puteri Bapak/Ibu secara real-time.\n\nWassalamu'alaikum Wr. Wb.\n_MBS Tanggul · Sistem Laporanmu_`)
 
     // NEW: Import Google Sheets (Fitur 12)
     const [gSheetsUrl, setGSheetsUrl] = useState('')
