@@ -11,6 +11,9 @@ import {
     faMars,
     faVenus,
     faDownload,
+    faShieldHalved,
+    faPenNib,
+    faPaperPlane,
     faUpload,
     faUsers,
     faTrophy,
@@ -248,11 +251,24 @@ export default function StudentsPage() {
     // NEW: Audit Trail (Fitur 10)
     const [isAuditLogOpen, setIsAuditLogOpen] = useState(false)
     const [auditStudentId, setAuditStudentId] = useState(null)
+
+    // NEW: Bulk Photo Matcher (Sultan Fitur 2)
+    const [isBulkPhotoModalOpen, setIsBulkPhotoModalOpen] = useState(false)
+    const [bulkPhotoFiles, setBulkPhotoFiles] = useState([])
+    const [bulkPhotoMatches, setBulkPhotoMatches] = useState([])
+    const [matchingPhotos, setMatchingPhotos] = useState(false)
+    const [uploadingBulkPhotos, setUploadingBulkPhotos] = useState(false)
+
+    // NEW: Guardian Broadcast Hub (Sultan Fitur 3)
+    const [broadcastTemplate, setBroadcastTemplate] = useState('summary') // 'summary', 'points', 'security', 'custom'
+    const [customWaMsg, setCustomWaMsg] = useState('')
+    const [broadcastIndex, setBroadcastIndex] = useState(-1)
+    const [broadcastResults, setBroadcastResults] = useState({}) // { studentId: 'sent'|'pending' }
     const [auditLogs, setAuditLogs] = useState([])
     const [loadingAudit, setLoadingAudit] = useState(false)
 
     // NEW: Template WA Customizable (Fitur 11)
-    const [waTemplate, setWaTemplate] = useState(`Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu wali dari ananda {nama}.\nKami sampaikan informasi terkini dari sistem *Laporanmu* — MBS Tanggul.\n\n*Data Akademik Ananda:*\n• Kelas : {kelas}\n• ID Reg : {kode}\n• Poin Perilaku : {poin} poin\n\n*Akses Portal Orang Tua:*\nPortal  : [URL]/check\nPIN     : {pin}\n\nGunakan ID Reg & PIN untuk memantau perkembangan putera/puteri Bapak/Ibu secara real-time.\n\nWassalamu'alaikum Wr. Wb.\n_MBS Tanggul · Sistem Laporanmu_`)
+    const [waTemplate, setWaTemplate] = useState(`Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu wali dari ananda {nama}. Kami sampaikan informasi terkini dari sistem *Laporanmu* — MBS Tanggul.\n\n*Data Akademik Ananda:*\n• Kelas : {kelas}\n• ID Reg : {kode}\n• Poin Perilaku : {poin} poin\n\n*Akses Portal Orang Tua:*\nPortal  : [URL]\nPIN     : {pin}\n\nGunakan ID Reg & PIN untuk memantau perkembangan putera/puteri Bapak/Ibu secara real-time.\n\nWassalamu'alaikum Wr. Wb.\n_MBS Tanggul · Sistem Laporanmu_`)
 
     // NEW: Import Google Sheets (Fitur 12)
     const [gSheetsUrl, setGSheetsUrl] = useState('')
@@ -1343,16 +1359,29 @@ export default function StudentsPage() {
             addToast('Tidak ada siswa terpilih yang memiliki nomor WA', 'warning')
             return
         }
+        setBroadcastResults({})
+        setBroadcastIndex(-1)
         setIsBulkWAModalOpen(true)
     }
 
-    const buildWAMessage = (student, template) => {
+    const buildWAMessage = (student, templateId) => {
+        let template = waTemplate; // Default bit string from line 268
+
+        if (templateId === 'points') {
+            template = `*Laporan Poin Perilaku Ananda {nama}*\n\nSaat ini Ananda memiliki total *{poin} poin* di sistem Laporanmu.\n\n_Terus semangatkan kedisiplinan dan prestasi ananda._\n\nWassalam.`
+        } else if (templateId === 'security') {
+            template = `*PEMBERITAHUAN KEAMANAN*\n\nInformasi akses Portal Orang Tua untuk ananda {nama}:\nID Reg : {kode}\nPIN    : {pin}\nPortal : [URL]\n\n_Mohon jaga kerahasiaan PIN anda._`
+        } else if (templateId === 'custom') {
+            template = customWaMsg || 'Halo Bapak/Ibu wali dari {nama}.'
+        }
+
         return template
             .replace(/{nama}/g, student.name)
-            .replace(/{kelas}/g, student.className || student.class || '-')
+            .replace(/{kelas}/g, classesList.find(c => c.id === student.class_id)?.name || '-')
             .replace(/{poin}/g, String(student.points ?? student.total_points ?? 0))
-            .replace(/{kode}/g, student.code || student.registration_code || '-')
+            .replace(/{kode}/g, student.registration_code || student.code || '-')
             .replace(/{pin}/g, student.pin || '-')
+            .replace(/\[URL\]/g, window.location.origin + '/check')
     }
 
     const openWAForStudent = (student, msg) => {
@@ -1375,6 +1404,76 @@ export default function StudentsPage() {
     // ======================================================
     // Cetak Thermal 58mm — COMPACT, tanpa foto, hanya QR
     // ======================================================
+    // Sultan Fitur 2: handleBulkPhotoMatch
+    const handleBulkPhotoMatch = async (files) => {
+        setMatchingPhotos(true)
+        const fileList = Array.from(files)
+        const matches = []
+
+        for (const file of fileList) {
+            const cleanName = file.name.split('.')[0].trim().toLowerCase()
+            // Match against NISN first, then Name, then ID
+            const student = students.find(s =>
+                (s.nisn && s.nisn.trim().toLowerCase() === cleanName) ||
+                (s.name && s.name.trim().toLowerCase() === cleanName) ||
+                (s.id && s.id.trim().toLowerCase() === cleanName)
+            )
+
+            matches.push({
+                file,
+                studentId: student?.id || null,
+                studentName: student?.name || 'Tidak Ditemukan',
+                preview: URL.createObjectURL(file),
+                status: student ? 'matched' : 'unmatched'
+            })
+        }
+
+        setBulkPhotoMatches(matches)
+        setMatchingPhotos(false)
+    }
+
+    const handleBulkPhotoUpload = async () => {
+        const matched = bulkPhotoMatches.filter(m => m.status === 'matched')
+        if (matched.length === 0) {
+            addToast('Tidak ada foto yang cocok untuk dicolong (upload)!', 'warning')
+            return
+        }
+
+        setUploadingBulkPhotos(true)
+        let successCount = 0
+
+        for (const item of matched) {
+            try {
+                const fileName = `${item.studentId}_${Date.now()}.${item.file.name.split('.').pop()}`
+                const { error: uploadError } = await supabase.storage
+                    .from('photos')
+                    .upload(fileName, item.file)
+
+                if (uploadError) throw uploadError
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('photos')
+                    .getPublicUrl(fileName)
+
+                const { error: updateError } = await supabase
+                    .from('students')
+                    .update({ photo_url: publicUrl })
+                    .eq('id', item.studentId)
+
+                if (updateError) throw updateError
+                successCount++
+            } catch (err) {
+                console.error('Upload failed for:', item.studentName, err)
+            }
+        }
+
+        addToast(`Berhasil upload ${successCount} foto siswa!`, 'success')
+        setIsBulkPhotoModalOpen(false)
+        setBulkPhotoMatches([])
+        setUploadingBulkPhotos(false)
+        fetchStudents()
+    }
+
     const handlePrintThermal = async (student) => {
         if (!student) return;
         setGeneratingPdf(true);
@@ -2624,6 +2723,14 @@ export default function StudentsPage() {
                                         Export Data
                                     </button>
 
+                                    <button
+                                        onClick={() => { setIsHeaderMenuOpen(false); setIsBulkPhotoModalOpen(true) }}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-indigo-600 hover:bg-indigo-500/10 transition-colors text-left"
+                                    >
+                                        <FontAwesomeIcon icon={faCamera} className="w-3.5" />
+                                        Bulk Foto Siswa
+                                    </button>
+
                                     <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
                                     <p className="px-3 pt-0.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
 
@@ -3406,6 +3513,193 @@ export default function StudentsPage() {
                     </Modal>
                 )
             }
+
+            {/* ===================== */}
+            {/* BULK PHOTO MATCHER MODAL */}
+            {/* ===================== */}
+            {isBulkPhotoModalOpen && (
+                <Modal
+                    isOpen={isBulkPhotoModalOpen}
+                    onClose={() => { if (!uploadingBulkPhotos) setIsBulkPhotoModalOpen(false) }}
+                    title="Bulk Match Foto Siswa"
+                    size="xl"
+                >
+                    <div className="space-y-5">
+                        <div className="p-8 border-2 border-dashed border-[var(--color-border)] rounded-2xl bg-[var(--color-surface-alt)]/30 flex flex-col items-center text-center group hover:border-[var(--color-primary)]/50 transition-all cursor-pointer relative overflow-hidden">
+                            <input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                onChange={(e) => handleBulkPhotoMatch(e.target.files)}
+                            />
+                            <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] mb-4 group-hover:scale-110 transition-transform">
+                                <FontAwesomeIcon icon={faCamera} className="text-2xl" />
+                            </div>
+                            <h4 className="text-sm font-black text-[var(--color-text)] mb-1">Pilih File Foto Massal</h4>
+                            <p className="text-[11px] text-[var(--color-text-muted)] max-w-xs">Pastikan nama file foto menggunakan <b>NISN</b> atau <b>ID Siswa</b> (contoh: 12345.jpg)</p>
+                        </div>
+
+                        {bulkPhotoMatches.length > 0 && (
+                            <div className="border border-[var(--color-border)] rounded-2xl overflow-hidden bg-[var(--color-surface)]">
+                                <div className="max-h-60 overflow-auto scrollbar-none">
+                                    <table className="w-full text-[11px]">
+                                        <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10 border-b border-[var(--color-border)]">
+                                            <tr className="text-left font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                                <th className="p-3 w-16">Preview</th>
+                                                <th className="p-3">Nama File</th>
+                                                <th className="p-3">Siswa Cocok</th>
+                                                <th className="p-3 text-right">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[var(--color-border)]">
+                                            {bulkPhotoMatches.map((item, i) => (
+                                                <tr key={i} className="hover:bg-[var(--color-surface-alt)]/50 transition-colors">
+                                                    <td className="p-2">
+                                                        <img src={item.preview} className="w-10 h-10 rounded-lg object-cover border border-[var(--color-border)] shadow-sm" alt="" />
+                                                    </td>
+                                                    <td className="p-3 font-medium opacity-70">{item.file.name}</td>
+                                                    <td className="p-3 font-bold text-[var(--color-text)]">{item.studentName}</td>
+                                                    <td className="p-3 text-right">
+                                                        {item.status === 'matched' ? (
+                                                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-black uppercase text-[8px]">Matched</span>
+                                                        ) : (
+                                                            <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 font-black uppercase text-[8px]">Skipped</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="p-3 bg-[var(--color-surface-alt)] border-t border-[var(--color-border)] flex items-center justify-between">
+                                    <p className="text-[10px] font-bold text-[var(--color-text-muted)]">
+                                        Ditemukan <span className="text-emerald-600 font-black">{bulkPhotoMatches.filter(m => m.status === 'matched').length}</span> foto cocok.
+                                    </p>
+                                    <button
+                                        onClick={handleBulkPhotoUpload}
+                                        disabled={uploadingBulkPhotos || bulkPhotoMatches.filter(m => m.status === 'matched').length === 0}
+                                        className="h-9 px-6 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        {uploadingBulkPhotos ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengupload...</> : <><FontAwesomeIcon icon={faCheck} /> Simpan Semua Foto</>}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </Modal>
+            )}
+
+            {/* ===================== */}
+            {/* GUARDIAN BROADCAST HUB */}
+            {/* ===================== */}
+            {isBulkWAModalOpen && (
+                <Modal
+                    isOpen={isBulkWAModalOpen}
+                    onClose={() => setIsBulkWAModalOpen(false)}
+                    title="Guardian Broadcast Hub"
+                    size="xl"
+                >
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Selector Section */}
+                        <div className="lg:col-span-4 space-y-4">
+                            <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pilih Template Pesan</label>
+                                {[
+                                    { id: 'summary', label: 'Laporan Akademik Lengkap', icon: faFileLines },
+                                    { id: 'points', label: 'Ringkasan Poin Perilaku', icon: faTrophy },
+                                    { id: 'security', label: 'Akses Portal (ID & PIN)', icon: faShieldHalved },
+                                    { id: 'custom', label: 'Pesan Kustom Sekolah', icon: faPenNib },
+                                ].map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setBroadcastTemplate(t.id)}
+                                        className={`w-full p-3 rounded-xl border text-left flex items-center gap-3 transition-all ${broadcastTemplate === t.id ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${broadcastTemplate === t.id ? 'bg-white/20' : 'bg-[var(--color-surface-alt)]'}`}>
+                                            <FontAwesomeIcon icon={t.icon} className="text-xs" />
+                                        </div>
+                                        <span className="text-[11px] font-bold leading-tight">{t.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {broadcastTemplate === 'custom' && (
+                                <textarea
+                                    value={customWaMsg}
+                                    onChange={(e) => setCustomWaMsg(e.target.value)}
+                                    placeholder="Tulis pesan kustom di sini... Gunakan {nama}, {poin}, {kelas} sebagai tag otomatis."
+                                    className="w-full h-32 p-3 text-xs rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] outline-none"
+                                />
+                            )}
+                        </div>
+
+                        {/* Preview & Action Section */}
+                        <div className="lg:col-span-8 flex flex-col">
+                            <div className="flex-1 bg-[var(--color-surface-alt)]/30 border border-[var(--color-border)] rounded-2xl overflow-hidden flex flex-col min-h-[400px]">
+                                <div className="p-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/50 flex items-center justify-between">
+                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Antrean Siaran ({students.filter(s => selectedStudentIds.includes(s.id) && s.phone).length} Wali)</h5>
+                                    {broadcastIndex >= 0 && (
+                                        <div className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[9px] font-black animate-pulse">SIARAN BERJALAN...</div>
+                                    )}
+                                </div>
+
+                                <div className="flex-1 overflow-auto p-4 space-y-3 max-h-[350px] scrollbar-none">
+                                    {students.filter(s => selectedStudentIds.includes(s.id) && s.phone).map((s, idx) => (
+                                        <div key={idx} className={`p-3 rounded-xl border transition-all ${broadcastIndex === idx ? 'bg-[var(--color-primary)]/5 border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-[var(--color-border)] opacity-70'}`}>
+                                            <div className="flex items-start justify-between gap-3 mb-2">
+                                                <div>
+                                                    <p className="text-[11px] font-black leading-none">{s.name}</p>
+                                                    <p className="text-[9px] text-[var(--color-text-muted)] mt-1 font-bold">Wali: {s.guardian_name || '---'} ({s.phone})</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => openWAForStudent(s, buildWAMessage(s, broadcastTemplate))}
+                                                    className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center text-[10px]"
+                                                >
+                                                    <FontAwesomeIcon icon={faWhatsapp} />
+                                                </button>
+                                            </div>
+                                            <div className="p-2.5 rounded-lg bg-[var(--color-surface-alt)]/50 border border-black/5 text-[10px] font-medium leading-relaxed italic line-clamp-2">
+                                                {buildWAMessage(s, broadcastTemplate)}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="p-4 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">
+                                            <span>Kemajuan Hub</span>
+                                            <span>{broadcastIndex + 1} / {students.filter(s => selectedStudentIds.includes(s.id) && s.phone).length}</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-[var(--color-surface-alt)] rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-[var(--color-primary)] transition-all duration-500"
+                                                style={{ width: `${((broadcastIndex + 1) / students.filter(s => selectedStudentIds.includes(s.id) && s.phone).length) * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const targets = students.filter(s => selectedStudentIds.includes(s.id) && s.phone);
+                                            targets.forEach((s, i) => {
+                                                setTimeout(() => {
+                                                    setBroadcastIndex(i);
+                                                    openWAForStudent(s, buildWAMessage(s, broadcastTemplate));
+                                                }, i * 1200);
+                                            });
+                                        }}
+                                        className="h-11 px-6 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shrink-0"
+                                    >
+                                        <FontAwesomeIcon icon={faPaperPlane} />
+                                        Mulai Siaran Massal
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
+            )}
 
             {/* ===================== */}
             {/* EXPORT MODAL */}
@@ -4798,7 +5092,7 @@ export default function StudentsPage() {
                                     className="h-10 px-4 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all duration-300 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
                                 >
                                     <FontAwesomeIcon icon={faWhatsapp} className="text-base" />
-                                    <span className="hidden md:inline">WA Wali</span>
+                                    Broadcast
                                 </button>
 
                                 <button
@@ -4833,13 +5127,7 @@ export default function StudentsPage() {
                                     <span className="hidden md:inline">Beri Poin</span>
                                 </button>
 
-                                <button
-                                    onClick={() => setIsBulkDeleteModalOpen(true)}
-                                    className="h-10 px-4 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all duration-300 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-                                >
-                                    <FontAwesomeIcon icon={faBoxArchive} className="text-base" />
-                                    <span className="hidden md:inline">Arsipkan</span>
-                                </button>
+
 
                                 <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block" />
 
