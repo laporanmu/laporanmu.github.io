@@ -17,7 +17,7 @@ import {
     faSpinner,
     faHistory,
     faQrcode,
-    faIdCardAlt,
+    faIdCard,
     faArrowTrendUp,
     faArrowTrendDown,
     faCheckCircle,
@@ -29,7 +29,6 @@ import {
     faAnglesRight,
     faTriangleExclamation,
     faPrint,
-    faFilter,
     faXmark,
     faSliders,
     faTableList,
@@ -49,6 +48,10 @@ import {
     faFileLines,
     faImage,
     faBolt,
+    faTags,
+    faEye,
+    faEyeSlash,
+    faCircleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -82,6 +85,40 @@ const SortOptions = [
 const RiskThreshold = -30
 const AvailableTags = ['Beasiswa', 'Berprestasi']
 
+const getTagColor = (tag) => {
+    const colors = [
+        'bg-blue-500/10 text-blue-500 border-blue-500/20',
+        'bg-purple-500/10 text-purple-500 border-purple-500/20',
+        'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+        'bg-amber-500/10 text-amber-500 border-amber-500/20',
+        'bg-pink-500/10 text-pink-500 border-pink-500/20',
+        'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
+        'bg-cyan-500/10 text-cyan-500 border-cyan-500/20'
+    ];
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+        hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+};
+
+// Helper to calculate data completeness percentage
+const calculateCompleteness = (s) => {
+    if (!s) return 0;
+    let score = 40; // Base score for Name, Gender, Class
+    if (s.photo_url || s.photo) score += 20;
+    if (s.phone) score += 15;
+    if (s.nisn) score += 15;
+    if (s.metadata && Object.keys(s.metadata).length > 0) score += 10;
+    return score;
+};
+
+const maskInfo = (str, visibleLen = 3) => {
+    if (!str) return '---'
+    if (str.length <= visibleLen) return str[0] + '*'.repeat(str.length - 1)
+    return str.substring(0, visibleLen) + '***'
+};
+
 import StudentFormModal from '../../components/students/StudentFormModal'
 import StudentRow from '../../components/students/StudentRow'
 
@@ -111,7 +148,7 @@ export default function StudentsPage() {
     const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false)
     const [isBulkWAModalOpen, setIsBulkWAModalOpen] = useState(false)
     const [bulkClassId, setBulkClassId] = useState('')
-    const [globalStats, setGlobalStats] = useState({ total: 0, boys: 0, girls: 0, avgPoints: 0, worstClass: null })
+    const [globalStats, setGlobalStats] = useState({ total: 0, boys: 0, girls: 0, avgPoints: 0, risk: 0, worstClass: null })
     const [totalRows, setTotalRows] = useState(0)
     const [lastReportMap, setLastReportMap] = useState({})
     const [pendingArchive, setPendingArchive] = useState(null)
@@ -170,6 +207,7 @@ export default function StudentsPage() {
 
     // NEW: Student Status (Fitur 4)
     const [filterStatus, setFilterStatus] = useState('')
+    const [filterMissing, setFilterMissing] = useState('') // 'photo' or 'wa'
 
     // NEW: Reset PIN (Fitur 5)
     const [resettingPin, setResettingPin] = useState(false)
@@ -185,6 +223,24 @@ export default function StudentsPage() {
     const [isTagModalOpen, setIsTagModalOpen] = useState(false)
     const [studentForTags, setStudentForTags] = useState(null)
     const [filterTag, setFilterTag] = useState('')
+    const [allUsedTags, setAllUsedTags] = useState([]) // Array of unique strings
+    const [newTagInput, setNewTagInput] = useState('')
+    const [tagToEdit, setTagToEdit] = useState(null)
+    const [renameInput, setRenameInput] = useState('')
+
+    // Bulk Tagging Setup
+    const [isBulkTagModalOpen, setIsBulkTagModalOpen] = useState(false)
+    const [bulkTagAction, setBulkTagAction] = useState('add') // 'add' or 'remove'
+    const [tagStats, setTagStats] = useState({}) // { tag: count }
+
+    // Privacy Mode (SaaS Security)
+    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
+
+    // Bulk Point Update (Fitur 14)
+    const [isBulkPointModalOpen, setIsBulkPointModalOpen] = useState(false)
+    const [bulkPointValue, setBulkPointValue] = useState(0)
+    const [bulkPointLabel, setBulkPointLabel] = useState('')
+    const [bulkPointMode, setBulkPointMode] = useState('individual') // 'individual' or 'group'
 
     // NEW: Multi-Filter Kelas (Fitur 8)
     const [filterClasses, setFilterClasses] = useState([]) // array of class ids
@@ -274,6 +330,7 @@ export default function StudentsPage() {
                 .order('name')
             if (classesError) throw classesError
             setClassesList(classesData || [])
+            fetchUsedTags()
 
             const from = (page - 1) * pageSize
             const to = from + pageSize - 1
@@ -283,7 +340,9 @@ export default function StudentsPage() {
                 name_desc: { col: 'name', asc: false },
                 class_asc: { col: 'class_id', asc: true },
                 points_desc: { col: 'total_points', asc: false },
+                total_points_desc: { col: 'total_points', asc: false },
                 points_asc: { col: 'total_points', asc: true },
+                created_at: { col: 'created_at', asc: false },
             }
             const orderCfg = sortMap[sortBy] || sortMap.name_asc
 
@@ -301,6 +360,14 @@ export default function StudentsPage() {
             if (filterGender) q = q.eq('gender', filterGender)
             if (filterStatus) q = q.eq('status', filterStatus)
             if (filterTag) q = q.contains('tags', [filterTag])
+
+            // NEW: filterMissing logic
+            if (filterMissing === 'photo') {
+                q = q.or('photo_url.is.null,photo_url.eq.""')
+            } else if (filterMissing === 'wa') {
+                q = q.or('phone.is.null,phone.eq.""')
+            }
+
             if (debouncedSearch) {
                 const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
                 q = q.or(`name.ilike.%${s}%,registration_code.ilike.%${s}%,nisn.ilike.%${s}%`)
@@ -396,7 +463,7 @@ export default function StudentsPage() {
         } finally {
             setLoading(false)
         }
-    }, [page, pageSize, sortBy, filterGender, filterStatus, filterTag, debouncedSearch, filterClasses, filterClass, filterPointMode, filterPointMin, filterPointMax, addToast])
+    }, [page, pageSize, sortBy, filterGender, filterStatus, filterTag, filterMissing, debouncedSearch, filterClasses, filterClass, filterPointMode, filterPointMin, filterPointMax, addToast])
 
     const fetchStats = useCallback(async () => {
         try {
@@ -408,6 +475,7 @@ export default function StudentsPage() {
             const total = statsData.length
             const boys = statsData.filter(s => s.gender === 'L').length
             const girls = statsData.filter(s => s.gender === 'P').length
+            const risk = statsData.filter(s => (s.total_points || 0) < RiskThreshold).length
             const avgPoints = total > 0
                 ? Math.round(statsData.reduce((acc, s) => acc + (s.total_points || 0), 0) / total)
                 : 0
@@ -422,7 +490,7 @@ export default function StudentsPage() {
                 const avg = pts.reduce((a, b) => a + b, 0) / pts.length
                 if (avg < worstAvg) { worstAvg = avg; worstClass = { name, avg: Math.round(avg), count: pts.length } }
             })
-            setGlobalStats({ total, boys, girls, avgPoints, worstClass })
+            setGlobalStats({ total, boys, girls, avgPoints, risk, worstClass })
         } catch (err) {
             console.error('fetchStats error:', err)
         }
@@ -459,7 +527,7 @@ export default function StudentsPage() {
     useEffect(() => {
         fetchData()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, pageSize, filterClass, filterClasses, filterGender, filterStatus, filterTag, sortBy, debouncedSearch, filterPointMode, filterPointMin, filterPointMax])
+    }, [page, pageSize, filterClass, filterClasses, filterGender, filterStatus, filterTag, filterMissing, sortBy, debouncedSearch, filterPointMode, filterPointMin, filterPointMax])
 
     // FIX #5: Realtime — auto-refresh jika ada siswa ditambah/diubah/dihapus
     useEffect(() => {
@@ -921,33 +989,184 @@ export default function StudentsPage() {
     }
 
     // NEW: Fitur 7 - Tag management
+    const fetchUsedTags = async () => {
+        try {
+            const { data } = await supabase.from('students').select('tags').is('deleted_at', null)
+            if (data) {
+                const stats = {}
+                const uniqueTagsArr = []
+                data.forEach(s => {
+                    (s.tags || []).forEach(t => {
+                        stats[t] = (stats[t] || 0) + 1
+                        if (!uniqueTagsArr.includes(t)) uniqueTagsArr.push(t)
+                    })
+                })
+                setAllUsedTags(uniqueTagsArr.sort())
+                setTagStats(stats)
+            }
+        } catch { }
+    }
+
+    const handleBulkTagApply = async (tag) => {
+        if (!tag || selectedStudentIds.length === 0) return
+        setSubmitting(true)
+        try {
+            // Kita ambil data tags terbaru untuk tiap siswa terpilih dulu
+            const { data } = await supabase.from('students').select('id, tags').in('id', selectedStudentIds).is('deleted_at', null)
+            if (data) {
+                const updates = data.map(s => {
+                    const current = s.tags || []
+                    let next = []
+                    if (bulkTagAction === 'add') {
+                        next = Array.from(new Set([...current, tag]))
+                    } else {
+                        next = current.filter(t => t !== tag)
+                    }
+                    return supabase.from('students').update({ tags: next }).eq('id', s.id)
+                })
+                await Promise.all(updates)
+                addToast(`${selectedStudentIds.length} siswa berhasil diperbarui labelnya`, 'success')
+                fetchData()
+                fetchUsedTags()
+                setIsBulkTagModalOpen(false)
+                setSelectedStudentIds([]) // Reset selection after bulk action
+            }
+        } catch {
+            addToast('Gagal update label massal', 'error')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const handleBulkPointUpdate = async () => {
+        if (!bulkPointValue || selectedStudentIds.length === 0) return
+        setSubmitting(true)
+        try {
+            const updates = selectedStudentIds.map(async (sid) => {
+                // 1. Get current points
+                const { data: s } = await supabase.from('students').select('total_points').eq('id', sid).single()
+                const oldPoints = s?.total_points || 0
+                const newPoints = oldPoints + bulkPointValue
+
+                // 2. Update Student Points
+                await supabase.from('students').update({ total_points: newPoints }).eq('id', sid)
+
+                // 3. Create History Log
+                return supabase.from('point_history').insert([{
+                    student_id: sid,
+                    points: bulkPointValue,
+                    label: bulkPointLabel || 'Aksi Massal',
+                    created_at: new Date().toISOString()
+                }])
+            })
+
+            await Promise.all(updates)
+            addToast(`${selectedStudentIds.length} siswa berhasil diperbarui poinnya`, 'success')
+            fetchData()
+            setIsBulkPointModalOpen(false)
+            setBulkPointValue(0)
+            setBulkPointLabel('')
+            setSelectedStudentIds([])
+        } catch {
+            addToast('Gagal update poin massal', 'error')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
     const handleToggleTag = async (student, tag) => {
+        if (!tag) return
         const currentTags = student.tags || []
         const newTags = currentTags.includes(tag) ? currentTags.filter(t => t !== tag) : [...currentTags, tag]
         try {
             const { error } = await supabase.from('students').update({ tags: newTags }).eq('id', student.id)
             if (error) throw error
             setStudentForTags({ ...student, tags: newTags })
+            addToast(`Label '${tag}' diperbarui`, 'success')
             fetchData()
-            fetchStats()
-            addToast('Tag berhasil diperbarui', 'success')
+            fetchUsedTags()
         } catch {
-            addToast('Gagal update tag', 'error')
+            addToast('Gagal update label', 'error')
+        }
+    }
+
+    const handleAddCustomTag = (e) => {
+        if (e.key === 'Enter') {
+            const tag = newTagInput.trim()
+            if (tag && studentForTags) {
+                handleToggleTag(studentForTags, tag)
+                setNewTagInput('')
+            }
+        }
+    }
+
+    const handleGlobalDeleteTag = async (oldTag) => {
+        if (!window.confirm(`Hapus label '${oldTag}' dari SEMUA siswa? Tindakan ini tidak bisa dibatalkan.`)) return
+        setSubmitting(true)
+        try {
+            const { data } = await supabase.from('students').select('id, tags').contains('tags', [oldTag]).is('deleted_at', null)
+            if (data && data.length > 0) {
+                const updates = data.map(s =>
+                    supabase.from('students').update({ tags: (s.tags || []).filter(t => t !== oldTag) }).eq('id', s.id)
+                )
+                await Promise.all(updates)
+                addToast(`Label '${oldTag}' dihapus dari ${data.length} siswa`, 'success')
+                fetchData()
+                fetchUsedTags()
+            }
+        } catch {
+            addToast('Gagal menghapus label secara global', 'error')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const handleGlobalRenameTag = async (oldTag, newTag) => {
+        if (!newTag || oldTag === newTag) { setTagToEdit(null); return }
+        setSubmitting(true)
+        try {
+            const { data } = await supabase.from('students').select('id, tags').contains('tags', [oldTag]).is('deleted_at', null)
+            if (data && data.length > 0) {
+                const updates = data.map(s =>
+                    supabase.from('students').update({ tags: (s.tags || []).map(t => t === oldTag ? newTag : t) }).eq('id', s.id)
+                )
+                await Promise.all(updates)
+                addToast(`Label '${oldTag}' diubah menjadi '${newTag}'`, 'success')
+                fetchData()
+                fetchUsedTags()
+                setTagToEdit(null)
+            }
+        } catch {
+            addToast('Gagal mengubah label secara global', 'error')
+        } finally {
+            setSubmitting(false)
         }
     }
 
     // NEW: Fitur 9 - Export hasil filter aktif
     const fetchFilteredForExport = async () => {
-        let q = supabase.from('students').select(`*, classes (name)`).is('deleted_at', null).order('name')
+        let q = supabase.from('students').select(`*, classes (name)`).is('deleted_at', null)
+
+        // Sync with primary filters
         if (filterClasses.length > 0) q = q.in('class_id', filterClasses)
         else if (filterClass) q = q.eq('class_id', filterClass)
         if (filterGender) q = q.eq('gender', filterGender)
         if (filterStatus) q = q.eq('status', filterStatus)
         if (filterTag) q = q.contains('tags', [filterTag])
+
+        // filterMissing logic
+        if (filterMissing === 'photo') {
+            q = q.or('photo_url.is.null,photo_url.eq.""')
+        } else if (filterMissing === 'wa') {
+            q = q.or('phone.is.null,phone.eq.""')
+        }
+
         if (debouncedSearch) {
             const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
-            q = q.or(`name.ilike.%${s}%,registration_code.ilike.%${s}%`)
+            q = q.or(`name.ilike.%${s}%,registration_code.ilike.%${s}%,nisn.ilike.%${s}%`)
         }
+
+        // Points filters
         if (filterPointMode === 'risk') q = q.lt('total_points', RiskThreshold)
         else if (filterPointMode === 'positive') q = q.gt('total_points', 0)
         else if (filterPointMode === 'custom') {
@@ -955,23 +1174,26 @@ export default function StudentsPage() {
             if (filterPointMax !== '') q = q.lte('total_points', Number(filterPointMax))
         }
 
-        // SMART PRESETS LOGIC
-        if (filterCompleteness === 'missing_photo') q = q.is('photo_url', null)
-        else if (filterCompleteness === 'missing_phone') q = q.is('phone', null)
+        // Sorting (Important for 'New Student' or 'Top Performer' presets)
+        if (sortBy === 'total_points_desc') q = q.order('total_points', { ascending: false })
+        else if (sortBy === 'created_at') q = q.order('created_at', { ascending: false })
+        else q = q.order('name', { ascending: true })
 
-        // SMART PRESETS LOGIC
-        if (filterCompleteness === 'missing_photo') {
-            q = q.is('photo_url', null)
-        } else if (filterCompleteness === 'missing_phone') {
-            q = q.is('phone', null)
-        }
         const { data, error } = await q
         if (error) throw error
+
         return (data || []).map(s => ({
-            ID: s.id, Kode: s.registration_code || '', Nama: s.name || '',
-            Gender: s.gender || '', Kelas: s.classes?.name || '',
-            Poin: s.total_points ?? 0, Phone: s.phone || '', Status: s.status || 'aktif',
-            Tags: (s.tags || []).join(', ')
+            ID: s.id,
+            'Kode Registrasi': s.registration_code || '',
+            NISN: s.nisn || '',
+            Nama: s.name || '',
+            Gender: s.gender === 'L' ? 'Putra' : 'Putri',
+            Kelas: s.classes?.name || '',
+            Poin: s.total_points ?? 0,
+            Phone: s.phone || '',
+            Status: s.status || 'aktif',
+            Tags: (s.tags || []).join(', '),
+            'Data Lengkap': `${calculateCompleteness(s)}%`
         }))
     }
 
@@ -1994,6 +2216,7 @@ export default function StudentsPage() {
         setFilterGender('')
         setFilterStatus('')
         setFilterTag('')
+        setFilterMissing('')
         setSortBy('name_asc')
         setFilterPointMode('')
         setFilterPointMin('')
@@ -2002,7 +2225,7 @@ export default function StudentsPage() {
         localStorage.removeItem('students_filters') // ← tambahkan ini
     }
 
-    const activeFilterCount = [filterClass, filterClasses.length > 0 ? 'multi' : '', filterGender, filterStatus, filterTag, filterPointMode, debouncedSearch].filter(Boolean).length
+    const activeFilterCount = [filterClass, filterClasses.length > 0 ? 'multi' : '', filterGender, filterStatus, filterTag, filterPointMode, filterMissing, debouncedSearch].filter(Boolean).length
 
     const sanitizeText = (s) => String(s ?? '').replace(/[<>]/g, '').trim()
 
@@ -2283,6 +2506,60 @@ export default function StudentsPage() {
         isBulkWAModalOpen || isClassBreakdownOpen || photoZoom
     );
 
+    // --- SaaS COMPONENTS ---
+
+    const BehaviorHeatmap = ({ history }) => {
+        // Generate dates for the last 4 months
+        const today = new Date();
+        const startDate = new Date();
+        startDate.setMonth(today.getMonth() - 3);
+        startDate.setDate(1);
+
+        const days = [];
+        let curr = new Date(startDate);
+        while (curr <= today) {
+            days.push(new Date(curr));
+            curr.setDate(curr.getDate() + 1);
+        }
+
+        // Map history to dates
+        const activityMap = history.reduce((acc, item) => {
+            const d = new Date(item.created_at).toDateString();
+            acc[d] = (acc[d] || 0) + (item.points || 0);
+            return acc;
+        }, {});
+
+        const getLevel = (val) => {
+            if (!val) return 'bg-[var(--color-surface-alt)] opacity-20';
+            if (val > 0) {
+                if (val > 10) return 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]';
+                if (val > 5) return 'bg-emerald-400';
+                return 'bg-emerald-300/60';
+            } else {
+                if (val < -10) return 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]';
+                if (val < -5) return 'bg-red-400';
+                return 'bg-red-300/60';
+            }
+        }
+
+        return (
+            <div className="flex flex-wrap gap-1">
+                {days.map((d, i) => {
+                    const dateStr = d.toDateString();
+                    const val = activityMap[dateStr] || 0;
+                    return (
+                        <div
+                            key={i}
+                            title={`${dateStr}: ${val} poin`}
+                            className={`w-2.5 h-2.5 rounded-[2px] transition-all cursor-help hover:scale-125 hover:z-10 ${getLevel(val)}`}
+                        />
+                    );
+                })}
+            </div>
+        )
+    };
+
+
     return (
         <DashboardLayout title="Data Siswa" hideHeader={isAnyModalOpen} hideSidebar={isAnyModalOpen}>
             <style>
@@ -2370,6 +2647,17 @@ export default function StudentsPage() {
                         )}
                     </div>
 
+                    <button
+                        onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                        className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
+                        title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}
+                    >
+                        <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                            {isPrivacyMode ? 'Privacy On' : 'Privacy Off'}
+                        </span>
+                    </button>
+
                     <input
                         type="file"
                         ref={importFileInputRef}
@@ -2426,7 +2714,7 @@ export default function StudentsPage() {
                     </div>
                     <div>
                         <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">Rata-rata Poin</p>
-                        <h3 className={`text-xl font-black font-heading leading-none ${globalStats.avgPoints >= 0 ? 'text-[var(--color-text)]' : 'text-red-500'}`}>{globalStats.avgPoints}</h3>
+                        <h3 className={`text-xl font-black font-heading leading-none ${globalStats.avgPoints >= 0 ? 'text-[var(--color-text)]' : 'text-red-500'} `}>{globalStats.avgPoints}</h3>
                     </div>
                 </div>
 
@@ -2473,38 +2761,38 @@ export default function StudentsPage() {
                     </div>
 
                     {/* Filter toggle button */}
-                    <button
-                        type="button"
-                        onClick={() => setShowAdvancedFilter(v => !v)}
-                        className={`h-9 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${showAdvancedFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
-                    >
-                        <FontAwesomeIcon icon={faSliders} />
-                        Filter
-                        {activeFilterCount > 0 && (
-                            <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
-                                {activeFilterCount}
-                            </span>
-                        )}
-                    </button>
-
-                    {/* Reset */}
-                    {activeFilterCount > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
                         <button
-                            type="button"
-                            onClick={resetAllFilters}
-                            className="h-9 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-red-500/10 flex items-center gap-1.5"
+                            onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
+                            className={`h-9 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${showAdvancedFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
                         >
-                            <FontAwesomeIcon icon={faXmark} />
-                            Reset
+                            <FontAwesomeIcon icon={faSliders} />
+                            Filter
+                            {activeFilterCount > 0 && (
+                                <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
+                                    {activeFilterCount}
+                                </span>
+                            )}
                         </button>
-                    )}
+
+                        {/* Reset */}
+                        {activeFilterCount > 0 && (
+                            <button
+                                type="button"
+                                onClick={resetAllFilters}
+                                className="h-9 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-red-500/10 flex items-center gap-1.5"
+                            >
+                                <FontAwesomeIcon icon={faXmark} />
+                                Reset
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Row 2: Expandable filter panel */}
                 {showAdvancedFilter && (
                     <div className="border-t border-[var(--color-border)] px-4 py-4 bg-[var(--color-surface-alt)]/40">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
                             {/* Kelas */}
                             <div>
                                 <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Kelas</label>
@@ -2557,7 +2845,9 @@ export default function StudentsPage() {
                                     className="select-field h-9 text-sm w-full rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_0.75rem_center] px-3 pr-8"
                                 >
                                     <option value="">Semua Label</option>
-                                    {AvailableTags.map(t => <option key={t} value={t}>{t}</option>)}
+                                    {Array.from(new Set([...AvailableTags, ...allUsedTags])).sort().map(t => (
+                                        <option key={t} value={t}>{t} ({tagStats[t] || 0})</option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -2573,9 +2863,9 @@ export default function StudentsPage() {
                                 </select>
                             </div>
 
-                            {/* Filter Poin Min */}
+                            {/* Poin Min */}
                             <div>
-                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Poin Minimum</label>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Poin Min</label>
                                 <input
                                     type="number"
                                     value={filterPointMin}
@@ -2585,9 +2875,9 @@ export default function StudentsPage() {
                                 />
                             </div>
 
-                            {/* Filter Poin Max */}
+                            {/* Poin Max */}
                             <div>
-                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Poin Maksimum</label>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Poin Max</label>
                                 <input
                                     type="number"
                                     value={filterPointMax}
@@ -2598,21 +2888,74 @@ export default function StudentsPage() {
                             </div>
 
                             {/* Quick poin presets */}
-                            <div>
+                            <div className="md:col-span-2 lg:col-span-3">
                                 <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Preset Poin</label>
                                 <div className="flex gap-1.5">
                                     {[
-                                        { value: '', label: 'Semua' },
-                                        { value: 'risk', label: '⚠ Risiko' },
-                                        { value: 'positive', label: '✓ Positif' },
+                                        { value: '', label: 'Semua', icon: null },
+                                        { value: 'risk', label: 'Risiko', icon: faTriangleExclamation },
+                                        { value: 'positive', label: 'Positif', icon: faCheck },
                                     ].map(opt => (
                                         <button key={opt.value} type="button"
                                             onClick={() => { setFilterPointMode(opt.value); setFilterPointMin(''); setFilterPointMax(''); setPage(1) }}
-                                            className={`flex-1 h-9 rounded-xl text-[9px] font-black uppercase border transition-all ${filterPointMode === opt.value && opt.value !== '' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
-                                        >{opt.label}</button>
+                                            className={`flex-1 h-9 rounded-xl text-[9px] font-black uppercase border transition-all flex items-center justify-center gap-2 ${filterPointMode === opt.value && opt.value !== '' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm shadow-[var(--color-primary)]/20' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
+                                        >
+                                            {opt.icon && <FontAwesomeIcon icon={opt.icon} className="text-[10px]" />}
+                                            {opt.label}
+                                        </button>
                                     ))}
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Full Width Section: Data Needs Presets */}
+                        <div className="pt-1 mb-4">
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Filter Kebutuhan Data</label>
+                            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                                {[
+                                    { label: 'Semua', icon: faUsers, active: !filterMissing && sortBy !== 'created_at' && sortBy !== 'total_points_desc', onClick: () => { setFilterMissing(''); setSortBy('name_asc'); } },
+                                    { label: 'Foto Kosong', icon: faImage, active: filterMissing === 'photo', onClick: () => { setFilterMissing('photo'); setPage(1); } },
+                                    { label: 'Belum Ada WA', icon: faWhatsapp, active: filterMissing === 'wa', onClick: () => { setFilterMissing('wa'); setPage(1); } },
+                                    { label: 'Top Performer', icon: faTrophy, active: sortBy === 'total_points_desc', onClick: () => { setSortBy('total_points_desc'); setPage(1); } },
+                                    { label: 'Siswa Baru', icon: faPlus, active: sortBy === 'created_at', onClick: () => { setSortBy('created_at'); setPage(1); } },
+                                ].map((s, i) => (
+                                    <button key={i} onClick={s.onClick}
+                                        className={`whitespace-nowrap h-9 px-3 rounded-xl border flex items-center gap-2 transition-all ${s.active ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                        <FontAwesomeIcon icon={s.icon} className="text-[10px]" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest">{s.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Filter Panel Footer - Actions */}
+                        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--color-border)]/50">
+                            {activeFilterCount > 0 && (
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const rows = await fetchFilteredForExport()
+                                            const ws = XLSX.utils.json_to_sheet(rows)
+                                            const wb = XLSX.utils.book_new()
+                                            XLSX.utils.book_append_sheet(wb, ws, 'Filter')
+                                            const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+                                            const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+                                            downloadBlob(blob, `export_filter_${new Date().toISOString().slice(0, 10)}.xlsx`)
+                                            addToast(`${rows.length} baris berhasil diekspor sebagai Excel`, 'success')
+                                        } catch { addToast('Gagal export', 'error') }
+                                    }}
+                                    className="h-9 px-4 rounded-xl bg-teal-500/10 text-teal-600 hover:bg-teal-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-teal-500/20"
+                                >
+                                    <FontAwesomeIcon icon={faDownload} />
+                                    Export Hasil Filter
+                                </button>
+                            )}
+                            <button
+                                onClick={resetAllFilters}
+                                className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20"
+                            >
+                                Reset Filter
+                            </button>
                         </div>
                     </div>
                 )}
@@ -2623,15 +2966,15 @@ export default function StudentsPage() {
                 {[
                     {
                         label: 'Total Siswa',
-                        value: stats.total,
+                        value: globalStats.total,
                         icon: faUsers,
                         color: 'indigo',
-                        active: !filterClass && !filterGender && !filterStatus && !filterTag && !filterPointMode && !debouncedSearch,
+                        active: !filterClass && !filterGender && !filterStatus && !filterTag && !filterPointMode && !debouncedSearch && !filterMissing && !filterCompleteness,
                         onClick: () => { resetAllFilters(); setPage(1); }
                     },
                     {
                         label: 'Laki-laki',
-                        value: stats.boys,
+                        value: globalStats.boys,
                         icon: faMars,
                         color: 'blue',
                         active: filterGender === 'L',
@@ -2639,7 +2982,7 @@ export default function StudentsPage() {
                     },
                     {
                         label: 'Perempuan',
-                        value: stats.girls,
+                        value: globalStats.girls,
                         icon: faVenus,
                         color: 'pink',
                         active: filterGender === 'P',
@@ -2647,7 +2990,7 @@ export default function StudentsPage() {
                     },
                     {
                         label: 'Berisiko',
-                        value: stats.risk,
+                        value: globalStats.risk,
                         icon: faTriangleExclamation,
                         color: 'red',
                         active: filterPointMode === 'risk',
@@ -2672,27 +3015,7 @@ export default function StudentsPage() {
                 ))}
             </div>
 
-            {/* Smart Presets - SaaS Navigation Style */}
-            <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-                <div className="flex items-center gap-1.5 p-1.5 bg-[var(--color-surface-alt)]/50 rounded-2xl border border-[var(--color-border)]">
-                    {[
-                        { id: '', label: 'Semua', icon: faTableList, active: !filterPointMode && !sortBy.includes('points') && !filterStatus && !filterCompleteness, onClick: () => { resetAllFilters(); setFilterCompleteness(''); } },
-                        { id: 'missing_photo', label: 'Foto Kosong', icon: faImage, active: filterCompleteness === 'missing_photo', onClick: () => { resetAllFilters(); setFilterCompleteness('missing_photo'); setPage(1); } },
-                        { id: 'missing_phone', label: 'Belum Ada WA', icon: faWhatsapp, active: filterCompleteness === 'missing_phone', onClick: () => { resetAllFilters(); setFilterCompleteness('missing_phone'); setPage(1); } },
-                        { id: 'top', label: 'Top Performer', icon: faTrophy, active: sortBy === 'points_desc', onClick: () => { setSortBy('points_desc'); setPage(1); } },
-                        { id: 'new', label: 'Siswa Baru', icon: faPlus, active: sortBy === 'id_desc', onClick: () => { setSortBy('id_desc'); setPage(1); } },
-                    ].map((p, i) => (
-                        <button
-                            key={i}
-                            onClick={p.onClick}
-                            className={`h-8 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${p.active ? 'bg-white shadow-sm text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                        >
-                            <FontAwesomeIcon icon={p.icon} />
-                            {p.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
+            {/* Removed: Smart Presets - SaaS Navigation Style */}
             {loading ? (
                 <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
                     <div className="overflow-x-auto">
@@ -2734,65 +3057,6 @@ export default function StudentsPage() {
                 </div>
             ) : (
                 <>
-                    {/* Dashboard Stats Panel */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                        {[
-                            {
-                                label: 'Total Siswa',
-                                value: stats.total,
-                                icon: faUsers,
-                                color: 'indigo',
-                                active: !filterClass && !filterGender && !filterStatus && !filterTag && !filterPointMode && !filterPointMin && !filterPointMax && !debouncedSearch,
-                                onClick: () => { resetAllFilters(); setPage(1); }
-                            },
-                            {
-                                label: 'Laki-laki',
-                                value: stats.boys,
-                                icon: faMars,
-                                color: 'blue',
-                                active: filterGender === 'L',
-                                onClick: () => { setFilterGender('L'); setPage(1); }
-                            },
-                            {
-                                label: 'Perempuan',
-                                value: stats.girls,
-                                icon: faVenus,
-                                color: 'pink',
-                                active: filterGender === 'P',
-                                onClick: () => { setFilterGender('P'); setPage(1); }
-                            },
-                            {
-                                label: 'Berisiko',
-                                value: stats.risk,
-                                icon: faTriangleExclamation,
-                                color: 'red',
-                                active: filterPointMode === 'risk',
-                                onClick: () => { setFilterPointMode('risk'); setPage(1); }
-                            }
-                        ].map((s, i) => (
-                            <button
-                                key={i}
-                                onClick={s.onClick}
-                                className={`group relative overflow-hidden glass rounded-3xl border p-4 text-left transition-all duration-500 hover:scale-[1.02] active:scale-95 ${s.active ? `border-${s.color}-500/50 bg-${s.color}-500/5 shadow-xl shadow-${s.color}-500/10` : 'border-[var(--color-border)]'}`}
-                            >
-                                {/* Decorative background element */}
-                                <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full bg-${s.color}-500/10 blur-2xl group-hover:scale-150 transition-all duration-700`} />
-
-                                <div className="flex items-center gap-3 relative z-10">
-                                    <div className={`w-10 h-10 rounded-2xl bg-${s.color}-500/10 flex items-center justify-center text-${s.color}-500 group-hover:scale-110 transition-transform duration-500`}>
-                                        <FontAwesomeIcon icon={s.icon} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] transition-colors">{s.label}</p>
-                                        <p className="text-xl font-black text-[var(--color-text)]">{s.value}</p>
-                                    </div>
-                                </div>
-                                {s.active && (
-                                    <div className={`absolute bottom-0 left-0 h-1 bg-${s.color}-500 w-full opacity-50`} />
-                                )}
-                            </button>
-                        ))}
-                    </div>
                     <div className="glass rounded-[1.5rem] border border-[var(--color-border)]">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
@@ -2837,6 +3101,7 @@ export default function StudentsPage() {
                                             student={student}
                                             selectedIds={selectedStudentIds}
                                             lastReportMap={lastReportMap}
+                                            isPrivacyMode={isPrivacyMode}
                                             onEdit={handleEdit}
                                             onViewProfile={handleViewProfile}
                                             onViewQR={handleViewQR}
@@ -2938,27 +3203,6 @@ export default function StudentsPage() {
                             </button>
                         )}
 
-                        {/* Fitur 9 - Export filter aktif */}
-                        {activeFilterCount > 0 && (
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const rows = await fetchFilteredForExport()
-                                        const ws = XLSX.utils.json_to_sheet(rows)
-                                        const wb = XLSX.utils.book_new()
-                                        XLSX.utils.book_append_sheet(wb, ws, 'Filter')
-                                        const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
-                                        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-                                        downloadBlob(blob, `export_filter_${new Date().toISOString().slice(0, 10)}.xlsx`)
-                                        addToast(`${rows.length} baris berhasil diekspor`, 'success')
-                                    } catch { addToast('Gagal export', 'error') }
-                                }}
-                                className="btn bg-teal-500/10 hover:bg-teal-500 text-teal-600 hover:text-white border border-teal-500/20 h-8 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-1.5"
-                            >
-                                <FontAwesomeIcon icon={faDownload} />
-                                Export Filter
-                            </button>
-                        )}
                     </div>
 
                     {/* Pagination Footer */}
@@ -3016,7 +3260,7 @@ export default function StudentsPage() {
                                         {getPageItems(page, totalPages).map((it, idx) => {
                                             if (it === '...') {
                                                 return (
-                                                    <div key={`dots-${idx}`} className="h-10 px-2 flex items-center text-[var(--color-text-muted)] font-black">
+                                                    <div key={`dots - ${idx} `} className="h-10 px-2 flex items-center text-[var(--color-text-muted)] font-black">
                                                         …
                                                     </div>
                                                 )
@@ -3074,7 +3318,8 @@ export default function StudentsPage() {
                                                     setJumpPage('')
                                                 }
                                             }}
-                                            placeholder={`${page}/${totalPages}`}
+                                            placeholder={`${page}/${totalPages}`
+                                            }
                                             className="h-10 w-24 rounded-xl border border-[var(--color-border)] bg-transparent px-3 text-sm font-bold"
                                         />
                                         <button
@@ -3088,11 +3333,11 @@ export default function StudentsPage() {
                                         >
                                             Go
                                         </button>
-                                    </div>
+                                    </div >
                                 </>
                             )}
-                        </div>
-                    </div>
+                        </div >
+                    </div >
                 </>
             )}
 
@@ -3334,13 +3579,15 @@ export default function StudentsPage() {
                                                     <img src={selectedStudent.photo_url} alt="" className="w-full h-full object-cover rounded-md" />
                                                 ) : (
                                                     <div className="w-full h-full rounded-md bg-white/5 flex items-center justify-center border border-white/10">
-                                                        <span className="text-2xl font-black opacity-30">{selectedStudent.name.charAt(0)}</span>
+                                                        <span className="text-2xl font-black opacity-30">{isPrivacyMode ? '*' : selectedStudent.name.charAt(0)}</span>
                                                     </div>
                                                 )}
                                             </div>
                                             <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">
                                                 <div>
-                                                    <h3 className="text-[11px] font-black leading-[1.2] uppercase mb-0.5 drop-shadow-sm line-clamp-2">{selectedStudent.name}</h3>
+                                                    <h3 className="text-[11px] font-black leading-[1.2] uppercase mb-0.5 drop-shadow-sm line-clamp-2">
+                                                        {isPrivacyMode ? maskInfo(selectedStudent.name, 4) : selectedStudent.name}
+                                                    </h3>
                                                     <div className="space-y-0.5">
                                                         <p className="text-[8px] font-black text-white/90 uppercase tracking-tight leading-tight">{selectedStudent.className}</p>
                                                         <p className="text-[6px] font-bold text-white/40 uppercase tracking-widest leading-none">MUHAMMADIYAH BOARDING SCHOOL TANGGUL</p>
@@ -3348,7 +3595,9 @@ export default function StudentsPage() {
                                                 </div>
                                                 <div className="pt-1.5 border-t border-white/10">
                                                     <p className="text-[5px] font-bold opacity-30 uppercase tracking-widest mb-0.5 leading-none">NOMOR REGISTRASI</p>
-                                                    <p className="text-[9px] font-mono font-bold tracking-wider text-indigo-100 leading-tight">{selectedStudent.code}</p>
+                                                    <p className="text-[9px] font-mono font-bold tracking-wider text-indigo-100 leading-tight">
+                                                        {isPrivacyMode ? maskInfo(selectedStudent.code, 3) : selectedStudent.code}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -3363,7 +3612,7 @@ export default function StudentsPage() {
 
                                     {/* Back Card */}
                                     <div className="w-[300px] h-[188px] bg-white dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-800 relative shadow-lg flex flex-col items-center justify-center text-center shrink-0 p-4 scale-95 sm:scale-100 origin-center transition-transform">
-                                        <div className="p-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm mb-2">
+                                        <div className={`p-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm mb-2 ${isPrivacyMode ? 'blur-md grayscale opacity-50' : ''}`}>
                                             <QRCodeCanvas
                                                 value={`${window.location.origin}/check?code=${selectedStudent.code}&pin=${selectedStudent.pin}`}
                                                 size={65}
@@ -3389,15 +3638,27 @@ export default function StudentsPage() {
                                             <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
                                                 <label className="block text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">ID REG</label>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[12px] font-black text-[var(--color-primary)] font-mono">{selectedStudent.code}</span>
-                                                    <button onClick={() => { navigator.clipboard.writeText(selectedStudent.code); addToast('Kode dicopy', 'success') }} className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"><FontAwesomeIcon icon={faLink} /></button>
+                                                    <span className="text-[12px] font-black text-[var(--color-primary)] font-mono">
+                                                        {isPrivacyMode ? maskInfo(selectedStudent.code, 2) : selectedStudent.code}
+                                                    </span>
+                                                    <button onClick={() => {
+                                                        if (isPrivacyMode) return addToast('Mode Privasi aktif', 'warning')
+                                                        navigator.clipboard.writeText(selectedStudent.code);
+                                                        addToast('Kode dicopy', 'success')
+                                                    }} className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"><FontAwesomeIcon icon={faLink} /></button>
                                                 </div>
                                             </div>
                                             <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
                                                 <label className="block text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">PIN</label>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[12px] font-black text-emerald-500 font-mono tracking-wider">{selectedStudent.pin}</span>
-                                                    <button onClick={() => { navigator.clipboard.writeText(selectedStudent.pin); addToast('PIN dicopy', 'success') }} className="text-[10px] text-[var(--color-text-muted)] hover:text-emerald-500"><FontAwesomeIcon icon={faLink} /></button>
+                                                    <span className="text-[12px] font-black text-emerald-500 font-mono tracking-wider">
+                                                        {isPrivacyMode ? '****' : selectedStudent.pin}
+                                                    </span>
+                                                    <button onClick={() => {
+                                                        if (isPrivacyMode) return addToast('Mode Privasi aktif', 'warning')
+                                                        navigator.clipboard.writeText(selectedStudent.pin);
+                                                        addToast('PIN dicopy', 'success')
+                                                    }} className="text-[10px] text-[var(--color-text-muted)] hover:text-emerald-500"><FontAwesomeIcon icon={faLink} /></button>
                                                 </div>
                                             </div>
                                         </div>
@@ -3415,7 +3676,10 @@ export default function StudentsPage() {
                                     {/* Tools Bar */}
                                     <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--color-border)]/50">
                                         <button
-                                            onClick={() => handleResetPin(selectedStudent)}
+                                            onClick={() => {
+                                                if (isPrivacyMode) return addToast('Mode Privasi aktif', 'warning');
+                                                handleResetPin(selectedStudent);
+                                            }}
                                             disabled={resettingPin}
                                             className="h-9 px-3 rounded-lg border border-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5"
                                         >
@@ -3479,175 +3743,196 @@ export default function StudentsPage() {
                         isOpen={isProfileModalOpen}
                         onClose={() => setIsProfileModalOpen(false)}
                         title="Profil Siswa"
-                        size="md"
+                        size="xl"
                     >
                         {selectedStudent && (
                             <div className="space-y-4 -mt-2">
-                                {/* Header Section - Glassmorphism */}
-                                <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 shadow-xl">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] via-[var(--color-primary)]/80 to-[var(--color-accent)] opacity-90"></div>
-                                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+                                {/* Compact Slim Header */}
+                                <div className="relative overflow-hidden rounded-2xl border border-white/10 shadow-xl">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-700 via-violet-600 to-purple-800"></div>
+                                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
 
-                                    <div className="relative p-4 flex items-center gap-5 text-white">
-                                        {/* Avatar with Glow */}
+                                    <div className="relative p-3.5 flex items-center gap-5 text-white">
+                                        {/* Slim Avatar */}
                                         <div className="relative shrink-0">
-                                            <div className="absolute inset-0 bg-white/40 blur-2xl rounded-full scale-110 opacity-50"></div>
-                                            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/30 flex items-center justify-center text-3xl font-black shadow-xl overflow-hidden relative z-10">
-                                                {selectedStudent.photo_url ? (
+                                            <div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur-xl border border-white/30 flex items-center justify-center text-2xl font-black shadow-xl overflow-hidden z-10 relative">
+                                                {selectedStudent.photo_url && !isPrivacyMode ? (
                                                     <img src={selectedStudent.photo_url} alt="" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span>{selectedStudent.name.charAt(0)}</span>
+                                                    <span>{isPrivacyMode ? '*' : selectedStudent.name.charAt(0)}</span>
                                                 )}
                                             </div>
-                                            {/* Status Badge */}
-                                            <div className={`absolute -bottom-1 -right-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-white/20 shadow-lg z-20 ${selectedStudent.status === 'aktif' ? 'bg-emerald-500' : 'bg-amber-500'
-                                                }`}>
+                                            <div className={`absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest border border-white/30 shadow-lg z-20 ${selectedStudent.status === 'aktif' ? 'bg-emerald-500' : 'bg-amber-500'}`}>
                                                 {selectedStudent.status}
                                             </div>
                                         </div>
 
-                                        {/* Name & Basic Info */}
-                                        <div className="flex-1 min-w-0 space-y-1">
-                                            <div>
-                                                <h2 className="text-xl font-black font-heading leading-tight truncate">
-                                                    {selectedStudent.name}
+                                        {/* Name & Quick Stats */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-3 mb-1">
+                                                <h2 className="text-base font-black text-white truncate drop-shadow-sm">
+                                                    {isPrivacyMode ? maskInfo(selectedStudent.name, 4) : selectedStudent.name}
                                                 </h2>
-                                                <div className="flex flex-wrap justify-center md:justify-start items-center gap-2 mt-1 opacity-90">
-                                                    <span className="text-[10px] font-black bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">
-                                                        {selectedStudent.className}
-                                                    </span>
-                                                    <span className="text-[10px] font-black bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">
-                                                        {selectedStudent.gender === 'L' ? 'PUTRA' : 'PUTRI'}
-                                                    </span>
-                                                </div>
+                                                {(() => {
+                                                    const completeness = calculateCompleteness(selectedStudent);
+                                                    return (
+                                                        <span className={`text-[7px] px-2 py-0.5 rounded-md font-black uppercase tracking-widest border ${completeness === 100 ? 'bg-emerald-400/20 text-emerald-100 border-emerald-400/30' : 'bg-white/10 text-white/90 border-white/20'}`}>
+                                                            {completeness}% READY
+                                                        </span>
+                                                    )
+                                                })()}
                                             </div>
 
-                                            {/* Quick Stats in Header */}
-                                            <div className="flex items-center gap-4 pt-1">
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className="text-[8px] font-black uppercase tracking-wider opacity-60">POIN</span>
-                                                    <span className="text-sm font-black tracking-tighter">{selectedStudent.points}</span>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-1.5 text-white/70">
+                                                    <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
+                                                    <span className="text-[10px] font-bold tracking-wider">{isPrivacyMode ? maskInfo(selectedStudent.registration_code || selectedStudent.code, 3) : (selectedStudent.registration_code || selectedStudent.code)}</span>
                                                 </div>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-[8px] font-black uppercase tracking-wider opacity-60">STATUS</span>
-                                                    <span className="text-[10px] font-black uppercase">
-                                                        {selectedStudent.points >= 0 ? 'AMAN' : 'RISIKO'}
-                                                    </span>
+                                                <div className="flex-1 max-w-[140px]">
+                                                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-white transition-all duration-700"
+                                                            style={{ width: `${calculateCompleteness(selectedStudent)}%` }}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Quick Actions (Copy ID) */}
+                                        <button
+                                            onClick={() => {
+                                                if (isPrivacyMode) return addToast('Mode Privasi aktif', 'warning');
+                                                navigator.clipboard.writeText(selectedStudent.registration_code || selectedStudent.code);
+                                                addToast('ID disalin', 'success');
+                                            }}
+                                            className="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-[9px] font-black uppercase transition-all"
+                                        >
+                                            SALIN ID
+                                        </button>
                                     </div>
                                 </div>
 
-                                {/* Information Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div className="space-y-4">
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1 flex items-center gap-2">
-                                            <span className="w-4 h-px bg-[var(--color-border)]"></span>
-                                            Data Akademik
-                                        </h3>
-                                        <div className="grid grid-cols-[1.2fr_0.8fr] gap-2">
-                                            <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 hover:bg-[var(--color-surface-alt)]/50 transition-colors">
-                                                <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">ID REG</p>
-                                                <p className="font-mono font-black text-[11px] text-[var(--color-primary)] whitespace-nowrap overflow-hidden">{selectedStudent.code}</p>
-                                            </div>
-                                            <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 hover:bg-[var(--color-surface-alt)]/50 transition-colors">
-                                                <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">NISN</p>
-                                                <p className="font-bold text-xs text-[var(--color-text)] whitespace-nowrap overflow-hidden">{selectedStudent.nisn || '---'}</p>
+                                {/* Main Grid - Compact Distribution */}
+                                <div className="space-y-4">
+                                    {/* Top Row: Info Cards */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {/* Academic Box */}
+                                        <div className="p-3 rounded-xl bg-[var(--color-surface-alt)]/20 border border-[var(--color-border)]">
+                                            <h4 className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
+                                                <FontAwesomeIcon icon={faIdCard} className="opacity-50" /> Data Akademik
+                                            </h4>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center text-[10px]">
+                                                    <span className="text-[var(--color-text-muted)] font-bold">Kelas</span>
+                                                    <span className="font-black text-[var(--color-text)]">{selectedStudent.className}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[10px]">
+                                                    <span className="text-[var(--color-text-muted)] font-bold">Gender</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <FontAwesomeIcon icon={selectedStudent.gender === 'L' ? faMars : faVenus} className={selectedStudent.gender === 'L' ? 'text-blue-500' : 'text-pink-500'} />
+                                                        <span className="font-black text-[var(--color-text)] uppercase">{selectedStudent.gender === 'L' ? 'Putra' : 'Putri'}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[10px]">
+                                                    <span className="text-[var(--color-text-muted)] font-bold">NISN</span>
+                                                    <span className="font-mono font-black text-[var(--color-primary)]">{isPrivacyMode ? maskInfo(selectedStudent.nisn, 3) : (selectedStudent.nisn || '---')}</span>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1 mt-4 flex items-center gap-2">
-                                            <span className="w-4 h-px bg-[var(--color-border)]"></span>
-                                            Kontak Wali
-                                        </h3>
-                                        <div className="space-y-2">
-                                            <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 group">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">WHATSAPP</p>
+                                        {/* Contact Box */}
+                                        <div className="p-3 rounded-xl bg-[var(--color-surface-alt)]/20 border border-[var(--color-border)]">
+                                            <h4 className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
+                                                <FontAwesomeIcon icon={faWhatsapp} className="opacity-50" /> Kontak Wali
+                                            </h4>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center group">
+                                                    <span className="text-[8px] text-[var(--color-text-muted)] font-black uppercase">WhatsApp</span>
                                                     {selectedStudent.phone && (
-                                                        <a href={`https://wa.me/${selectedStudent.phone.replace(/\D/g, '').replace(/^0/, '62')}`} target="_blank" rel="noreferrer"
-                                                            className="text-green-500 hover:text-green-600 flex items-center gap-1.5 text-[9px] font-black uppercase">
-                                                            <FontAwesomeIcon icon={faWhatsapp} /> Chat
+                                                        <a href={isPrivacyMode ? '#' : `https://wa.me/${selectedStudent.phone.replace(/\D/g, '').replace(/^0/, '62')}`} target="_blank" rel="noreferrer"
+                                                            className="text-emerald-500 hover:text-emerald-600 transition-colors text-[9px] font-black uppercase flex items-center gap-1">
+                                                            Chat <FontAwesomeIcon icon={faBolt} className="text-[7px]" />
                                                         </a>
                                                     )}
                                                 </div>
-                                                <p className="font-bold text-[var(--color-text)] text-xs tracking-wider">{selectedStudent.phone || 'Nomor tidak tersedia'}</p>
-                                            </div>
-
-                                            <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                                                <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">NAMA WALI</p>
-                                                <p className="font-bold text-[var(--color-text)] text-xs">
-                                                    {selectedStudent.guardian_name || '---'}
-                                                    {selectedStudent.guardian_relation && (
-                                                        <span className="text-[9px] ml-1.5 opacity-50 capitalize">({selectedStudent.guardian_relation})</span>
-                                                    )}
-                                                </p>
+                                                <p className="text-[10px] font-black text-[var(--color-text)] tracking-wider">{isPrivacyMode ? maskInfo(selectedStudent.phone, 3) : (selectedStudent.phone || '---')}</p>
+                                                <div className="pt-1.5 border-t border-[var(--color-border)]/30">
+                                                    <p className="text-[8px] text-[var(--color-text-muted)] font-bold mb-0.5">Wali: <span className="text-[var(--color-text)] font-black">{isPrivacyMode ? maskInfo(selectedStudent.guardian_name, 4) : (selectedStudent.guardian_name || '---')}</span></p>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Fitur SaaS: Display Metadata if exists */}
-                                        {selectedStudent.metadata && Object.keys(selectedStudent.metadata).length > 0 && (
-                                            <div className="mt-4 p-3 rounded-2xl bg-violet-500/[0.03] border border-violet-500/10 space-y-2">
-                                                <h4 className="text-[8px] font-black text-violet-600 dark:text-violet-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-violet-500"></div>
-                                                    Info Karakter & Khusus
-                                                </h4>
-                                                <div className="grid grid-cols-1 gap-2">
-                                                    {Object.entries(selectedStudent.metadata).map(([key, val]) => (
+                                        {/* Metadata / Special Info Box */}
+                                        <div className="p-3 rounded-xl bg-violet-500/[0.03] border border-violet-500/10">
+                                            <h4 className="text-[8px] font-black text-violet-600 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
+                                                <FontAwesomeIcon icon={faTrophy} className="opacity-50" /> Informasi Khusus
+                                            </h4>
+                                            <div className="max-h-[60px] overflow-auto pr-1 space-y-2 scrollbar-none">
+                                                {selectedStudent.metadata && Object.keys(selectedStudent.metadata).length > 0 ? (
+                                                    Object.entries(selectedStudent.metadata).map(([key, val]) => (
                                                         <div key={key} className="flex flex-col">
-                                                            <span className="text-[7px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">{key}</span>
-                                                            <span className="text-[11px] font-bold text-[var(--color-text)] truncate">{val}</span>
+                                                            <span className="text-[7px] font-black text-violet-400 uppercase tracking-tighter">{key}</span>
+                                                            <span className="text-[9px] font-bold text-[var(--color-text)] line-clamp-1">{val}</span>
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold opacity-50 italic py-2">Tidak ada catatan data khusus</p>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
 
-                                    {/* Timeline/History Section */}
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1 flex items-center gap-2">
-                                                <span className="w-4 h-px bg-[var(--color-border)]"></span>
-                                                Riwayat
-                                            </h3>
-                                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
-                                                {behaviorHistory.length}
-                                            </span>
+                                    {/* Bottom Row: Dynamic Insights */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        {/* Activity Heatmap (Equal width) */}
+                                        <div className="flex flex-col h-[200px]">
+                                            <div className="flex items-center justify-between mb-2 px-1">
+                                                <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+                                                    <FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[8px]" />
+                                                    Heatmap Aktivitas
+                                                </h3>
+                                                <div className="flex gap-2 text-[7px] font-black uppercase opacity-60">
+                                                    <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Positif</span>
+                                                    <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-red-500" /> Negatif</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 p-4 rounded-xl bg-[var(--color-surface-alt)]/10 border border-[var(--color-border)] flex flex-col justify-center items-center overflow-hidden">
+                                                <BehaviorHeatmap history={behaviorHistory} />
+                                            </div>
                                         </div>
 
-                                        <div className="flex-1 max-h-[220px] overflow-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 p-3 scrollbar-none">
-                                            {behaviorHistory.length === 0 ? (
-                                                <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-6">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest">Kosong</p>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-3">
-                                                    {behaviorHistory.map((item, idx) => (
-                                                        <div key={item.id} className="relative pl-4 group">
-                                                            {idx !== behaviorHistory.length - 1 && (
-                                                                <div className="absolute left-[5px] top-3 w-px h-full bg-[var(--color-border)]"></div>
-                                                            )}
-                                                            <div className={`absolute left-0 top-1.5 w-[10px] h-[10px] rounded-full border border-[var(--color-surface)] z-10 ${item.type === 'prestasi' ? 'bg-emerald-500' : 'bg-red-500'
-                                                                }`}></div>
-
-                                                            <div className="bg-[var(--color-surface)] rounded-lg p-2 border border-[var(--color-border)] shadow-sm">
-                                                                <div className="flex items-start justify-between gap-2 mb-0.5">
-                                                                    <div className="text-xs font-black text-[var(--color-text)] line-clamp-1">{item.title || item.type || 'Laporan'}</div>
-                                                                    <div className={`text-xs font-black ${item.points >= 0 ? 'text-emerald-500' : 'text-red-500'
-                                                                        }`}>
-                                                                        {item.points > 0 ? '+' : ''}{item.points}
+                                        {/* History Timeline (Equal width) */}
+                                        <div className="flex flex-col h-[200px]">
+                                            <div className="flex items-center justify-between mb-2 px-1">
+                                                <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Riwayat Terbaru</h3>
+                                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)]">{behaviorHistory.length}</span>
+                                            </div>
+                                            <div className="flex-1 overflow-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/10 p-4 scrollbar-none">
+                                                {behaviorHistory.length === 0 ? (
+                                                    <div className="h-full flex flex-col items-center justify-center opacity-30">
+                                                        <FontAwesomeIcon icon={faHistory} className="text-sm mb-1" />
+                                                        <p className="text-[8px] font-black uppercase">Kosong</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-2.5">
+                                                        {behaviorHistory.slice(0, 5).map((item, idx) => (
+                                                            <div key={item.id} className="relative pl-3.5">
+                                                                <div className={`absolute left-0 top-1 w-1.5 h-1.5 rounded-full ${item.type === 'prestasi' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]'}`} />
+                                                                <div className="flex items-start justify-between gap-2.5">
+                                                                    <div className="min-w-0">
+                                                                        <p className="text-[9px] font-black text-[var(--color-text)] truncate">{item.title || item.type}</p>
+                                                                        <p className="text-[7px] text-[var(--color-text-muted)] font-bold">{new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
                                                                     </div>
-                                                                </div>
-                                                                <div className="text-[9px] text-[var(--color-text-muted)] font-bold opacity-70">
-                                                                    {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                                                    <span className={`text-[9px] font-black ${item.points >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                                        {item.points > 0 ? '+' : ''}{item.points}
+                                                                    </span>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -3661,7 +3946,7 @@ export default function StudentsPage() {
                                         }}
                                         className="h-8 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"
                                     >
-                                        <FontAwesomeIcon icon={faFilter} /> Label
+                                        <FontAwesomeIcon icon={faTags} /> Label
                                     </button>
                                     <button
                                         onClick={() => {
@@ -4178,7 +4463,7 @@ export default function StudentsPage() {
                 )
             }
 
-            {/* Fitur 7 - Tag Modal */}
+            {/* Fitur 7 - Dynamic Tag Modal (SaaS UI) */}
             {
                 isTagModalOpen && (
                     <Modal
@@ -4188,34 +4473,129 @@ export default function StudentsPage() {
                         size="sm"
                     >
                         {studentForTags && (
-                            <div className="space-y-4">
-                                <p className="text-xs text-[var(--color-text-muted)]">Pilih label/tag untuk siswa ini. Bisa dipilih lebih dari satu.</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {AvailableTags.map(tag => {
-                                        const active = (studentForTags.tags || []).includes(tag)
-                                        return (
-                                            <button key={tag} onClick={() => handleToggleTag(studentForTags, tag)}
-                                                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${active
-                                                    ? 'bg-violet-500/20 border-violet-500/40 text-violet-600 dark:text-violet-400'
-                                                    : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'
-                                                    }`}>
-                                                {active ? '✓ ' : ''}{tag}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                                {(studentForTags.tags || []).length > 0 && (
-                                    <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                                        <p className="text-[10px] font-black text-violet-600 uppercase tracking-widest mb-1">Label Aktif</p>
-                                        <div className="flex flex-wrap gap-1">
-                                            {(studentForTags.tags || []).map(t => (
-                                                <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-600 font-bold">{t}</span>
-                                            ))}
+                            <div className="space-y-6">
+                                {/* Input Section */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tambah Label Baru</label>
+                                    <div className="relative group">
+                                        <input
+                                            type="text"
+                                            value={newTagInput}
+                                            onChange={e => setNewTagInput(e.target.value)}
+                                            onKeyDown={handleAddCustomTag}
+                                            placeholder="Ketik lalu Tekan Enter..."
+                                            className="w-full h-11 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl px-4 text-sm font-bold focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all outline-none"
+                                        />
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden group-focus-within:block">
+                                            <span className="text-[9px] font-black bg-white/10 px-2 py-1 rounded border border-white/20 text-[var(--color-text-muted)]">ENTER ↵</span>
                                         </div>
                                     </div>
-                                )}
-                                <div className="flex justify-end">
-                                    <button onClick={() => setIsTagModalOpen(false)} className="btn bg-[var(--color-surface-alt)] h-9 px-5 text-[10px] font-black uppercase tracking-widest rounded-lg">Tutup</button>
+                                </div>
+
+                                {/* Active Tags Pool */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Label Saat Ini</label>
+                                        <span className="text-[9px] font-black text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full">
+                                            {(studentForTags.tags || []).length} AKTIF
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 min-h-[40px] p-3 rounded-2xl bg-[var(--color-surface-alt)]/30 border border-dashed border-[var(--color-border)]">
+                                        {(studentForTags.tags || []).length === 0 ? (
+                                            <p className="text-[10px] text-[var(--color-text-muted)] italic opacity-60 m-auto">Belum ada label terpilih</p>
+                                        ) : (
+                                            (studentForTags.tags || []).map(tag => (
+                                                <button
+                                                    key={tag}
+                                                    onClick={() => handleToggleTag(studentForTags, tag)}
+                                                    className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all hover:scale-105 active:scale-95 ${getTagColor(tag)}`}
+                                                >
+                                                    {tag}
+                                                    <FontAwesomeIcon icon={faXmark} className="text-[9px] opacity-40 group-hover:opacity-100 transition-opacity" />
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Suggested Pool */}
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pilih dari Database / Edit Global</label>
+                                    <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
+                                        {Array.from(new Set([...AvailableTags, ...allUsedTags])).sort().map(tag => {
+                                            const isActive = (studentForTags.tags || []).includes(tag);
+                                            const isEditing = tagToEdit === tag;
+
+                                            return (
+                                                <div key={tag} className={`relative flex items-center transition-all ${isEditing ? 'w-full' : ''}`}>
+                                                    {isEditing ? (
+                                                        <div className="flex-1 flex gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                                                            <input
+                                                                autoFocus
+                                                                type="text"
+                                                                value={renameInput}
+                                                                onChange={e => setRenameInput(e.target.value)}
+                                                                className="flex-1 h-8 bg-white border border-[var(--color-primary)] rounded-lg px-3 text-xs font-bold outline-none shadow-lg shadow-[var(--color-primary)]/10"
+                                                                onKeyDown={e => {
+                                                                    if (e.key === 'Enter') handleGlobalRenameTag(tag, renameInput)
+                                                                    if (e.key === 'Escape') setTagToEdit(null)
+                                                                }}
+                                                            />
+                                                            <button onClick={() => handleGlobalRenameTag(tag, renameInput)} className="w-8 h-8 rounded-lg bg-[var(--color-primary)] text-white text-[10px] shrink-0">
+                                                                <FontAwesomeIcon icon={faCheck} />
+                                                            </button>
+                                                            <button onClick={() => setTagToEdit(null)} className="w-8 h-8 rounded-lg bg-gray-100 text-gray-400 text-[10px] shrink-0">
+                                                                <FontAwesomeIcon icon={faXmark} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="group flex items-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:border-[var(--color-primary)]/30 transition-all">
+                                                            <button
+                                                                onClick={() => handleToggleTag(studentForTags, tag)}
+                                                                className={`px-3 py-1.5 text-xs font-bold transition-all rounded-l-lg ${isActive
+                                                                    ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
+                                                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'
+                                                                    }`}
+                                                            >
+                                                                {tag}
+                                                                {isActive && <FontAwesomeIcon icon={faCheck} className="ml-2 text-[10px]" />}
+                                                            </button>
+
+                                                            {/* Manage Actions on Hover */}
+                                                            <div className="flex opacity-0 group-hover:opacity-100 transition-opacity border-l border-[var(--color-border)] bg-white/50 backdrop-blur-sm rounded-r-lg">
+                                                                <button
+                                                                    onClick={() => { setTagToEdit(tag); setRenameInput(tag) }}
+                                                                    className="w-7 h-7 flex items-center justify-center text-[10px] text-blue-500 hover:bg-blue-500/10"
+                                                                    title="Ganti Nama Global"
+                                                                >
+                                                                    <FontAwesomeIcon icon={faEdit} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleGlobalDeleteTag(tag)}
+                                                                    className="w-7 h-7 flex items-center justify-center text-[10px] text-red-500 hover:bg-red-500/10"
+                                                                    title="Hapus Global"
+                                                                >
+                                                                    <FontAwesomeIcon icon={faTrash} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                    <p className="text-[8px] text-[var(--color-text-muted)] mt-2 italic px-1">
+                                        * Gunakan ikon <FontAwesomeIcon icon={faEdit} className="text-blue-500 mx-0.5" /> dan <FontAwesomeIcon icon={faTrash} className="text-red-500 mx-0.5" /> untuk merubah nama atau menghapus label dari SEMUA siswa sekaligus.
+                                    </p>
+                                </div>
+
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        onClick={() => setIsTagModalOpen(false)}
+                                        className="h-10 px-6 bg-gray-900 dark:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-95"
+                                    >
+                                        Selesai
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -4482,11 +4862,27 @@ export default function StudentsPage() {
                                 </button>
 
                                 <button
+                                    onClick={() => setIsBulkTagModalOpen(true)}
+                                    className="h-10 px-4 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500 hover:text-white transition-all duration-300 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    <FontAwesomeIcon icon={faTags} className="text-base" />
+                                    <span className="hidden md:inline">Beri Label</span>
+                                </button>
+
+                                <button
                                     onClick={() => setIsBulkModalOpen(true)}
                                     className="h-10 px-4 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500 hover:text-white transition-all duration-300 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
                                 >
                                     <FontAwesomeIcon icon={faGraduationCap} className="text-base" />
                                     <span className="hidden md:inline">Naik Kelas</span>
+                                </button>
+
+                                <button
+                                    onClick={() => setIsBulkPointModalOpen(true)}
+                                    className="h-10 px-4 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500 hover:text-white transition-all duration-300 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    <FontAwesomeIcon icon={faBolt} className="text-base" />
+                                    <span className="hidden md:inline">Beri Poin</span>
                                 </button>
 
                                 <button
@@ -4509,6 +4905,158 @@ export default function StudentsPage() {
                             </div>
                         </div>
                     </div>
+                )
+            }
+            {/* ===================== */}
+            {/* BULK TAG MODAL - SaaS STYLE */}
+            {/* ===================== */}
+            {
+                isBulkTagModalOpen && (
+                    <Modal
+                        isOpen={isBulkTagModalOpen}
+                        onClose={() => setIsBulkTagModalOpen(false)}
+                        title={`Aksi Label Massal — ${selectedStudentIds.length} Siswa`}
+                        size="sm"
+                    >
+                        <div className="space-y-6">
+                            {/* Mode Toggle */}
+                            <div className="flex p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
+                                <button
+                                    onClick={() => setBulkTagAction('add')}
+                                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${bulkTagAction === 'add' ? 'bg-indigo-500 text-white shadow-lg' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                >
+                                    Tambah Label
+                                </button>
+                                <button
+                                    onClick={() => setBulkTagAction('remove')}
+                                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${bulkTagAction === 'remove' ? 'bg-red-500 text-white shadow-lg' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                >
+                                    Hapus Label
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pilih Label untuk Diaplikasikan</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {Array.from(new Set([...AvailableTags, ...allUsedTags])).sort().map(tag => (
+                                        <button
+                                            key={tag}
+                                            onClick={() => handleBulkTagApply(tag)}
+                                            disabled={submitting}
+                                            className={`p-3 rounded-xl border text-xs font-bold transition-all text-left flex items-center justify-between group hover:scale-[1.02] active:scale-95 ${bulkTagAction === 'add'
+                                                ? 'hover:border-indigo-500 hover:bg-indigo-500/5'
+                                                : 'hover:border-red-500 hover:bg-red-500/5'
+                                                } border-[var(--color-border)] bg-[var(--color-surface)]`}
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${getTagColor(tag).split(' ')[0]}`} />
+                                                {tag}
+                                            </span>
+                                            <FontAwesomeIcon
+                                                icon={bulkTagAction === 'add' ? faPlus : faTrash}
+                                                className={`text-[9px] opacity-0 group-hover:opacity-100 transition-opacity ${bulkTagAction === 'add' ? 'text-indigo-500' : 'text-red-500'}`}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
+                                <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold leading-relaxed">
+                                    {bulkTagAction === 'add'
+                                        ? `* Memilih label akan MENAMBAHKAN label tersebut ke SEMUA (${selectedStudentIds.length}) siswa yang Anda pilih.`
+                                        : `* Memilih label akan MENGHAPUS label tersebut dari SEMUA (${selectedStudentIds.length}) siswa yang memiliki label itu.`}
+                                </p>
+                            </div>
+
+                            <div className="flex justify-end pt-2">
+                                <button
+                                    onClick={() => setIsBulkTagModalOpen(false)}
+                                    className="h-10 px-6 bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[var(--color-border)] transition-all"
+                                >
+                                    Batal
+                                </button>
+                            </div>
+                        </div>
+                    </Modal>
+                )
+            }
+            {/* ===================== */}
+            {/* BULK POINT MODAL - SaaS STYLE */}
+            {/* ===================== */}
+            {
+                isBulkPointModalOpen && (
+                    <Modal
+                        isOpen={isBulkPointModalOpen}
+                        onClose={() => setIsBulkPointModalOpen(false)}
+                        title={`Aksi Poin Massal — ${selectedStudentIds.length} Siswa`}
+                        size="sm"
+                    >
+                        <div className="space-y-6">
+                            <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500 text-xl">
+                                    <FontAwesomeIcon icon={faBolt} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-600/60">Input Poin Massal</p>
+                                    <p className="text-xs font-bold text-[var(--color-text)]">Berikan poin positif atau negatif ke seluruh siswa terpilih.</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-2">Jumlah Poin</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={bulkPointValue}
+                                            onChange={e => setBulkPointValue(Number(e.target.value))}
+                                            placeholder="Contoh: 10 atau -10"
+                                            className="input-field w-full h-12 px-4 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] text-lg font-black"
+                                        />
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
+                                            <button onClick={() => setBulkPointValue(10)} className="h-7 px-2 rounded-lg bg-emerald-500/10 text-emerald-600 text-[9px] font-black">+10</button>
+                                            <button onClick={() => setBulkPointValue(-10)} className="h-7 px-2 rounded-lg bg-red-500/10 text-red-600 text-[9px] font-black">-10</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-2">Alasan / Keterangan</label>
+                                    <input
+                                        type="text"
+                                        value={bulkPointLabel}
+                                        onChange={e => setBulkPointLabel(e.target.value)}
+                                        placeholder="Contoh: Hadiah Lomba Kebersihan"
+                                        className="input-field w-full h-11 px-4 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] text-sm font-bold"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 gap-3 items-start">
+                                <FontAwesomeIcon icon={faCircleExclamation} className="text-amber-500 mt-0.5" />
+                                <p className="text-[10px] text-amber-700 dark:text-amber-400 font-bold leading-relaxed">
+                                    Poin akan ditambahkan ke total poin masing-masing siswa. Pastikan jumlah dan alasan sudah benar sebelum memproses.
+                                </p>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setIsBulkPointModalOpen(false)}
+                                    className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-border)] transition-all"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleBulkPointUpdate}
+                                    disabled={submitting || !bulkPointValue}
+                                    className="h-12 flex-2 rounded-xl bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-orange-500/20 transition-all disabled:opacity-50"
+                                >
+                                    {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Proses Poin Massal'}
+                                </button>
+                            </div>
+                        </div>
+                    </Modal>
                 )
             }
         </DashboardLayout >

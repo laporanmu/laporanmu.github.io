@@ -7,27 +7,40 @@
 
 /* Custom CSS Variables for theming (Dark Mode supported) */
 :root {
-  --color-primary: #4f46e5;      /* Indigo 600 - sleek and modern */
-  --color-primary-dark: #3730a3; /* Indigo 800 */
-  --color-secondary: #0ea5e9;    /* Sky 500 */
-  --color-accent: #8b5cf6;       /* Violet 500 */
+  --color-primary: #4f46e5;
+  /* Indigo 600 - sleek and modern */
+  --color-primary-dark: #3730a3;
+  /* Indigo 800 */
+  --color-secondary: #0ea5e9;
+  /* Sky 500 */
+  --color-accent: #8b5cf6;
+  /* Violet 500 */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
   --color-surface: #ffffff;
-  --color-surface-alt: #f8fafc;  /* Slate 50 */
-  --color-text: #0f172a;         /* Slate 900 */
-  --color-text-muted: #64748b;   /* Slate 500 */
-  --color-border: #e2e8f0;       /* Slate 200 */
+  --color-surface-alt: #f8fafc;
+  /* Slate 50 */
+  --color-text: #0f172a;
+  /* Slate 900 */
+  --color-text-muted: #64748b;
+  /* Slate 500 */
+  --color-border: #e2e8f0;
+  /* Slate 200 */
   --sidebar-width: 260px;
 }
 
 .dark {
-  --color-surface: #020617;      /* Slate 950 - premium dark */
-  --color-surface-alt: #0f172a;  /* Slate 900 */
-  --color-text: #f8fafc;         /* Slate 50 */
-  --color-text-muted: #94a3b8;   /* Slate 400 */
-  --color-border: #1e293b;       /* Slate 800 */
+  --color-surface: #020617;
+  /* Slate 950 - premium dark */
+  --color-surface-alt: #0f172a;
+  /* Slate 900 */
+  --color-text: #f8fafc;
+  /* Slate 50 */
+  --color-text-muted: #94a3b8;
+  /* Slate 400 */
+  --color-border: #1e293b;
+  /* Slate 800 */
 }
 
 body {
@@ -40,7 +53,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6, .font-heading {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-heading {
   font-family: 'Outfit', system-ui, sans-serif;
 }
 
@@ -591,5 +610,17 @@ tr:hover td {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  /* Scrollbar hide utility */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
   }
 }

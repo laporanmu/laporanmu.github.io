@@ -35,9 +35,9 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     }
 
     const node = (
-        <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
+        <div className="modal-overlay overflow-y-auto p-4 py-8" onClick={onClose} role="dialog" aria-modal="true">
             <div
-                className={`modal-content ${sizeClasses[size]}`}
+                className={`modal-content ${sizeClasses[size]} max-h-fit`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-4">
