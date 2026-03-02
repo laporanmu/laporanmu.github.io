@@ -5,10 +5,11 @@ import {
     faMars,
     faVenus,
     faTriangleExclamation,
-    faFilter,
+    faTags,
     faBoxArchive,
     faUserTie,
-    faIdCardAlt,
+    faCheck,
+    faIdCard,
     faClockRotateLeft,
     faArrowTrendUp,
     faArrowTrendDown,
@@ -16,8 +17,24 @@ import {
     faMedal,
     faBolt,
     faXmark,
-    faCheck,
 } from '@fortawesome/free-solid-svg-icons'
+
+const getTagColor = (tag) => {
+    const colors = [
+        'bg-blue-500/10 text-blue-500 border-blue-500/20',
+        'bg-purple-500/10 text-purple-500 border-purple-500/20',
+        'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+        'bg-amber-500/10 text-amber-500 border-amber-500/20',
+        'bg-pink-500/10 text-pink-500 border-pink-500/20',
+        'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
+        'bg-cyan-500/10 text-cyan-500 border-cyan-500/20'
+    ];
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+        hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+};
 
 // Helper to calculate data completeness percentage
 const calculateCompleteness = (s) => {
@@ -45,8 +62,15 @@ const StudentRow = memo(({
     onToggleSelect,
     onQuickPoint,
     formatRelativeDate,
-    RiskThreshold
+    RiskThreshold,
+    isPrivacyMode
 }) => {
+    const maskInfo = (str, visibleLen = 3) => {
+        if (!str) return '---'
+        if (str.length <= visibleLen) return str[0] + '*'.repeat(str.length - 1)
+        return str.substring(0, visibleLen) + '***'
+    }
+
     const isRisk = (student.total_points || 0) <= RiskThreshold
     const isSelected = selectedIds.includes(student.id)
     const p = student.total_points || 0
@@ -76,14 +100,17 @@ const StudentRow = memo(({
             <td className="px-6 py-4">
                 <div className="flex items-start gap-3">
                     <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black shadow-sm overflow-hidden relative shrink-0 cursor-pointer transition-transform hover:scale-110 ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]'}`}
-                        onClick={() => student.photo_url && onPhotoZoom({ url: student.photo_url, name: student.name })}
-                        title={student.photo_url ? 'Klik untuk zoom foto' : ''}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black shadow-sm overflow-hidden relative shrink-0 cursor-pointer transition-transform hover:scale-110 ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]'} ${isPrivacyMode ? 'blur-sm grayscale opacity-60' : ''}`}
+                        onClick={() => {
+                            if (isPrivacyMode) return;
+                            student.photo_url && onPhotoZoom({ url: student.photo_url, name: student.name });
+                        }}
+                        title={student.photo_url && !isPrivacyMode ? 'Klik untuk zoom foto' : ''}
                     >
                         {student.photo_url ? (
                             <img src={student.photo_url} alt="" className="w-full h-full object-cover relative z-10" />
                         ) : (
-                            <span className="relative z-10">{(student.name || 'S').charAt(0)}</span>
+                            <span className="relative z-10">{isPrivacyMode ? '*' : (student.name || 'S').charAt(0)}</span>
                         )}
                     </div>
 
@@ -93,7 +120,7 @@ const StudentRow = memo(({
                                 onClick={() => onViewProfile(student)}
                                 className="font-extrabold text-sm text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors text-left"
                             >
-                                {student.name}
+                                {isPrivacyMode ? maskInfo(student.name, 4) : student.name}
                             </button>
                             {isRisk && (
                                 <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black bg-red-500/10 text-red-500 border border-red-500/20 uppercase tracking-widest">
@@ -101,24 +128,17 @@ const StudentRow = memo(({
                                     Risiko
                                 </span>
                             )}
-                            {completeness < 100 ? (
-                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest leading-none ${completeness < 60 ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                                    {completeness}%
-                                </span>
-                            ) : (
-                                <span className="text-[8px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest leading-none">
-                                    Verified
-                                </span>
-                            )}
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 uppercase tracking-wider truncate max-w-[100px]">{student.registration_code || student.code}</span>
-                            <div className="w-16 h-1 rounded-full bg-[var(--color-border)] overflow-hidden shrink-0">
-                                <div
-                                    className={`h-full transition-all duration-1000 ${completeness < 60 ? 'bg-amber-500' : completeness < 100 ? 'bg-blue-500' : 'bg-emerald-500'}`}
-                                    style={{ width: `${completeness}%` }}
-                                />
-                            </div>
+                        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 uppercase tracking-wider">
+                                {isPrivacyMode ? maskInfo(student.registration_code || student.code, 2) : (student.registration_code || student.code)}
+                            </span>
+                            {/* Render small badges for tags */}
+                            {(student.tags || []).map(tag => (
+                                <span key={tag} className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider ${getTagColor(tag)}`}>
+                                    {tag}
+                                </span>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -237,7 +257,7 @@ const StudentRow = memo(({
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 transition-all text-sm"
                         title="ID Card"
                     >
-                        <FontAwesomeIcon icon={faIdCardAlt} />
+                        <FontAwesomeIcon icon={faIdCard} />
                     </button>
 
                     <button
@@ -245,7 +265,7 @@ const StudentRow = memo(({
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-violet-500 hover:bg-violet-500/10 transition-all text-sm"
                         title="Label"
                     >
-                        <FontAwesomeIcon icon={faFilter} />
+                        <FontAwesomeIcon icon={faTags} />
                     </button>
 
                     <button
