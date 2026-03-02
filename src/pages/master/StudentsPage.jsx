@@ -2961,59 +2961,7 @@ export default function StudentsPage() {
                 )}
             </div>
 
-            {/* Dashboard Stats Panel */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                {[
-                    {
-                        label: 'Total Siswa',
-                        value: globalStats.total,
-                        icon: faUsers,
-                        color: 'indigo',
-                        active: !filterClass && !filterGender && !filterStatus && !filterTag && !filterPointMode && !debouncedSearch && !filterMissing && !filterCompleteness,
-                        onClick: () => { resetAllFilters(); setPage(1); }
-                    },
-                    {
-                        label: 'Laki-laki',
-                        value: globalStats.boys,
-                        icon: faMars,
-                        color: 'blue',
-                        active: filterGender === 'L',
-                        onClick: () => { setFilterGender('L'); setPage(1); }
-                    },
-                    {
-                        label: 'Perempuan',
-                        value: globalStats.girls,
-                        icon: faVenus,
-                        color: 'pink',
-                        active: filterGender === 'P',
-                        onClick: () => { setFilterGender('P'); setPage(1); }
-                    },
-                    {
-                        label: 'Berisiko',
-                        value: globalStats.risk,
-                        icon: faTriangleExclamation,
-                        color: 'red',
-                        active: filterPointMode === 'risk',
-                        onClick: () => { setFilterPointMode('risk'); setPage(1); }
-                    }
-                ].map((s, i) => (
-                    <button
-                        key={i}
-                        onClick={s.onClick}
-                        className={`group relative overflow-hidden glass rounded-[1.5rem] border p-4 text-left transition-all duration-300 hover:shadow-lg ${s.active ? `border-${s.color}-500/50 bg-${s.color}-500/5` : 'border-[var(--color-border)]'}`}
-                    >
-                        <div className="flex items-center gap-3 relative z-10">
-                            <div className={`w-9 h-9 rounded-xl bg-${s.color}-500/10 flex items-center justify-center text-${s.color}-500`}>
-                                <FontAwesomeIcon icon={s.icon} className="text-sm" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{s.label}</p>
-                                <p className="text-lg font-black text-[var(--color-text)]">{s.value}</p>
-                            </div>
-                        </div>
-                    </button>
-                ))}
-            </div>
+
 
             {/* Removed: Smart Presets - SaaS Navigation Style */}
             {loading ? (
