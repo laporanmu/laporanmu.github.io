@@ -10,6 +10,7 @@ import {
     faEnvelope, faCalendar, faMapMarkerAlt, faNoteSticky,
     faCircleCheck, faUsers, faFileLines, faAnglesLeft, faAnglesRight,
     faChevronLeft, faChevronRight,
+    faBullhorn, faIdCard,
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -283,8 +284,47 @@ export default function TeachersPage() {
 
     // ── pin ───────────────────────────────────────────────────────────────────
     const handleTogglePin = async teacher => {
-        try { const { error } = await supabase.from('teachers').update({ is_pinned: !teacher.is_pinned }).eq('id', teacher.id); if (error) throw error; addToast(teacher.is_pinned ? 'Sematkan dilepas' : `"${teacher.name}" disematkan`, 'success'); fetchData() }
-        catch { addToast('Gagal menyematkan', 'error') }
+        const newPinned = !teacher.is_pinned
+
+        // Optimistic UI Update
+        setTeachers(prev => {
+            const updated = prev.map(t =>
+                t.id === teacher.id ? { ...t, is_pinned: newPinned } : t
+            )
+            // Re-sort to put pinned at top
+            return updated.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+        })
+
+        try {
+            const { error } = await supabase
+                .from('teachers')
+                .update({ is_pinned: newPinned })
+                .eq('id', teacher.id)
+
+            if (error) throw error
+
+            addToast(
+                newPinned ? (
+                    <span className="flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faThumbtack} className="text-amber-400 rotate-[-45deg] text-[10px]" />
+                        "{teacher.name}" disematkan ke atas
+                    </span>
+                ) : (
+                    `Sematkan "${teacher.name}" dilepas`
+                ),
+                'success'
+            )
+        } catch (err) {
+            console.error('Pin error:', err)
+            // Rollback on failure
+            setTeachers(prev => {
+                const rolledBack = prev.map(t =>
+                    t.id === teacher.id ? { ...t, is_pinned: teacher.is_pinned } : t
+                )
+                return rolledBack.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+            })
+            addToast('Gagal menyematkan data', 'error')
+        }
     }
 
     // ── quick status ──────────────────────────────────────────────────────────
@@ -954,7 +994,12 @@ export default function TeachersPage() {
                                 </button>
                             ))}</div>
                         </div>
-                        {Object.values(exportColumns).every(v => !v) && <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold">⚠️ Pilih minimal satu kolom untuk export</div>}
+                        {Object.values(exportColumns).every(v => !v) && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold">
+                                <FontAwesomeIcon icon={faTriangleExclamation} />
+                                Pilih minimal satu kolom untuk export
+                            </div>
+                        )}
                         {exporting && <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-bold"><FontAwesomeIcon icon={faSpinner} className="fa-spin" />Menyiapkan file export...</div>}
                     </div>
                 </Modal>

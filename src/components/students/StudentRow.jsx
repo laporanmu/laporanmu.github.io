@@ -122,26 +122,26 @@ const InlineEditKelas = ({ value, classesList, onSave, onCancel }) => {
 
 // ─── Inline Edit: Poin ───────────────────────────────────────────────────────
 const InlineEditPoin = ({ value, onSave, onCancel }) => {
-    const [delta, setDelta] = useState('')
+    const [val, setVal] = useState(value)
     const inputRef = useRef(null)
-    useEffect(() => { inputRef.current?.focus() }, [])
-    const parsed = parseInt(delta) || 0
+    useEffect(() => { inputRef.current?.focus(); inputRef.current?.select() }, [])
+    const parsed = parseInt(val) || 0
     return (
         <div className="flex items-center gap-1">
             <input
                 ref={inputRef}
                 type="number"
-                value={delta}
-                onChange={e => setDelta(e.target.value)}
+                value={val}
+                onChange={e => setVal(e.target.value)}
                 onKeyDown={e => {
-                    if (e.key === 'Enter' && delta !== '') onSave(parsed)
+                    if (e.key === 'Enter') onSave(parsed)
                     if (e.key === 'Escape') onCancel()
                 }}
                 placeholder="Poin"
-                className="input-field h-7 w-14 px-2 rounded-lg border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-center outline-none focus:border-[var(--color-primary)]"
+                className="input-field h-7 w-16 px-2 rounded-lg border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-center outline-none focus:border-[var(--color-primary)] shadow-sm"
             />
-            {delta !== '' && (
-                <button onClick={() => onSave(parsed)} className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[10px] hover:brightness-110 transition-all">
+            {val !== '' && (
+                <button onClick={() => onSave(parsed)} className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[10px] hover:brightness-110 transition-all shadow-sm">
                     <FontAwesomeIcon icon={faCheck} />
                 </button>
             )}
@@ -275,9 +275,9 @@ const StudentRow = memo(({
                         )}
                     </div>
 
-                    {/* Name + inline edit */}
-                    <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
+                    {/* Name + badges area */}
+                    <div className="flex flex-col min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1 group/name">
                             {editingField === 'name' ? (
                                 <InlineEditName
                                     value={student.name}
@@ -285,40 +285,59 @@ const StudentRow = memo(({
                                     onCancel={cancelEdit}
                                 />
                             ) : (
-                                <div className="flex items-center gap-1.5 group/name">
+                                <div className="flex items-center gap-1.5 min-w-0 max-w-full">
                                     <button
                                         onClick={() => onViewProfile(student)}
-                                        className="font-extrabold text-sm text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors text-left"
+                                        className="font-extrabold text-sm text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors text-left truncate"
                                     >
                                         {isPrivacyMode ? maskInfo(student.name, 4) : student.name}
                                     </button>
                                     {!isPrivacyMode && (
                                         <button
                                             onClick={() => setEditingField('name')}
-                                            className="w-5 h-5 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all opacity-0 group-hover/name:opacity-100"
+                                            className="shrink-0 w-5 h-5 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all opacity-0 group-hover/name:opacity-100"
                                             title="Edit nama"
                                         >
                                             <FontAwesomeIcon icon={faPencil} className="text-[9px]" />
                                         </button>
                                     )}
-                                    {isRisk && (
-                                        <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black bg-red-500/10 text-red-500 border border-red-500/20 uppercase tracking-widest">
-                                            <FontAwesomeIcon icon={faTriangleExclamation} className="text-[7px]" />
-                                            Risiko
-                                        </span>
-                                    )}
                                 </div>
                             )}
                         </div>
+
+                        {/* Status + Identification line */}
                         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 uppercase tracking-wider">
+                            {/* Badges prioritize visibility */}
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                {isRisk ? (
+                                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black bg-red-500/10 text-red-500 border border-red-500/20 uppercase tracking-widest animate-pulse">
+                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-[7px]" />
+                                        Risiko
+                                    </span>
+                                ) : p < 0 ? (
+                                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black bg-amber-500/10 text-amber-600 border border-amber-500/20 uppercase tracking-widest">
+                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-[7px]" />
+                                        Monitor
+                                    </span>
+                                ) : p >= 100 ? (
+                                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 uppercase tracking-widest">
+                                        <FontAwesomeIcon icon={faCrown} className="text-[7px]" />
+                                        Excellent
+                                    </span>
+                                ) : null}
+                            </div>
+
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 uppercase tracking-wider truncate">
                                 {isPrivacyMode ? maskInfo(student.registration_code || student.code, 2) : (student.registration_code || student.code)}
                             </span>
-                            {(student.tags || []).map(tag => (
-                                <span key={tag} className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider ${getTagColor(tag)}`}>
-                                    {tag}
-                                </span>
-                            ))}
+
+                            <div className="flex flex-wrap items-center gap-1">
+                                {(student.tags || []).map(tag => (
+                                    <span key={tag} className={`text-[8px] font-black px-1.2 py-0.3 rounded-md border uppercase tracking-wider whitespace-nowrap ${getTagColor(tag)}`}>
+                                        {tag}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -439,12 +458,6 @@ const StudentRow = memo(({
                                         </>
                                     )}
                                 </div>
-                            </div>
-
-                            {/* Badges — rank sudah di avatar */}
-                            <div className="flex flex-wrap justify-center gap-1">
-                                {p >= 100 && <span className="px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[7px] font-black uppercase tracking-widest leading-none">Excellent</span>}
-                                {p < 0 && <span className="px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 text-[7px] font-black uppercase tracking-widest leading-none">Monitor</span>}
                             </div>
                         </div>
                     )}

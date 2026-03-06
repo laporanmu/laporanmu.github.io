@@ -9,6 +9,7 @@ import {
     faArrowRight,
     faExclamationTriangle,
     faTrophy,
+    faHandPeace,
 } from '@fortawesome/free-solid-svg-icons'
 import { Link } from 'react-router-dom'
 import {
@@ -312,8 +313,9 @@ export default function DashboardPage() {
         <DashboardLayout title="Dashboard">
             {/* Welcome */}
             <div className="mb-5">
-                <h1 className="text-2xl font-black font-heading text-[var(--color-text)] tracking-tight">
-                    Selamat Datang, {profile?.name?.split(' ')[0] || 'User'}! 👋
+                <h1 className="text-2xl font-black font-heading text-[var(--color-text)] tracking-tight flex items-center gap-2">
+                    Selamat Datang, {profile?.name?.split(' ')[0] || 'User'}!
+                    <FontAwesomeIcon icon={faHandPeace} className="text-amber-400 animate-bounce" />
                 </h1>
                 <p className="text-[var(--color-text-muted)] text-[11px] font-medium tracking-widest">
                     Ringkasan Aktivitas Perilaku Siswa Hari Ini
