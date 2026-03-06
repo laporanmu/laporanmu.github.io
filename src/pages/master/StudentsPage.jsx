@@ -317,6 +317,7 @@ export default function StudentsPage() {
         aksi: true,
     })
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
+    const [colMenuPos, setColMenuPos] = useState({ top: 0, right: 0, showUp: false })
     const colMenuRef = useRef(null)
 
     // Close dropdown saat klik luar
@@ -3102,6 +3103,15 @@ export default function StudentsPage() {
                     main { padding-top: 0 !important; }
                 ` : ''}
             </style>
+
+            {/* Privacy Banner */}
+            {isPrivacyMode && (
+                <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disensor</div>
+                    <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline">Matikan</button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
@@ -3340,20 +3350,20 @@ export default function StudentsPage() {
 
             {/* ── INSIGHT ROW ─────────────────────────────────────────────── */}
             {(globalStats.risk > 0 || globalStats.incompleteCount > 0 || globalStats.topPerformer || (globalStats.worstClass && globalStats.worstClass.avg < 0) || globalStats.avgPointsLastWeek !== null) && (
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-6 animate-in fade-in slide-in-from-top-1 duration-500">
 
                     {/* Siswa berisiko */}
                     {globalStats.risk > 0 && (
                         <button
-                            onClick={() => { setFilterPointMode('risk'); setShowAdvancedFilter(true) }}
-                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/[0.08] border border-red-500/20 hover:bg-red-500/[0.15] transition-all"
+                            onClick={() => { setFilterPointMode(filterPointMode === 'risk' ? '' : 'risk'); setShowAdvancedFilter(true) }}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all hover:scale-[1.02] active:scale-95 ${filterPointMode === 'risk' ? 'border-red-500 bg-red-500/5 ring-1 ring-red-500' : 'bg-red-500/[0.08] border-red-500/20 hover:bg-red-500/[0.15] text-red-600'}`}
                         >
-                            <div className="w-6 h-6 rounded-lg bg-red-500/15 flex items-center justify-center shrink-0">
-                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-red-500 text-[10px]" />
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${filterPointMode === 'risk' ? 'bg-red-500 text-white' : 'bg-red-500/15'}`}>
+                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
                             </div>
                             <div className="text-left">
-                                <p className="text-[10px] font-black text-red-500 leading-none">{globalStats.risk} Siswa Berisiko</p>
-                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Poin di bawah threshold · Klik untuk filter</p>
+                                <p className="text-[10px] font-black leading-none">{globalStats.risk} Siswa Berisiko</p>
+                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Poin di bawah threshold</p>
                             </div>
                         </button>
                     )}
@@ -3361,23 +3371,23 @@ export default function StudentsPage() {
                     {/* Data tidak lengkap */}
                     {globalStats.incompleteCount > 0 && (
                         <button
-                            onClick={() => { setFilterMissing('photo'); setShowAdvancedFilter(true) }}
-                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/[0.08] border border-amber-500/20 hover:bg-amber-500/[0.15] transition-all"
+                            onClick={() => { setFilterMissing(filterMissing === 'photo' ? '' : 'photo'); setShowAdvancedFilter(true) }}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all hover:scale-[1.02] active:scale-95 ${filterMissing === 'photo' ? 'border-amber-500 bg-amber-500/5 ring-1 ring-amber-500' : 'bg-amber-500/[0.08] border-amber-500/20 hover:bg-amber-500/[0.15]'}`}
                         >
-                            <div className="w-6 h-6 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${filterMissing === 'photo' ? 'bg-amber-500 text-white' : 'bg-amber-500/15'}`}>
                                 <FontAwesomeIcon icon={faCircleExclamation} className="text-amber-500 text-[10px]" />
                             </div>
                             <div className="text-left">
-                                <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 leading-none">{globalStats.incompleteCount} Data Belum Lengkap</p>
-                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Foto / NISN / WA kosong · Klik untuk filter</p>
+                                <p className={`text-[10px] font-black leading-none ${filterMissing === 'photo' ? 'text-amber-600' : 'text-amber-600 dark:text-amber-400'}`}>{globalStats.incompleteCount} Data Belum Lengkap</p>
+                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Foto/NISN/WA kosong</p>
                             </div>
                         </button>
                     )}
 
                     {/* Tren poin minggu ini */}
                     {globalStats.avgPointsLastWeek !== null && (
-                        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${globalStats.avgPointsLastWeek >= 0 ? 'bg-emerald-500/[0.08] border-emerald-500/20' : 'bg-red-500/[0.08] border-red-500/20'}`}>
-                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${globalStats.avgPointsLastWeek >= 0 ? 'bg-emerald-500/15' : 'bg-red-500/15'}`}>
+                        <div className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all ${globalStats.avgPointsLastWeek >= 0 ? 'bg-emerald-500/[0.08] border-emerald-500/20' : 'bg-red-500/[0.08] border-red-500/20'}`}>
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${globalStats.avgPointsLastWeek >= 0 ? 'bg-emerald-500/15' : 'bg-red-500/15'}`}>
                                 <FontAwesomeIcon icon={globalStats.avgPointsLastWeek >= 0 ? faArrowTrendUp : faArrowTrendDown} className={`text-[10px] ${globalStats.avgPointsLastWeek >= 0 ? 'text-emerald-500' : 'text-red-500'}`} />
                             </div>
                             <div className="text-left">
@@ -3391,28 +3401,31 @@ export default function StudentsPage() {
 
                     {/* Top performer */}
                     {globalStats.topPerformer && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-500/[0.08] border border-indigo-500/20">
-                            <div className="w-6 h-6 rounded-lg bg-indigo-500/15 flex items-center justify-center shrink-0">
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-indigo-500/[0.08] border border-indigo-500/20 transition-all">
+                            <div className="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center shrink-0">
                                 <FontAwesomeIcon icon={faCrown} className="text-indigo-500 text-[10px]" />
                             </div>
                             <div className="text-left">
                                 <p className="text-[10px] font-black text-indigo-500 leading-none truncate max-w-[140px]">{globalStats.topPerformer.name}</p>
-                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Top Performer · +{globalStats.topPerformer.points} poin</p>
+                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Top Performer · +{globalStats.topPerformer.points}</p>
                             </div>
                         </div>
                     )}
 
                     {/* Kelas rata-rata terendah */}
                     {globalStats.worstClass && globalStats.worstClass.avg < 0 && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-500/[0.08] border border-orange-500/20">
-                            <div className="w-6 h-6 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+                        <button
+                            onClick={() => { setFilterClass(globalStats.worstClass.id); setFilterClasses([]); setPage(1); setShowAdvancedFilter(true) }}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all hover:scale-[1.02] active:scale-95 ${filterClass === globalStats.worstClass.id ? 'border-orange-500 bg-orange-500/5 ring-1 ring-orange-500' : 'bg-orange-500/[0.08] border-orange-500/20 hover:bg-orange-500/[0.15]'}`}
+                        >
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${filterClass === globalStats.worstClass.id ? 'bg-orange-500 text-white' : 'bg-orange-500/15'}`}>
                                 <FontAwesomeIcon icon={faSchool} className="text-orange-500 text-[10px]" />
                             </div>
                             <div className="text-left">
-                                <p className="text-[10px] font-black text-orange-600 dark:text-orange-400 leading-none truncate max-w-[140px]">{globalStats.worstClass.name}</p>
-                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Rata-rata terendah · {globalStats.worstClass.avg} poin</p>
+                                <p className={`text-[10px] font-black leading-none truncate max-w-[140px] ${filterClass === globalStats.worstClass.id ? 'text-orange-600' : 'text-orange-600 dark:text-orange-400'}`}>{globalStats.worstClass.name}</p>
+                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Rata terendah ({globalStats.worstClass.avg})</p>
                             </div>
-                        </div>
+                        </button>
                     )}
 
                 </div>
@@ -3709,59 +3722,70 @@ export default function StudentsPage() {
                                         )}
 
                                         {/* COLUMN TOGGLE BUTTON — di dalam header Aksi */}
-                                        <th className="px-6 py-4 text-center pr-6">
-                                            <div className="flex items-center justify-center gap-2">
+                                        <th className="px-6 py-4 text-center pr-6 relative">
+                                            <div className="flex items-center justify-center">
                                                 {visibleColumns.aksi && <span>Aksi</span>}
+                                            </div>
 
-                                                {/* Toggle Button */}
-                                                <div className="relative" ref={colMenuRef}>
-                                                    <button
-                                                        onClick={() => setIsColMenuOpen(p => !p)}
-                                                        title="Atur kolom"
-                                                        className={`w-6 h-6 rounded-md flex items-center justify-center transition-all
+                                            {/* Toggle Button — absolute kanan, seperti checkbox di kiri */}
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2" ref={colMenuRef}>
+                                                <button
+                                                    onClick={(e) => {
+                                                        const rect = e.currentTarget.getBoundingClientRect()
+                                                        const menuHeight = 220
+                                                        const spaceBelow = window.innerHeight - rect.bottom
+                                                        const showUp = spaceBelow < menuHeight && rect.top > menuHeight
+                                                        setColMenuPos({
+                                                            top: showUp ? (rect.top + window.scrollY - menuHeight - 8) : (rect.bottom + window.scrollY + 8),
+                                                            right: window.innerWidth - rect.right - window.scrollX,
+                                                            showUp
+                                                        })
+                                                        setIsColMenuOpen(p => !p)
+                                                    }}
+                                                    title="Atur kolom"
+                                                    className={`w-6 h-6 rounded-md flex items-center justify-center transition-all
                             ${isColMenuOpen
-                                                                ? 'bg-[var(--color-primary)] text-white'
-                                                                : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'
-                                                            }`}
-                                                    >
-                                                        {/* Grid/columns icon pakai SVG inline agar tidak perlu import baru */}
-                                                        <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
-                                                            <rect x="0" y="0" width="5" height="5" rx="1" />
-                                                            <rect x="7" y="0" width="5" height="5" rx="1" />
-                                                            <rect x="0" y="7" width="5" height="5" rx="1" />
-                                                            <rect x="7" y="7" width="5" height="5" rx="1" />
-                                                        </svg>
-                                                    </button>
+                                                            ? 'bg-[var(--color-primary)] text-white'
+                                                            : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'
+                                                        }`}
+                                                >
+                                                    <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
+                                                        <rect x="0" y="0" width="5" height="5" rx="1" />
+                                                        <rect x="7" y="0" width="5" height="5" rx="1" />
+                                                        <rect x="0" y="7" width="5" height="5" rx="1" />
+                                                        <rect x="7" y="7" width="5" height="5" rx="1" />
+                                                    </svg>
+                                                </button>
 
-                                                    {/* Dropdown Menu */}
-                                                    {isColMenuOpen && (
-                                                        <div className="absolute right-0 top-8 z-50 w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5">
-                                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-2 py-1.5">
-                                                                Tampilkan Kolom
-                                                            </p>
-                                                            {[
-                                                                { key: 'gender', label: 'Gender' },
-                                                                { key: 'kelas', label: 'Kelas' },
-                                                                { key: 'poin', label: 'Poin' },
-                                                                { key: 'aksi', label: 'Aksi' },
-                                                            ].map(({ key, label }) => (
-                                                                <button
-                                                                    key={key}
-                                                                    onClick={() => toggleColumn(key)}
-                                                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group"
-                                                                >
-                                                                    <span className="text-xs font-bold text-[var(--color-text)]">{label}</span>
-                                                                    {/* Toggle pill */}
-                                                                    <div className={`w-8 h-4 rounded-full transition-all flex items-center px-0.5
-                                        ${visibleColumns[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
-                                                                        <div className={`w-3 h-3 rounded-full bg-white shadow transition-all
-                                            ${visibleColumns[key] ? 'translate-x-4' : 'translate-x-0'}`} />
-                                                                    </div>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                {/* Dropdown Menu — Portal agar tidak ter-clip oleh overflow tabel */}
+                                                {isColMenuOpen && createPortal(
+                                                    <div
+                                                        className={`absolute z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${colMenuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
+                                                        style={{ top: colMenuPos.top, right: colMenuPos.right }}
+                                                    >
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">
+                                                            Tampilkan Kolom
+                                                        </p>
+                                                        {[
+                                                            { key: 'gender', label: 'Gender' },
+                                                            { key: 'kelas', label: 'Kelas' },
+                                                            { key: 'poin', label: 'Poin' },
+                                                            { key: 'aksi', label: 'Aksi' },
+                                                        ].map(({ key, label }) => (
+                                                            <button
+                                                                key={key}
+                                                                onClick={() => toggleColumn(key)}
+                                                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left"
+                                                            >
+                                                                <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
+                                                                <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleColumns[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                                                    <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${visibleColumns[key] ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>,
+                                                    document.body
+                                                )}
                                             </div>
                                         </th>
                                     </tr>
@@ -3899,138 +3923,25 @@ export default function StudentsPage() {
                     </div>
 
                     {/* Pagination Footer */}
-                    <div className="p-4 border-t border-[var(--color-border)] flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-[var(--color-surface-alt)]/30">
-                        {/* Left info */}
-                        <div className="text-xs font-bold text-[var(--color-text-muted)]">
-                            Menampilkan <span className="text-[var(--color-text)]">{fromRow}</span> – <span className="text-[var(--color-text)]">{toRow}</span> dari{' '}
-                            <span className="text-[var(--color-text)]">{totalRows}</span>
-                        </div>
-
-                        {/* Right controls */}
-                        <div className="flex flex-wrap items-center gap-2 justify-end">
-                            {/* Page size */}
+                    {totalRows > 0 && (
+                        <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} siswa</p>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-[var(--color-text-muted)]">Tampilkan</span>
-                                <select
-                                    className="h-10 rounded-xl border border-[var(--color-border)] bg-transparent px-3 text-sm font-bold"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value))
-                                        setPage(1)
-                                    }}
-                                >
-                                    {[10, 25, 50, 100].map(n => (
-                                        <option key={n} value={n}>{n} / halaman</option>
+                                <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
+                                <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
+                                <div className="flex items-center gap-1.5 mx-1">
+                                    {getPageItems(page, totalPages).map((it, idx) => it === '...' ? <span key={`s${idx}`} className="w-8 flex items-center justify-center text-[var(--color-text-muted)] font-bold opacity-30">···</span> : (
+                                        <button key={it} onClick={() => setPage(it)} className={`h-9 min-w-[36px] px-2.5 rounded-xl font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/25' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}>{it}</button>
                                     ))}
-                                </select>
+                                </div>
+                                <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[10px]" /></button>
+                                <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" /></button>
+                                <div className="ml-2 relative flex items-center">
+                                    <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/[^\d]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal..." className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[11px] font-black focus:border-[var(--color-primary)] outline-none" />
+                                </div>
                             </div>
-
-                            {/* Hide page controls kalau cuma 1 halaman atau data kosong */}
-                            {(totalPages > 1 && totalRows > 0) && (
-                                <>
-                                    {/* First */}
-                                    <button
-                                        className="h-10 w-10 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                        disabled={page === 1}
-                                        onClick={() => setPage(1)}
-                                        title="Halaman pertama"
-                                    >
-                                        <FontAwesomeIcon icon={faAnglesLeft} />
-                                    </button>
-
-                                    {/* Prev */}
-                                    <button
-                                        className="h-10 w-10 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                        disabled={page === 1}
-                                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                                        title="Sebelumnya"
-                                    >
-                                        <FontAwesomeIcon icon={faChevronLeft} />
-                                    </button>
-
-                                    {/* Page numbers */}
-                                    <div className="flex items-center gap-1 px-1">
-                                        {getPageItems(page, totalPages).map((it, idx) => {
-                                            if (it === '...') {
-                                                return (
-                                                    <div key={`dots - ${idx} `} className="h-10 px-2 flex items-center text-[var(--color-text-muted)] font-black">
-                                                        …
-                                                    </div>
-                                                )
-                                            }
-                                            const n = it
-                                            const active = n === page
-                                            return (
-                                                <button
-                                                    key={n}
-                                                    onClick={() => setPage(n)}
-                                                    className={
-                                                        `h-10 min-w-[40px] px-3 rounded-xl border transition font-black text-xs ` +
-                                                        (active
-                                                            ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-lg shadow-[var(--color-primary)]/20'
-                                                            : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] text-[var(--color-text)]')
-                                                    }
-                                                >
-                                                    {n}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-
-                                    {/* Next */}
-                                    <button
-                                        className="h-10 w-10 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                        disabled={page >= totalPages}
-                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                        title="Berikutnya"
-                                    >
-                                        <FontAwesomeIcon icon={faChevronRight} />
-                                    </button>
-
-                                    {/* Last */}
-                                    <button
-                                        className="h-10 w-10 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                        disabled={page >= totalPages}
-                                        onClick={() => setPage(totalPages)}
-                                        title="Halaman terakhir"
-                                    >
-                                        <FontAwesomeIcon icon={faAnglesRight} />
-                                    </button>
-
-                                    {/* Jump to page */}
-                                    <div className="flex items-center gap-2 ml-1">
-                                        <span className="text-xs font-bold text-[var(--color-text-muted)] hidden sm:inline">Ke</span>
-                                        <input
-                                            value={jumpPage}
-                                            onChange={(e) => setJumpPage(e.target.value.replace(/[^\d]/g, ''))}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    const n = Number(jumpPage)
-                                                    if (!n) return
-                                                    setPage(Math.min(totalPages, Math.max(1, n)))
-                                                    setJumpPage('')
-                                                }
-                                            }}
-                                            placeholder={`${page}/${totalPages}`
-                                            }
-                                            className="h-10 w-24 rounded-xl border border-[var(--color-border)] bg-transparent px-3 text-sm font-bold"
-                                        />
-                                        <button
-                                            className="h-10 px-4 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition text-xs font-black uppercase tracking-widest"
-                                            onClick={() => {
-                                                const n = Number(jumpPage)
-                                                if (!n) return
-                                                setPage(Math.min(totalPages, Math.max(1, n)))
-                                                setJumpPage('')
-                                            }}
-                                        >
-                                            Go
-                                        </button>
-                                    </div >
-                                </>
-                            )}
-                        </div >
-                    </div >
+                        </div>
+                    )}
                 </>
             )}
 

@@ -1,6 +1,13 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus, faSearch, faEdit, faTrash, faTimes, faSpinner, faBuilding, faMars, faVenus, faSchool, faBed, faCalendarAlt, faUsers, faFilter } from '@fortawesome/free-solid-svg-icons'
+import {
+    faPlus, faSearch, faTimes, faSpinner, faBuilding, faSchool, faBed,
+    faUsers, faFilter, faSliders, faChevronLeft, faChevronRight, faAnglesLeft, faAnglesRight,
+    faTrash, faEye, faEyeSlash, faXmark, faDownload, faUpload, faBoxArchive, faRotateLeft,
+    faKeyboard, faLink, faCheck, faChevronDown
+} from '@fortawesome/free-solid-svg-icons'
+
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
@@ -8,771 +15,760 @@ import { supabase } from '../../lib/supabase'
 import { useDebounce } from '../../hooks/useDebounce'
 import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
 
-// Demo data fallback
-const DEMO_CLASSES = [
-    { id: '1', name: '7A', grade: '7', major: 'Boarding Putra', homeroom_teacher_id: null, academic_year_id: null, teacherName: 'Budi Santoso, S.Pd', academicYearName: '2024/2025', students: 32 },
-    { id: '2', name: '7B', grade: '7', major: 'Boarding Putri', homeroom_teacher_id: null, academic_year_id: null, teacherName: 'Sari Dewi, M.Pd', academicYearName: '2024/2025', students: 30 },
-    { id: '3', name: '8A', grade: '8', major: 'Reguler Putra', homeroom_teacher_id: null, academic_year_id: null, teacherName: 'Ahmad Fauzi, S.Pd', academicYearName: '2024/2025', students: 28 },
-    { id: '4', name: '8B', grade: '8', major: 'Reguler', homeroom_teacher_id: null, academic_year_id: null, teacherName: 'Rina Marlina, S.Pd', academicYearName: '2024/2025', students: 29 },
-    { id: '5', name: '9A', grade: '9', major: 'Boarding Putri', homeroom_teacher_id: null, academic_year_id: null, teacherName: 'Dedi Kusuma, M.Pd', academicYearName: '2024/2025', students: 31 },
-]
+// Library for Export/Import
+import Papa from 'papaparse'
+import * as XLSX from 'xlsx'
+
+// Components
+import { ClassRow, ClassMobileCard } from '../../components/classes/ClassRow'
+import ClassFormModal from '../../components/classes/ClassFormModal'
 
 const LEVELS = ['7', '8', '9', '10', '11', '12']
 const PROGRAMS = ['Boarding', 'Reguler']
-const GENDERS = ['Putra', 'Putri']
+const LS_COLS = 'classes_columns'
 
-function normalizeClass(row, teachersMap = {}, yearsMap = {}) {
-    const id = row.id
-    const homeroom_teacher_id = row.homeroom_teacher_id ?? null
-    const academic_year_id = row.academic_year_id ?? null
-    return {
-        id,
-        name: row.name || '',
-        grade: row.grade || '',
-        major: row.major || '',
-        homeroom_teacher_id,
-        academic_year_id,
-        teacherName: homeroom_teacher_id ? (teachersMap[homeroom_teacher_id] || '—') : (row.teacherName ?? row.teacher ?? '—'),
-        academicYearName: academic_year_id ? (yearsMap[academic_year_id] || '—') : (row.academicYearName ?? '—'),
-        students: row.students ?? row.student_count ?? 0,
-    }
+function getPageItems(current, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+    if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
+    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
+    return [1, '...', current - 1, current, current + 1, '...', total]
 }
 
 export default function ClassesPage() {
-    const [classes, setClasses] = useState([])
-    const [teachersList, setTeachersList] = useState([])
-    const [academicYearsList, setAcademicYearsList] = useState([])
-    const [loading, setLoading] = useState(false) // Changed for demo
-
-    // Search & Filter States
-    const [searchQuery, setSearchQuery] = useState('')
-    const [filterLevel, setFilterLevel] = useState('')
-    const [filterProgram, setFilterProgram] = useState('')
-    const [filterGender, setFilterGender] = useState('')
-    const [sortBy, setSortBy] = useState('name')
-
-    // Modal & Selection States
-    const [isModalOpen, setIsModalOpen] = useState(false)
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-    const [selectedItem, setSelectedItem] = useState(null)
-    const [itemToDelete, setItemToDelete] = useState(null)
-
-    // Form State
-    const [formData, setFormData] = useState({
-        name: '',
-        level: '',
-        program: '',
-        gender_type: '',
-        homeroom_teacher_id: '',
-        academic_year_id: ''
-    })
-
     const { addToast } = useToast()
 
-    // Debounced search
-    const debouncedSearch = useDebounce(searchQuery, 300)
+    // Data states
+    const [classes, setClasses] = useState([])
+    const [archivedClasses, setArchivedClasses] = useState([])
+    const [teachersList, setTeachersList] = useState([])
+    const [academicYearsList, setAcademicYearsList] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [submitting, setSubmitting] = useState(false)
 
-    async function loadTeachers() {
-        if (!supabase) return {}
+    // Stats
+    const [stats, setStats] = useState({ total: 0, boarding: 0, reguler: 0, totalStudents: 0 })
+
+    // UI states
+    const [searchQuery, setSearchQuery] = useState('')
+    const debouncedSearch = useDebounce(searchQuery, 350)
+    const [filterLevel, setFilterLevel] = useState('')
+    const [filterProgram, setFilterProgram] = useState('')
+    const [sortBy, setSortBy] = useState('name')
+    const [isFilterOpen, setIsFilterOpen] = useState(false)
+    const [filterNoTeacher, setFilterNoTeacher] = useState(false)
+    const [filterCrowded, setFilterCrowded] = useState(false)
+    const filterRef = useRef(null)
+
+    // Privacy Mode
+    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
+    const [isShortcutOpen, setIsShortcutOpen] = useState(false)
+    const shortcutRef = useRef(null)
+
+    // Pagination
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(25)
+    const [jumpPage, setJumpPage] = useState('')
+
+    // Refs
+    const searchInputRef = useRef(null)
+
+    // Selection
+    const [selectedIds, setSelectedIds] = useState([])
+
+    // Modals
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+    const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+    const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false)
+    const [selectedItem, setSelectedItem] = useState(null)
+    const [itemToDelete, setItemToDelete] = useState(null)
+    const [exporting, setExporting] = useState(false)
+    const [exportScope, setExportScope] = useState('filtered')
+
+    // Header & Columns
+    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
+    const [isActionSheetOpen, setIsActionSheetOpen] = useState(false)
+    const [isColMenuOpen, setIsColMenuOpen] = useState(false)
+    const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
+    const [isSlidersOpen, setIsSlidersOpen] = useState(false)
+    const headerMenuRef = useRef(null)
+    const colMenuRef = useRef(null)
+    const slidersRef = useRef(null)
+    const defaultCols = { level: true, program: true, gender: true, teacher: true, students: true, year: true }
+    const [visibleCols, setVisibleCols] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(LS_COLS)) || defaultCols }
+        catch { return defaultCols }
+    })
+
+    // ── DATA FETCHING ──────────────────────────────────────────────
+    const loadMetadata = useCallback(async () => {
+        if (!supabase) return { t: {}, y: {} }
         try {
-            const { data } = await supabase
-                .from('profiles')
-                .select('id, name')
-                .eq('user_role', 'teacher')
-                .order('name')
-            const list = data || []
-            setTeachersList(list)
-            return Object.fromEntries(list.map(t => [t.id, t.name || '—']))
-        } catch { return {} }
-    }
-
-    async function loadAcademicYears() {
-        if (!supabase) return {}
-        try {
-            const { data } = await supabase
-                .from('academic_years')
-                .select('id, name, semester')
-                .order('name', { ascending: false })
-            const list = (data || []).map(y => ({
-                ...y,
-                label: [y.name, y.semester].filter(Boolean).join(' ') || '—',
-            }))
-            setAcademicYearsList(list)
-            return Object.fromEntries(list.map(y => [y.id, y.label]))
-        } catch { return {} }
-    }
-
-    async function loadClasses() {
-        setLoading(true)
-        if (supabase) {
-            try {
-                const teachersMap = await loadTeachers()
-                const yearsMap = await loadAcademicYears()
-                const { data, error } = await supabase
-                    .from('classes')
-                    .select('id, name, grade, major, homeroom_teacher_id, academic_year_id, created_at')
-                    .order('name')
-
-                if (!error) {
-                    setClasses((data || []).map(row => normalizeClass(row, teachersMap, yearsMap)))
-                } else {
-                    console.error("Error fetching classes:", error)
-                    setClasses(DEMO_CLASSES)
-                }
-            } catch (err) {
-                console.error("Exception fetching classes:", err)
-                setClasses(DEMO_CLASSES)
-            }
-        } else {
-            setClasses(DEMO_CLASSES)
-        }
-        setLoading(false)
-    }
-
-    useEffect(() => {
-        loadClasses()
+            const [tRes, yRes] = await Promise.all([
+                // Hapus filter status — tampilkan semua guru yang belum di-soft-delete
+                // Filter .eq('status','active') menyebabkan FK error jika nilai status di DB berbeda
+                supabase.from('teachers').select('id, name').order('name'),
+                supabase.from('academic_years').select('id, name, semester').order('name', { ascending: false })
+            ])
+            const tList = tRes.data || []
+            const yList = (yRes.data || []).map(y => ({ ...y, label: [y.name, y.semester].filter(Boolean).join(' ') || '—' }))
+            setTeachersList(tList); setAcademicYearsList(yList)
+            return { t: Object.fromEntries(tList.map(t => [t.id, t.name || '—'])), y: Object.fromEntries(yList.map(y => [y.id, y.label])) }
+        } catch { return { t: {}, y: {} } }
     }, [])
 
-    const parseMajorColumn = (majorStr = '') => {
-        let program = 'Reguler'
-        let gender = ''
-        if (majorStr.includes('Boarding')) program = 'Boarding'
-        if (majorStr.includes('Putra')) gender = 'Putra'
-        if (majorStr.includes('Putri')) gender = 'Putri'
-        return { program, gender }
+    const fetchData = useCallback(async () => {
+        setLoading(true)
+        try {
+            const { t: tMap, y: yMap } = await loadMetadata()
+            let q = supabase.from('classes').select('id, name, grade, major, homeroom_teacher_id, academic_year_id, created_at, students(count)').order('name')
+            const { data, error } = await q
+            if (!error && data) {
+                const mapped = data.map(row => ({
+                    ...row,
+                    teacherName: row.homeroom_teacher_id ? (tMap[row.homeroom_teacher_id] || '—') : '—',
+                    academicYearName: row.academic_year_id ? (yMap[row.academic_year_id] || '—') : '—',
+                    students: row.students?.[0]?.count ?? 0,
+                }))
+                setClasses(mapped)
+                const s = { total: mapped.length, boarding: 0, reguler: 0, totalStudents: 0 }
+                mapped.forEach(c => { if (c.major?.includes('Boarding')) s.boarding++; else s.reguler++; s.totalStudents += (c.students || 0) })
+                setStats(s)
+            }
+        } catch (err) { console.error(err) }
+        finally { setLoading(false) }
+    }, [loadMetadata])
+
+    const fetchArchived = useCallback(async () => {
+        // Soft delete not supported by schema
+        setArchivedClasses([])
+    }, [])
+
+    const handleRestore = async (id) => {
+        try {
+            const { error } = await supabase.from('classes').update({ deleted_at: null }).eq('id', id)
+            if (error) throw error
+            addToast('Kelas berhasil dipulihkan', 'success'); fetchArchived(); fetchData()
+        } catch { addToast('Gagal memulihkan kelas', 'error') }
     }
 
-    // Enhanced filtering with useMemo
+    const handlePermanentDelete = async (id) => {
+        if (!confirm('Hapus permanen kelas ini? Data tidak bisa dikembalikan.')) return
+        try {
+            const { error } = await supabase.from('classes').delete().eq('id', id)
+            if (error) throw error
+            addToast('Kelas dihapus permanen', 'success'); fetchArchived()
+        } catch { addToast('Gagal menghapus permanen', 'error') }
+    }
+
+    const fetchDataRef = useRef(fetchData)
+    useEffect(() => { fetchDataRef.current = fetchData }, [fetchData])
+    useEffect(() => { fetchData() }, [fetchData])
+
+    useEffect(() => {
+        if (isArchivedModalOpen) fetchArchived()
+    }, [isArchivedModalOpen, fetchArchived])
+
+    // ── UI EFFECTS ─────────────────────────────────────────────────
+    useEffect(() => { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) }, [visibleCols])
+
+    const isAnyModalOpen = isModalOpen || isDeleteModalOpen || isBulkDeleteOpen || isExportModalOpen || isImportModalOpen || isArchivedModalOpen
+
+    // Active Filter Count
+    const activeFilterCount = (filterLevel ? 1 : 0) + (filterProgram ? 1 : 0) + (filterNoTeacher ? 1 : 0) + (filterCrowded ? 1 : 0)
+    const resetAllFilters = () => { setSearchQuery(''); setFilterLevel(''); setFilterProgram(''); setFilterNoTeacher(false); setFilterCrowded(false) }
+
+    // Click Outside
+    useEffect(() => {
+        const handler = (e) => {
+            if (filterRef.current && !filterRef.current.contains(e.target)) setIsFilterOpen(false)
+            if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setIsHeaderMenuOpen(false)
+            if (shortcutRef.current && !shortcutRef.current.contains(e.target)) setIsShortcutOpen(false)
+            if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setIsColMenuOpen(false)
+            if (slidersRef.current && !slidersRef.current.contains(e.target)) setIsSlidersOpen(false)
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [])
+
+    const handleAdd = () => { setSelectedItem(null); setIsModalOpen(true) }
+    const handleEdit = item => { setSelectedItem(item); setIsModalOpen(true) }
+
+    // Keyboard Shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (isAnyModalOpen) return
+            if (e.ctrlKey && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus() }
+            if (e.key === '?') { e.preventDefault(); setIsShortcutOpen(v => !v) }
+            if (e.key === 'n') { e.preventDefault(); handleAdd() }
+            if (e.key === 'p') { e.preventDefault(); setIsPrivacyMode(v => !v) }
+            if (e.key === 'r') { e.preventDefault(); fetchData() }
+            if (e.key === 'x') { e.preventDefault(); resetAllFilters() }
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [isAnyModalOpen, fetchData])
+
+    // Realtime
+    useEffect(() => {
+        const ch = supabase.channel('classes-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, () => fetchDataRef.current?.()).subscribe()
+        return () => supabase.removeChannel(ch)
+    }, [])
+
+    // Filter & Sort Logic
     const filteredClasses = useMemo(() => {
         let result = classes.filter(c => {
-            const matchesSearch =
-                c.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-                c.major.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-                c.teacherName.toLowerCase().includes(debouncedSearch.toLowerCase())
-
-            const matchesLevel = !filterLevel || c.grade === filterLevel
-            const matchesProgram = !filterProgram || c.major.includes(filterProgram)
-            const matchesGender = !filterGender || c.major.includes(filterGender)
-
-            return matchesSearch && matchesLevel && matchesProgram && matchesGender
+            const q = debouncedSearch.toLowerCase()
+            const matchSearch = !q || c.name.toLowerCase().includes(q) || (c.major || '').toLowerCase().includes(q) || (c.teacherName || '').toLowerCase().includes(q)
+            const matchLevel = !filterLevel || c.grade === filterLevel
+            const matchProg = !filterProgram || (c.major || '').includes(filterProgram)
+            const matchNoTeacher = !filterNoTeacher || !c.homeroom_teacher_id
+            const matchCrowded = !filterCrowded || c.students > 35
+            return matchSearch && matchLevel && matchProg && matchNoTeacher && matchCrowded
         })
-
-        // Sorting
-        if (sortBy === 'name') {
-            result.sort((a, b) => a.name.localeCompare(b.name))
-        } else if (sortBy === 'level') {
-            result.sort((a, b) => a.grade.localeCompare(b.grade) || a.name.localeCompare(b.name))
-        } else if (sortBy === 'students') {
-            result.sort((a, b) => b.students - a.students)
-        }
-
+        if (sortBy === 'name') result.sort((a, b) => a.name.localeCompare(b.name))
+        else if (sortBy === 'level') result.sort((a, b) => (a.grade || '').localeCompare(b.grade || '') || a.name.localeCompare(b.name))
+        else if (sortBy === 'students') result.sort((a, b) => (b.students || 0) - (a.students || 0))
         return result
-    }, [classes, debouncedSearch, filterLevel, filterProgram, filterGender, sortBy])
+    }, [classes, debouncedSearch, filterLevel, filterProgram, sortBy])
 
-    const hasActiveFilters = searchQuery || filterLevel || filterProgram || filterGender
+    const totalRows = filteredClasses.length
+    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
+    const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1
+    const toRow = Math.min(page * pageSize, totalRows)
+    const pagedClasses = filteredClasses.slice((page - 1) * pageSize, page * pageSize)
 
-    const clearFilters = () => {
-        setSearchQuery('')
-        setFilterLevel('')
-        setFilterProgram('')
-        setFilterGender('')
-    }
+    useEffect(() => { setPage(1) }, [debouncedSearch, filterLevel, filterProgram, sortBy, filterNoTeacher, filterCrowded])
 
-    const handleAdd = () => {
-        setSelectedItem(null)
-        setFormData({
-            name: '',
-            level: '7',
-            program: 'Reguler',
-            gender_type: 'Putra',
-            homeroom_teacher_id: '',
-            academic_year_id: ''
+    // Insights
+    const insights = useMemo(() => {
+        const results = []
+        const noTeacher = classes.filter(c => !c.homeroom_teacher_id)
+        if (noTeacher.length > 0) results.push({
+            id: 'noTeacher',
+            label: `${noTeacher.length} Kelas Tanpa Wali`,
+            desc: 'Wali kelas belum ditentukan',
+            icon: faUsers,
+            color: 'text-amber-500',
+            bg: 'bg-amber-500/10',
+            onClick: () => { setFilterNoTeacher(v => !v); setFilterCrowded(false); setIsFilterOpen(true) },
+            active: filterNoTeacher
         })
-        setIsModalOpen(true)
-    }
 
-    const handleEdit = (item) => {
-        setSelectedItem(item)
-        const { program, gender } = parseMajorColumn(item.major)
-        setFormData({
-            name: item.name,
-            level: item.grade,
-            program: program,
-            gender_type: gender,
-            homeroom_teacher_id: item.homeroom_teacher_id || '',
-            academic_year_id: item.academic_year_id || '',
+        const crowded = classes.filter(c => c.students > 35)
+        if (crowded.length > 0) results.push({
+            id: 'crowded',
+            label: `${crowded.length} Kelas Padat`,
+            desc: 'Populasi siswa > 35 anak',
+            icon: faSchool,
+            color: 'text-blue-500',
+            bg: 'bg-blue-500/10',
+            onClick: () => { setFilterCrowded(v => !v); setFilterNoTeacher(false); setIsFilterOpen(true) },
+            active: filterCrowded
         })
-        setIsModalOpen(true)
+
+        return results
+    }, [classes, filterNoTeacher, filterCrowded])
+
+    // Handlers
+    const handleSubmit = async (formData) => {
+        setSubmitting(true)
+        const finalMajor = [formData.program, formData.gender_type].filter(Boolean).join(' ')
+        const payload = { name: formData.name, grade: formData.level, major: finalMajor, homeroom_teacher_id: formData.homeroom_teacher_id || null, academic_year_id: formData.academic_year_id || null }
+        try {
+            if (selectedItem) { const { error } = await supabase.from('classes').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data kelas berhasil diupdate', 'success') }
+            else { const { error } = await supabase.from('classes').insert(payload); if (error) throw error; addToast('Kelas baru berhasil ditambahkan', 'success') }
+            setIsModalOpen(false); fetchData()
+        } catch (err) { addToast(err.message || 'Gagal menyimpan data', 'error') }
+        finally { setSubmitting(false) }
     }
 
-    const confirmDelete = (item) => {
-        setItemToDelete(item)
-        setIsDeleteModalOpen(true)
-    }
-
-    const executeDelete = async () => {
-        if (!itemToDelete) return
-        if (supabase) {
+    const handleDeleteConfirm = async () => {
+        if (!itemToDelete) return; setSubmitting(true)
+        try {
             const { error } = await supabase.from('classes').delete().eq('id', itemToDelete.id)
-            if (error) {
-                addToast(error.message || 'Gagal menghapus kelas', 'error')
-                setIsDeleteModalOpen(false)
-                return
-            }
-        }
-        setClasses(prev => prev.filter(c => c.id !== itemToDelete.id))
-        addToast('Kelas berhasil dihapus', 'success')
-        setIsDeleteModalOpen(false)
-        setItemToDelete(null)
+            if (error) throw error
+            addToast('Kelas berhasil dihapus', 'success'); setIsDeleteModalOpen(false); fetchData()
+        } catch { addToast('Gagal mengarsipkan kelas', 'error') }
+        finally { setSubmitting(false) }
     }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        if (!formData.name) { addToast('Nama kelas wajib diisi', 'warning'); return }
-        if (!formData.level) { addToast('Tingkat wajib dipilih', 'warning'); return }
-
-        let constructedMajor = []
-        if (formData.program) constructedMajor.push(formData.program)
-        if (formData.gender_type) constructedMajor.push(formData.gender_type)
-        const finalMajor = constructedMajor.join(' ')
-
-        const payload = {
-            name: formData.name,
-            grade: formData.level,
-            major: finalMajor,
-            homeroom_teacher_id: formData.homeroom_teacher_id || null,
-            academic_year_id: formData.academic_year_id || null,
-        }
-
-        if (selectedItem) {
-            if (supabase) {
-                const { error } = await supabase.from('classes').update(payload).eq('id', selectedItem.id)
-                if (error) {
-                    addToast(error.message || 'Gagal mengupdate kelas', 'error')
-                    return
-                }
-                await loadClasses()
-            } else {
-                const teacherName = teachersList.find(t => t.id === formData.homeroom_teacher_id)?.name || '—'
-                const ay = academicYearsList.find(y => y.id === formData.academic_year_id)
-                const academicYearName = ay?.label || ay?.name || '—'
-                setClasses(prev => prev.map(c => c.id === selectedItem.id ? { ...c, ...payload, teacherName, academicYearName } : c))
-            }
-            addToast('Data berhasil diupdate', 'success')
-        } else {
-            if (supabase) {
-                const { error } = await supabase.from('classes').insert(payload)
-                if (error) {
-                    addToast(error.message || 'Gagal menambah kelas', 'error')
-                    setIsModalOpen(false)
-                    return
-                }
-                await loadClasses()
-            } else {
-                const teacherName = teachersList.find(t => t.id === formData.homeroom_teacher_id)?.name || '—'
-                const ay = academicYearsList.find(y => y.id === formData.academic_year_id)
-                const academicYearName = ay?.label || ay?.name || '—'
-                setClasses(prev => [...prev, { id: String(Date.now()), students: 0, ...payload, teacherName, academicYearName }])
-            }
-            addToast('Kelas berhasil ditambahkan', 'success')
-        }
-        setIsModalOpen(false)
+    const handleBulkDelete = async () => {
+        setSubmitting(true)
+        try {
+            const { error } = await supabase.from('classes').delete().in('id', selectedIds)
+            if (error) throw error
+            addToast(`${selectedIds.length} kelas berhasil dihapus`, 'success'); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData()
+        } catch { addToast('Gagal menghapus kelas', 'error') }
+        finally { setSubmitting(false) }
     }
+
+    const toggleSelect = id => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+    const toggleSelectAll = () => {
+        const ids = pagedClasses.map(c => c.id)
+        setSelectedIds(prev => ids.every(id => prev.includes(id)) ? prev.filter(id => !ids.includes(id)) : [...new Set([...prev, ...ids])])
+    }
+    const allSelected = pagedClasses.length > 0 && pagedClasses.every(c => selectedIds.includes(c.id))
+
+    const toggleColumn = (key) => setVisibleCols(prev => ({ ...prev, [key]: !prev[key] }))
+
+    // Export Logic
+    const getExportData = async () => {
+        let q = supabase.from('classes').select('name, grade, major, homeroom_teacher_id, academic_year_id, students(count)').order('name')
+        if (exportScope === 'filtered') {
+            if (filterLevel) q = q.eq('grade', filterLevel)
+            if (filterProgram) q = q.ilike('major', `%${filterProgram}%`)
+        } else if (exportScope === 'selected') {
+            q = q.in('id', selectedIds)
+        }
+        const { data, error } = await q; if (error) throw error
+        const { t: tMap, y: yMap } = await loadMetadata()
+        return (data || []).map(c => ({
+            'Nama Kelas': c.name || '-',
+            'Tingkat': c.grade || '-',
+            'Program/Major': c.major || '-',
+            'Wali Kelas': c.homeroom_teacher_id ? (tMap[c.homeroom_teacher_id] || '-') : '-',
+            'Tahun Ajaran': c.academic_year_id ? (yMap[c.academic_year_id] || '-') : '-',
+            'Jumlah Siswa': c.students?.[0]?.count || 0
+        }))
+    }
+
+    const handleExportCSV = async () => {
+        setExporting(true)
+        try {
+            const data = await getExportData(); if (!data.length) return addToast('Tidak ada data', 'warning')
+            const blob = new Blob([Papa.unparse(data)], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.setAttribute('download', `data_kelas_${new Date().toISOString().slice(0, 10)}.csv`); link.click()
+            addToast(`Export CSV berhasil (${data.length} kelas)`, 'success')
+        } catch { addToast('Gagal export CSV', 'error') }
+        finally { setExporting(false); setIsExportModalOpen(false) }
+    }
+
+    const handleExportExcel = async () => {
+        setExporting(true)
+        try {
+            const data = await getExportData(); if (!data.length) return addToast('Tidak ada data', 'warning')
+            const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = Object.keys(data[0]).map(k => ({ wch: Math.max(k.length, 14) }))
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Data Kelas')
+            XLSX.writeFile(wb, `data_kelas_${new Date().toISOString().slice(0, 10)}.xlsx`)
+            addToast(`Export Excel berhasil (${data.length} kelas)`, 'success')
+        } catch { addToast('Gagal export Excel', 'error') }
+        finally { setExporting(false); setIsExportModalOpen(false) }
+    }
+
+    const activeFilterCountVal = activeFilterCount
+    // remove resetAllFilters from here as it's defined above
 
     return (
-        <DashboardLayout title="Data Kelas">
-            {/* Header */}
+        <DashboardLayout title="Data Kelas" hideHeader={isAnyModalOpen} hideSidebar={isAnyModalOpen}>
+            <style>{isAnyModalOpen ? ` .top-nav, .sidebar, .floating-dock { display: none !important; } main { padding-top: 0 !important; } ` : ''}</style>
+
+            {/* Privacy Banner */}
+            {isPrivacyMode && (
+                <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-600 text-xs font-bold">
+                        <FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disensor
+                    </div>
+                    <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">Matikan</button>
+                </div>
+            )}
+
+            {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-black font-heading text-[var(--color-text)] tracking-tight">Data Kelas</h1>
-                    <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">
-                        Total {classes.length} kelas aktif didefinisikan dalam sistem.
-                    </p>
+                    <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Data Kelas</h1>
+                    <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} data kelas aktif dalam sistem laporan.</p>
                 </div>
-                <button onClick={handleAdd} className="btn btn-primary shadow-lg shadow-[var(--color-primary)]/20 h-11 text-xs font-bold px-5 rounded-full">
-                    <FontAwesomeIcon icon={faPlus} />
-                    <span className="ml-2 uppercase tracking-widest">TAMBAH KELAS</span>
-                </button>
+                <div className="flex gap-2 items-center">
+                    {/* Sliders dropdown (Opsi) */}
+                    <div className="relative" ref={headerMenuRef}>
+                        <button
+                            onClick={() => window.innerWidth < 640 ? setIsActionSheetOpen(true) : setIsHeaderMenuOpen(!isHeaderMenuOpen)}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${isHeaderMenuOpen || isActionSheetOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                            title="Opsi Lanjutan"><FontAwesomeIcon icon={faSliders} /></button>
+                        {isHeaderMenuOpen && (
+                            <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl shadow-black/10 overflow-hidden">
+                                <div className="p-1.5 space-y-0.5">
+                                    <p className="px-3 pt-1.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Data</p>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsImportModalOpen(true) }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"><FontAwesomeIcon icon={faUpload} className="w-3.5 text-[var(--color-text-muted)]" /> Import CSV / Excel</button>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"><FontAwesomeIcon icon={faDownload} className="w-3.5 text-[var(--color-text-muted)]" /> Export Data</button>
+                                    <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                                    <p className="px-3 pt-0.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
+                                    <p className="px-3 py-2 text-[10px] text-[var(--color-text-muted)] italic">Fitur arsip tidak tersedia untuk tabel ini.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    {/* Privacy toggle */}
+                    <button onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                        className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
+                        <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privacy On' : 'Privacy Off'}</span>
+                    </button>
+                    {/* Shortcut toggle */}
+                    <div className="relative" ref={shortcutRef}>
+                        <button onClick={() => setIsShortcutOpen(!isShortcutOpen)}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                            title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
+                        {isShortcutOpen && (
+                            <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden animate-in fade-in zoom-in-95">
+                                <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/50">
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Shortcuts</p>
+                                    <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
+                                </div>
+                                <div className="p-3 space-y-0.5">
+                                    {[{ section: 'Navigasi' }, { keys: ['Ctrl', 'K'], label: 'Fokus ke search' }, { keys: ['Esc'], label: 'Tutup / deselect' }, { section: 'Aksi' }, { keys: ['N'], label: 'Tambah kelas baru' }, { keys: ['P'], label: 'Toggle privacy mode' }, { keys: ['X'], label: 'Reset semua filter' }].map((item, i) => item.section ? (
+                                        <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
+                                    ) : (
+                                        <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
+                                            <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
+                                            <div className="flex items-center gap-1">{item.keys.map((k, ki) => <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>)}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <button onClick={handleAdd} className="h-9 px-4 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 active:scale-95">
+                        <FontAwesomeIcon icon={faPlus} /> Tambah
+                    </button>
+                </div>
             </div>
 
-            {/* CONTINUE IN NEXT FILE... */}
-            {/* Enhanced Multi-Filter System */}
-            <div className="glass rounded-[1.5rem] mb-6 p-4 border border-[var(--color-border)]">
-                <div className="flex flex-col gap-3">
-                    {/* Search Input */}
-                    <div className="flex-1 relative font-normal group">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[var(--color-text-muted)] transition-colors group-focus-within:text-[var(--color-primary)]">
-                            <FontAwesomeIcon icon={faSearch} className="text-sm" />
+
+            {/* Stats Overview */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                {[
+                    { label: 'Total Kelas', val: stats.total, icon: faSchool, gradient: 'from-blue-600 to-indigo-500' },
+                    { label: 'Boarding', val: stats.boarding, icon: faBed, gradient: 'from-amber-500 to-orange-500' },
+                    { label: 'Reguler', val: stats.reguler, icon: faBuilding, gradient: 'from-emerald-600 to-teal-500' },
+                    { label: 'Total Siswa', val: stats.totalStudents, icon: faUsers, gradient: 'from-pink-600 to-rose-500' },
+                ].map((s, i) => (
+                    <div key={i} className="bg-[var(--color-surface)] rounded-2xl p-4 border border-[var(--color-border)] flex items-center gap-4 transition-all hover:border-[var(--color-primary)]/30 shadow-sm">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white text-[15px] shrink-0 shadow-lg`}><FontAwesomeIcon icon={s.icon} /></div>
+                        <div className="min-w-0">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] truncate">{s.label}</p>
+                            <p className="text-xl font-black text-[var(--color-text)] leading-none mt-1 tracking-tight">{s.val}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Insights Row — Repositioned below stats */}
+            {insights.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6 animate-in fade-in slide-in-from-top-1 duration-500">
+                    {insights.map((ins) => (
+                        <button
+                            key={ins.id}
+                            onClick={ins.onClick}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all hover:scale-[1.02] active:scale-95 ${ins.active ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 ring-1 ring-[var(--color-primary)]' : `border-current opacity-80 ${ins.bg} ${ins.color}`}`}
+                        >
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${ins.active ? 'bg-[var(--color-primary)] text-white' : 'bg-white/20'}`}>
+                                <FontAwesomeIcon icon={ins.icon} className="text-[10px]" />
+                            </div>
+                            <div className="text-left">
+                                <p className={`text-[10px] font-black leading-none ${ins.active ? 'text-[var(--color-primary)]' : ''}`}>{ins.label}</p>
+                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">{ins.desc}</p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Filters & Actions */}
+            <div className="bg-[var(--color-surface)] rounded-2xl mb-6 border border-[var(--color-border)] overflow-hidden shadow-sm">
+                {/* Row 1: Search + Main Actions */}
+                <div className="flex gap-2 p-3">
+                    <div className="flex-1 relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
+                            <FontAwesomeIcon icon={faSearch} />
                         </div>
                         <input
+                            ref={searchInputRef}
                             type="text"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Cari nama kelas, wali kelas..."
-                            className="input-field pl-11 pr-10 w-full h-11 text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Cari nama kelas atau wali kelas... (Ctrl+K)"
+                            className="input-field pl-10 w-full h-9 text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                         />
                         {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery('')}
-                                className="absolute inset-y-0 right-0 pr-4 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-                            >
-                                <FontAwesomeIcon icon={faTimes} />
+                            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
+                                <FontAwesomeIcon icon={faTimes} className="text-xs" />
                             </button>
                         )}
                     </div>
 
-                    {/* Filter & Sort Row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                        {/* Level Filter */}
-                        <select
-                            value={filterLevel}
-                            onChange={(e) => setFilterLevel(e.target.value)}
-                            className="select-field font-bold text-sm h-11 bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] rounded-xl"
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                            className={`h-9 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${isFilterOpen || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
                         >
-                            <option value="">Semua Tingkat</option>
-                            {LEVELS.map(l => <option key={l} value={l}>Kelas {l}</option>)}
-                        </select>
-
-                        {/* Program Filter */}
-                        <select
-                            value={filterProgram}
-                            onChange={(e) => setFilterProgram(e.target.value)}
-                            className="select-field font-bold text-sm h-11 bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] rounded-xl"
-                        >
-                            <option value="">Semua Program</option>
-                            <option value="Boarding">Boarding</option>
-                            <option value="Reguler">Reguler</option>
-                        </select>
-
-                        {/* Gender Filter */}
-                        <select
-                            value={filterGender}
-                            onChange={(e) => setFilterGender(e.target.value)}
-                            className="select-field font-bold text-sm h-11 bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] rounded-xl"
-                        >
-                            <option value="">Semua Gender</option>
-                            <option value="Putra">Putra</option>
-                            <option value="Putri">Putri</option>
-                        </select>
-
-                        {/* Sort */}
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="select-field font-bold text-sm h-11 bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] rounded-xl"
-                        >
-                            <option value="name">Urutkan: Nama</option>
-                            <option value="level">Urutkan: Tingkat</option>
-                            <option value="students">Urutkan: Jumlah Siswa</option>
-                        </select>
+                            <FontAwesomeIcon icon={faSliders} />
+                            Filter
+                            {activeFilterCount > 0 && (
+                                <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </button>
                     </div>
+                </div>
 
-                    {/* Active Filters Display */}
-                    {hasActiveFilters && (
-                        <div className="flex items-center gap-2 pt-3 border-t border-[var(--color-border)] flex-wrap">
-                            <span className="text-xs text-[var(--color-text-muted)] font-medium flex items-center gap-1.5">
-                                <FontAwesomeIcon icon={faFilter} className="text-[10px]" />
-                                Filter aktif:
-                            </span>
-                            {filterLevel && (
-                                <span className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg text-xs font-bold">
-                                    Kelas {filterLevel}
-                                    <button onClick={() => setFilterLevel('')} className="hover:text-[var(--color-accent)]">
-                                        <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
-                                    </button>
-                                </span>
-                            )}
-                            {filterProgram && (
-                                <span className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg text-xs font-bold">
-                                    {filterProgram}
-                                    <button onClick={() => setFilterProgram('')} className="hover:text-[var(--color-accent)]">
-                                        <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
-                                    </button>
-                                </span>
-                            )}
-                            {filterGender && (
-                                <span className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg text-xs font-bold">
-                                    {filterGender}
-                                    <button onClick={() => setFilterGender('')} className="hover:text-[var(--color-accent)]">
-                                        <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
-                                    </button>
-                                </span>
-                            )}
+                {/* Row 2: Expandable Filter Panel */}
+                {isFilterOpen && (
+                    <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 animate-in slide-in-from-top-2 duration-300">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">Tingkat / Grade</label>
+                                <select
+                                    value={filterLevel}
+                                    onChange={e => setFilterLevel(e.target.value)}
+                                    className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-primary)] transition-all appearance-none"
+                                >
+                                    <option value="">Semua Tingkat</option>
+                                    {LEVELS.map(l => <option key={l} value={l}>Kelas {l}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">Program</label>
+                                <select
+                                    value={filterProgram}
+                                    onChange={e => setFilterProgram(e.target.value)}
+                                    className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-primary)] transition-all appearance-none"
+                                >
+                                    <option value="">Semua Program</option>
+                                    {PROGRAMS.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">Urutan</label>
+                                <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-primary)] transition-all appearance-none">
+                                    <option value="name">Nama (A-Z)</option>
+                                    <option value="level">Tingkat</option>
+                                    <option value="students">Populasi Siswa</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex items-end gap-2 mt-4">
                             <button
-                                onClick={clearFilters}
-                                className="text-xs text-red-500 hover:text-red-700 font-bold transition-colors ml-auto"
+                                onClick={resetAllFilters}
+                                className="flex-1 h-9 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-red-500/10 flex items-center justify-center gap-2"
                             >
-                                Clear All
+                                <FontAwesomeIcon icon={faRotateLeft} />
+                                Reset
                             </button>
                         </div>
-                    )}
-
-                    {/* Result Count */}
-                    <div className="pt-3 border-t border-[var(--color-border)]">
-                        <p className="text-xs text-[var(--color-text-muted)]">
-                            Menampilkan <strong className="text-[var(--color-text)] font-bold">{filteredClasses.length}</strong> dari {classes.length} kelas
-                            {debouncedSearch && ` (hasil pencarian: "${debouncedSearch}")`}
-                        </p>
                     </div>
-                </div>
+                )}
             </div>
 
-            {/* Loading State */}
-            {loading ? (
-                <>
-                    <div className="hidden md:block"><TableSkeleton rows={5} cols={7} /></div>
-                    <div className="md:hidden"><CardSkeleton count={3} /></div>
-                </>
-            ) : filteredClasses.length === 0 ? (
-                /* Empty State */
-                <div className="glass rounded-[2rem] py-20 text-center border-dashed border-2 border-[var(--color-border)]">
-                    <div className="w-24 h-24 bg-gradient-to-br from-[var(--color-surface-alt)] to-[var(--color-surface)] rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                        <FontAwesomeIcon icon={faSchool} className="text-5xl text-[var(--color-text-muted)] opacity-40" />
+            {/* Bulk Action Bar */}
+            {selectedIds.length > 0 && (
+                <div className="mb-4 px-4 py-3 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-between gap-3 flex-wrap animate-in slide-in-from-top-2">
+                    <p className="text-sm font-black text-[var(--color-primary)] tracking-tight">{selectedIds.length} kelas dipilih</p>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setIsBulkDeleteOpen(true)} className="h-8 px-4 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2"><FontAwesomeIcon icon={faTrash} /> Hapus</button>
+                        <button onClick={() => setSelectedIds([])} className="h-8 px-4 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:text-[var(--color-text)] transition-all"><FontAwesomeIcon icon={faXmark} /> Batal</button>
                     </div>
-                    <h3 className="text-2xl font-bold font-heading text-[var(--color-text)] mb-2">
-                        {hasActiveFilters ? 'Tidak ada hasil' : 'Belum ada kelas'}
-                    </h3>
-                    <p className="text-[var(--color-text-muted)] text-sm mb-6 max-w-sm mx-auto">
-                        {hasActiveFilters
-                            ? 'Coba gunakan filter lain atau hapus filter yang aktif.'
-                            : 'Mulai tambahkan kelas baru untuk melihat data di sini.'
-                        }
-                    </p>
-                    {hasActiveFilters ? (
-                        <button onClick={clearFilters} className="btn btn-secondary px-8 rounded-full">
-                            <FontAwesomeIcon icon={faTimes} className="mr-2" />
-                            Clear Filters
-                        </button>
-                    ) : (
-                        <button onClick={handleAdd} className="btn btn-primary px-8 rounded-full">
-                            <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                            Tambah Kelas
-                        </button>
-                    )}
                 </div>
-            ) : (
-                <>
-                    {/* Desktop: Table View */}
-                    <div className="hidden lg:block glass rounded-[1.5rem] overflow-hidden border border-[var(--color-border)] shadow-sm">
-                        <div className="overflow-x-auto">
+            )}
+
+            {/* Main Content Area */}
+            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden min-h-[400px]">
+                {loading ? (
+                    <div className="p-6 space-y-4"><div className="hidden md:block"><TableSkeleton rows={8} cols={7} /></div><div className="md:hidden"><CardSkeleton count={4} /></div></div>
+                ) : totalRows === 0 ? (
+                    <div className="py-12 flex flex-col items-center justify-center text-center px-6">
+                        <div className="w-16 h-16 mb-4 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] border border-dashed border-[var(--color-border)] opacity-40"><FontAwesomeIcon icon={faSchool} className="text-2xl" /></div>
+                        <h3 className="text-base font-black text-[var(--color-text)] mb-2 uppercase tracking-wide">Data Tidak Ditemukan</h3>
+                        <p className="text-[10px] text-[var(--color-text-muted)] max-w-xs leading-relaxed font-bold uppercase tracking-widest opacity-60">Tidak ditemukan kelas yang cocok dengan filter atau database masih kosong.</p>
+                        <button onClick={() => { setSearchQuery(''); setFilterLevel(''); setFilterProgram('') }} className="mt-6 h-9 px-5 rounded-xl border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all">Clear Filter</button>
+                    </div>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto whitespace-nowrap hidden md:block">
                             <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-[var(--color-surface-alt)]/50 border-b border-[var(--color-border)] backdrop-blur-sm">
-                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Nama Kelas</th>
-                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Tingkat</th>
-                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Program</th>
-                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Gender</th>
-                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Wali Kelas</th>
-                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-center">Siswa</th>
-                                        <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] text-right pr-6">Aksi</th>
+                                <thead className="bg-[var(--color-surface-alt)]/50 border-b border-[var(--color-border)]">
+                                    <tr>
+                                        <th className="px-6 py-4 w-16 text-center"><input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer" /></th>
+                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Identitas Kelas</th>
+                                        {visibleCols.level && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center">Level</th>}
+                                        {visibleCols.program && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center">Program</th>}
+                                        {visibleCols.gender && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center">Gender</th>}
+                                        {visibleCols.teacher && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Wali Kelas</th>}
+                                        {visibleCols.students && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center">Siswa</th>}
+                                        {visibleCols.year && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center">Akademik</th>}
+                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <span>Aksi</span>
+                                                <div className="relative">
+                                                    <button onClick={(e) => {
+                                                        const rect = e.currentTarget.getBoundingClientRect()
+                                                        const menuHeight = 280
+                                                        const spaceBelow = window.innerHeight - rect.bottom
+                                                        const showUp = spaceBelow < menuHeight && rect.top > menuHeight
+                                                        setMenuPos({
+                                                            top: showUp ? (rect.top + window.scrollY - menuHeight - 8) : (rect.bottom + window.scrollY + 8),
+                                                            right: window.innerWidth - rect.right - window.scrollX,
+                                                            showUp
+                                                        })
+                                                        setIsColMenuOpen(p => !p)
+                                                    }} title="Atur tampilan kolom"
+                                                        className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}>
+                                                        <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
+                                                    </button>
+                                                    {isColMenuOpen && createPortal(
+                                                        <div className={`absolute z-[9999] w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${menuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
+                                                            style={{ top: menuPos.top, right: menuPos.right }}>
+                                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Atur Kolom</p>
+                                                            {[{ key: 'level', label: 'Tingkat' }, { key: 'program', label: 'Program Studi' }, { key: 'gender', label: 'Gender / Tipe' }, { key: 'teacher', label: 'Wali Kelas' }, { key: 'students', label: 'Jumlah Siswa' }, { key: 'year', label: 'Tahun Akademik' }].map(({ key, label }) => (
+                                                                <button key={key} onClick={() => toggleColumn(key)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
+                                                                    <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
+                                                                    <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                                                        <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${visibleCols[key] ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                        </div>,
+                                                        document.body
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[var(--color-border)]">
-                                    {filteredClasses.map((cls) => (
-                                        <tr key={cls.id} className="hover:bg-[var(--color-surface-alt)]/30 transition-colors group">
-                                            <td className="px-6 py-4">
-                                                <span className="font-bold text-sm text-[var(--color-text)]">{cls.name}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="badge badge-primary px-2.5 py-1 text-[11px] uppercase font-bold tracking-tight rounded-md bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-none">Lvl {cls.grade}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                {cls.major.includes('Boarding') ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-bold border border-amber-500/20 uppercase tracking-tight">
-                                                        <FontAwesomeIcon icon={faBed} className="text-[10px]" /> Boarding
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[11px] font-bold border border-[var(--color-border)] uppercase tracking-tight">
-                                                        <FontAwesomeIcon icon={faBuilding} className="text-[10px]" /> Reguler
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                {cls.major.includes('Putra') ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-500/20 uppercase tracking-tight">
-                                                        <FontAwesomeIcon icon={faMars} className="text-[10px]" /> Putra
-                                                    </span>
-                                                ) : cls.major.includes('Putri') ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-pink-500/10 text-pink-600 dark:text-pink-400 text-[11px] font-bold border border-pink-500/20 uppercase tracking-tight">
-                                                        <FontAwesomeIcon icon={faVenus} className="text-[10px]" /> Putri
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[var(--color-text-muted)] text-[11px] font-bold uppercase tracking-widest opacity-60">—</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-bold text-[var(--color-text)] truncate max-w-[180px]">
-                                                    {cls.teacherName}
-                                                </div>
-                                                <div className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1.5 mt-1 font-medium opacity-80">
-                                                    <FontAwesomeIcon icon={faCalendarAlt} className="text-[9px]" />
-                                                    {cls.academicYearName}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="inline-flex items-center gap-2 bg-[var(--color-surface-alt)] px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--color-text)] border border-[var(--color-border)]">
-                                                    <FontAwesomeIcon icon={faUsers} className="text-[11px] text-[var(--color-primary)]" />
-                                                    {cls.students}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right pr-6">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <button onClick={() => handleEdit(cls)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm" title="Edit">
-                                                        <FontAwesomeIcon icon={faEdit} />
-                                                    </button>
-                                                    <button onClick={() => confirmDelete(cls)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Hapus">
-                                                        <FontAwesomeIcon icon={faTrash} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                <tbody>
+                                    {pagedClasses.map(cls => (
+                                        <ClassRow key={cls.id} cls={cls} selectedIds={selectedIds} toggleSelect={toggleSelect} visibleCols={visibleCols} handleEdit={handleEdit} setItemToDelete={setItemToDelete} setIsDeleteModalOpen={setIsDeleteModalOpen} isPrivacyMode={isPrivacyMode} />
                                     ))}
                                 </tbody>
                             </table>
                         </div>
+                        <div className="md:hidden divide-y divide-[var(--color-border)]">
+                            {pagedClasses.map(cls => (
+                                <ClassMobileCard key={cls.id} cls={cls} selectedIds={selectedIds} toggleSelect={toggleSelect} handleEdit={handleEdit} setItemToDelete={setItemToDelete} setIsDeleteModalOpen={setIsDeleteModalOpen} />
+                            ))}
+                        </div>
+                        {/* Compact Pagination */}
+                        <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} kelas</p>
+                            <div className="flex items-center gap-2">
+                                <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
+                                <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
+                                <div className="flex items-center gap-1.5 mx-1">
+                                    {getPageItems(page, totalPages).map((it, idx) => it === '...' ? <span key={`s${idx}`} className="w-8 flex items-center justify-center text-[var(--color-text-muted)] font-bold opacity-30">···</span> : (
+                                        <button key={it} onClick={() => setPage(it)} className={`h-9 min-w-[36px] px-2.5 rounded-xl font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/25' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}>{it}</button>
+                                    ))}
+                                </div>
+                                <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[10px]" /></button>
+                                <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" /></button>
+                                <div className="ml-2 relative flex items-center">
+                                    <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/[^\d]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal..." className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[11px] font-black focus:border-[var(--color-primary)] outline-none" />
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* Modals */}
+            <ClassFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} selectedItem={selectedItem} teachersList={teachersList} academicYearsList={academicYearsList} onSubmit={handleSubmit} submitting={submitting} />
+
+            {/* Delete Modal */}
+            <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Hapus Kelas" size="sm">
+                <div className="space-y-6">
+                    <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-4 text-red-500 border border-red-500/20 shadow-inner">
+                        <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30 animate-pulse"><FontAwesomeIcon icon={faTrash} /></div>
+                        <div className="min-w-0"><h3 className="text-sm font-black uppercase tracking-wider italic">Konfirmasi Hapus</h3><p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest">Penghapusan tidak dapat dibatalkan.</p></div>
+                    </div>
+                    <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">Yakin menghapus kelas <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20 italic">{itemToDelete?.name}</span>? <span className="text-[10px] text-[var(--color-text-muted)] mt-2 block opacity-60">Siswa yang terdaftar akan kehilangan referensi kelas.</span></p>
+                    <div className="flex gap-3 pt-2">
+                        <button onClick={() => setIsDeleteModalOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest transition-all">BATAL</button>
+                        <button onClick={handleDeleteConfirm} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all">{submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'HAPUS PERMANEN'}</button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Export Modal */}
+            <Modal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} title="Export Data Kelas" size="sm">
+                <div className="space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Rentang Data</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button onClick={() => setExportScope('filtered')} className={`py-3 rounded-xl text-[10px] font-black uppercase border transition-all ${exportScope === 'filtered' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-lg' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>Filter Aktif</button>
+                            <button onClick={() => setExportScope('all')} className={`py-3 rounded-xl text-[10px] font-black uppercase border transition-all ${exportScope === 'all' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-lg' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>Semua Data</button>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <button onClick={handleExportExcel} disabled={exporting} className="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-[0.15em] shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50">
+                            {exporting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faDownload} /> EXPORT EXCEL (.XLSX)</>}
+                        </button>
+                        <button onClick={handleExportCSV} disabled={exporting} className="w-full h-12 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50">
+                            <FontAwesomeIcon icon={faDownload} /> EXPORT CSV (.CSV)
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Mobile Action Sheet (Slider on Mobile) */}
+            <Modal isOpen={isActionSheetOpen} onClose={() => setIsActionSheetOpen(false)} title="Aksi Lainnya" size="sm">
+                <div className="space-y-1 pb-4">
+                    <button onClick={() => { setIsActionSheetOpen(false); setIsImportModalOpen(true) }} className="w-full h-12 px-4 rounded-xl flex items-center gap-4 text-sm font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] active:bg-[var(--color-border)] transition-all">
+                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0"><FontAwesomeIcon icon={faUpload} /></div>
+                        <div className="text-left"><p className="text-sm font-black text-[var(--color-text)]">Import Data</p><p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">CSV / XLSX</p></div>
+                    </button>
+                    <button onClick={() => { setIsActionSheetOpen(false); setIsExportModalOpen(true) }} className="w-full h-12 px-4 rounded-xl flex items-center gap-4 text-sm font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] active:bg-[var(--color-border)] transition-all">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0"><FontAwesomeIcon icon={faDownload} /></div>
+                        <div className="text-left"><p className="text-sm font-black text-[var(--color-text)]">Export Data</p><p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">CSV / XLSX</p></div>
+                    </button>
+                    <div className="my-2 border-t border-[var(--color-border)] opacity-30 mx-4" />
+                    <div className="px-4 py-2">
+                        <p className="text-[10px] text-[var(--color-text-muted)] italic">Fitur arsip tidak tersedia untuk tabel ini.</p>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Arsip Kelas Modal */}
+            <Modal isOpen={isArchivedModalOpen} onClose={() => setIsArchivedModalOpen(false)} title="Arsip Kelas" size="lg">
+                <div className="space-y-4">
+                    <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/20">
+                        <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest leading-relaxed">
+                            Kelas di bawah ini telah diarsipkan. Anda dapat memulihkan kembali ke daftar aktif atau menghapusnya secara permanen.
+                        </p>
                     </div>
 
-                    {/* Mobile/Tablet: Card View */}
-                    <div className="lg:hidden space-y-3">
-                        {filteredClasses.map((cls) => (
-                            <div key={cls.id} className="glass rounded-2xl p-4 border border-[var(--color-border)] hover:shadow-md transition-shadow">
-                                {/* Header */}
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-sm font-black shrink-0 shadow-sm">
-                                            {cls.grade}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-base text-[var(--color-text)] truncate">
-                                                {cls.name}
-                                            </h3>
-                                            <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-2 mt-0.5">
-                                                <FontAwesomeIcon icon={faUsers} className="text-[10px]" />
-                                                {cls.students} siswa
-                                            </p>
-                                        </div>
-                                    </div>
+                    <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                        {archivedClasses.length === 0 ? (
+                            <div className="py-12 text-center opacity-40">
+                                <FontAwesomeIcon icon={faBoxArchive} className="text-4xl mb-3" />
+                                <p className="text-xs font-black uppercase tracking-widest">Tidak ada arsip</p>
+                            </div>
+                        ) : archivedClasses.map(ac => (
+                            <div key={ac.id} className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center justify-between group">
+                                <div>
+                                    <h4 className="text-sm font-black text-[var(--color-text)]">{ac.name}</h4>
+                                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">
+                                        Level {ac.grade} • {ac.major} • Diarsipkan {new Date(ac.deleted_at).toLocaleDateString('id-ID')}
+                                    </p>
                                 </div>
-
-                                {/* Badges */}
-                                <div className="flex flex-wrap gap-2 mb-3">
-                                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-bold uppercase tracking-tight">
-                                        Kelas {cls.grade}
-                                    </span>
-                                    {cls.major.includes('Boarding') && (
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 text-amber-600 text-[10px] font-bold uppercase tracking-tight">
-                                            <FontAwesomeIcon icon={faBed} className="text-[9px]" /> Boarding
-                                        </span>
-                                    )}
-                                    {cls.major.includes('Putra') && (
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 text-[10px] font-bold uppercase tracking-tight">
-                                            <FontAwesomeIcon icon={faMars} className="text-[9px]" /> Putra
-                                        </span>
-                                    )}
-                                    {cls.major.includes('Putri') && (
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-pink-500/10 text-pink-600 text-[10px] font-bold uppercase tracking-tight">
-                                            <FontAwesomeIcon icon={faVenus} className="text-[9px]" /> Putri
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Info */}
-                                <div className="space-y-2 mb-3 text-xs">
-                                    <div className="flex items-start gap-2">
-                                        <span className="text-[var(--color-text-muted)] font-medium w-16 shrink-0">Wali:</span>
-                                        <span className="text-[var(--color-text)] font-bold flex-1">{cls.teacherName}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[var(--color-text-muted)] font-medium w-16 shrink-0">Tahun:</span>
-                                        <span className="text-[var(--color-text)] font-medium">{cls.academicYearName}</span>
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex gap-2 pt-3 border-t border-[var(--color-border)]">
-                                    <button
-                                        onClick={() => handleEdit(cls)}
-                                        className="flex-1 btn btn-secondary text-xs py-2 h-9 font-bold rounded-lg hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all"
-                                    >
-                                        <FontAwesomeIcon icon={faEdit} className="mr-1.5" />
-                                        Edit
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => handleRestore(ac.id)} title="Pulihkan" className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all">
+                                        <FontAwesomeIcon icon={faRotateLeft} className="text-xs" />
                                     </button>
-                                    <button
-                                        onClick={() => confirmDelete(cls)}
-                                        className="flex-1 btn bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500 hover:text-white text-xs py-2 h-9 font-bold rounded-lg transition-all"
-                                    >
-                                        <FontAwesomeIcon icon={faTrash} className="mr-1.5" />
-                                        Hapus
+                                    <button onClick={() => handlePermanentDelete(ac.id)} title="Hapus Permanen" className="w-8 h-8 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white transition-all">
+                                        <FontAwesomeIcon icon={faTrash} className="text-xs" />
                                     </button>
                                 </div>
                             </div>
                         ))}
                     </div>
-                </>
-            )}
-
-            {/* MODALS CONTINUE IN NEXT SECTION... */}
-            {/* Create/Edit Modal */}
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedItem ? 'Edit Kelas' : 'Tambah Kelas Baru'} size="md">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <section className="space-y-4">
-                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-primary)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faBuilding} className="text-[12px]" /> Identitas Kelas
-                        </h4>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div>
-                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">
-                                    Nama Kelas <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="Contoh: 7A, 8B"
-                                    className="input-field font-bold text-sm py-2.5 h-11"
-                                    autoFocus
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">
-                                    Tingkat (Level) <span className="text-red-500">*</span>
-                                </label>
-                                <select
-                                    value={formData.level}
-                                    onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                                    className="select-field font-bold text-sm py-2 h-11"
-                                    required
-                                >
-                                    <option value="">Pilih Tingkat</option>
-                                    {LEVELS.map(l => <option key={l} value={l}>Kelas {l}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div>
-                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Program</label>
-                                <div className="flex gap-1 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
-                                    {PROGRAMS.map(prog => (
-                                        <button
-                                            key={prog}
-                                            type="button"
-                                            onClick={() => setFormData({ ...formData, program: prog })}
-                                            className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all uppercase tracking-tight
-                                                ${formData.program === prog
-                                                    ? 'bg-[var(--color-primary)] text-white shadow-md'
-                                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
-                                                }`}
-                                        >
-                                            {prog}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Gender Khusus</label>
-                                <div className="flex gap-1 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, gender_type: formData.gender_type === 'Putra' ? '' : 'Putra' })}
-                                        className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 uppercase tracking-tight
-                                            ${formData.gender_type === 'Putra'
-                                                ? 'bg-blue-600 text-white shadow-md'
-                                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
-                                            }`}
-                                    >
-                                        <FontAwesomeIcon icon={faMars} className="text-[10px]" /> Putra
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, gender_type: formData.gender_type === 'Putri' ? '' : 'Putri' })}
-                                        className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 uppercase tracking-tight
-                                            ${formData.gender_type === 'Putri'
-                                                ? 'bg-pink-600 text-white shadow-md'
-                                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
-                                            }`}
-                                    >
-                                        <FontAwesomeIcon icon={faVenus} className="text-[10px]" /> Putri
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="space-y-4 pt-2">
-                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-primary)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faSchool} className="text-[12px]" /> Wali & Akademik
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div>
-                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Wali Kelas</label>
-                                <select
-                                    value={formData.homeroom_teacher_id}
-                                    onChange={(e) => setFormData({ ...formData, homeroom_teacher_id: e.target.value })}
-                                    className="select-field font-bold text-sm py-2 h-11"
-                                >
-                                    <option value="">Pilih Wali Kelas</option>
-                                    {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Tahun Ajaran</label>
-                                <select
-                                    value={formData.academic_year_id}
-                                    onChange={(e) => setFormData({ ...formData, academic_year_id: e.target.value })}
-                                    className="select-field font-bold text-sm py-2 h-11"
-                                >
-                                    <option value="">Pilih Tahun Ajaran</option>
-                                    {academicYearsList.map(y => <option key={y.id} value={y.id}>{y.label || y.name}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                    </section>
-
-                    <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary font-bold py-2 text-xs h-10 px-6 uppercase tracking-widest rounded-xl">
-                            BATAL
-                        </button>
-                        <button type="submit" className="btn btn-primary px-8 font-bold shadow-md shadow-[var(--color-primary)]/20 py-2 text-xs h-10 uppercase tracking-widest rounded-xl">
-                            {selectedItem ? 'UPDATE' : 'SIMPAN'}
-                        </button>
-                    </div>
-                </form>
-            </Modal>
-
-            {/* Delete Confirmation Modal */}
-            <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Konfirmasi Hapus" size="sm">
-                <div className="space-y-5">
-                    <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-5 text-red-500 border border-red-500/20">
-                        <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl">
-                            <FontAwesomeIcon icon={faTrash} />
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-bold uppercase tracking-wider leading-tight">Hapus Kelas?</h3>
-                            <p className="text-[10px] opacity-80 font-medium mt-1">Tindakan ini permanen dan tidak bisa dibatalkan.</p>
-                        </div>
-                    </div>
-                    <div className="px-2">
-                        <p className="text-sm text-[var(--color-text)] leading-relaxed font-medium">
-                            Apakah Anda yakin ingin menghapus kelas <strong className="text-red-500 font-bold">{itemToDelete?.name}</strong>?
-                            <br />
-                            <span className="text-[11px] text-[var(--color-text-muted)] mt-3 block italic">Semua data siswa dalam kelas ini mungkin akan kehilangan referensi kelas.</span>
-                        </p>
-                    </div>
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="btn btn-secondary flex-1 font-bold h-11 text-xs uppercase tracking-widest rounded-xl">
-                            BATAL
-                        </button>
-                        <button type="button" onClick={executeDelete} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-lg shadow-red-500/20 flex-1 font-bold h-11 text-xs uppercase tracking-widest rounded-xl">
-                            YA, HAPUS
-                        </button>
-                    </div>
+                    <button onClick={() => setIsArchivedModalOpen(false)} className="w-full h-11 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">TUTUP</button>
                 </div>
             </Modal>
+
         </DashboardLayout>
     )
 }
