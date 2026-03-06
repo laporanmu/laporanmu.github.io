@@ -97,7 +97,7 @@ export default function AcademicYearsPage() {
             })
         } catch { addToast('Gagal memuat data tahun pelajaran', 'error') }
         finally { setLoading(false) }
-    }, [])
+    }, [addToast])
 
     const fetchArchived = useCallback(async () => {
         if (!supabase) return
@@ -168,12 +168,14 @@ export default function AcademicYearsPage() {
         try {
             const payload = { name: formData.name.trim(), semester: formData.semester, start_date: formData.startDate, end_date: formData.endDate }
             if (selectedItem) {
-                const { error } = await supabase.from('academic_years').update(payload).eq('id', selectedItem.id)
+                const { data, error } = await supabase.from('academic_years').update(payload).eq('id', selectedItem.id).select()
                 if (error) throw error
+                if (!data || data.length === 0) throw new Error('Gagal mengupdate: tidak ada data yang berubah (periksa RLS policy)')
                 addToast('Tahun pelajaran berhasil diupdate', 'success')
             } else {
-                const { error } = await supabase.from('academic_years').insert({ ...payload, is_active: false })
+                const { data, error } = await supabase.from('academic_years').insert({ ...payload, is_active: false }).select()
                 if (error) throw error
+                if (!data || data.length === 0) throw new Error('Gagal menambahkan: tidak ada data yang tersimpan (periksa RLS policy)')
                 addToast('Tahun pelajaran berhasil ditambahkan', 'success')
             }
             setIsModalOpen(false)
@@ -183,20 +185,31 @@ export default function AcademicYearsPage() {
     }
 
     const handleSetActive = async (item) => {
+        if (submitting) return
+        setSubmitting(true)
         try {
-            await supabase.from('academic_years').update({ is_active: false }).neq('id', 'none')
-            await supabase.from('academic_years').update({ is_active: true }).eq('id', item.id)
+            const { error: e1 } = await supabase.from('academic_years').update({ is_active: false }).neq('id', item.id).select()
+            if (e1) throw e1
+            const { data, error: e2 } = await supabase.from('academic_years').update({ is_active: true }).eq('id', item.id).select()
+            if (e2) throw e2
+            if (!data || data.length === 0) throw new Error('Gagal mengaktifkan: periksa RLS policy di Supabase')
             addToast(`${item.name} ${item.semester} diaktifkan`, 'success')
             fetchData()
-        } catch { addToast('Gagal mengaktifkan', 'error') }
+        } catch (err) { addToast(err.message || 'Gagal mengaktifkan', 'error') }
+        finally { setSubmitting(false) }
     }
 
     const handleDeactivate = async (item) => {
+        if (submitting) return
+        setSubmitting(true)
         try {
-            await supabase.from('academic_years').update({ is_active: false }).eq('id', item.id)
+            const { data, error } = await supabase.from('academic_years').update({ is_active: false }).eq('id', item.id).select()
+            if (error) throw error
+            if (!data || data.length === 0) throw new Error('Gagal menonaktifkan: periksa RLS policy di Supabase')
             addToast(`${item.name} ${item.semester} dinonaktifkan`, 'success')
             fetchData()
-        } catch { addToast('Gagal menonaktifkan', 'error') }
+        } catch (err) { addToast(err.message || 'Gagal menonaktifkan', 'error') }
+        finally { setSubmitting(false) }
     }
 
     const handleDuplicate = async (item) => {
@@ -227,38 +240,44 @@ export default function AcademicYearsPage() {
         if (!itemToDelete) return
         setSubmitting(true)
         try {
-            const { error } = await supabase.from('academic_years').update({ deleted_at: new Date().toISOString() }).eq('id', itemToDelete.id)
+            const { data, error } = await supabase.from('academic_years').update({ deleted_at: new Date().toISOString() }).eq('id', itemToDelete.id).select()
             if (error) throw error
+            if (!data || data.length === 0) throw new Error('Gagal mengarsipkan: periksa RLS policy di Supabase')
             addToast('Tahun pelajaran diarsipkan', 'success')
             setIsDeleteModalOpen(false)
             fetchData()
-        } catch { addToast('Gagal menghapus', 'error') }
+        } catch (err) { addToast(err.message || 'Gagal menghapus', 'error') }
         finally { setSubmitting(false); setItemToDelete(null) }
     }
 
     const handleRestore = async (id) => {
         try {
-            await supabase.from('academic_years').update({ deleted_at: null }).eq('id', id)
+            const { data, error } = await supabase.from('academic_years').update({ deleted_at: null }).eq('id', id).select()
+            if (error) throw error
+            if (!data || data.length === 0) throw new Error('Gagal memulihkan: periksa RLS policy di Supabase')
             addToast('Berhasil dipulihkan', 'success')
             fetchArchived(); fetchData()
-        } catch { addToast('Gagal memulihkan', 'error') }
+        } catch (err) { addToast(err.message || 'Gagal memulihkan', 'error') }
     }
 
     const handlePermanentDelete = async (id) => {
         try {
-            await supabase.from('academic_years').delete().eq('id', id)
+            const { error } = await supabase.from('academic_years').delete().eq('id', id)
+            if (error) throw error
             addToast('Data dihapus permanen', 'success')
             setIsPermanentDeleteOpen(false)
             setItemToPermanentDelete(null)
             fetchArchived()
-        } catch { addToast('Gagal menghapus permanen', 'error') }
+        } catch (err) { addToast(err.message || 'Gagal menghapus permanen', 'error') }
     }
 
     const handleBulkDelete = async () => {
         setSubmitting(true)
         try {
-            await supabase.from('academic_years').update({ deleted_at: new Date().toISOString() }).in('id', selectedIds)
-            addToast(`${selectedIds.length} data diarsipkan`, 'success')
+            const { data, error } = await supabase.from('academic_years').update({ deleted_at: new Date().toISOString() }).in('id', selectedIds).select()
+            if (error) throw error
+            if (!data || data.length === 0) throw new Error('Gagal mengarsipkan massal: periksa RLS policy di Supabase')
+            addToast(`${data.length} data diarsipkan`, 'success')
             setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData()
         } catch { addToast('Gagal menghapus massal', 'error') }
         finally { setSubmitting(false) }
@@ -274,9 +293,11 @@ export default function AcademicYearsPage() {
         const matchSemester = !filterSemester || y.semester === filterSemester
         return matchSearch && matchSemester
     }).sort((a, b) => {
+        // Pin active items to top always
+        if (a.is_active !== b.is_active) return b.is_active ? 1 : -1
+        // Then apply selected sort
         if (sortBy === 'name_desc') return b.name.localeCompare(a.name)
         if (sortBy === 'name_asc') return a.name.localeCompare(b.name)
-        if (sortBy === 'active') return (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0)
         return 0
     })
 
@@ -568,16 +589,16 @@ export default function AcademicYearsPage() {
                                                 <div className="flex items-center justify-center gap-1">
                                                     {/* Toggle aktif/nonaktif */}
                                                     {year.is_active ? (
-                                                        <button onClick={() => handleDeactivate(year)} title="Nonaktifkan" className="h-8 px-2.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 whitespace-nowrap">
+                                                        <button onClick={() => handleDeactivate(year)} title="Nonaktifkan" disabled={submitting} className="h-8 px-2.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all whitespace-nowrap disabled:opacity-50">
                                                             Nonaktifkan
                                                         </button>
                                                     ) : (
-                                                        <button onClick={() => handleSetActive(year)} title="Aktifkan" className="h-8 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all opacity-0 group-hover:opacity-100">
+                                                        <button onClick={() => handleSetActive(year)} title="Aktifkan" disabled={submitting} className="h-8 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-50">
                                                             Aktifkan
                                                         </button>
                                                     )}
                                                     {/* Duplicate */}
-                                                    <button onClick={() => handleDuplicate(year)} title="Duplikasi" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all opacity-0 group-hover:opacity-100">
+                                                    <button onClick={() => handleDuplicate(year)} title="Duplikasi" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all">
                                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
                                                     </button>
                                                     <button onClick={() => handleEdit(year)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
