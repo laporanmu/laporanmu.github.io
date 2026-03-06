@@ -36,7 +36,7 @@ export default function BottomNav() {
                     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
                         <div className="grid grid-cols-5">
                             <Item to="/dashboard" icon={faHouse} label="Home" />
-                            <Item to="/reports" icon={faClipboardList} label="Laporan" />
+                            <Item to="/reports" icon={faClipboardList} label="Reports" />
 
                             {/* Master - opens bottom sheet */}
                             <button
@@ -55,7 +55,7 @@ export default function BottomNav() {
                                 type="button"
                             >
                                 <FontAwesomeIcon icon={faClockRotateLeft} className="text-base" />
-                                <span className="tracking-tight">Riwayat</span>
+                                <span className="tracking-tight">History</span>
                             </button>
 
                             <Item to="/settings" icon={faCog} label="Setting" />
