@@ -4,7 +4,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('⚠️ Supabase environment variables not set. Using demo mode.')
+    console.warn('[WARNING] Supabase environment variables not set. Using demo mode.')
 }
 
 export const supabase = supabaseUrl && supabaseAnonKey

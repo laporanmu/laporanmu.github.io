@@ -166,7 +166,6 @@ const BehaviorHeatmap = memo(({ history }) => {
 
 export default function StudentsPage() {
     const [students, setStudents] = useState([])
-    const [pinnedIds, setPinnedIds] = useState(new Set())
     const [classesList, setClassesList] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
@@ -564,12 +563,7 @@ export default function StudentsPage() {
             })
 
             // Pinned siswa selalu di atas
-            transformed.sort((a, b) => {
-                if (a.is_pinned && !b.is_pinned) return -1
-                if (!a.is_pinned && b.is_pinned) return 1
-                return 0
-            })
-            setPinnedIds(new Set(transformed.filter(s => s.is_pinned).map(s => s.id)))
+            transformed.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
 
             setStudents(transformed)
         } catch (err) {
@@ -919,13 +913,17 @@ export default function StudentsPage() {
                 if (error) throw error
 
                 if (formData.class_id !== selectedStudent.class_id) {
-                    await supabase.from('student_class_history').insert([{
-                        student_id: selectedStudent.id,
-                        from_class_id: selectedStudent.class_id,
-                        to_class_id: formData.class_id,
-                        changed_at: new Date().toISOString(),
-                        note: 'Diubah manual'
-                    }]).catch(() => { })
+                    try {
+                        await supabase.from('student_class_history').insert([{
+                            student_id: selectedStudent.id,
+                            from_class_id: selectedStudent.class_id,
+                            to_class_id: formData.class_id,
+                            changed_at: new Date().toISOString(),
+                            note: 'Diubah manual'
+                        }])
+                    } catch (e) {
+                        console.error('Failed to insert history:', e)
+                    }
                 }
                 addToast('Data siswa berhasil diperbarui', 'success')
             } else {
@@ -1596,18 +1594,21 @@ export default function StudentsPage() {
                 payload = { class_id: value }
                 toastMsg = `Kelas diperbarui`
                 if (value !== studentData.class_id) {
-                    await supabase.from('student_class_history').insert([{
-                        student_id: studentId,
-                        from_class_id: studentData.class_id,
-                        to_class_id: value,
-                        changed_at: new Date().toISOString(),
-                        note: 'Diubah via inline edit'
-                    }]).catch(() => { })
+                    try {
+                        await supabase.from('student_class_history').insert([{
+                            student_id: studentId,
+                            from_class_id: studentData.class_id,
+                            to_class_id: value,
+                            changed_at: new Date().toISOString(),
+                            note: 'Diubah via inline edit'
+                        }])
+                    } catch (e) {
+                        console.error('Failed to log class history:', e)
+                    }
                 }
             } else if (field === 'poin') {
-                const newPoints = (studentData.total_points || 0) + value
-                payload = { total_points: newPoints }
-                toastMsg = `Poin ${value > 0 ? '+' : ''}${value} → total ${newPoints > 0 ? '+' : ''}${newPoints}`
+                payload = { total_points: value }
+                toastMsg = `Poin diperbarui menjadi ${value > 0 ? '+' : ''}${value}`
             }
 
             const { error } = await supabase.from('students').update(payload).eq('id', studentId)
@@ -1624,40 +1625,45 @@ export default function StudentsPage() {
     // ── Pin Handler ────────────────────────────────────────────────────────
     const handleTogglePin = async (student) => {
         const newPinned = !student.is_pinned
-        // Optimistic UI
+
+        // Optimistic UI Update
         setStudents(prev => {
             const updated = prev.map(s =>
                 s.id === student.id ? { ...s, is_pinned: newPinned } : s
             )
-            return updated.sort((a, b) => {
-                if (a.is_pinned && !b.is_pinned) return -1
-                if (!a.is_pinned && b.is_pinned) return 1
-                return 0
-            })
+            // Re-sort: pinned first, then by current criteria (implicit in how students was loaded)
+            return updated.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
         })
-        setPinnedIds(prev => {
-            const next = new Set(prev)
-            newPinned ? next.add(student.id) : next.delete(student.id)
-            return next
-        })
+
         try {
             const { error } = await supabase
                 .from('students')
                 .update({ is_pinned: newPinned })
                 .eq('id', student.id)
+
             if (error) throw error
-            addToast(newPinned ? `📌 ${student.name} di-pin ke atas` : `${student.name} di-unpin`, 'success')
-        } catch {
-            // Rollback
-            setStudents(prev => prev.map(s =>
-                s.id === student.id ? { ...s, is_pinned: student.is_pinned } : s
-            ))
-            setPinnedIds(prev => {
-                const next = new Set(prev)
-                student.is_pinned ? next.add(student.id) : next.delete(student.id)
-                return next
+
+            addToast(
+                newPinned ? (
+                    <span className="flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faThumbtack} className="text-amber-400 rotate-[-45deg] text-[10px]" />
+                        "{student.name}" disematkan ke atas
+                    </span>
+                ) : (
+                    `Sematkan "${student.name}" dilepas`
+                ),
+                'success'
+            )
+        } catch (err) {
+            console.error('Pin error:', err)
+            // Rollback on failure
+            setStudents(prev => {
+                const rolledBack = prev.map(s =>
+                    s.id === student.id ? { ...s, is_pinned: student.is_pinned } : s
+                )
+                return rolledBack.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
             })
-            addToast('Gagal menyimpan pin', 'error')
+            addToast('Gagal menyematkan data', 'error')
         }
     }
 
@@ -3920,28 +3926,27 @@ export default function StudentsPage() {
                             </button>
                         )}
 
-                    </div>
-
-                    {/* Pagination Footer */}
-                    {totalRows > 0 && (
-                        <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} siswa</p>
-                            <div className="flex items-center gap-2">
-                                <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
-                                <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
-                                <div className="flex items-center gap-1.5 mx-1">
-                                    {getPageItems(page, totalPages).map((it, idx) => it === '...' ? <span key={`s${idx}`} className="w-8 flex items-center justify-center text-[var(--color-text-muted)] font-bold opacity-30">···</span> : (
-                                        <button key={it} onClick={() => setPage(it)} className={`h-9 min-w-[36px] px-2.5 rounded-xl font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/25' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}>{it}</button>
-                                    ))}
-                                </div>
-                                <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[10px]" /></button>
-                                <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" /></button>
-                                <div className="ml-2 relative flex items-center">
-                                    <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/[^\d]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal..." className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[11px] font-black focus:border-[var(--color-primary)] outline-none" />
+                        {/* Pagination Footer */}
+                        {totalRows > 0 && (
+                            <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} siswa</p>
+                                <div className="flex items-center gap-2">
+                                    <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
+                                    <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
+                                    <div className="flex items-center gap-1.5 mx-1">
+                                        {getPageItems(page, totalPages).map((it, idx) => it === '...' ? <span key={`s${idx}`} className="w-8 flex items-center justify-center text-[var(--color-text-muted)] font-bold opacity-30">···</span> : (
+                                            <button key={it} onClick={() => setPage(it)} className={`h-9 min-w-[36px] px-2.5 rounded-xl font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/25' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}>{it}</button>
+                                        ))}
+                                    </div>
+                                    <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[10px]" /></button>
+                                    <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" /></button>
+                                    <div className="ml-2 relative flex items-center">
+                                        <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/[^\d]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal..." className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[11px] font-black focus:border-[var(--color-primary)] outline-none" />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </>
             )}
 
@@ -4624,7 +4629,10 @@ export default function StudentsPage() {
                             {/* Warning jika tidak ada kolom dipilih */}
                             {Object.values(exportColumns).every(v => !v) && (
                                 <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-bold">
-                                    ⚠️ Pilih minimal satu kolom untuk export
+                                    <div className="flex items-center gap-2">
+                                        <FontAwesomeIcon icon={faTriangleExclamation} />
+                                        Pilih minimal satu kolom untuk export
+                                    </div>
                                 </div>
                             )}
 
@@ -5701,7 +5709,10 @@ export default function StudentsPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2">🏆 Top 3 Poin Tertinggi</p>
+                                    <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                        <FontAwesomeIcon icon={faTrophy} className="text-amber-500" />
+                                        Top 3 Poin Tertinggi
+                                    </p>
                                     <div className="space-y-2">
                                         {classBreakdownData.topStudents.map((s, idx) => (
                                             <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
