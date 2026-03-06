@@ -17,8 +17,8 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         if (isDemoMode) {
-            // Check localStorage for demo session
-            const demoSession = localStorage.getItem('laporanmu_demo_session')
+            // Check localStorage or sessionStorage for demo session
+            const demoSession = localStorage.getItem('laporanmu_demo_session') || sessionStorage.getItem('laporanmu_demo_session')
             if (demoSession) {
                 const parsed = JSON.parse(demoSession)
                 setUser(parsed)
@@ -61,19 +61,23 @@ export function AuthProvider({ children }) {
         setLoading(false)
     }
 
-    async function signIn(email, password) {
+    async function signIn(email, password, rememberMe = false) {
         if (isDemoMode) {
             // Demo login
             const demoUser = Object.values(DEMO_USERS).find(u => u.email === email)
             if (demoUser && password === 'demo123') {
                 setUser(demoUser)
                 setProfile(demoUser)
-                localStorage.setItem('laporanmu_demo_session', JSON.stringify(demoUser))
+                const storage = rememberMe ? localStorage : sessionStorage
+                storage.setItem('laporanmu_demo_session', JSON.stringify(demoUser))
                 return { error: null }
             }
             return { error: { message: 'Email atau password salah' } }
         }
 
+        // For real Supabase auth, session persistence is configured at client level,
+        // but passing rememberMe here is a good placeholder if we want to implement 
+        // custom token storage logic later.
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         return { error }
     }
