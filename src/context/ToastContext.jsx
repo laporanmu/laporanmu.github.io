@@ -73,7 +73,7 @@ export function ToastProvider({ children }) {
             {children}
 
             {/* Toast Container */}
-            <div className="fixed top-4 right-4 left-4 sm:left-auto z-[100] flex flex-col gap-2 sm:max-w-sm">
+            <div className="fixed top-4 right-4 left-4 sm:left-auto z-[99999] flex flex-col gap-2 sm:max-w-sm">
                 {toasts.map(toast => {
                     const config = TOAST_TYPES[toast.type] || TOAST_TYPES.info
                     const isUndo = toast.type === 'undo'
