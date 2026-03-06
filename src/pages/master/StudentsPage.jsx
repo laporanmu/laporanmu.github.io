@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+    faThumbtack,
     faPlus,
     faSearch,
     faEdit,
