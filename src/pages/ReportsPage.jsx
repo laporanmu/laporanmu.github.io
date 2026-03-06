@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faPlus, faEdit, faTrash, faSearch, faSpinner,
@@ -16,6 +17,7 @@ import { supabase } from '../lib/supabase'
 
 const PAGE_SIZE = 25
 const LS_VIEW = 'reports_view'
+const LS_COLS = 'reports_columns'
 
 function getPageItems(current, total) {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
@@ -108,6 +110,12 @@ export default function ReportsPage() {
     const [selectedIds, setSelectedIds] = useState([])
     const [classesList, setClassesList] = useState([]) // fetched directly from classes table
     const searchInputRef = useRef(null)
+    const colMenuRef = useRef(null)
+
+    // columns
+    const [visibleCols, setVisibleCols] = useState({ type: true, points: true, time: true, teacher: true })
+    const [isColMenuOpen, setIsColMenuOpen] = useState(false)
+    const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
 
     // ── Derived ───────────────────────────────────────────────────────────────
     const totalPages = Math.ceil(totalRows / PAGE_SIZE)
@@ -170,15 +178,34 @@ export default function ReportsPage() {
 
     useEffect(() => { localStorage.setItem(LS_VIEW, viewMode) }, [viewMode])
 
+    // Load/Save columns
     useEffect(() => {
-        const handler = e => {
+        try {
+            const c = JSON.parse(localStorage.getItem(LS_COLS) || '{}')
+            if (Object.keys(c).length) setVisibleCols(c)
+        } catch { }
+    }, [])
+    useEffect(() => {
+        localStorage.setItem(LS_COLS, JSON.stringify(visibleCols))
+    }, [visibleCols])
+
+    useEffect(() => {
+        const h = e => {
             const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
             if (e.ctrlKey && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus() }
             if (e.key === 'n' && !e.ctrlKey && !isTyping) handleAdd()
             if (e.key === 'Escape') { setSearchQuery(''); setSelectedIds([]) }
+
+            if (colMenuRef.current && !colMenuRef.current.contains(e.target)) {
+                setIsColMenuOpen(false)
+            }
         }
-        document.addEventListener('keydown', handler)
-        return () => document.removeEventListener('keydown', handler)
+        document.addEventListener('keydown', h)
+        document.addEventListener('mousedown', h)
+        return () => {
+            document.removeEventListener('keydown', h)
+            document.removeEventListener('mousedown', h)
+        }
     }, [])
 
     // ── Fetchers ──────────────────────────────────────────────────────────────
@@ -546,22 +573,20 @@ export default function ReportsPage() {
                 <div className="glass rounded-2xl border border-[var(--color-border)] overflow-hidden animate-in fade-in duration-300">
                     <div className="p-4 sm:p-5">
 
-                        {/* Timeline container — padded left 72px for the rail */}
-                        <div className="relative" style={{ paddingLeft: 72 }}>
+                        {/* Timeline container — mobile smaller padding left, desktop 64px (was 72px) */}
+                        <div className="relative pl-[28px] sm:pl-[64px]">
 
-                            {/* Vertical line at x=54px relative to this container */}
-                            <div className="absolute top-0 bottom-0 pointer-events-none"
-                                style={{ left: 54, width: 1, background: 'linear-gradient(to bottom, var(--color-border) 80%, transparent)', zIndex: 0 }} />
+                            {/* Vertical line at x=14px on mobile, x=48px on desktop (was 54px) */}
+                            <div className="absolute top-0 bottom-0 pointer-events-none left-[14px] sm:left-[48px] w-px bg-gradient-to-b from-[var(--color-border)] via-[var(--color-border)] to-transparent z-0" />
 
                             {groupedReports.map(([date, items], gi) => (
                                 <div key={date} className={gi < groupedReports.length - 1 ? 'mb-7' : ''}>
 
                                     {/* ── Date header ── */}
                                     {/* Pull back to container edge, then re-pad to align badge */}
-                                    <div className="relative mb-2.5" style={{ marginLeft: -72, paddingLeft: 72 }}>
+                                    <div className="relative mb-2.5 -ml-[28px] pl-[28px] sm:-ml-[64px] sm:pl-[64px]">
                                         {/* Large dot on the line */}
-                                        <div className="absolute pointer-events-none"
-                                            style={{ left: 48, top: '50%', transform: 'translateY(-50%)', width: 12, height: 12, borderRadius: '50%', background: 'var(--color-primary)', boxShadow: '0 0 0 4px var(--color-background)', zIndex: 2 }} />
+                                        <div className="absolute pointer-events-none left-[8px] sm:left-[42px] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[var(--color-primary)] shadow-[0_0_0_4px_var(--color-background)] z-10" />
                                         <div className="flex items-center gap-3 bg-[var(--color-surface-alt)]/80 backdrop-blur-sm pl-4 pr-5 py-2 rounded-xl border border-[var(--color-border)] w-fit">
                                             <span className="text-[11px] font-black uppercase text-[var(--color-text)] tracking-wider">{fmtDayLabel(date)}</span>
                                             <span className="w-1 h-1 rounded-full bg-current opacity-20" />
@@ -575,22 +600,18 @@ export default function ReportsPage() {
                                             const isPos = (r.points ?? 0) > 0
                                             const stud = students.find(x => x.id === r.student_id)
                                             return (
-                                                <div key={r.id} className="relative group/item" style={{ marginLeft: -72, paddingLeft: 72 }}>
+                                                <div key={r.id} className="relative group/item -ml-[28px] pl-[28px] sm:-ml-[64px] sm:pl-[64px]">
 
-                                                    {/* Time — right-aligned in 0→44px zone. No overlap with dot at 54px */}
-                                                    <div className="absolute pointer-events-none hidden sm:flex items-center justify-end"
-                                                        style={{ left: 0, top: '50%', transform: 'translateY(-50%)', width: 44, zIndex: 1 }}>
-                                                        <span className="text-[9px] font-black tabular-nums leading-none"
-                                                            style={{ color: 'var(--color-text-muted)', opacity: 0.4 }}>
+                                                    {/* Time — right-aligned in 0→36px zone. Hidden on mobile. */}
+                                                    <div className="absolute pointer-events-none hidden sm:flex items-center justify-end left-0 top-1/2 -translate-y-1/2 w-[36px] z-[1]">
+                                                        <span className="text-[9px] font-black tabular-nums leading-none text-[var(--color-text-muted)] opacity-40">
                                                             {fmtTime(r.reported_at)}
                                                         </span>
                                                     </div>
 
-                                                    {/* Small colored dot — centered at x=54px, above line (zIndex 1) */}
-                                                    <div className="absolute pointer-events-none hidden sm:block"
+                                                    {/* Small colored dot — centered at line on desktop/mobile */}
+                                                    <div className="absolute pointer-events-none left-[10px] sm:left-[44px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full z-[1]"
                                                         style={{
-                                                            left: 50, top: '50%', transform: 'translateY(-50%)',
-                                                            width: 8, height: 8, borderRadius: '50%', zIndex: 1,
                                                             background: isPos ? '#10b981' : '#ef4444',
                                                             boxShadow: isPos ? '0 0 6px rgba(16,185,129,0.5)' : '0 0 6px rgba(239,68,68,0.5)',
                                                         }} />
@@ -637,7 +658,7 @@ export default function ReportsPage() {
 
                                                                 {/* Right: hover actions + point badge */}
                                                                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                                    <div className="flex items-center gap-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                                                    <div className="flex items-center gap-0.5 transition-opacity">
                                                                         <button onClick={() => handleEdit(r)}
                                                                             className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all">
                                                                             <FontAwesomeIcon icon={faEdit} className="text-[10px]" />
@@ -676,17 +697,51 @@ export default function ReportsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-[var(--color-surface-alt)]/60 border-b border-[var(--color-border)]">
                                 <tr>
-                                    <th className="px-4 py-3.5 w-10">
+                                    <th className="px-4 py-3.5 w-10 text-center">
                                         <input type="checkbox" checked={allSelected}
                                             onChange={() => setSelectedIds(allSelected ? [] : reports.map(r => r.id))}
                                             className="w-4 h-4 rounded border-[var(--color-border)] cursor-pointer" />
                                     </th>
-                                    {['Siswa', 'Jenis Laporan', 'Poin', 'Waktu', 'Dicatat Oleh', 'Aksi'].map(h => (
-                                        <th key={h}
-                                            className={`px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ${h === 'Poin' || h === 'Aksi' ? 'text-center' : ''} ${h === 'Aksi' ? 'w-20' : ''}`}>
-                                            {h}
-                                        </th>
-                                    ))}
+                                    <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Siswa</th>
+                                    {visibleCols.type && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Jenis Laporan</th>}
+                                    {visibleCols.points && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center">Poin</th>}
+                                    {visibleCols.time && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Waktu</th>}
+                                    {visibleCols.teacher && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Dicatat Oleh</th>}
+                                    <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-20 relative">
+                                        <span>Aksi</span>
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                            <button
+                                                onClick={(e) => {
+                                                    const rect = e.currentTarget.getBoundingClientRect()
+                                                    setMenuPos({ top: rect.bottom + window.scrollY + 8, right: window.innerWidth - rect.right - window.scrollX })
+                                                    setIsColMenuOpen(p => !p)
+                                                }}
+                                                className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}
+                                            >
+                                                <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
+                                            </button>
+                                            {isColMenuOpen && createPortal(
+                                                <div ref={colMenuRef} className="fixed z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95 slide-in-from-top-2"
+                                                    style={{ top: menuPos.top, right: menuPos.right }}>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Atur Kolom</p>
+                                                    {[
+                                                        { key: 'type', label: 'Jenis Laporan' },
+                                                        { key: 'points', label: 'Poin' },
+                                                        { key: 'time', label: 'Waktu' },
+                                                        { key: 'teacher', label: 'Dicatat Oleh' }
+                                                    ].map(({ key, label }) => (
+                                                        <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
+                                                            <span className="text-[10px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)]">{label}</span>
+                                                            <div className={`w-7 h-4 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                                                <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-all ${visibleCols[key] ? 'translate-x-[12px]' : 'translate-x-0'}`} />
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>,
+                                                document.body
+                                            )}
+                                        </div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
@@ -694,10 +749,8 @@ export default function ReportsPage() {
                                     const isP = (r.points ?? 0) > 0
                                     const s = students.find(x => x.id === r.student_id)
                                     return (
-                                        /* group/row for scoped per-row hover */
-                                        <tr key={r.id}
-                                            className={`transition-colors group/row ${selectedIds.includes(r.id) ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-alt)]/40'}`}>
-                                            <td className="px-4 py-3">
+                                        <tr key={r.id} className={`transition-colors group/row ${selectedIds.includes(r.id) ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-alt)]/40'}`}>
+                                            <td className="px-4 py-3 text-center">
                                                 <input type="checkbox" checked={selectedIds.includes(r.id)}
                                                     onChange={() => toggleSelect(r.id)}
                                                     className="w-4 h-4 rounded border-[var(--color-border)] cursor-pointer" />
@@ -708,38 +761,41 @@ export default function ReportsPage() {
                                                         {(s?.name || '?')[0].toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-black leading-tight text-[var(--color-text)]">{s?.name || '—'}</p>
-                                                        {s?.class_name && (
-                                                            <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-50">{s.class_name}</p>
-                                                        )}
+                                                        <p className="text-sm font-black text-[var(--color-text)] leading-tight truncate max-w-[150px]">{s?.name || '—'}</p>
+                                                        {s?.class_name && <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-50">{s.class_name}</p>}
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <p className="text-xs font-bold text-[var(--color-text)]">{getTypeName(r.violation_type_id)}</p>
-                                                {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 italic truncate max-w-[200px]">{r.notes}</p>}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <span className={`inline-flex items-center justify-center min-w-[40px] px-2 py-0.5 rounded-full text-[11px] font-black border ${isP ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
-                                                    {r.points > 0 ? '+' : ''}{r.points}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <p className="text-xs font-bold text-[var(--color-text)]">{fmtDate(r.reported_at)}</p>
-                                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-50 tabular-nums">{fmtTime(r.reported_at)}</p>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide opacity-50">{r.teacher_name || '—'}</p>
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                {/* group/row scoped hover — only THIS row's buttons appear */}
-                                                <div className="flex items-center justify-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity duration-150">
-                                                    <button onClick={() => handleEdit(r)}
-                                                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all">
+                                            {visibleCols.type && (
+                                                <td className="px-4 py-3">
+                                                    <p className="text-xs font-bold text-[var(--color-text)]">{getTypeName(r.violation_type_id)}</p>
+                                                    {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 italic truncate max-w-[180px]">{r.notes}</p>}
+                                                </td>
+                                            )}
+                                            {visibleCols.points && (
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className={`inline-flex items-center justify-center min-w-[40px] px-2 py-0.5 rounded-full text-[11px] font-black border ${isP ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
+                                                        {r.points > 0 ? '+' : ''}{r.points}
+                                                    </span>
+                                                </td>
+                                            )}
+                                            {visibleCols.time && (
+                                                <td className="px-4 py-3">
+                                                    <p className="text-xs font-bold text-[var(--color-text)]">{fmtDate(r.reported_at)}</p>
+                                                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-50 tabular-nums">{fmtTime(r.reported_at)}</p>
+                                                </td>
+                                            )}
+                                            {visibleCols.teacher && (
+                                                <td className="px-4 py-3">
+                                                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide opacity-50 truncate max-w-[100px]">{r.teacher_name || '—'}</p>
+                                                </td>
+                                            )}
+                                            <td className="px-4 py-3 text-center relative">
+                                                <div className="flex items-center justify-center gap-1 transition-opacity duration-150">
+                                                    <button onClick={() => handleEdit(r)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all">
                                                         <FontAwesomeIcon icon={faEdit} className="text-[10px]" />
                                                     </button>
-                                                    <button onClick={() => { setItemToDelete(r); setIsDeleteModalOpen(true) }}
-                                                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all">
+                                                    <button onClick={() => { setItemToDelete(r); setIsDeleteModalOpen(true) }} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all">
                                                         <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
                                                     </button>
                                                 </div>

@@ -24,12 +24,19 @@ export default function TopNav({ title, subtitle }) {
     const [masterOpen, setMasterOpen] = useState(false)
     const [profileOpen, setProfileOpen] = useState(false)
     const masterRef = useRef(null)
-    const profileRef = useRef(null)
+    const mobileProfileRef = useRef(null)
+    const desktopProfileRef = useRef(null)
 
     useEffect(() => {
         const onClick = (e) => {
             if (masterRef.current && !masterRef.current.contains(e.target)) setMasterOpen(false)
-            if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false)
+
+            const isOutsideMobile = mobileProfileRef.current && !mobileProfileRef.current.contains(e.target)
+            const isOutsideDesktop = desktopProfileRef.current && !desktopProfileRef.current.contains(e.target)
+
+            if (isOutsideMobile && isOutsideDesktop) {
+                setProfileOpen(false)
+            }
         }
         window.addEventListener("mousedown", onClick)
         return () => window.removeEventListener("mousedown", onClick)
@@ -68,7 +75,7 @@ export default function TopNav({ title, subtitle }) {
                         </div>
 
                         {/* Right: Profile dropdown */}
-                        <div className="relative flex-shrink-0" ref={profileRef}>
+                        <div className="relative flex-shrink-0" ref={mobileProfileRef}>
                             <button
                                 onClick={() => setProfileOpen((v) => !v)}
                                 className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-2xl hover:bg-[var(--color-surface-alt)] transition border border-transparent hover:border-[var(--color-border)]"
@@ -204,7 +211,7 @@ export default function TopNav({ title, subtitle }) {
                             </button>
 
                             {/* Profile dropdown (desktop) */}
-                            <div className="relative" ref={profileRef}>
+                            <div className="relative" ref={desktopProfileRef}>
                                 <button
                                     onClick={() => setProfileOpen((v) => !v)}
                                     className="flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-2xl hover:bg-[var(--color-surface-alt)] transition border border-transparent hover:border-[var(--color-border)]"
