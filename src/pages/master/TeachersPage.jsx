@@ -26,6 +26,7 @@ import * as XLSX from 'xlsx'
 // STATUS_CONFIG imported from TeacherRow component
 const LS_FILTERS = 'teachers_filters'
 const LS_COLS = 'teachers_columns'
+const LS_PAGE_SIZE = 'teachers_page_size'
 
 const maskInfo = (str, vis = 4) => {
     if (!str) return '—'
@@ -60,7 +61,9 @@ export default function TeachersPage() {
     const [page, setPage] = useState(1)
     const [jumpPage, setJumpPage] = useState('')
     const [showAdvFilter, setShowAdvFilter] = useState(false)
-    const pageSize = 25
+    const [pageSize, setPageSize] = useState(() => {
+        try { return Number(localStorage.getItem(LS_PAGE_SIZE)) || 10 } catch { return 10 }
+    })
     // columns
     const [visibleCols, setVisibleCols] = useState({ nbm: true, subject: true, gender: true, contact: true, status: true, join: true })
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
@@ -129,6 +132,7 @@ export default function TeachersPage() {
     }, [])
     useEffect(() => { try { localStorage.setItem(LS_FILTERS, JSON.stringify({ filterGender, filterStatus, filterSubject, sortBy })) } catch { } }, [filterGender, filterStatus, filterSubject, sortBy])
     useEffect(() => { try { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) } catch { } }, [visibleCols])
+    useEffect(() => { try { localStorage.setItem(LS_PAGE_SIZE, pageSize) } catch { } }, [pageSize])
 
     // ── debounce ─────────────────────────────────────────────────────────────
     useEffect(() => { const t = setTimeout(() => { setDebouncedSearch(searchQuery.trim()); setPage(1) }, 350); return () => clearTimeout(t) }, [searchQuery])
@@ -809,6 +813,22 @@ export default function TeachersPage() {
                         <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
                             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} guru</p>
                             <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 mr-2 pr-3 border-r border-[var(--color-border)]">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">Baris:</span>
+                                    <select
+                                        value={pageSize}
+                                        onChange={e => {
+                                            const val = Number(e.target.value)
+                                            setPageSize(val)
+                                            setPage(1)
+                                        }}
+                                        className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer hover:text-[var(--color-primary)] transition-all"
+                                    >
+                                        {[10, 25, 50, 100].map(v => (
+                                            <option key={v} value={v} className="bg-[var(--color-surface)] text-[var(--color-text)]">{v}</option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
                                 <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
                                 <div className="flex items-center gap-1.5 mx-1">

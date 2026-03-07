@@ -59,7 +59,9 @@ import {
     faCircleExclamation,
     faKeyboard,
     faFileImport,
-    faFileExport
+    faFileExport,
+    faArrowLeft,
+    faArrowRight
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -226,7 +228,7 @@ export default function StudentsPage() {
     const [importIssues, setImportIssues] = useState([])
     const [importing, setImporting] = useState(false)
     const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
-    const [importTab, setImportTab] = useState('panduan') // 'panduan' | 'preview' | 'validasi'
+    const [importStep, setImportStep] = useState(1) // 1: Panduan/Upload, 2: Preview/Validation
     const [importDuplicates, setImportDuplicates] = useState([]) // row indices flagged as duplicate
     const [importSkipDupes, setImportSkipDupes] = useState(true) // skip duplicates on commit
     const [importDragOver, setImportDragOver] = useState(false) // drag-drop highlight
@@ -397,7 +399,7 @@ export default function StudentsPage() {
     // Pagination + Filter + Sort
     // =========================================
     const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(25)
+    const [pageSize, setPageSize] = useState(10)
     const [jumpPage, setJumpPage] = useState('')
 
     const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -2885,7 +2887,7 @@ export default function StudentsPage() {
         setImportPreview([])
         setImportIssues([])
         setImportDuplicates([])
-        setImportTab('preview')
+        setImportStep(2)
         try {
             const isXlsx = ext.endsWith('.xlsx') || (file.type || '').includes('sheet')
             const rows = isXlsx ? await parseExcelFile(file) : await parseCSVFile(file)
@@ -2901,7 +2903,7 @@ export default function StudentsPage() {
         // Open the import modal on the Panduan tab first.
         // The actual file picker is triggered from inside the modal.
         if (!isImportModalOpen) {
-            setImportTab('panduan')
+            setImportStep(1)
             setIsImportModalOpen(true)
         } else {
             // Already open (e.g. "Ganti File" button inside modal) — open picker directly
@@ -2964,7 +2966,7 @@ export default function StudentsPage() {
             setImportIssues([])
             setImportDuplicates([])
             setImportFileName('')
-            setImportTab('panduan')
+            setImportStep(1)
             await fetchData();
             fetchStats()
         } catch (err) {
@@ -3943,6 +3945,22 @@ export default function StudentsPage() {
                             <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} siswa</p>
                                 <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 mr-2 pr-3 border-r border-[var(--color-border)]">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">Baris:</span>
+                                        <select
+                                            value={pageSize}
+                                            onChange={e => {
+                                                const val = Number(e.target.value)
+                                                setPageSize(val)
+                                                setPage(1)
+                                            }}
+                                            className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer hover:text-[var(--color-primary)] transition-all"
+                                        >
+                                            {[10, 25, 50, 100].map(v => (
+                                                <option key={v} value={v} className="bg-[var(--color-surface)] text-[var(--color-text)]">{v}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
                                     <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
                                     <div className="flex items-center gap-1.5 mx-1">
@@ -3975,83 +3993,65 @@ export default function StudentsPage() {
                         setImportIssues([])
                         setImportDuplicates([])
                         setImportFileName('')
-                        setImportTab('panduan')
                         setImportDragOver(false)
+                        setImportStep(1)
                     }}
                     title="Import Siswa"
                     size="md"
                 >
-                    {/* ── STATUS BAR — hanya muncul setelah file dipilih ── */}
-                    {importPreview.length > 0 && (
-                        <div className="flex items-center gap-2 -mt-1 mb-3 flex-wrap">
-                            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[9px] font-black text-indigo-600 dark:text-indigo-400 truncate max-w-[160px]">
-                                <FontAwesomeIcon icon={faFileLines} className="text-[8px] shrink-0" />
+                    {/* ── STATUS BAR — hanya muncul setelah file dipilih & di Step 2 ── */}
+                    {importStep === 2 && importPreview.length > 0 && (
+                        <div className="flex items-center gap-2 -mt-1 mb-4 flex-wrap">
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-600 dark:text-indigo-400 truncate max-w-[200px]">
+                                <FontAwesomeIcon icon={faFileLines} className="text-[10px] shrink-0" />
                                 {importFileName}
                             </span>
-                            <span className="px-2 py-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)]">
+                            <span className="px-2.5 py-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)]">
                                 {importPreview.length} baris
                             </span>
                             {importIssues.filter(x => x.level === 'error').length > 0 && (
-                                <span className="px-2 py-0.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[9px] font-black text-red-600">
+                                <span className="px-2.5 py-1 rounded-xl bg-red-500/10 border border-red-500/20 text-[10px] font-black text-red-600">
                                     {importIssues.filter(x => x.level === 'error').length} error
                                 </span>
                             )}
                             {importIssues.filter(x => x.level === 'warn').length > 0 && (
-                                <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[9px] font-black text-amber-600">
+                                <span className="px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-black text-amber-600">
                                     {importIssues.filter(x => x.level === 'warn').length} warning
                                 </span>
                             )}
                             {importDuplicates.length > 0 && (
-                                <span className="px-2 py-0.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-[9px] font-black text-violet-600">
+                                <span className="px-2.5 py-1 rounded-xl bg-violet-500/10 border border-violet-500/20 text-[10px] font-black text-violet-600">
                                     {importDuplicates.length} duplikat
                                 </span>
                             )}
-                            <button
-                                onClick={() => importFileInputRef.current?.click()}
-                                className="ml-auto h-6 px-2.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all"
-                            >
-                                Ganti File
-                            </button>
                         </div>
                     )}
 
-                    {/* ── TAB BAR ── */}
-                    <div className="flex gap-0.5 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] mb-3">
+                    {/* ── STEPPER HEADER ── */}
+                    <div className="flex items-center justify-center gap-4 mb-8">
                         {[
-                            { key: 'panduan', label: 'Panduan', icon: faFileLines },
-                            {
-                                key: 'preview', label: 'Preview', icon: faTableList,
-                                badge: importPreview.length > 0 ? importPreview.length : null
-                            },
-                            {
-                                key: 'validasi', label: 'Validasi', icon: faTriangleExclamation,
-                                badge: importIssues.length > 0 ? importIssues.length : null,
-                                badgeColor: hasImportBlockingErrors ? 'bg-red-500/15 text-red-600' : 'bg-amber-500/15 text-amber-600'
-                            },
-                        ].map(tab => (
-                            <button
-                                key={tab.key}
-                                onClick={() => setImportTab(tab.key)}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all
-                                    ${importTab === tab.key
-                                        ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm'
-                                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                            >
-                                <FontAwesomeIcon icon={tab.icon} className="text-[9px]" />
-                                {tab.label}
-                                {tab.badge != null && (
-                                    <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black leading-none ${tab.badgeColor || 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'}`}>
-                                        {tab.badge}
-                                    </span>
-                                )}
-                            </button>
+                            { step: 1, label: 'Upload', icon: faUpload },
+                            { step: 2, label: 'Review', icon: faTableList },
+                        ].map(s => (
+                            <React.Fragment key={s.step}>
+                                <div className="flex items-center gap-2.5">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${importStep >= s.step ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]'}`}>
+                                        {importStep > s.step ? <FontAwesomeIcon icon={faCheck} /> : s.step}
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${importStep >= s.step ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-50'}`}>{s.label}</span>
+                                        <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-40 uppercase tracking-tighter mt-0.5">{s.step === 1 ? 'Pilih File' : 'Validasi'}</span>
+                                    </div>
+                                </div>
+                                {s.step === 1 && <div className={`w-12 h-0.5 rounded-full transition-all ${importStep > 1 ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)] opacity-30'}`} />}
+                            </React.Fragment>
                         ))}
                     </div>
 
-                    {/* ── TAB: PANDUAN ── */}
-                    {importTab === 'panduan' && (
+                    {/* ── STEP 1: PANDUAN & UPLOAD ── */}
+                    {importStep === 1 && (
                         <div className="space-y-2.5">
-                            {/* Drop zone — juga berfungsi sebagai CTA utama */}
+                            {/* Drop zone */}
                             <div
                                 onDragOver={e => { e.preventDefault(); setImportDragOver(true) }}
                                 onDragLeave={() => setImportDragOver(false)}
@@ -4076,7 +4076,7 @@ export default function StudentsPage() {
                                 </div>
                             </div>
 
-                            {/* Info row: kelas valid + download template dengan scrollable list */}
+                            {/* Info row: kelas valid */}
                             <div className="flex flex-col gap-3 p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
@@ -4136,132 +4136,99 @@ export default function StudentsPage() {
                         </div>
                     )}
 
-                    {/* ── TAB: PREVIEW ── */}
-                    {importTab === 'preview' && (
-                        <div className="space-y-3">
-                            {importPreview.length === 0 ? (
-                                <div
-                                    onDragOver={e => { e.preventDefault(); setImportDragOver(true) }}
-                                    onDragLeave={() => setImportDragOver(false)}
-                                    onDrop={async e => {
-                                        e.preventDefault(); setImportDragOver(false)
-                                        const file = e.dataTransfer.files?.[0]
-                                        if (file) await processImportFile(file)
-                                    }}
-                                    onClick={() => importFileInputRef.current?.click()}
-                                    className={`py-14 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all
-                                        ${importDragOver ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/8' : 'border-[var(--color-border)] opacity-40 hover:opacity-70'}`}
-                                >
-                                    <FontAwesomeIcon icon={faUpload} className="text-xl" />
-                                    <p className="text-[9px] font-black uppercase">Drag & drop atau klik untuk pilih file</p>
+                    {/* ── STEP 2: PREVIEW & VALIDASI ── */}
+                    {importStep === 2 && (
+                        <div className="space-y-4">
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+                                    <p className="text-[14px] font-black text-emerald-600 leading-none">{importPreview.length - importIssues.filter(x => x.level === 'error').length - (importSkipDupes ? importDuplicates.length : 0)}</p>
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-emerald-600/70 mt-1">Siap Import</p>
                                 </div>
-                            ) : (
-                                <>
-                                    {importDuplicates.length > 0 && (
-                                        <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/15">
-                                            <p className="text-[9px] font-bold text-violet-600 dark:text-violet-400">
-                                                <span className="font-black">{importDuplicates.length} duplikat</span> — nama/NISN sudah ada di DB atau dalam file
-                                            </p>
-                                            <button
-                                                onClick={() => setImportSkipDupes(v => !v)}
-                                                className={`shrink-0 h-7 px-2.5 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all ${importSkipDupes ? 'bg-violet-500 border-violet-500 text-white' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
-                                            >
-                                                {importSkipDupes ? 'Skip Duplikat ✓' : 'Import Semua'}
-                                            </button>
+                                <div className="p-3 rounded-2xl bg-red-500/5 border border-red-500/10">
+                                    <p className="text-[14px] font-black text-red-600 leading-none">{importIssues.filter(x => x.level === 'error').length}</p>
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-red-600/70 mt-1">Error</p>
+                                </div>
+                                <div className="p-3 rounded-2xl bg-violet-500/5 border border-violet-500/10">
+                                    <p className="text-[14px] font-black text-violet-600 leading-none">{importDuplicates.length}</p>
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-violet-600/70 mt-1">Duplikat</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                {importDuplicates.length > 0 && (
+                                    <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/15">
+                                        <p className="text-[9px] font-bold text-violet-600 dark:text-violet-400">
+                                            <span className="font-black">{importDuplicates.length} duplikat</span> — nama/NISN sudah ada di DB atau dalam file
+                                        </p>
+                                        <button
+                                            onClick={() => setImportSkipDupes(v => !v)}
+                                            className={`shrink-0 h-7 px-2.5 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all ${importSkipDupes ? 'bg-violet-500 border-violet-500 text-white' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
+                                        >
+                                            {importSkipDupes ? 'Skip Duplikat ✓' : 'Import Semua'}
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
+                                    <div className="max-h-[35vh] overflow-auto">
+                                        <table className="w-full text-[10px]">
+                                            <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
+                                                <tr className="text-left">
+                                                    <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest w-8">#</th>
+                                                    <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">Nama</th>
+                                                    <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">Gender</th>
+                                                    <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">No. HP</th>
+                                                    <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">Kelas</th>
+                                                    <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">NISN</th>
+                                                    <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest w-16">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {importPreview.slice(0, 300).map((r, i) => {
+                                                    const isError = r._hasError
+                                                    const isDupe = r._isDupe
+                                                    const isWarn = r._hasWarn && !isError && !isDupe
+                                                    const rowBg = isError ? 'bg-red-500/5 border-l-2 border-l-red-500'
+                                                        : isDupe ? 'bg-violet-500/5 border-l-2 border-l-violet-500'
+                                                            : isWarn ? 'bg-amber-500/5 border-l-2 border-l-amber-400' : ''
+                                                    return (
+                                                        <tr key={i} className={`border-t border-[var(--color-border)] ${rowBg}`}>
+                                                            <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{i + 1}</td>
+                                                            <td className="px-3 py-1.5 font-black text-[var(--color-text)]">{r.name || <span className="text-red-500 italic">kosong</span>}</td>
+                                                            <td className="px-3 py-1.5 text-[var(--color-text-muted)]">{r.gender || '-'}</td>
+                                                            <td className="px-3 py-1.5 font-mono text-[var(--color-text-muted)]">{r.phone || '-'}</td>
+                                                            <td className="px-3 py-1.5 font-bold text-[var(--color-text)]">
+                                                                {classesList.find(c => c.id === r.class_id)?.name || <span className="text-red-500 italic">{r._className || '?'}</span>}
+                                                            </td>
+                                                            <td className="px-3 py-1.5 font-mono text-[var(--color-text-muted)]">{r.nisn || '-'}</td>
+                                                            <td className="px-3 py-1.5">
+                                                                {isError ? <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 text-[8px] font-black">ERROR</span>
+                                                                    : isDupe ? <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-600 text-[8px] font-black">DUPLIKAT</span>
+                                                                        : isWarn ? <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 text-[8px] font-black">WARN</span>
+                                                                            : <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 text-[8px] font-black">OK</span>}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {importPreview.length > 300 && (
+                                        <div className="px-3 py-2 text-[9px] font-bold text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] border-t border-[var(--color-border)]">
+                                            Menampilkan 300 dari {importPreview.length} baris.
                                         </div>
                                     )}
-                                    <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
-                                        <div className="max-h-[42vh] overflow-auto">
-                                            <table className="w-full text-[10px]">
-                                                <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
-                                                    <tr className="text-left">
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest w-8">#</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">Nama</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">Gender</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">No. HP</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">Kelas</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">NISN</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest w-16">Status</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {importPreview.slice(0, 300).map((r, i) => {
-                                                        const isError = r._hasError
-                                                        const isDupe = r._isDupe
-                                                        const isWarn = r._hasWarn && !isError && !isDupe
-                                                        const rowBg = isError ? 'bg-red-500/5 border-l-2 border-l-red-500'
-                                                            : isDupe ? 'bg-violet-500/5 border-l-2 border-l-violet-500'
-                                                                : isWarn ? 'bg-amber-500/5 border-l-2 border-l-amber-400' : ''
-                                                        return (
-                                                            <tr key={i} className={`border-t border-[var(--color-border)] ${rowBg}`}>
-                                                                <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{i + 1}</td>
-                                                                <td className="px-3 py-1.5 font-black text-[var(--color-text)]">{r.name || <span className="text-red-500 italic">kosong</span>}</td>
-                                                                <td className="px-3 py-1.5">
-                                                                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-black ${r.gender === 'L' ? 'bg-blue-500/10 text-blue-600' : 'bg-pink-500/10 text-pink-600'}`}>
-                                                                        {r.gender || '-'}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-3 py-1.5 font-mono text-[var(--color-text-muted)]">{r.phone || '-'}</td>
-                                                                <td className="px-3 py-1.5 font-bold text-[var(--color-text)]">
-                                                                    {classesList.find(c => c.id === r.class_id)?.name || <span className="text-red-500 italic">{r._className || '?'}</span>}
-                                                                </td>
-                                                                <td className="px-3 py-1.5 font-mono text-[var(--color-text-muted)]">{r.nisn || '-'}</td>
-                                                                <td className="px-3 py-1.5">
-                                                                    {isError ? <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 text-[8px] font-black">ERROR</span>
-                                                                        : isDupe ? <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-600 text-[8px] font-black">DUPLIKAT</span>
-                                                                            : isWarn ? <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 text-[8px] font-black">WARN</span>
-                                                                                : <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 text-[8px] font-black">OK</span>}
-                                                                </td>
-                                                            </tr>
-                                                        )
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        {importPreview.length > 300 && (
-                                            <div className="px-3 py-2 text-[9px] font-bold text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] border-t border-[var(--color-border)]">
-                                                Menampilkan 300 dari {importPreview.length} baris.
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
+                                </div>
 
-                    {/* ── TAB: VALIDASI ── */}
-                    {importTab === 'validasi' && (
-                        <div className="space-y-3">
-                            {importIssues.length === 0 && importPreview.length === 0 ? (
-                                <div className="py-14 flex flex-col items-center justify-center opacity-30 gap-2">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-2xl" />
-                                    <p className="text-[9px] font-black uppercase">Belum ada file yang dipilih</p>
-                                </div>
-                            ) : importIssues.length === 0 ? (
-                                <div className="py-12 flex flex-col items-center justify-center gap-2">
-                                    <div className="w-12 h-12 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500 text-xl" />
-                                    </div>
-                                    <p className="text-sm font-black text-emerald-600">Semua baris valid!</p>
-                                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold">{importPreview.length} baris siap diimport</p>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {[
-                                            { label: 'Error', count: importIssues.filter(x => x.level === 'error').length, color: 'text-red-600', bg: 'bg-red-500/8 border-red-500/20', desc: 'Blok import' },
-                                            { label: 'Duplikat', count: importIssues.filter(x => x.level === 'dupe').length, color: 'text-violet-600', bg: 'bg-violet-500/8 border-violet-500/20', desc: 'Terdeteksi double' },
-                                            { label: 'Warning', count: importIssues.filter(x => x.level === 'warn').length, color: 'text-amber-600', bg: 'bg-amber-500/8 border-amber-500/20', desc: 'Tidak blok' },
-                                        ].map(s => (
-                                            <div key={s.label} className={`p-3 rounded-xl border ${s.bg}`}>
-                                                <p className={`text-xl font-black leading-none ${s.color}`}>{s.count}</p>
-                                                <p className={`text-[8px] font-black uppercase tracking-widest mt-1 ${s.color}`}>{s.label}</p>
-                                                <p className="text-[7px] font-bold text-[var(--color-text-muted)] mt-0.5">{s.desc}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="rounded-xl border border-[var(--color-border)] overflow-hidden">
-                                        <div className="max-h-[38vh] overflow-auto">
+                                {/* Issue List if Any */}
+                                {importIssues.length > 0 && (
+                                    <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)]/20">
+                                        <div className="px-3 py-2 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Catatan Validasi</span>
+                                            <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-50">{importIssues.length} isu</span>
+                                        </div>
+                                        <div className="max-h-[180px] overflow-auto divide-y divide-[var(--color-border)]">
                                             {importIssues.map((issue, idx) => {
                                                 const levelStyle = issue.level === 'error'
                                                     ? { pill: 'bg-red-500/15 text-red-600', row: 'border-l-2 border-l-red-500 bg-red-500/3' }
@@ -4269,7 +4236,7 @@ export default function StudentsPage() {
                                                         ? { pill: 'bg-violet-500/15 text-violet-600', row: 'border-l-2 border-l-violet-500 bg-violet-500/3' }
                                                         : { pill: 'bg-amber-500/15 text-amber-600', row: 'border-l-2 border-l-amber-400 bg-amber-500/3' }
                                                 return (
-                                                    <div key={idx} className={`flex items-start gap-3 px-3 py-2 border-b border-[var(--color-border)] last:border-0 ${levelStyle.row}`}>
+                                                    <div key={idx} className={`flex items-start gap-3 px-3 py-2 ${levelStyle.row}`}>
                                                         <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 rounded text-[8px] font-black ${levelStyle.pill}`}>
                                                             {issue.level === 'dupe' ? 'DUPLIKAT' : issue.level.toUpperCase()}
                                                         </span>
@@ -4284,52 +4251,68 @@ export default function StudentsPage() {
                                             })}
                                         </div>
                                     </div>
-                                </>
-                            )}
+                                )}
+                            </div>
                         </div>
                     )}
 
                     {/* ── FOOTER ── */}
-                    <div className="flex items-center justify-between gap-3 pt-3 mt-2 border-t border-[var(--color-border)]">
-                        <button
-                            onClick={() => {
-                                setIsImportModalOpen(false)
-                                setImportPreview([])
-                                setImportIssues([])
-                                setImportDuplicates([])
-                                setImportFileName('')
-                                setImportTab('panduan')
-                            }}
-                            disabled={importing}
-                            className="h-9 px-5 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest disabled:opacity-50 hover:bg-[var(--color-border)] transition-all"
-                        >
-                            Tutup
-                        </button>
+                    <div className="flex items-center justify-between gap-3 pt-4 mt-2 border-t border-[var(--color-border)]">
+                        {importStep === 1 ? (
+                            <button
+                                onClick={() => {
+                                    setIsImportModalOpen(false)
+                                    setImportPreview([])
+                                    setImportIssues([])
+                                    setImportDuplicates([])
+                                    setImportFileName('')
+                                }}
+                                disabled={importing}
+                                className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-widest disabled:opacity-50 hover:bg-[var(--color-border)] transition-all"
+                            >
+                                Tutup
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => setImportStep(1)}
+                                disabled={importing}
+                                className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-widest disabled:opacity-50 hover:bg-[var(--color-border)] transition-all flex items-center gap-2"
+                            >
+                                <FontAwesomeIcon icon={faArrowLeft} />
+                                Kembali
+                            </button>
+                        )}
+
                         <div className="flex items-center gap-3">
                             {importing && (
-                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold text-[var(--color-text-muted)] flex items-center gap-2">
                                     <FontAwesomeIcon icon={faSpinner} className="fa-spin text-[var(--color-primary)]" />
-                                    {importProgress.done}/{importProgress.total}...
+                                    {importProgress.done}/{importProgress.total}
                                 </span>
                             )}
-                            {!importing && importPreview.length > 0 && (
-                                <span className="text-[9px] font-bold text-[var(--color-text-muted)]">
-                                    {(() => {
-                                        const errCount = importIssues.filter(x => x.level === 'error').length
-                                        const dupeCount = importSkipDupes ? importDuplicates.length : 0
-                                        return `${importPreview.length - errCount - dupeCount} baris akan diimport`
-                                    })()}
-                                </span>
+
+                            {importStep === 1 ? (
+                                <button
+                                    onClick={() => importPreview.length > 0 ? setImportStep(2) : importFileInputRef.current?.click()}
+                                    className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
+                                >
+                                    {importPreview.length > 0 ? (
+                                        <>Lanjutkan <FontAwesomeIcon icon={faArrowRight} /></>
+                                    ) : (
+                                        <>Pilih File <FontAwesomeIcon icon={faUpload} /></>
+                                    )}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleCommitImport}
+                                    disabled={importing || hasImportBlockingErrors || importPreview.length === 0}
+                                    className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
+                                >
+                                    {importing
+                                        ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengimport...</>
+                                        : <><FontAwesomeIcon icon={faCheck} /> Selesaikan Import</>}
+                                </button>
                             )}
-                            <button
-                                onClick={handleCommitImport}
-                                disabled={importing || hasImportBlockingErrors || importPreview.length === 0}
-                                className="h-9 px-5 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
-                            >
-                                {importing
-                                    ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengimport...</>
-                                    : <><FontAwesomeIcon icon={faUpload} /> Import ke Database</>}
-                            </button>
                         </div>
                     </div>
                 </Modal>
