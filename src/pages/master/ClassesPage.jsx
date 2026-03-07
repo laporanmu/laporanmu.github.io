@@ -27,6 +27,7 @@ import ClassFormModal from '../../components/classes/ClassFormModal'
 const LEVELS = ['7', '8', '9', '10', '11', '12']
 const PROGRAMS = ['Boarding', 'Reguler']
 const LS_COLS = 'classes_columns'
+const LS_PAGE_SIZE = 'classes_page_size'
 
 function getPageItems(current, total) {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
@@ -67,7 +68,9 @@ export default function ClassesPage() {
 
     // Pagination
     const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(25)
+    const [pageSize, setPageSize] = useState(() => {
+        try { return Number(localStorage.getItem(LS_PAGE_SIZE)) || 10 } catch { return 10 }
+    })
     const [jumpPage, setJumpPage] = useState('')
 
     // Refs
@@ -173,6 +176,7 @@ export default function ClassesPage() {
 
     // ── UI EFFECTS ─────────────────────────────────────────────────
     useEffect(() => { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) }, [visibleCols])
+    useEffect(() => { localStorage.setItem(LS_PAGE_SIZE, pageSize) }, [pageSize])
 
     const isAnyModalOpen = isModalOpen || isDeleteModalOpen || isBulkDeleteOpen || isExportModalOpen || isImportModalOpen || isArchivedModalOpen
 
@@ -672,6 +676,22 @@ export default function ClassesPage() {
                         <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
                             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} kelas</p>
                             <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 mr-2 pr-3 border-r border-[var(--color-border)]">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">Baris:</span>
+                                    <select
+                                        value={pageSize}
+                                        onChange={e => {
+                                            const val = Number(e.target.value)
+                                            setPageSize(val)
+                                            setPage(1)
+                                        }}
+                                        className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer hover:text-[var(--color-primary)] transition-all"
+                                    >
+                                        {[10, 25, 50, 100].map(v => (
+                                            <option key={v} value={v} className="bg-[var(--color-surface)] text-[var(--color-text)]">{v}</option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
                                 <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
                                 <div className="flex items-center gap-1.5 mx-1">

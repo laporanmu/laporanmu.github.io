@@ -20,9 +20,10 @@ import { supabase } from '../lib/supabase'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
-const PAGE_SIZE = 25
+const PAGE_SIZE = 10
 const LS_VIEW = 'reports_view'
 const LS_COLS = 'reports_columns'
+const LS_PAGE_SIZE = 'reports_page_size'
 
 function getPageItems(current, total) {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
@@ -32,17 +33,31 @@ function getPageItems(current, total) {
 }
 
 // ── Shared Pagination strip (renders inside any card) ────────────────────────
-function PaginationStrip({ page, totalPages, totalRows, fromRow, toRow, onPage }) {
+function PaginationStrip({ page, totalPages, totalRows, fromRow, toRow, pageSize, onPage, onPageSize }) {
     if (!totalRows) return null
     return (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-            <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.08em] tabular-nums">
-                Menampilkan{' '}
-                <span className="text-[var(--color-text)]">{fromRow}–{toRow}</span>
-                <span className="opacity-40 font-medium"> dari </span>
-                <span className="text-[var(--color-text)]">{totalRows}</span>
-                {' '}laporan
-            </p>
+            <div className="flex items-center gap-4">
+                <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.08em] tabular-nums">
+                    Menampilkan{' '}
+                    <span className="text-[var(--color-text)]">{fromRow}–{toRow}</span>
+                    <span className="opacity-40 font-medium"> dari </span>
+                    <span className="text-[var(--color-text)]">{totalRows}</span>
+                    {' '}laporan
+                </p>
+                <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-[var(--color-border)]">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Baris:</span>
+                    <select
+                        value={pageSize}
+                        onChange={e => onPageSize(Number(e.target.value))}
+                        className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer hover:text-[var(--color-primary)] transition-all"
+                    >
+                        {[10, 25, 50, 100].map(v => (
+                            <option key={v} value={v} className="bg-[var(--color-surface)] text-[var(--color-text)]">{v}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
             <div className="flex items-center gap-1">
                 {[
                     { icon: faAnglesLeft, action: () => onPage(1), disabled: page === 1 },
@@ -98,6 +113,9 @@ export default function ReportsPage() {
     const [sortBy, setSortBy] = useState('newest')
     const [showAdvFilter, setShowAdvFilter] = useState(false)
     const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(() => {
+        try { return Number(localStorage.getItem(LS_PAGE_SIZE)) || 10 } catch { return 10 }
+    })
     const [viewMode, setViewMode] = useState(() => {
         try { return localStorage.getItem(LS_VIEW) || 'timeline' } catch { return 'timeline' }
     })
@@ -151,9 +169,9 @@ export default function ReportsPage() {
     const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
 
     // ── Derived ───────────────────────────────────────────────────────────────
-    const totalPages = Math.ceil(totalRows / PAGE_SIZE)
-    const fromRow = totalRows === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-    const toRow = Math.min(page * PAGE_SIZE, totalRows)
+    const totalPages = Math.ceil(totalRows / pageSize)
+    const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1
+    const toRow = Math.min(page * pageSize, totalRows)
 
     const filteredStudentsForModal = useMemo(() => {
         let list = students
@@ -227,87 +245,12 @@ export default function ReportsPage() {
     useEffect(() => {
         localStorage.setItem(LS_COLS, JSON.stringify(visibleCols))
     }, [visibleCols])
+    useEffect(() => {
+        localStorage.setItem(LS_PAGE_SIZE, pageSize)
+    }, [pageSize])
 
 
-    // ── Export Logic ────────────────────────────────────────────────────────
-    const getExportData = async () => {
-        let sourceRows = []
-        if (exportScope === 'selected' && selectedIds.length > 0) {
-            sourceRows = reports.filter(r => selectedIds.includes(r.id))
-        } else if (exportScope === 'filtered') {
-            // Re-fetch all filtered data without range limit
-            let q = supabase
-                .from('reports')
-                .select('reported_at, points, notes, teacher_name, student_id, violation_type_id')
-                .order('reported_at', { ascending: sortBy === 'oldest' })
-
-            if (filterType === 'positive') q = q.gt('points', 0)
-            if (filterType === 'negative') q = q.lt('points', 0)
-
-            if (debouncedSearch) {
-                const [matchedS, matchedT] = await Promise.all([
-                    supabase.from('students').select('id').ilike('name', `%${debouncedSearch}%`),
-                    supabase.from('violation_types').select('id').ilike('name', `%${debouncedSearch}%`),
-                ])
-                const sIds = (matchedS.data || []).map(s => s.id)
-                const tIds = (matchedT.data || []).map(t => t.id)
-                if (sIds.length || tIds.length) {
-                    const ors = []
-                    if (sIds.length) ors.push(`student_id.in.(${sIds.join(',')})`)
-                    if (tIds.length) ors.push(`violation_type_id.in.(${tIds.join(',')})`)
-                    q = q.or(ors.join(','))
-                }
-            }
-            const { data } = await q
-            sourceRows = data || []
-        } else {
-            // scope === 'all'
-            const { data } = await supabase.from('reports').select('*').order('reported_at', { ascending: false })
-            sourceRows = data || []
-        }
-
-        return sourceRows.map(r => {
-            const row = {}
-            if (exportColumns.date) row['Tanggal'] = fmtDate(r.reported_at) + ' ' + fmtTime(r.reported_at)
-            if (exportColumns.student) {
-                const s = students.find(s => s.id === r.student_id)
-                row['Nama Siswa'] = s?.name || '—'
-                if (exportColumns.class) row['Kelas'] = s?.class_name || '—'
-            }
-            if (exportColumns.type) row['Jenis'] = getTypeName(r.violation_type_id)
-            if (exportColumns.points) row['Poin'] = (r.points > 0 ? '+' : '') + r.points
-            if (exportColumns.notes) row['Catatan'] = r.notes || '-'
-            if (exportColumns.teacher) row['Guru Pelapor'] = r.teacher_name || '-'
-            return row
-        })
-    }
-
-    const handleExport = async () => {
-        setSubmitting(true)
-        try {
-            const data = await getExportData()
-            if (!data.length) { addToast('Tidak ada data untuk diekspor', 'warning'); return }
-
-            const fileName = `Laporan_${new Date().toISOString().slice(0, 10)}`
-
-            if (exportFormat === 'csv') {
-                const csv = Papa.unparse(data)
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-                const link = document.createElement('a')
-                link.href = URL.createObjectURL(blob)
-                link.download = `${fileName}.csv`
-                link.click()
-            } else if (exportFormat === 'xlsx') {
-                const ws = XLSX.utils.json_to_sheet(data)
-                const wb = XLSX.utils.book_new()
-                XLSX.utils.book_append_sheet(wb, ws, 'Laporan')
-                XLSX.writeFile(wb, `${fileName}.xlsx`)
-            }
-            addToast('Ekspor berhasil', 'success')
-            setIsExportModalOpen(false)
-        } catch { addToast('Gagal ekspor data', 'error') }
-        finally { setSubmitting(false) }
-    }
+    // ── Export Logic Moved to Below ──
 
     // ── Import Logic ────────────────────────────────────────────────────────
     const parseCSVFile = (file) => new Promise((res, rej) => {
@@ -431,8 +374,8 @@ export default function ReportsPage() {
     const fetchReports = useCallback(async () => {
         setLoading(true)
         try {
-            const from = (page - 1) * PAGE_SIZE
-            const to = from + PAGE_SIZE - 1
+            const from = (page - 1) * pageSize
+            const to = from + pageSize - 1
             let q = supabase
                 .from('reports')
                 .select('id,student_id,violation_type_id,points,notes,reported_at,teacher_name', { count: 'exact' })
@@ -467,7 +410,7 @@ export default function ReportsPage() {
             setTotalRows(count ?? 0)
         } catch { addToast('Gagal memuat laporan', 'error') }
         finally { setLoading(false) }
-    }, [page, debouncedSearch, filterType, filterClass, sortBy, students, addToast])
+    }, [page, pageSize, debouncedSearch, filterType, filterClass, sortBy, students, addToast])
 
     const fetchStats = useCallback(async () => {
         try {
@@ -572,6 +515,81 @@ export default function ReportsPage() {
         setCurrentStep(2)
     }
 
+    // ── Export Logic ──
+    const getExportData = async () => {
+        let q = supabase
+            .from('reports')
+            .select('*, students(name, class_id, classes(name)), violation_types(name)')
+            .order('reported_at', { ascending: false })
+
+        if (exportScope === 'filtered') {
+            if (filterType === 'positive') q = q.gt('points', 0)
+            if (filterType === 'negative') q = q.lt('points', 0)
+        } else if (exportScope === 'selected') {
+            q = q.in('id', selectedIds)
+        }
+
+        const { data, error } = await q
+        if (error) throw error
+
+        let filtered = data || []
+        if (exportScope === 'filtered') {
+            if (filterClass) {
+                filtered = filtered.filter(r => r.students?.classes?.name === filterClass)
+            }
+            if (debouncedSearch) {
+                const s = debouncedSearch.toLowerCase()
+                filtered = filtered.filter(r =>
+                    (r.students?.name || '').toLowerCase().includes(s) ||
+                    (r.violation_types?.name || '').toLowerCase().includes(s)
+                )
+            }
+        }
+
+        return filtered.map(r => {
+            const row = {}
+            if (exportColumns.date) row['Tanggal'] = fmtDate(r.reported_at)
+            if (exportColumns.student) row['Siswa'] = r.students?.name || '-'
+            if (exportColumns.class) row['Kelas'] = r.students?.classes?.name || '-'
+            if (exportColumns.type) row['Jenis'] = r.violation_types?.name || '-'
+            if (exportColumns.points) row['Poin'] = r.points
+            if (exportColumns.notes) row['Catatan'] = r.notes || '-'
+            if (exportColumns.teacher) row['Pelapor'] = r.teacher_name || '-'
+            return row
+        })
+    }
+
+    const handleExportData = async (format) => {
+        setLoading(true)
+        try {
+            const data = await getExportData()
+            if (!data.length) return addToast('Tidak ada data yang cocok untuk diekspor', 'warning')
+
+            const filename = `Laporan_Perilaku_${new Date().toISOString().slice(0, 10)}`
+
+            if (format === 'csv') {
+                const csv = Papa.unparse(data)
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                const url = URL.createObjectURL(blob)
+                const link = document.createElement('a')
+                link.href = url
+                link.setAttribute('download', `${filename}.csv`)
+                link.click()
+            } else {
+                const ws = XLSX.utils.json_to_sheet(data)
+                const wb = XLSX.utils.book_new()
+                XLSX.utils.book_append_sheet(wb, ws, 'Laporan')
+                XLSX.writeFile(wb, `${filename}.xlsx`)
+            }
+            addToast(`Ekspor ${format.toUpperCase()} berhasil`, 'success')
+            setIsExportModalOpen(false)
+        } catch (err) {
+            console.error(err)
+            addToast('Gagal mengekspor data', 'error')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     // ── Export Modal Component ───────────────────────────────────────────────
     const ExportModal = () => (
@@ -1149,7 +1167,8 @@ export default function ReportsPage() {
                     </div>
                     {/* Pagination INSIDE the timeline card */}
                     <PaginationStrip page={page} totalPages={totalPages} totalRows={totalRows}
-                        fromRow={fromRow} toRow={toRow} onPage={setPage} />
+                        fromRow={fromRow} toRow={toRow} pageSize={pageSize} onPage={setPage}
+                        onPageSize={(val) => { setPageSize(val); setPage(1) }} />
                 </div>
 
             ) : (
@@ -1272,7 +1291,8 @@ export default function ReportsPage() {
                     </div>
                     {/* Pagination INSIDE the table card */}
                     <PaginationStrip page={page} totalPages={totalPages} totalRows={totalRows}
-                        fromRow={fromRow} toRow={toRow} onPage={setPage} />
+                        fromRow={fromRow} toRow={toRow} pageSize={pageSize} onPage={setPage}
+                        onPageSize={(val) => { setPageSize(val); setPage(1) }} />
                 </div>
             )}
 
