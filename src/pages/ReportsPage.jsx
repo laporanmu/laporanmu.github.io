@@ -8,12 +8,17 @@ import {
     faCheckCircle, faCircleExclamation,
     faCalendarDay, faClipboardList, faTableList, faTable,
     faTriangleExclamation, faFilePen, faArrowRight, faArrowLeft,
+    faUpload, faDownload, faFileExport, faFileImport, faFileExcel, faFileCsv,
+    faKeyboard, faEye, faEyeSlash, faBoxArchive, faRotateLeft,
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import Modal from '../components/ui/Modal'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+
+import Papa from 'papaparse'
+import * as XLSX from 'xlsx'
 
 const PAGE_SIZE = 25
 const LS_VIEW = 'reports_view'
@@ -111,11 +116,39 @@ export default function ReportsPage() {
     const [classesList, setClassesList] = useState([]) // fetched directly from classes table
     const searchInputRef = useRef(null)
     const colMenuRef = useRef(null)
+    const importFileInputRef = useRef(null)
+    const shortcutRef = useRef(null)
 
     // columns
     const [visibleCols, setVisibleCols] = useState({ type: true, points: true, time: true, teacher: true })
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
     const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
+
+    // ── Export/Import & UX States ───────────────────────────────────────────
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+    const [isShortcutOpen, setIsShortcutOpen] = useState(false)
+    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
+    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
+    const headerMenuRef = useRef(null)
+
+    const [exportScope, setExportScope] = useState('filtered')
+    const [exportFormat, setExportFormat] = useState('xlsx')
+    const [exportColumns, setExportColumns] = useState({
+        date: true,
+        student: true,
+        class: true,
+        type: true,
+        points: true,
+        notes: true,
+        teacher: true
+    })
+
+    const [importStep, setImportStep] = useState(1)
+    const [importFile, setImportFile] = useState(null)
+    const [importPreview, setImportPreview] = useState([])
+    const [importing, setImporting] = useState(false)
+    const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
 
     // ── Derived ───────────────────────────────────────────────────────────────
     const totalPages = Math.ceil(totalRows / PAGE_SIZE)
@@ -166,6 +199,12 @@ export default function ReportsPage() {
         return new Date(d).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     }
 
+    const mask = (str, visibleLen = 3) => {
+        if (!isPrivacyMode || !str) return str
+        if (str.length <= visibleLen) return str[0] + '*'.repeat(Math.max(0, str.length - 1))
+        return str.substring(0, visibleLen) + '***'
+    }
+
     const resetAllFilters = () => {
         setSearchQuery(''); setFilterType(''); setFilterClass(''); setSortBy('newest'); setPage(1)
     }
@@ -189,19 +228,178 @@ export default function ReportsPage() {
         localStorage.setItem(LS_COLS, JSON.stringify(visibleCols))
     }, [visibleCols])
 
+
+    // ── Export Logic ────────────────────────────────────────────────────────
+    const getExportData = async () => {
+        let sourceRows = []
+        if (exportScope === 'selected' && selectedIds.length > 0) {
+            sourceRows = reports.filter(r => selectedIds.includes(r.id))
+        } else if (exportScope === 'filtered') {
+            // Re-fetch all filtered data without range limit
+            let q = supabase
+                .from('reports')
+                .select('reported_at, points, notes, teacher_name, student_id, violation_type_id')
+                .order('reported_at', { ascending: sortBy === 'oldest' })
+
+            if (filterType === 'positive') q = q.gt('points', 0)
+            if (filterType === 'negative') q = q.lt('points', 0)
+
+            if (debouncedSearch) {
+                const [matchedS, matchedT] = await Promise.all([
+                    supabase.from('students').select('id').ilike('name', `%${debouncedSearch}%`),
+                    supabase.from('violation_types').select('id').ilike('name', `%${debouncedSearch}%`),
+                ])
+                const sIds = (matchedS.data || []).map(s => s.id)
+                const tIds = (matchedT.data || []).map(t => t.id)
+                if (sIds.length || tIds.length) {
+                    const ors = []
+                    if (sIds.length) ors.push(`student_id.in.(${sIds.join(',')})`)
+                    if (tIds.length) ors.push(`violation_type_id.in.(${tIds.join(',')})`)
+                    q = q.or(ors.join(','))
+                }
+            }
+            const { data } = await q
+            sourceRows = data || []
+        } else {
+            // scope === 'all'
+            const { data } = await supabase.from('reports').select('*').order('reported_at', { ascending: false })
+            sourceRows = data || []
+        }
+
+        return sourceRows.map(r => {
+            const row = {}
+            if (exportColumns.date) row['Tanggal'] = fmtDate(r.reported_at) + ' ' + fmtTime(r.reported_at)
+            if (exportColumns.student) {
+                const s = students.find(s => s.id === r.student_id)
+                row['Nama Siswa'] = s?.name || '—'
+                if (exportColumns.class) row['Kelas'] = s?.class_name || '—'
+            }
+            if (exportColumns.type) row['Jenis'] = getTypeName(r.violation_type_id)
+            if (exportColumns.points) row['Poin'] = (r.points > 0 ? '+' : '') + r.points
+            if (exportColumns.notes) row['Catatan'] = r.notes || '-'
+            if (exportColumns.teacher) row['Guru Pelapor'] = r.teacher_name || '-'
+            return row
+        })
+    }
+
+    const handleExport = async () => {
+        setSubmitting(true)
+        try {
+            const data = await getExportData()
+            if (!data.length) { addToast('Tidak ada data untuk diekspor', 'warning'); return }
+
+            const fileName = `Laporan_${new Date().toISOString().slice(0, 10)}`
+
+            if (exportFormat === 'csv') {
+                const csv = Papa.unparse(data)
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                const link = document.createElement('a')
+                link.href = URL.createObjectURL(blob)
+                link.download = `${fileName}.csv`
+                link.click()
+            } else if (exportFormat === 'xlsx') {
+                const ws = XLSX.utils.json_to_sheet(data)
+                const wb = XLSX.utils.book_new()
+                XLSX.utils.book_append_sheet(wb, ws, 'Laporan')
+                XLSX.writeFile(wb, `${fileName}.xlsx`)
+            }
+            addToast('Ekspor berhasil', 'success')
+            setIsExportModalOpen(false)
+        } catch { addToast('Gagal ekspor data', 'error') }
+        finally { setSubmitting(false) }
+    }
+
+    // ── Import Logic ────────────────────────────────────────────────────────
+    const parseCSVFile = (file) => new Promise((res, rej) => {
+        Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => res(r.data), error: e => rej(e) })
+    })
+
+    const parseExcelFile = async (file) => {
+        const buf = await file.arrayBuffer()
+        const wb = XLSX.read(buf, { type: 'array' })
+        return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]])
+    }
+
+    const processImportFile = async (file) => {
+        if (!file) return
+        setLoading(true)
+        try {
+            const ext = file.name.split('.').pop().toLowerCase()
+            const rows = ext === 'xlsx' ? await parseExcelFile(file) : await parseCSVFile(file)
+
+            if (!rows.length) { addToast('File kosong', 'error'); return }
+
+            const preview = rows.map(r => {
+                const studentName = r.nama_siswa || r.student || r.name
+                const vtName = r.jenis || r.type || r.violation
+                const student = students.find(s => s.name.toLowerCase() === (studentName || '').toLowerCase())
+                const vt = violationTypes.find(v => v.name.toLowerCase() === (vtName || '').toLowerCase())
+
+                return {
+                    nama_siswa: studentName,
+                    jenis: vtName,
+                    poin: r.poin || r.points || vt?.points || 0,
+                    notes: r.catatan || r.notes || '',
+                    date: r.tanggal || r.date || new Date().toISOString(),
+                    student_id: student?.id,
+                    violation_type_id: vt?.id,
+                    error: !student ? 'Siswa tidak ditemukan' : !vt ? 'Jenis pelanggaran tidak ditemukan' : null
+                }
+            })
+            setImportPreview(preview)
+            setImportStep(2)
+        } catch { addToast('Gagal membaca file', 'error') }
+        finally { setLoading(false) }
+    }
+
+    const handleCommitImport = async () => {
+        const validRows = importPreview.filter(r => !r.error)
+        if (!validRows.length) { addToast('Tidak ada data valid untuk diimpor', 'error'); return }
+
+        setImporting(true)
+        setImportProgress({ done: 0, total: validRows.length })
+        try {
+            for (let i = 0; i < validRows.length; i++) {
+                const row = validRows[i]
+                await supabase.from('reports').insert([{
+                    student_id: row.student_id,
+                    violation_type_id: row.violation_type_id,
+                    points: row.poin,
+                    notes: row.notes,
+                    reported_at: new Date(row.date).toISOString(),
+                    teacher_name: profile?.full_name || 'Sistem'
+                }])
+                setImportProgress(p => ({ ...p, done: i + 1 }))
+            }
+            addToast(`Berhasil mengimpor ${validRows.length} laporan`, 'success')
+            setIsImportModalOpen(false)
+            fetchReports()
+        } catch { addToast('Gagal mengimpor data', 'error') }
+        finally { setImporting(false) }
+    }
+
     useEffect(() => {
         const h = e => {
             const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
             if (e.ctrlKey && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus() }
-            if (e.key === 'n' && !e.ctrlKey && !isTyping) handleAdd()
-            if (e.key === 'Escape') { setSearchQuery(''); setSelectedIds([]) }
+            if (e.key === 'n' && !e.ctrlKey && !isTyping) { e.preventDefault(); setIsModalOpen(true) }
+            if (e.key === 'Escape') {
+                setSearchQuery(''); setSelectedIds([]);
+                setIsModalOpen(false); setIsExportModalOpen(false); setIsImportModalOpen(false)
+                setIsShortcutOpen(false); setIsDeleteModalOpen(false); setIsBulkDeleteOpen(false)
+            }
+            if (e.key === '?' && !isTyping) setIsShortcutOpen(v => !v)
 
             if (colMenuRef.current && !colMenuRef.current.contains(e.target)) {
                 setIsColMenuOpen(false)
             }
         }
         document.addEventListener('keydown', h)
-        document.addEventListener('mousedown', h)
+        document.addEventListener('mousedown', (e) => {
+            if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setIsColMenuOpen(false)
+            if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setIsHeaderMenuOpen(false)
+            if (shortcutRef.current && !shortcutRef.current.contains(e.target)) setIsShortcutOpen(false)
+        })
         return () => {
             document.removeEventListener('keydown', h)
             document.removeEventListener('mousedown', h)
@@ -374,9 +572,179 @@ export default function ReportsPage() {
         setCurrentStep(2)
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ── Export Modal Component ───────────────────────────────────────────────
+    const ExportModal = () => (
+        <Modal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} title="Export Data Laporan">
+            <div className="p-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">1. Pilih Cakupan Data</label>
+                            <div className="grid grid-cols-1 gap-2">
+                                {[
+                                    { id: 'filtered', label: 'Data Terfilter', desc: 'Sesuai pencarian & filter saat ini', icon: faSliders },
+                                    { id: 'selected', label: 'Data Terpilih', desc: `${selectedIds.length} baris yang Anda centang`, icon: faCheckCircle, disabled: selectedIds.length === 0 },
+                                    { id: 'all', label: 'Semua Data', desc: 'Seluruh catatan di database', icon: faClipboardList },
+                                ].map(opt => (
+                                    <button key={opt.id} disabled={opt.disabled} onClick={() => setExportScope(opt.id)}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${exportScope === opt.id ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/30' : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] opacity-60 hover:opacity-100 disabled:opacity-20'}`}>
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${exportScope === opt.id ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
+                                            <FontAwesomeIcon icon={opt.icon} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-tight leading-tight">{opt.label}</p>
+                                            <p className="text-[10px] opacity-60 font-medium">{opt.desc}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">2. Format File</label>
+                            <div className="flex gap-2">
+                                {[
+                                    { id: 'xlsx', label: 'Excel (.xlsx)', icon: faFileExcel, color: 'text-emerald-500' },
+                                    { id: 'csv', label: 'CSV (.csv)', icon: faFileCsv, color: 'text-amber-500' },
+                                ].map(fmt => (
+                                    <button key={fmt.id} onClick={() => setExportFormat(fmt.id)}
+                                        className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${exportFormat === fmt.id ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                        <FontAwesomeIcon icon={fmt.icon} className={`text-lg ${fmt.color}`} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">{fmt.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-[var(--color-surface-alt)]/30 rounded-2xl border border-[var(--color-border)] p-4">
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">3. Pilih Kolom</label>
+                        <div className="space-y-1.5">
+                            {Object.entries(exportColumns).map(([key, val]) => (
+                                <button key={key} onClick={() => setExportColumns(prev => ({ ...prev, [key]: !val }))}
+                                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-white transition-all group">
+                                    <span className="text-[11px] font-bold text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] capitalize">{key.replace('type', 'Jenis Perilaku').replace('points', 'Poin').replace('date', 'Tanggal').replace('student', 'Nama Siswa').replace('class', 'Kelas').replace('notes', 'Catatan').replace('teacher', 'Dicatat Oleh')}</span>
+                                    <div className={`w-8 h-4.5 rounded-full flex items-center px-0.5 transition-all ${val ? 'bg-emerald-500' : 'bg-[var(--color-border)]'}`}>
+                                        <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${val ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="mt-8 flex gap-3">
+                    <button onClick={() => setIsExportModalOpen(false)} className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all">Batal</button>
+                    <button onClick={() => handleExportData(exportFormat)} className="flex-[2] h-12 rounded-xl bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3">
+                        <FontAwesomeIcon icon={faDownload} />
+                        Download {exportFormat.toUpperCase()}
+                    </button>
+                </div>
+            </div>
+        </Modal>
+    )
+
+    // ── Import Modal Component ───────────────────────────────────────────────
+    const ImportModal = () => (
+        <Modal isOpen={isImportModalOpen} onClose={() => { setIsImportModalOpen(false); setImportStep(1) }} title="Import Data Laporan">
+            <div className="p-1">
+                {/* Stepper Header */}
+                <div className="flex items-center justify-center gap-4 mb-8">
+                    {[1, 2, 3].map(s => (
+                        <div key={s} className="flex items-center gap-2">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${importStep >= s ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>{s}</div>
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${importStep >= s ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>{s === 1 ? 'Upload' : s === 2 ? 'Preview' : 'Selesai'}</span>
+                            {s < 3 && <div className="w-8 h-px bg-[var(--color-border)]" />}
+                        </div>
+                    ))}
+                </div>
+
+                {importStep === 1 ? (
+                    <div className="space-y-6">
+                        <div className="text-center p-12 rounded-3xl border-2 border-dashed border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 relative group hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
+                            <input type="file" accept=".csv, .xlsx" onChange={e => processImportFile(e.target.files[0])}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                            <div className="w-16 h-16 rounded-2xl bg-white shadow-xl shadow-[var(--color-primary)]/10 flex items-center justify-center mx-auto mb-4 text-[var(--color-primary)] group-hover:scale-110 transition-transform">
+                                <FontAwesomeIcon icon={faUpload} className="text-2xl" />
+                            </div>
+                            <h3 className="text-sm font-black text-[var(--color-text)] mb-1">Upload File CSV/Excel</h3>
+                            <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Klik atau seret file ke sini</p>
+                        </div>
+                        <div className="bg-[var(--color-surface-alt)]/50 rounded-2xl p-4 border border-[var(--color-border)]">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-primary)] mb-2 flex items-center gap-2">
+                                <FontAwesomeIcon icon={faTriangleExclamation} />
+                                Panduan Format
+                            </h4>
+                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed mb-3">Pastikan file Anda memiliki kolom-kolom berikut:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {['Nama Siswa', 'Jenis Perilaku', 'Catatan', 'Tanggal'].map(h => (
+                                    <span key={h} className="px-2 py-1 rounded bg-white border border-[var(--color-border)] text-[9px] font-bold text-[var(--color-text)]">{h}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                ) : importStep === 2 ? (
+                    <div className="space-y-6">
+                        <div className="max-h-[350px] overflow-y-auto rounded-2xl border border-[var(--color-border)]">
+                            <table className="w-full text-left text-[11px]">
+                                <thead className="bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] sticky top-0 z-10">
+                                    <tr>
+                                        <th className="px-3 py-2 text-[9px] font-black uppercase text-[var(--color-text-muted)]">Siswa</th>
+                                        <th className="px-3 py-2 text-[9px] font-black uppercase text-[var(--color-text-muted)]">Perilaku</th>
+                                        <th className="px-3 py-2 text-[9px] font-black uppercase text-[var(--color-text-muted)] text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[var(--color-border)] bg-white">
+                                    {importPreview.map((row, i) => (
+                                        <tr key={i}>
+                                            <td className="px-3 py-2 font-bold">{row['Nama Siswa'] || row.nama_siswa || '—'}</td>
+                                            <td className="px-3 py-2">{row['Jenis Perilaku'] || row.jenis || '—'}</td>
+                                            <td className="px-3 py-2 text-center">
+                                                {row.error === null || row._status === 'valid'
+                                                    ? <span className="text-emerald-500"><FontAwesomeIcon icon={faCheckCircle} /></span>
+                                                    : <span className="text-red-500" title={row.error || "Siswa atau Jenis Perilaku tidak ditemukan"}><FontAwesomeIcon icon={faCircleExclamation} /></span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={() => setImportStep(1)} className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all">Kembali</button>
+                            <button onClick={handleCommitImport} disabled={importing}
+                                className="flex-[2] h-12 rounded-xl bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3">
+                                {importing ? (
+                                    <>
+                                        <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                                        Memproses ({importProgress.done}/{importProgress.total})
+                                    </>
+                                ) : (
+                                    <>
+                                        <FontAwesomeIcon icon={faFileImport} />
+                                        Commit Import
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
+            </div>
+        </Modal>
+    )
+
+
+
     return (
         <DashboardLayout title="Laporan Perilaku">
+            {/* Privacy Banner */}
+            {isPrivacyMode && (
+                <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disensor</div>
+                    <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">Matikan</button>
+                </div>
+            )}
+
+            <ExportModal />
+            <ImportModal />
 
             {/* ── PAGE HEADER ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -386,22 +754,121 @@ export default function ReportsPage() {
                         Rekam dan pantau perkembangan karakter siswa.
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)] flex gap-0.5">
+                <div className="flex gap-2 items-center">
+                    {/* View Mode Togglers */}
+                    <div className="bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)] flex gap-0.5 hidden md:flex">
                         <button onClick={() => setViewMode('timeline')}
-                            className={`h-9 px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 ${viewMode === 'timeline' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                            className={`h-7 px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 ${viewMode === 'timeline' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                             <FontAwesomeIcon icon={faTableList} />
                             {viewMode === 'timeline' && <span className="hidden sm:inline">Timeline</span>}
                         </button>
                         <button onClick={() => setViewMode('table')}
-                            className={`h-9 px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                            className={`h-7 px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                             <FontAwesomeIcon icon={faTable} />
                             {viewMode === 'table' && <span className="hidden sm:inline">Tabel</span>}
                         </button>
                     </div>
+
+                    {/* Tombol aksi sekunder — Dropdown */}
+                    <div className="relative" ref={headerMenuRef}>
+                        <button onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                            title="Opsi Laporan"
+                        >
+                            <FontAwesomeIcon icon={faSliders} />
+                        </button>
+
+                        {/* Dropdown menu - Retaining original colorful icons as requested */}
+                        {isHeaderMenuOpen && (
+                            <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Opsi & Aksi</p>
+                                <button onClick={() => { setIsImportModalOpen(true); setIsHeaderMenuOpen(false) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileImport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Import Data</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    </div>
+                                </button>
+                                <button onClick={() => { setIsExportModalOpen(true); setIsHeaderMenuOpen(false) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Export Data</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    </div>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Privacy Button Standalone */}
+                    <button
+                        onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                        className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
+                        title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}
+                    >
+                        <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                            {isPrivacyMode ? 'Privacy On' : 'Privacy Off'}
+                        </span>
+                    </button>
+
+                    {/* Keyboard Shortcuts Button Standalone */}
+                    <div className="relative" ref={shortcutRef}>
+                        <button
+                            onClick={() => setIsShortcutOpen(v => !v)}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                            title="Keyboard Shortcuts (?)"
+                        >
+                            <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
+                        </button>
+
+                        {isShortcutOpen && (
+                            <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-11 -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[340px] sm:w-72 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                                <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
+                                    <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
+                                </div>
+                                <div className="p-3 space-y-0.5">
+                                    {[
+                                        { section: 'Navigasi' },
+                                        { keys: ['Ctrl', 'K'], label: 'Cari laporan' },
+                                        { keys: ['Esc'], label: 'Tutup modal / reset search' },
+                                        { section: 'Aksi' },
+                                        { keys: ['N'], label: 'Tambah laporan baru' },
+                                        { keys: ['Ctrl', 'E'], label: 'Buka menu export' },
+                                        { keys: ['Ctrl', 'I'], label: 'Buka menu import' },
+                                        { section: 'Tampilan' },
+                                        { keys: ['P'], label: 'Toggle privacy mode' },
+                                        { keys: ['R'], label: 'Refresh data' },
+                                        { keys: ['X'], label: 'Reset filter' },
+                                        { keys: ['?'], label: 'Tampilkan shortcut ini' },
+                                    ].map((item, i) => item.section ? (
+                                        <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
+                                    ) : (
+                                        <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
+                                            <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
+                                            <div className="flex items-center gap-1">
+                                                {item.keys.map((k, ki) => (
+                                                    <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Primary Add Button */}
                     <button onClick={handleAdd}
-                        className="btn btn-primary h-9 px-5 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2">
-                        <FontAwesomeIcon icon={faPlus} />
+                        className="btn btn-primary h-9 px-4 lg:px-5 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faPlus} className="text-sm" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Buat Laporan</span>
                     </button>
                 </div>
@@ -639,7 +1106,7 @@ export default function ReportsPage() {
                                                             <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
                                                                 <div className="min-w-0 flex-1">
                                                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                                                        <span className="text-xs font-black text-[var(--color-text)] leading-tight">{stud?.name || '—'}</span>
+                                                                        <span className="text-xs font-black text-[var(--color-text)] leading-tight">{mask(stud?.name || '—')}</span>
                                                                         {stud?.class_name && (
                                                                             <span className="px-1.5 rounded bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider flex-shrink-0 leading-[16px]">
                                                                                 {stud.class_name}
@@ -647,31 +1114,28 @@ export default function ReportsPage() {
                                                                         )}
                                                                     </div>
                                                                     <p className="text-[11px] text-[var(--color-text-muted)] truncate mt-0.5">{getTypeName(r.violation_type_id)}</p>
-                                                                    {r.notes && <p className="text-[10px] italic opacity-50 text-[var(--color-text-muted)] truncate">{r.notes}</p>}
+                                                                    {r.notes && <p className="text-[10px] italic opacity-50 text-[var(--color-text-muted)] truncate">{mask(r.notes)}</p>}
                                                                     <div className="flex items-center gap-1 mt-1">
                                                                         <FontAwesomeIcon icon={faFilePen} className="text-[8px] opacity-25 text-[var(--color-text-muted)]" />
                                                                         <span className="text-[8px] font-black uppercase tracking-widest opacity-30 text-[var(--color-text-muted)]">
-                                                                            {r.teacher_name || 'Unknown'}
+                                                                            {mask(r.teacher_name || 'Unknown')}
                                                                         </span>
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Right: hover actions + point badge */}
-                                                                <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                                    <div className="flex items-center gap-0.5 transition-opacity">
-                                                                        <button onClick={() => handleEdit(r)}
-                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all">
-                                                                            <FontAwesomeIcon icon={faEdit} className="text-[10px]" />
-                                                                        </button>
-                                                                        <button onClick={() => { setItemToDelete(r); setIsDeleteModalOpen(true) }}
-                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all">
-                                                                            <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
-                                                                        </button>
-                                                                    </div>
-                                                                    <span className={`min-w-[40px] text-center px-2 py-0.5 rounded-full text-[11px] font-black border ${isPos ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
-                                                                        {r.points > 0 ? '+' : ''}{r.points}
-                                                                    </span>
-                                                                </div>
+                                                                <span className={`min-w-[40px] text-center px-2 py-0.5 rounded-full text-[11px] font-black border ${isPos ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
+                                                                    {r.points > 0 ? '+' : ''}{r.points}
+                                                                </span>
+                                                            </div>
+
+                                                            {/* Action Menu for Mobile/Timeline */}
+                                                            <div className="flex items-center gap-1 ml-auto">
+                                                                <button onClick={() => handleEdit(r)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all">
+                                                                    <FontAwesomeIcon icon={faEdit} className="text-[10px]" />
+                                                                </button>
+                                                                <button onClick={() => { setItemToDelete(r); setIsDeleteModalOpen(true) }} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all">
+                                                                    <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -761,7 +1225,7 @@ export default function ReportsPage() {
                                                         {(s?.name || '?')[0].toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-black text-[var(--color-text)] leading-tight truncate max-w-[150px]">{s?.name || '—'}</p>
+                                                        <p className="text-sm font-black text-[var(--color-text)] leading-tight truncate max-w-[150px]">{mask(s?.name || '—')}</p>
                                                         {s?.class_name && <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-50">{s.class_name}</p>}
                                                     </div>
                                                 </div>
@@ -769,7 +1233,7 @@ export default function ReportsPage() {
                                             {visibleCols.type && (
                                                 <td className="px-4 py-3">
                                                     <p className="text-xs font-bold text-[var(--color-text)]">{getTypeName(r.violation_type_id)}</p>
-                                                    {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 italic truncate max-w-[180px]">{r.notes}</p>}
+                                                    {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 italic truncate max-w-[180px]">{mask(r.notes)}</p>}
                                                 </td>
                                             )}
                                             {visibleCols.points && (
@@ -787,7 +1251,7 @@ export default function ReportsPage() {
                                             )}
                                             {visibleCols.teacher && (
                                                 <td className="px-4 py-3">
-                                                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide opacity-50 truncate max-w-[100px]">{r.teacher_name || '—'}</p>
+                                                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide opacity-50 truncate max-w-[100px]">{mask(r.teacher_name || '—')}</p>
                                                 </td>
                                             )}
                                             <td className="px-4 py-3 text-center relative">
@@ -813,33 +1277,35 @@ export default function ReportsPage() {
             )}
 
             {/* ── FLOATING BULK ACTION BAR ── */}
-            {selectedIds.length > 0 && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] w-[95%] max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl px-3 py-2.5 flex items-center justify-between gap-3 text-white">
-                        <div className="flex items-center gap-2.5 pl-1">
-                            <div className="w-8 h-8 rounded-xl bg-red-500 flex items-center justify-center font-black text-sm shadow-lg shadow-red-500/30 flex-shrink-0">
-                                {selectedIds.length}
+            {
+                selectedIds.length > 0 && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] w-[95%] max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
+                        <div className="bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl px-3 py-2.5 flex items-center justify-between gap-3 text-white">
+                            <div className="flex items-center gap-2.5 pl-1">
+                                <div className="w-8 h-8 rounded-xl bg-red-500 flex items-center justify-center font-black text-sm shadow-lg shadow-red-500/30 flex-shrink-0">
+                                    {selectedIds.length}
+                                </div>
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-widest opacity-50 leading-none">Terpilih</p>
+                                    <p className="text-[11px] font-bold leading-tight">Aksi Massal</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest opacity-50 leading-none">Terpilih</p>
-                                <p className="text-[11px] font-bold leading-tight">Aksi Massal</p>
+                            <div className="flex items-center gap-1.5">
+                                <button onClick={() => setIsBulkDeleteOpen(true)}
+                                    className="h-8 px-4 rounded-xl bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                                    <FontAwesomeIcon icon={faTrash} className="text-xs" />
+                                    Hapus
+                                </button>
+                                <div className="w-px h-5 bg-white/10 mx-0.5" />
+                                <button onClick={() => setSelectedIds([])}
+                                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-all text-white/50 hover:text-white">
+                                    <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                                </button>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <button onClick={() => setIsBulkDeleteOpen(true)}
-                                className="h-8 px-4 rounded-xl bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-                                <FontAwesomeIcon icon={faTrash} className="text-xs" />
-                                Hapus
-                            </button>
-                            <div className="w-px h-5 bg-white/10 mx-0.5" />
-                            <button onClick={() => setSelectedIds([])}
-                                className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-all text-white/50 hover:text-white">
-                                <FontAwesomeIcon icon={faXmark} className="text-xs" />
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* ── WIZARD MODAL ── */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}
@@ -1003,54 +1469,49 @@ export default function ReportsPage() {
                 </div>
             </Modal>
 
-            {/* ── DELETE ── */}
-            <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Hapus Laporan" size="sm">
-                <div className="text-center space-y-5 py-3">
-                    <div className="w-14 h-14 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+            {/* ── DELETE MODAL ── */}
+            <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Hapus Laporan">
+                <div className="space-y-4 py-2 text-center">
+                    <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto text-2xl">
                         <FontAwesomeIcon icon={faTrash} />
                     </div>
                     <div>
-                        <h4 className="text-base font-black text-[var(--color-text)] mb-1">Konfirmasi Penghapusan</h4>
-                        <p className="text-sm text-[var(--color-text-muted)] opacity-70">Data laporan tidak dapat dikembalikan setelah dihapus.</p>
+                        <h4 className="text-base font-black text-[var(--color-text)] mb-1">Konfirmasi Hapus</h4>
+                        <p className="text-[11px] text-[var(--color-text-muted)] font-medium max-w-[240px] mx-auto leading-relaxed">
+                            Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.
+                        </p>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => setIsDeleteModalOpen(false)}
-                            className="h-10 flex-1 rounded-xl bg-[var(--color-surface-alt)] font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]">
-                            Batal
-                        </button>
-                        <button onClick={handleDeleteConfirm} disabled={submitting}
-                            className="h-10 flex-[2] rounded-xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:brightness-110 transition-all disabled:opacity-50">
+                    <div className="flex gap-3">
+                        <button onClick={() => setIsDeleteModalOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] font-black text-[11px] uppercase tracking-widest text-[var(--color-text-muted)]">Batal</button>
+                        <button onClick={handleDeleteConfirm} disabled={submitting} className="h-11 flex-[2] rounded-xl bg-red-500 text-white font-black text-[11px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:brightness-110 transition-all flex items-center justify-center gap-2">
                             {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Ya, Hapus'}
                         </button>
                     </div>
                 </div>
             </Modal>
 
-            {/* ── BULK DELETE ── */}
-            <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title="Hapus Massal" size="sm">
-                <div className="text-center space-y-5 py-3">
-                    <div className="w-14 h-14 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+            {/* ── BULK DELETE MODAL ── */}
+            <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title="Hapus Massal">
+                <div className="space-y-4 py-2 text-center">
+                    <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto text-2xl animate-bounce">
                         <FontAwesomeIcon icon={faTrash} />
                     </div>
                     <div>
-                        <h4 className="text-base font-black text-[var(--color-text)] mb-1">Hapus Serentak</h4>
-                        <p className="text-sm text-[var(--color-text-muted)] opacity-70">
-                            Anda akan menghapus <span className="text-red-600 font-black">{selectedIds.length}</span> laporan. Tidak dapat dibatalkan.
+                        <h4 className="text-base font-black text-[var(--color-text)] mb-1">Hapus {selectedIds.length} Laporan</h4>
+                        <p className="text-[11px] text-[var(--color-text-muted)] font-medium max-w-[240px] mx-auto leading-relaxed">
+                            Anda akan menghapus {selectedIds.length} data secara permanen. Lanjutkan?
                         </p>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => setIsBulkDeleteOpen(false)}
-                            className="h-10 flex-1 rounded-xl bg-[var(--color-surface-alt)] font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]">
-                            Batal
-                        </button>
-                        <button onClick={handleBulkDelete} disabled={submitting}
-                            className="h-10 flex-[2] rounded-xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:brightness-110 transition-all disabled:opacity-50">
-                            {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Hapus Semua'}
+                    <div className="flex gap-3">
+                        <button onClick={() => setIsBulkDeleteOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] font-black text-[11px] uppercase tracking-widest text-[var(--color-text-muted)]">Batal</button>
+                        <button onClick={handleBulkDelete} disabled={submitting} className="h-11 flex-[2] rounded-xl bg-red-500 text-white font-black text-[11px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                            {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Hapus Sekarang'}
                         </button>
                     </div>
                 </div>
             </Modal>
 
-        </DashboardLayout>
+
+        </DashboardLayout >
     )
 }

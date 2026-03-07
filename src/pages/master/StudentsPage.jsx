@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+    faTable,
     faThumbtack,
     faPlus,
     faSearch,
@@ -57,6 +58,8 @@ import {
     faEyeSlash,
     faCircleExclamation,
     faKeyboard,
+    faFileImport,
+    faFileExport
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -367,10 +370,13 @@ export default function StudentsPage() {
 
     // NEW: Dropdown menu header
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
-    const [isActionSheetOpen, setIsActionSheetOpen] = useState(false)
     const headerMenuRef = useRef(null)
+    const shortcutRef = useRef(null)
     useEffect(() => {
-        const handler = (e) => { if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setIsHeaderMenuOpen(false) }
+        const handler = (e) => {
+            if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setIsHeaderMenuOpen(false)
+            if (shortcutRef.current && !shortcutRef.current.contains(e.target)) setIsShortcutOpen(false)
+        }
         document.addEventListener('mousedown', handler)
         return () => document.removeEventListener('mousedown', handler)
     }, [])
@@ -2938,12 +2944,15 @@ export default function StudentsPage() {
         const CHUNK = 50
         try {
             for (let i = 0; i < validRows.length; i += CHUNK) {
-                const chunk = validRows.slice(i, i + CHUNK).map(r => ({
-                    ...r,
-                    registration_code: generateCode(),
-                    pin: String(Math.floor(1000 + Math.random() * 9000)),
-                    total_points: 0
-                }))
+                const chunk = validRows.slice(i, i + CHUNK).map(r => {
+                    const { _className, _isDupe, _hasError, _hasWarn, ...cleanRow } = r
+                    return {
+                        ...cleanRow,
+                        registration_code: generateCode(),
+                        pin: String(Math.floor(1000 + Math.random() * 9000)),
+                        total_points: 0
+                    }
+                })
                 const { error } = await supabase.from('students').insert(chunk)
                 if (error) throw error
                 setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
@@ -3115,7 +3124,7 @@ export default function StudentsPage() {
             {isPrivacyMode && (
                 <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disensor</div>
-                    <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline">Matikan</button>
+                    <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">Matikan</button>
                 </div>
             )}
 
@@ -3132,14 +3141,8 @@ export default function StudentsPage() {
                     {/* Tombol aksi sekunder — bottom sheet di mobile, dropdown di desktop */}
                     <div className="relative" ref={headerMenuRef}>
                         <button
-                            onClick={() => {
-                                if (window.innerWidth < 640) {
-                                    setIsActionSheetOpen(true)
-                                } else {
-                                    setIsHeaderMenuOpen(v => !v)
-                                }
-                            }}
-                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${(isHeaderMenuOpen || isActionSheetOpen) ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                            onClick={() => setIsHeaderMenuOpen(v => !v)}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${(isHeaderMenuOpen) ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
                             title="Aksi lainnya"
                         >
                             <FontAwesomeIcon icon={faSliders} />
@@ -3147,61 +3150,72 @@ export default function StudentsPage() {
 
                         {/* Dropdown — desktop only */}
                         {isHeaderMenuOpen && (
-                            <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl shadow-black/10 overflow-hidden">
-                                <div className="p-1.5 space-y-0.5">
-                                    <p className="px-3 pt-1.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Data</p>
+                            <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); handleImportClick() }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileImport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Import CSV / Excel</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    </div>
+                                </button>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsGSheetsModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faLink} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Import GSheets</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">online</p>
+                                    </div>
+                                </button>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Export Data</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    </div>
+                                </button>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsBulkPhotoModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faCamera} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Bulk Foto</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">png, jpg</p>
+                                    </div>
+                                </button>
 
-                                    <button
-                                        onClick={() => { setIsHeaderMenuOpen(false); handleImportClick() }}
-                                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"
-                                    >
-                                        <FontAwesomeIcon icon={faUpload} className="w-3.5 text-[var(--color-text-muted)]" />
-                                        Import CSV / Excel
-                                    </button>
+                                <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                                <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
 
-                                    <button
-                                        onClick={() => { setIsHeaderMenuOpen(false); setIsGSheetsModalOpen(true) }}
-                                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-emerald-600 hover:bg-emerald-500/10 transition-colors text-left"
-                                    >
-                                        <FontAwesomeIcon icon={faLink} className="w-3.5" />
-                                        Import Google Sheets
-                                    </button>
-
-                                    <button
-                                        onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
-                                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"
-                                    >
-                                        <FontAwesomeIcon icon={faDownload} className="w-3.5 text-[var(--color-text-muted)]" />
-                                        Export Data
-                                    </button>
-
-                                    <button
-                                        onClick={() => { setIsHeaderMenuOpen(false); setIsBulkPhotoModalOpen(true) }}
-                                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-indigo-600 hover:bg-indigo-500/10 transition-colors text-left"
-                                    >
-                                        <FontAwesomeIcon icon={faCamera} className="w-3.5" />
-                                        Bulk Foto Siswa
-                                    </button>
-
-                                    <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
-                                    <p className="px-3 pt-0.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
-
-                                    <button
-                                        onClick={() => { setIsHeaderMenuOpen(false); fetchArchivedStudents(); setIsArchivedModalOpen(true) }}
-                                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-amber-600 hover:bg-amber-500/10 transition-colors text-left"
-                                    >
-                                        <FontAwesomeIcon icon={faBoxArchive} className="w-3.5" />
-                                        Arsip Siswa
-                                    </button>
-
-                                    <button
-                                        onClick={() => { setIsHeaderMenuOpen(false); setResetPointsClassId(''); setIsResetPointsModalOpen(true) }}
-                                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-orange-600 hover:bg-orange-500/10 transition-colors text-left"
-                                    >
-                                        <FontAwesomeIcon icon={faRotateLeft} className="w-3.5" />
-                                        Reset Poin
-                                    </button>
-                                </div>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); fetchArchivedStudents(); setIsArchivedModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Arsip Siswa</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">arsip</p>
+                                    </div>
+                                </button>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setResetPointsClassId(''); setIsResetPointsModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faRotateLeft} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Reset Poin</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">poin</p>
+                                    </div>
+                                </button>
                             </div>
                         )}
                     </div>
@@ -3218,7 +3232,7 @@ export default function StudentsPage() {
                     </button>
 
                     {/* Keyboard Shortcuts Button + Cheatsheet */}
-                    <div className="relative">
+                    <div className="relative" ref={shortcutRef}>
                         <button
                             onClick={() => setIsShortcutOpen(v => !v)}
                             className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all
@@ -3232,43 +3246,40 @@ export default function StudentsPage() {
                         </button>
 
                         {isShortcutOpen && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setIsShortcutOpen(false)} />
-                                <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden">
-                                    <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
-                                        <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
-                                        <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
-                                    </div>
-                                    <div className="p-3 space-y-0.5">
-                                        {[
-                                            { section: 'Navigasi' },
-                                            { keys: ['Ctrl', 'K'], label: 'Fokus ke search' },
-                                            { keys: ['Ctrl', 'F'], label: 'Toggle filter lanjutan' },
-                                            { keys: ['Esc'], label: 'Tutup / clear / deselect' },
-                                            { section: 'Aksi' },
-                                            { keys: ['N'], label: 'Tambah siswa baru' },
-                                            { keys: ['Ctrl', 'A'], label: 'Pilih semua / deselect' },
-                                            { keys: ['Ctrl', 'E'], label: 'Buka export' },
-                                            { section: 'Tampilan' },
-                                            { keys: ['P'], label: 'Toggle privacy mode' },
-                                            { keys: ['R'], label: 'Refresh data' },
-                                            { keys: ['X'], label: 'Reset semua filter' },
-                                            { keys: ['?'], label: 'Tampilkan shortcut ini' },
-                                        ].map((item, i) => item.section ? (
-                                            <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
-                                        ) : (
-                                            <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
-                                                <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
-                                                <div className="flex items-center gap-1">
-                                                    {item.keys.map((k, ki) => (
-                                                        <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                            <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-11 -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[340px] sm:w-72 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                                <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
+                                    <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
                                 </div>
-                            </>
+                                <div className="p-3 space-y-0.5">
+                                    {[
+                                        { section: 'Navigasi' },
+                                        { keys: ['Ctrl', 'K'], label: 'Fokus ke search' },
+                                        { keys: ['Ctrl', 'F'], label: 'Toggle filter lanjutan' },
+                                        { keys: ['Esc'], label: 'Tutup / clear / deselect' },
+                                        { section: 'Aksi' },
+                                        { keys: ['N'], label: 'Tambah siswa baru' },
+                                        { keys: ['Ctrl', 'A'], label: 'Pilih semua / deselect' },
+                                        { keys: ['Ctrl', 'E'], label: 'Buka export' },
+                                        { section: 'Tampilan' },
+                                        { keys: ['P'], label: 'Toggle privacy mode' },
+                                        { keys: ['R'], label: 'Refresh data' },
+                                        { keys: ['X'], label: 'Reset semua filter' },
+                                        { keys: ['?'], label: 'Tampilkan shortcut ini' },
+                                    ].map((item, i) => item.section ? (
+                                        <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
+                                    ) : (
+                                        <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
+                                            <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
+                                            <div className="flex items-center gap-1">
+                                                {item.keys.map((k, ki) => (
+                                                    <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -4065,20 +4076,28 @@ export default function StudentsPage() {
                                 </div>
                             </div>
 
-                            {/* Info row: kelas valid + download template dalam 1 baris */}
-                            <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 flex-wrap">
-                                <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] shrink-0">Kelas valid:</span>
-                                <div className="flex flex-wrap gap-1 flex-1">
-                                    {classesList.map(c => (
-                                        <span key={c.id} className="px-1.5 py-0.5 rounded bg-[var(--color-surface)] border border-[var(--color-border)] text-[8px] font-black text-[var(--color-text)]">{c.name}</span>
-                                    ))}
+                            {/* Info row: kelas valid + download template dengan scrollable list */}
+                            <div className="flex flex-col gap-3 p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
+                                        <FontAwesomeIcon icon={faTags} className="text-emerald-500/70" /> Daftar Kelas Valid
+                                    </span>
+                                    <button
+                                        onClick={handleDownloadTemplate}
+                                        className="shrink-0 h-7 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:bg-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
+                                    >
+                                        <FontAwesomeIcon icon={faDownload} className="text-[8px]" /> Template
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={handleDownloadTemplate}
-                                    className="shrink-0 h-6 px-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-1 hover:bg-emerald-500/20 transition-all"
-                                >
-                                    <FontAwesomeIcon icon={faDownload} className="text-[7px]" /> Template
-                                </button>
+                                <div className="flex flex-wrap gap-1.5 max-h-[72px] overflow-y-auto pr-1 pb-2 custom-scrollbar">
+                                    {classesList.length > 0 ? classesList.map(c => (
+                                        <span key={c.id} className="px-2 py-1 rounded-md bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] text-[9px] font-bold text-[var(--color-text)] shrink-0 hover:border-emerald-500/30 transition-colors">
+                                            {c.name}
+                                        </span>
+                                    )) : (
+                                        <span className="text-[9px] text-[var(--color-text-muted)] italic">Belum ada kelas yang terdaftar.</span>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Kolom — compact 2 kolom grid */}
@@ -5927,11 +5946,64 @@ export default function StudentsPage() {
                         isOpen={isGSheetsModalOpen}
                         onClose={() => setIsGSheetsModalOpen(false)}
                         title="Import dari Google Sheets"
-                        size="sm"
+                        size="md"
                     >
                         <div className="space-y-4">
-                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-400 font-bold">
-                                Pastikan Google Sheets bersifat <b>publik</b> (Anyone with link can view).
+                            {/* Panduan Mini Sheets */}
+                            <div className="rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)] shadow-inner">
+                                <div className="bg-emerald-500/10 px-3 py-2 flex items-center justify-between border-b border-[var(--color-border)]">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        Contoh Format Kolom
+                                    </span>
+                                    <FontAwesomeIcon icon={faTable} className="text-emerald-500/50 text-xs" />
+                                </div>
+                                <div className="overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left border-collapse min-w-[300px]">
+                                        <thead>
+                                            <tr className="bg-[var(--color-surface-alt)]">
+                                                <th className="border-b border-r border-[var(--color-border)] px-2 py-1.5 text-[10px] font-bold text-[var(--color-text-muted)] w-8 text-center bg-[var(--color-surface-alt)]/50"></th>
+                                                <th className="border-b border-r border-[var(--color-border)] px-2 py-1.5 text-center">
+                                                    <p className="text-[10px] font-black text-[var(--color-text)] leading-none">A</p>
+                                                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">(name)</p>
+                                                </th>
+                                                <th className="border-b border-r border-[var(--color-border)] px-2 py-1.5 text-center">
+                                                    <p className="text-[10px] font-black text-[var(--color-text)] leading-none">B</p>
+                                                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">(gender)</p>
+                                                </th>
+                                                <th className="border-b border-r border-[var(--color-border)] px-2 py-1.5 text-center">
+                                                    <p className="text-[10px] font-black text-[var(--color-text)] leading-none">C</p>
+                                                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">(phone)</p>
+                                                </th>
+                                                <th className="border-b border-[var(--color-border)] px-2 py-1.5 text-center">
+                                                    <p className="text-[10px] font-black text-[var(--color-text)] leading-none">D</p>
+                                                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">(class_name)</p>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr className="border-b border-[var(--color-border)]">
+                                                <td className="border-r border-[var(--color-border)] px-2 py-1.5 text-[9px] font-bold text-[var(--color-text-muted)] text-center bg-[var(--color-surface-alt)]">1</td>
+                                                <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">Budi Santoso</td>
+                                                <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">L</td>
+                                                <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium font-mono text-emerald-600">0812...</td>
+                                                <td className="px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">10A Boarding Putra</td>
+                                            </tr>
+                                            <tr className="border-[var(--color-border)]">
+                                                <td className="border-r border-[var(--color-border)] px-2 py-1.5 text-[9px] font-bold text-[var(--color-text-muted)] text-center bg-[var(--color-surface-alt)]">2</td>
+                                                <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">Siti Aminah</td>
+                                                <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">P</td>
+                                                <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium font-mono text-emerald-600">0857...</td>
+                                                <td className="px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">10B Boarding Putri</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-400 font-bold flex gap-3 items-start">
+                                <FontAwesomeIcon icon={faCircleExclamation} className="mt-0.5 shrink-0" />
+                                <p>Pastikan akses Google Sheets telah diubah menjadi <b>Anyone with the link</b> (Siapa saja yang memiliki tautan dapat melihat).</p>
                             </div>
                             <div>
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-2">URL Google Sheets</label>
@@ -5944,10 +6016,10 @@ export default function StudentsPage() {
                                 />
                             </div>
                             <p className="text-[10px] text-[var(--color-text-muted)]">Header kolom: <b>name/nama</b>, <b>gender/jk</b>, <b>phone</b>, <b>class_name/kelas</b></p>
-                            <div className="flex gap-3">
-                                <button onClick={() => setIsGSheetsModalOpen(false)} className="btn bg-[var(--color-surface-alt)] h-11 flex-1 text-[10px] font-black uppercase tracking-widest rounded-xl">Batal</button>
+                            <div className="flex gap-3 mt-2">
+                                <button onClick={() => setIsGSheetsModalOpen(false)} className="btn bg-[var(--color-surface-alt)] h-11 flex-1 text-xs font-bold rounded-xl text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors">Batal</button>
                                 <button onClick={handleFetchGSheets} disabled={fetchingGSheets}
-                                    className="btn bg-emerald-500 hover:bg-emerald-600 text-white flex-1 h-11 text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
+                                    className="btn bg-emerald-500 hover:bg-emerald-600 text-white flex-1 h-11 text-xs font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-colors">
                                     {fetchingGSheets ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <FontAwesomeIcon icon={faLink} />}
                                     Ambil Data
                                 </button>
@@ -5957,88 +6029,6 @@ export default function StudentsPage() {
                 )
             }
 
-            {/* Mobile Action Bottom Sheet */}
-            {
-                isActionSheetOpen && createPortal(
-                    <>
-                        {/* Backdrop */}
-                        <div
-                            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-                            style={{ zIndex: 9990 }}
-                            onClick={() => setIsActionSheetOpen(false)}
-                        />
-                        {/* Sheet */}
-                        <div
-                            className="fixed left-0 right-0 bottom-0 bg-[var(--color-surface)] rounded-t-2xl border-t border-[var(--color-border)] shadow-2xl animate-in slide-in-from-bottom duration-300"
-                            style={{ zIndex: 9991 }}
-                            onClick={e => e.stopPropagation()}
-                        >
-                            {/* Handle bar */}
-                            <div className="flex justify-center pt-3 pb-1">
-                                <div className="w-10 h-1 rounded-full bg-[var(--color-border)]" />
-                            </div>
-
-                            <div className="px-4 pb-2 pt-1">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Data</p>
-                            </div>
-
-                            <div className="px-3 space-y-0.5">
-                                <button
-                                    onClick={() => { setIsActionSheetOpen(false); handleImportClick() }}
-                                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] active:bg-[var(--color-surface-alt)] transition-colors text-left"
-                                >
-                                    <FontAwesomeIcon icon={faUpload} className="w-4 text-[var(--color-text-muted)]" />
-                                    Import CSV / Excel
-                                </button>
-
-                                <button
-                                    onClick={() => { setIsActionSheetOpen(false); setIsGSheetsModalOpen(true) }}
-                                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-500/10 active:bg-emerald-500/10 transition-colors text-left"
-                                >
-                                    <FontAwesomeIcon icon={faLink} className="w-4" />
-                                    Import Google Sheets
-                                </button>
-
-                                <button
-                                    onClick={() => { setIsActionSheetOpen(false); setIsExportModalOpen(true) }}
-                                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] active:bg-[var(--color-surface-alt)] transition-colors text-left"
-                                >
-                                    <FontAwesomeIcon icon={faDownload} className="w-4 text-[var(--color-text-muted)]" />
-                                    Export Data
-                                </button>
-                            </div>
-
-                            <div className="mx-6 my-2 h-px bg-[var(--color-border)]" />
-
-                            <div className="px-4 pb-1">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Manajemen</p>
-                            </div>
-
-                            <div className="px-3 space-y-0.5">
-                                <button
-                                    onClick={() => { setIsActionSheetOpen(false); fetchArchivedStudents(); setIsArchivedModalOpen(true) }}
-                                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-amber-600 hover:bg-amber-500/10 active:bg-amber-500/10 transition-colors text-left"
-                                >
-                                    <FontAwesomeIcon icon={faBoxArchive} className="w-4" />
-                                    Arsip Siswa
-                                </button>
-
-                                <button
-                                    onClick={() => { setIsActionSheetOpen(false); setResetPointsClassId(''); setIsResetPointsModalOpen(true) }}
-                                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-orange-600 hover:bg-orange-500/10 active:bg-orange-500/10 transition-colors text-left"
-                                >
-                                    <FontAwesomeIcon icon={faRotateLeft} className="w-4" />
-                                    Reset Poin
-                                </button>
-                            </div>
-
-                            {/* Safe area bottom padding */}
-                            <div className="h-8" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
-                        </div>
-                    </>,
-                    document.body
-                )
-            }
 
             {/* Fitur 13 - Photo Zoom Overlay */}
             {

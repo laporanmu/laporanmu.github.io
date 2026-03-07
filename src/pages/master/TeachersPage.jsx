@@ -11,6 +11,7 @@ import {
     faCircleCheck, faUsers, faFileLines, faAnglesLeft, faAnglesRight,
     faChevronLeft, faChevronRight,
     faBullhorn, faIdCard,
+    faFileImport, faFileExport
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -450,7 +451,7 @@ export default function TeachersPage() {
             {isPrivacyMode && (
                 <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disensor</div>
-                    <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline">Matikan</button>
+                    <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">Matikan</button>
                 </div>
             )}
 
@@ -480,15 +481,40 @@ export default function TeachersPage() {
                             className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
                             title="Aksi lainnya"><FontAwesomeIcon icon={faSliders} /></button>
                         {isHeaderMenuOpen && (
-                            <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl shadow-black/10 overflow-hidden">
-                                <div className="p-1.5 space-y-0.5">
-                                    <p className="px-3 pt-1.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Data</p>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); setImportTab('panduan'); setImportPreview([]); setImportFileName(''); setIsImportModalOpen(true) }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"><FontAwesomeIcon icon={faUpload} className="w-3.5 text-[var(--color-text-muted)]" />Import CSV / Excel</button>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"><FontAwesomeIcon icon={faDownload} className="w-3.5 text-[var(--color-text-muted)]" />Export Data</button>
-                                    <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
-                                    <p className="px-3 pt-0.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); fetchArchived(); setIsArchivedOpen(true) }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-amber-600 hover:bg-amber-500/10 transition-colors text-left"><FontAwesomeIcon icon={faBoxArchive} className="w-3.5" />Arsip Guru</button>
-                                </div>
+                            <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setImportTab('panduan'); setImportPreview([]); setImportFileName(''); setIsImportModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileImport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Import CSV / Excel</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    </div>
+                                </button>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Export Data</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    </div>
+                                </button>
+                                <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                                <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); fetchArchived(); setIsArchivedOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Arsip Guru</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">arsip</p>
+                                    </div>
+                                </button>
                             </div>
                         )}
                     </div>
@@ -507,8 +533,8 @@ export default function TeachersPage() {
                             className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
                         {isShortcutOpen && (
-                            <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden">
-                                <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+                            <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-11 -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[340px] sm:w-72 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                                <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/50">
                                     <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
                                     <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
                                 </div>

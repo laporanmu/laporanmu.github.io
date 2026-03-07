@@ -5,7 +5,8 @@ import {
     faPlus, faSearch, faTimes, faSpinner, faBuilding, faSchool, faBed,
     faUsers, faFilter, faSliders, faChevronLeft, faChevronRight, faAnglesLeft, faAnglesRight,
     faTrash, faEye, faEyeSlash, faXmark, faDownload, faUpload, faBoxArchive, faRotateLeft,
-    faKeyboard, faLink, faCheck, faChevronDown
+    faKeyboard, faLink, faCheck, faChevronDown,
+    faFileImport, faFileExport
 } from '@fortawesome/free-solid-svg-icons'
 
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -89,7 +90,6 @@ export default function ClassesPage() {
 
     // Header & Columns
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
-    const [isActionSheetOpen, setIsActionSheetOpen] = useState(false)
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
     const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
     const [isSlidersOpen, setIsSlidersOpen] = useState(false)
@@ -385,19 +385,35 @@ export default function ClassesPage() {
                     {/* Sliders dropdown (Opsi) */}
                     <div className="relative" ref={headerMenuRef}>
                         <button
-                            onClick={() => window.innerWidth < 640 ? setIsActionSheetOpen(true) : setIsHeaderMenuOpen(!isHeaderMenuOpen)}
-                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${isHeaderMenuOpen || isActionSheetOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                            onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
                             title="Opsi Lanjutan"><FontAwesomeIcon icon={faSliders} /></button>
                         {isHeaderMenuOpen && (
-                            <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl shadow-black/10 overflow-hidden">
-                                <div className="p-1.5 space-y-0.5">
-                                    <p className="px-3 pt-1.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Data</p>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsImportModalOpen(true) }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"><FontAwesomeIcon icon={faUpload} className="w-3.5 text-[var(--color-text-muted)]" /> Import CSV / Excel</button>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"><FontAwesomeIcon icon={faDownload} className="w-3.5 text-[var(--color-text-muted)]" /> Export Data</button>
-                                    <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
-                                    <p className="px-3 pt-0.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
-                                    <p className="px-3 py-2 text-[10px] text-[var(--color-text-muted)] italic">Fitur arsip tidak tersedia untuk tabel ini.</p>
-                                </div>
+                            <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsImportModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileImport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Import CSV / Excel</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    </div>
+                                </button>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Export Data</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    </div>
+                                </button>
+                                <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                                <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
+                                <p className="px-3 py-2 text-[10px] text-[var(--color-text-muted)] italic">Fitur arsip tidak tersedia untuk tabel ini.</p>
                             </div>
                         )}
                     </div>
@@ -414,7 +430,7 @@ export default function ClassesPage() {
                             className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
                         {isShortcutOpen && (
-                            <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden animate-in fade-in zoom-in-95">
+                            <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-11 -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[340px] sm:w-72 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
                                 <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/50">
                                     <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Shortcuts</p>
                                     <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
@@ -713,23 +729,6 @@ export default function ClassesPage() {
                 </div>
             </Modal>
 
-            {/* Mobile Action Sheet (Slider on Mobile) */}
-            <Modal isOpen={isActionSheetOpen} onClose={() => setIsActionSheetOpen(false)} title="Aksi Lainnya" size="sm">
-                <div className="space-y-1 pb-4">
-                    <button onClick={() => { setIsActionSheetOpen(false); setIsImportModalOpen(true) }} className="w-full h-12 px-4 rounded-xl flex items-center gap-4 text-sm font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] active:bg-[var(--color-border)] transition-all">
-                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0"><FontAwesomeIcon icon={faUpload} /></div>
-                        <div className="text-left"><p className="text-sm font-black text-[var(--color-text)]">Import Data</p><p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">CSV / XLSX</p></div>
-                    </button>
-                    <button onClick={() => { setIsActionSheetOpen(false); setIsExportModalOpen(true) }} className="w-full h-12 px-4 rounded-xl flex items-center gap-4 text-sm font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] active:bg-[var(--color-border)] transition-all">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0"><FontAwesomeIcon icon={faDownload} /></div>
-                        <div className="text-left"><p className="text-sm font-black text-[var(--color-text)]">Export Data</p><p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">CSV / XLSX</p></div>
-                    </button>
-                    <div className="my-2 border-t border-[var(--color-border)] opacity-30 mx-4" />
-                    <div className="px-4 py-2">
-                        <p className="text-[10px] text-[var(--color-text-muted)] italic">Fitur arsip tidak tersedia untuk tabel ini.</p>
-                    </div>
-                </div>
-            </Modal>
 
             {/* Arsip Kelas Modal */}
             <Modal isOpen={isArchivedModalOpen} onClose={() => setIsArchivedModalOpen(false)} title="Arsip Kelas" size="lg">
