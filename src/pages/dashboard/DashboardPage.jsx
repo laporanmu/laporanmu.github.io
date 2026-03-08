@@ -109,11 +109,11 @@ export default function DashboardPage() {
             const from14 = startOfDay(addDays(today0, -13))
 
             try {
-                // 1) total siswa aktif
+                // 1) total siswa aktif (tidak diarsip)
                 const { count: studentCount, error: studentCountErr } = await supabase
                     .from('students')
                     .select('id', { count: 'exact', head: true })
-                    .eq('is_active', true)
+                    .is('deleted_at', null)
 
                 if (studentCountErr) {
                     console.log('studentCountErr', studentCountErr)
@@ -295,7 +295,7 @@ export default function DashboardPage() {
             icon: faExclamationTriangle,
             label: 'Pelanggaran',
             value: loading ? '…' : String(stats.weekViolations),
-            trend: `${stats.trendViolations} minggu ini`,
+            trend: stats.trendViolations,
             trendUp: !stats.trendViolations.startsWith('+'), // kalau naik pelanggaran, trendUp false
             color: 'red',
         },
@@ -303,7 +303,7 @@ export default function DashboardPage() {
             icon: faTrophy,
             label: 'Prestasi',
             value: loading ? '…' : String(stats.weekAchievements),
-            trend: `${stats.trendAchievements} minggu ini`,
+            trend: stats.trendAchievements,
             trendUp: stats.trendAchievements.startsWith('+') || stats.weekAchievements > 0,
             color: 'green',
         },
