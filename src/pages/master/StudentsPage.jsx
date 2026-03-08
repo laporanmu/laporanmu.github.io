@@ -4346,19 +4346,27 @@ export default function StudentsPage() {
                                 <div className="col-span-3 flex flex-col justify-between items-start gap-4 mt-2">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-full sm:w-auto">Aksi Massal:</span>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => handleBulkFix('gender', 'L')}
-                                                className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-all"
-                                            >Semua L</button>
-                                            <button
-                                                onClick={() => handleBulkFix('gender', 'P')}
-                                                className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-all"
-                                            >Semua P</button>
-                                        </div>
                                         <select
-                                            onChange={(e) => e.target.value && handleBulkFix('class_id', e.target.value)}
-                                            className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:border-[var(--color-primary)] outline-none"
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    handleBulkFix('gender', e.target.value);
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:border-[var(--color-primary)] outline-none cursor-pointer"
+                                        >
+                                            <option value="">Set Semua Gender...</option>
+                                            <option value="L">Semua L (Laki-laki)</option>
+                                            <option value="P">Semua P (Perempuan)</option>
+                                        </select>
+                                        <select
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    handleBulkFix('class_id', e.target.value);
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:border-[var(--color-primary)] outline-none cursor-pointer"
                                         >
                                             <option value="">Set Semua Kelas...</option>
                                             {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
