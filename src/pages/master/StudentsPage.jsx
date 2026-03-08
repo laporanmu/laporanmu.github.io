@@ -65,7 +65,8 @@ import {
     faRotate,
     faArrowUpFromBracket,
     faFileImport,
-    faFileExport
+    faFileExport,
+    faClipboardList,
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -135,6 +136,7 @@ const maskInfo = (str, visibleLen = 3) => {
 
 import StudentFormModal from '../../components/students/StudentFormModal'
 import { StudentRow, StudentMobileCard } from '../../components/students/StudentRow'
+import RaportBulananModal from '../../components/students/RaportBulananModal'
 
 // ── BehaviorHeatmap — outside StudentsPage to prevent re-creation on every render ──
 const BehaviorHeatmap = memo(({ history }) => {
@@ -241,9 +243,12 @@ export default function StudentsPage() {
     const [importDragOver, setImportDragOver] = useState(false) // drag-drop highlight
     const [importValidationOpen, setImportValidationOpen] = useState(false) // collapsible validation notes
     const [importLoading, setImportLoading] = useState(false) // loading state during file parsing
+    const [isRevalidating, setIsRevalidating] = useState(false) // spinning icon state for Re-validasi button
     const [importEditCell, setImportEditCell] = useState(null) // { idx, key }
     const [importCachedDBStudents, setImportCachedDBStudents] = useState({ names: new Set(), nisns: new Set() })
     const [exporting, setExporting] = useState(false)
+    // Raport Bulanan
+    const [isRaportModalOpen, setIsRaportModalOpen] = useState(false)
 
     const importReadyRows = useMemo(() => {
         if (!importPreview.length) return []
@@ -3292,6 +3297,17 @@ export default function StudentsPage() {
                                     </div>
                                 </button>
 
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsRaportModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Raport Bulanan</p>
+                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">نتيجة الشخصية</p>
+                                    </div>
+                                </button>
+
                                 <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
                                 <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
 
@@ -3389,6 +3405,14 @@ export default function StudentsPage() {
                         className="hidden"
                         accept=".csv,.xlsx"
                     />
+
+                    <button
+                        onClick={() => setIsRaportModalOpen(true)}
+                        className="h-9 px-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500/20 transition-all"
+                    >
+                        <FontAwesomeIcon icon={faClipboardList} />
+                        Raport Bulanan
+                    </button>
 
                     <button
                         onClick={handleAdd}
@@ -4377,10 +4401,14 @@ export default function StudentsPage() {
                                             <FontAwesomeIcon icon={faCircleInfo} className="text-[var(--color-primary)]" /> Klik sel tabel untuk edit
                                         </span>
                                         <button
-                                            onClick={() => validateImportPreview(importPreview)}
+                                            onClick={() => {
+                                                setIsRevalidating(true)
+                                                validateImportPreview(importPreview)
+                                                setTimeout(() => setIsRevalidating(false), 800)
+                                            }}
                                             className="text-[9px] font-black uppercase tracking-widest text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 transition-colors px-3 py-1.5 rounded-lg shrink-0"
                                         >
-                                            <FontAwesomeIcon icon={faSync} className="mr-1.5" /> Re-validasi
+                                            <FontAwesomeIcon icon={faSync} className={`mr-1.5 transition-transform ${isRevalidating ? 'animate-spin' : ''}`} /> Re-validasi
                                         </button>
                                     </div>
                                 </div>
@@ -6738,6 +6766,16 @@ export default function StudentsPage() {
                     </Modal>
                 )
             }
+
+            {/* ===================== */}
+            {/* MODAL RAPORT BULANAN  */}
+            {/* ===================== */}
+            <RaportBulananModal
+                isOpen={isRaportModalOpen}
+                onClose={() => setIsRaportModalOpen(false)}
+                classesList={classesList}
+            />
+
         </DashboardLayout >
     )
 }
