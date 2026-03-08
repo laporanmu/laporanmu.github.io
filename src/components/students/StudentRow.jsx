@@ -498,4 +498,152 @@ const StudentRow = memo(({
 })
 
 StudentRow.displayName = 'StudentRow'
+// ─── Mobile Card ─────────────────────────────────────────────────────────────
+const StudentMobileCard = memo(({
+    student,
+    selectedIds,
+    onToggleSelect,
+    onViewProfile,
+    onEdit,
+    onConfirmDelete,
+    onTogglePin,
+    onQuickPoint,
+    isPrivacyMode,
+    RiskThreshold
+}) => {
+    const isSelected = selectedIds.includes(student.id)
+    const isRisk = (student.total_points || 0) <= RiskThreshold
+    const p = student.total_points || 0
+    const [showQuickAction, setShowQuickAction] = useState(false)
+
+    const quickActions = [
+        { label: 'Sangat Aktif', amount: 5, color: 'text-emerald-500' },
+        { label: 'Fokus', amount: 2, color: 'text-emerald-500' },
+        { label: 'Ramai', amount: -2, color: 'text-amber-500' },
+        { label: 'Melanggar', amount: -5, color: 'text-red-500' },
+    ]
+
+    const maskInfo = (str, visibleLen = 3) => {
+        if (!str) return '---'
+        if (str.length <= visibleLen) return str[0] + '*'.repeat(str.length - 1)
+        return str.substring(0, visibleLen) + '***'
+    }
+
+    return (
+        <div className={`p-4 border-b border-[var(--color-border)] transition-colors relative
+            ${isSelected ? 'bg-[var(--color-primary)]/5' : ''}
+            ${student.is_pinned ? 'bg-amber-500/[0.04]' : ''}
+        `}>
+            {student.is_pinned && <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />}
+
+            <div className="flex items-start gap-3">
+                <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleSelect(student.id)}
+                    className="w-5 h-5 mt-1 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] shrink-0"
+                />
+
+                <div className="shrink-0 relative">
+                    <div
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black shadow-sm overflow-hidden
+                            ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white'}
+                            ${isPrivacyMode ? 'blur-sm grayscale opacity-60' : ''}`}
+                    >
+                        {student.photo_url
+                            ? <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
+                            : <span>{isPrivacyMode ? '*' : (student.name || 'S').charAt(0)}</span>
+                        }
+                    </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                            <button
+                                onClick={() => onViewProfile(student)}
+                                className="font-extrabold text-[15px] text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors text-left leading-tight block truncate"
+                            >
+                                {isPrivacyMode ? maskInfo(student.name, 4) : student.name}
+                            </button>
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-black uppercase tracking-widest border border-[var(--color-primary)]/20">
+                                    {student.className}
+                                </span>
+                                <span className={`text-[11px] font-black ${p < 0 ? 'text-red-500' : p > 0 ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'}`}>
+                                    {p > 0 ? '+' : ''}{p} Poin
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                            <button
+                                onClick={() => onTogglePin(student)}
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${student.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                            >
+                                <FontAwesomeIcon icon={faThumbtack} className={`text-xs ${student.is_pinned ? 'rotate-0' : 'rotate-45 opacity-40'}`} />
+                            </button>
+                            <button
+                                onClick={() => onEdit(student)}
+                                className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]"
+                            >
+                                <FontAwesomeIcon icon={faEdit} className="text-xs" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="flex gap-1 shrink-0">
+                            {(student.tags || []).slice(0, 2).map(tag => (
+                                <span key={tag} className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider ${getTagColor(tag)}`}>
+                                    {tag}
+                                </span>
+                            ))}
+                            {(student.tags || []).length > 2 && <span className="text-[8px] font-bold text-[var(--color-text-muted)]">+{(student.tags || []).length - 2}</span>}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                            {/* Quick Action bolt */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowQuickAction(!showQuickAction)}
+                                    className={`h-7 px-3 rounded-lg flex items-center gap-1.5 transition-all
+                                        ${showQuickAction ? 'bg-amber-500 text-white shadow-lg' : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white'}`}
+                                >
+                                    <FontAwesomeIcon icon={faBolt} className="text-[10px]" />
+                                    <span className="text-[9px] font-black uppercase">Poin</span>
+                                </button>
+                                {showQuickAction && (
+                                    <>
+                                        <div className="fixed inset-0 z-[70]" onClick={() => setShowQuickAction(false)} />
+                                        <div className="absolute right-0 bottom-9 z-[80] w-36 glass-morphism bg-white dark:bg-gray-800 shadow-2xl rounded-2xl border border-[var(--color-border)] p-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                            {quickActions.map((act, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => { onQuickPoint(student, act.amount, act.label); setShowQuickAction(false) }}
+                                                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-between group/act"
+                                                >
+                                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] group-hover/act:text-[var(--color-text)]">{act.label}</span>
+                                                    <span className={`text-[10px] font-black ${act.color}`}>{act.amount > 0 ? `+${act.amount}` : act.amount}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={() => onConfirmDelete(student)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/10"
+                            >
+                                <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+})
+
+export { StudentRow, StudentMobileCard }
 export default StudentRow

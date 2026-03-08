@@ -916,7 +916,7 @@ export default function ReportsPage() {
 
             {/* ── SEARCH + FILTER ── */}
             <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
-                <div className="flex gap-2 p-3">
+                <div className="flex flex-col sm:flex-row gap-3 p-3">
                     <div className="flex-1 relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
                             <FontAwesomeIcon icon={faSearch} />
@@ -934,7 +934,7 @@ export default function ReportsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                         <button onClick={() => setShowAdvFilter(v => !v)}
-                            className={`h-9 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${showAdvFilter || activeFilters.length > 0
+                            className={`flex-1 sm:flex-none h-9 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${showAdvFilter || activeFilters.length > 0
                                 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30'
                                 : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
                             <FontAwesomeIcon icon={faSliders} />
