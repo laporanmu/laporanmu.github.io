@@ -3553,7 +3553,7 @@ export default function StudentsPage() {
             <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
 
                 {/* Row 1: Search + action buttons */}
-                <div className="flex flex-col sm:flex-row gap-2 p-3">
+                <div className="flex flex-row items-center gap-2 p-3">
                     <div className="flex-1 relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
                             <FontAwesomeIcon icon={faSearch} />
@@ -3564,18 +3564,18 @@ export default function StudentsPage() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari nama, kode... (Ctrl+K)"
-                            className="input-field pl-10 w-full h-9 text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
+                            className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                         />
                     </div>
 
                     {/* Filter toggle button */}
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1.5 shrink-0">
                         <button
                             onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
-                            className={`h-9 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${showAdvancedFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
+                            className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${showAdvancedFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
                         >
                             <FontAwesomeIcon icon={faSliders} />
-                            Filter
+                            <span className="hidden xs:inline">Filter</span>
                             {activeFilterCount > 0 && (
                                 <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
                                     {activeFilterCount}
@@ -3591,7 +3591,7 @@ export default function StudentsPage() {
                                 className="h-9 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-red-500/10 flex items-center gap-1.5"
                             >
                                 <FontAwesomeIcon icon={faXmark} />
-                                Reset
+                                <span className="hidden sm:inline">Reset</span>
                             </button>
                         )}
                     </div>
