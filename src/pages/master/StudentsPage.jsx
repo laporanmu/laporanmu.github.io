@@ -4343,7 +4343,7 @@ export default function StudentsPage() {
                                     <p className="text-[14px] font-black text-violet-600 leading-none">{importDuplicates.length}</p>
                                     <p className="text-[8px] font-black uppercase tracking-widest text-violet-600/70 mt-1">Duplikat</p>
                                 </div>
-                                <div className="col-span-3 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mt-2">
+                                <div className="col-span-3 flex flex-col justify-between items-start gap-4 mt-2">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-full sm:w-auto">Aksi Massal:</span>
                                         <div className="flex items-center gap-2">
@@ -4364,13 +4364,13 @@ export default function StudentsPage() {
                                             {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
-                                    <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between w-full lg:w-auto gap-3 lg:gap-1.5 bg-[var(--color-surface-alt)] lg:bg-transparent p-2.5 lg:p-0 rounded-xl border border-[var(--color-border)] lg:border-none">
+                                    <div className="flex flex-row items-center justify-between w-full gap-3 bg-[var(--color-surface-alt)] p-2.5 rounded-xl border border-[var(--color-border)]">
                                         <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-80 uppercase tracking-widest flex items-center gap-1.5">
                                             <FontAwesomeIcon icon={faCircleInfo} className="text-[var(--color-primary)]" /> Klik sel tabel untuk edit
                                         </span>
                                         <button
                                             onClick={() => validateImportPreview(importPreview)}
-                                            className="text-[9px] font-black uppercase tracking-widest text-white lg:text-[var(--color-primary)] bg-[var(--color-primary)] lg:bg-transparent hover:bg-[var(--color-primary)]/90 lg:hover:bg-transparent lg:hover:underline px-3 py-1.5 lg:px-0 lg:py-0 rounded-lg lg:rounded-none shrink-0"
+                                            className="text-[9px] font-black uppercase tracking-widest text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 transition-colors px-3 py-1.5 rounded-lg shrink-0"
                                         >
                                             <FontAwesomeIcon icon={faSync} className="mr-1.5" /> Re-validasi
                                         </button>
