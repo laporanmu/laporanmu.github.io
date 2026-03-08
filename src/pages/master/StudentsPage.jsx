@@ -4343,35 +4343,37 @@ export default function StudentsPage() {
                                     <p className="text-[14px] font-black text-violet-600 leading-none">{importDuplicates.length}</p>
                                     <p className="text-[8px] font-black uppercase tracking-widest text-violet-600/70 mt-1">Duplikat</p>
                                 </div>
-                                <div className="col-span-3 flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Aksi Massal:</span>
-                                        <button
-                                            onClick={() => handleBulkFix('gender', 'L')}
-                                            className="px-2 py-1 rounded bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-all"
-                                        >Semua L</button>
-                                        <button
-                                            onClick={() => handleBulkFix('gender', 'P')}
-                                            className="px-2 py-1 rounded bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-all"
-                                        >Semua P</button>
+                                <div className="col-span-3 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mt-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-full sm:w-auto">Aksi Massal:</span>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleBulkFix('gender', 'L')}
+                                                className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-all"
+                                            >Semua L</button>
+                                            <button
+                                                onClick={() => handleBulkFix('gender', 'P')}
+                                                className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-all"
+                                            >Semua P</button>
+                                        </div>
                                         <select
                                             onChange={(e) => e.target.value && handleBulkFix('class_id', e.target.value)}
-                                            className="px-2 py-1 rounded bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:border-[var(--color-primary)] outline-none"
+                                            className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:border-[var(--color-primary)] outline-none"
                                         >
                                             <option value="">Set Semua Kelas...</option>
                                             {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
-                                    <div className="flex flex-col items-end gap-1">
+                                    <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between w-full lg:w-auto gap-3 lg:gap-1.5 bg-[var(--color-surface-alt)] lg:bg-transparent p-2.5 lg:p-0 rounded-xl border border-[var(--color-border)] lg:border-none">
+                                        <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-80 uppercase tracking-widest flex items-center gap-1.5">
+                                            <FontAwesomeIcon icon={faCircleInfo} className="text-[var(--color-primary)]" /> Klik sel tabel untuk edit
+                                        </span>
                                         <button
                                             onClick={() => validateImportPreview(importPreview)}
-                                            className="text-[8px] font-black uppercase tracking-widest text-[var(--color-primary)] hover:underline"
+                                            className="text-[9px] font-black uppercase tracking-widest text-white lg:text-[var(--color-primary)] bg-[var(--color-primary)] lg:bg-transparent hover:bg-[var(--color-primary)]/90 lg:hover:bg-transparent lg:hover:underline px-3 py-1.5 lg:px-0 lg:py-0 rounded-lg lg:rounded-none shrink-0"
                                         >
-                                            <FontAwesomeIcon icon={faSync} className="mr-1" /> Re-validasi Data
+                                            <FontAwesomeIcon icon={faSync} className="mr-1.5" /> Re-validasi
                                         </button>
-                                        <span className="text-[7px] font-bold text-[var(--color-text-muted)] opacity-60 uppercase tracking-wider flex items-center gap-1">
-                                            <FontAwesomeIcon icon={faCircleInfo} /> Klik sel di tabel untuk mengedit langsung
-                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -4392,17 +4394,17 @@ export default function StudentsPage() {
                                     )}
 
                                     <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
-                                        <div className="max-h-[28vh] overflow-auto">
-                                            <table className="w-full text-[10px]">
+                                        <div className="max-h-[28vh] overflow-auto custom-scrollbar">
+                                            <table className="w-full text-[10px] whitespace-nowrap">
                                                 <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
-                                                    <tr className="text-left">
+                                                    <tr className="text-left shadow-sm">
                                                         <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest w-8">#</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">Nama</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">Gender</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">No. HP</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">Kelas</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest">NISN</th>
-                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest w-16">Status</th>
+                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[180px]">Nama</th>
+                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[80px]">Gender</th>
+                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[100px]">No. HP</th>
+                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[120px]">Kelas</th>
+                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[100px]">NISN</th>
+                                                        <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest px-4">Status</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
