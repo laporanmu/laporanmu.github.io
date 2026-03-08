@@ -134,7 +134,7 @@ const maskInfo = (str, visibleLen = 3) => {
 };
 
 import StudentFormModal from '../../components/students/StudentFormModal'
-import StudentRow from '../../components/students/StudentRow'
+import { StudentRow, StudentMobileCard } from '../../components/students/StudentRow'
 
 // ── BehaviorHeatmap — outside StudentsPage to prevent re-creation on every render ──
 const BehaviorHeatmap = memo(({ history }) => {
@@ -3553,7 +3553,7 @@ export default function StudentsPage() {
             <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
 
                 {/* Row 1: Search + action buttons */}
-                <div className="flex gap-2 p-3">
+                <div className="flex flex-col sm:flex-row gap-2 p-3">
                     <div className="flex-1 relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
                             <FontAwesomeIcon icon={faSearch} />
@@ -3813,8 +3813,9 @@ export default function StudentsPage() {
                 </div>
             ) : (
                 <>
-                    <div className="glass rounded-[1.5rem] border border-[var(--color-border)]">
-                        <div className="overflow-x-auto">
+                    <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
+                        {/* Desktop View */}
+                        <div className="hidden md:block overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
                                     <tr className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
@@ -4024,6 +4025,33 @@ export default function StudentsPage() {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Mobile View */}
+                        <div className="md:hidden divide-y divide-[var(--color-border)]">
+                            {students.length === 0 ? (
+                                <div className="py-20 flex flex-col items-center text-center gap-3">
+                                    <FontAwesomeIcon icon={faTableList} className="text-4xl text-[var(--color-text-muted)] opacity-20" />
+                                    <div className="text-sm font-extrabold text-[var(--color-text)]">Tidak ada data ditemukan</div>
+                                    <button onClick={resetAllFilters} className="mt-2 h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)]">Reset Filter</button>
+                                </div>
+                            ) : (
+                                students.map(student => (
+                                    <StudentMobileCard
+                                        key={student.id}
+                                        student={student}
+                                        selectedIds={selectedStudentIds}
+                                        onToggleSelect={toggleSelectStudent}
+                                        onViewProfile={handleViewProfile}
+                                        onEdit={handleEdit}
+                                        onConfirmDelete={confirmDelete}
+                                        onTogglePin={handleTogglePin}
+                                        onQuickPoint={handleQuickPoint}
+                                        isPrivacyMode={isPrivacyMode}
+                                        RiskThreshold={RiskThreshold}
+                                    />
+                                ))
+                            )}
                         </div>
 
                         {/* Quick Add trigger */}
