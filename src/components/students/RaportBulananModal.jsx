@@ -42,11 +42,11 @@ const KRITERIA = [
 
 const GRADE = (n) => {
     const num = Number(n)
-    if (num >= 9) return { label: 'ممتاز', id: 'Istimewa', color: '#10b981', bg: '#10b98115', border: '#10b98140' }
-    if (num >= 8) return { label: 'جيد جدا', id: 'Sangat Baik', color: '#3b82f6', bg: '#3b82f615', border: '#3b82f640' }
-    if (num >= 6) return { label: 'جيد', id: 'Baik', color: '#6366f1', bg: '#6366f115', border: '#6366f140' }
-    if (num >= 4) return { label: 'مقبول', id: 'Cukup', color: '#f59e0b', bg: '#f59e0b15', border: '#f59e0b40' }
-    return { label: 'راسب', id: 'Kurang', color: '#ef4444', bg: '#ef444415', border: '#ef444440' }
+    if (num >= 9) return { label: 'ممتاز', id: 'Istimewa', color: '#000', bg: '#10b98115', border: '#10b98140', uiColor: '#10b981' }
+    if (num >= 8) return { label: 'جيد جدا', id: 'Sangat Baik', color: '#000', bg: '#3b82f615', border: '#3b82f640', uiColor: '#3b82f6' }
+    if (num >= 6) return { label: 'جيد', id: 'Baik', color: '#000', bg: '#6366f115', border: '#6366f140', uiColor: '#6366f1' }
+    if (num >= 4) return { label: 'مقبول', id: 'Cukup', color: '#000', bg: '#f59e0b15', border: '#f59e0b40', uiColor: '#f59e0b' }
+    return { label: 'راسب', id: 'Kurang', color: '#ef4444', bg: '#ef444415', border: '#ef444440', uiColor: '#ef4444' }
 }
 
 const toArabicNum = (n) => String(n).replace(/[0-9]/g, d => '٠١٢٣٤٥٦٧٨٩'[d])
@@ -55,9 +55,10 @@ const LABEL = {
     ar: {
         studentName: 'اسم الطالب', room: 'الغرفة', class: 'الفصل', year: 'العام الدراسي',
         dailyWork: 'الأعمال اليومية', subject: 'المواد الدراسية', score: 'النقاط',
-        grade: 'التقدم', num: 'الرقم', weight: 'وزن البدن', height: 'طول البدن',
-        ziyadah: 'الزيادة', murojaah: 'المراجعة', sick: 'المريض', home: 'الراجع',
-        gradeScale: 'نظام التقدير', headmaster: 'مدير معهد المحمدية الإسلامي تانجول',
+        grade: 'التقدير', num: 'الرقم', weight: 'وزن البدن', height: 'طول البدن',
+        ziyadah: 'الزيادة', murojaah: 'المراجعة', sick: 'المريض', home: 'الإجازة',
+        gradeScale: 'نظام التقدير',
+        headmaster: 'مدير معهد محمدية الإسلامي تانجول',
         headmasterSub: 'كياهي الحاج محمد علي معصوم، ليسانس',
         musyrif: 'رائد الحجرة', guardian: 'ولي الأمر',
         reportTitle: 'نتيجة الشخصية', month: 'شهر',
@@ -154,8 +155,8 @@ const ScoreCell = ({ value, onChange, onKeyDown, inputRef, kriteria }) => {
                 className="w-11 h-10 text-center text-base font-black rounded-lg outline-none transition-all appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 style={{
                     background: g ? g.bg : 'var(--color-surface-alt)',
-                    color: g ? g.color : 'var(--color-text-muted)',
-                    border: `2px solid ${focused ? (g ? g.color : 'var(--color-primary)') : (g ? g.border : 'var(--color-border)')}`,
+                    color: g ? g.uiColor : 'var(--color-text-muted)',
+                    border: `2px solid ${focused ? (g ? g.uiColor : 'var(--color-primary)') : (g ? g.border : 'var(--color-border)')}`,
                 }}
                 placeholder="—"
             />
@@ -165,11 +166,13 @@ const ScoreCell = ({ value, onChange, onKeyDown, inputRef, kriteria }) => {
 
 // ─── Raport Print Template ────────────────────────────────────────────────────
 
-const RaportPrintCard = ({ student, scores, extra, bulanObj, tahun, musyrif, className, lang = 'ar' }) => {
+const RaportPrintCard = ({ student, scores, extra, bulanObj, tahun, musyrif, className, lang = 'ar', onRendered }) => {
     const sc = scores || {}
     const ex = extra || {}
     const L = LABEL[lang]
     const isAr = lang === 'ar'
+
+    useEffect(() => { onRendered?.() }, [])
     const gradeLabel = isAr ? (v) => GRADE(v)?.label : (v) => GRADE_ID(v)?.label
     const gradeColor = (v) => GRADE(v)?.color
     const numRows = isAr ? ['١', '٢', '٣', '٤', '٥'] : [1, 2, 3, 4, 5]
@@ -189,6 +192,65 @@ const RaportPrintCard = ({ student, scores, extra, bulanObj, tahun, musyrif, cla
         return isAr ? toArabicNum(v) : v
     }
 
+    // Transliterasi nama kelas ke Arab
+    // Contoh: "7A Boarding Putra" → "السابع أ · بوتر"
+    const displayClassName = isAr ? (() => {
+        const ANGKA_AR = { '1': 'الأول', '2': 'الثاني', '3': 'الثالث', '4': 'الرابع', '5': 'الخامس', '6': 'السادس', '7': 'السابع', '8': 'الثامن', '9': 'التاسع', '10': 'العاشر' }
+        const HURUF_AR = { 'a': 'أ', 'b': 'ب', 'c': 'ج', 'd': 'د', 'e': 'ه' }
+        const KELAS_KATA = {
+            'boarding': '', 'pondok': '', 'reguler': '', 'regular': '', 'putra': 'بوتر', 'putri': 'بوتري',
+            'ikhwan': 'إخوان', 'akhwat': 'أخوات', 'sd': '', 'smp': '', 'sma': '',
+            'mts': '', 'ma': '', 'class': '', 'kelas': ''
+        }
+        const parts = (className || '').toLowerCase().split(/[\s\-_]+/)
+        const result = []
+        for (const p of parts) {
+            // Angka saja misal "7" → "السابع"
+            if (ANGKA_AR[p]) { result.push(ANGKA_AR[p]); continue }
+            // Angka + huruf misal "7a" → "السابع أ"
+            const m = p.match(/^(\d+)([a-e]?)$/)
+            if (m) {
+                if (ANGKA_AR[m[1]]) result.push(ANGKA_AR[m[1]])
+                if (m[2] && HURUF_AR[m[2]]) result.push(HURUF_AR[m[2]])
+                continue
+            }
+            // Huruf saja misal "a" → "أ"
+            if (HURUF_AR[p]) { result.push(HURUF_AR[p]); continue }
+            // Kata yang diabaikan / sudah diterjemahkan
+            if (KELAS_KATA[p] !== undefined) {
+                if (KELAS_KATA[p]) result.push(KELAS_KATA[p])
+                continue
+            }
+            // Fallback: tetap tampilkan aslinya
+            result.push(p)
+        }
+        return result.filter(Boolean).join(' ')
+    })() : className
+
+    // Transliterasi nama musyrif (sama seperti nama santri, pakai metadata atau rule-based)
+    const displayMusyrif = isAr && musyrif
+        ? musyrif.split(/\s+/).map(w => {
+            const KATA = {
+                'muhammad': 'محمد', 'mohamad': 'محمد', 'muhamad': 'محمد', 'ahmad': 'أحمد', 'achmad': 'أحمد',
+                'ali': 'علي', 'umar': 'عمر', 'hasan': 'حسن', 'husain': 'حسين', 'ibrahim': 'إبراهيم',
+                'ismail': 'إسماعيل', 'yusuf': 'يوسف', 'abdul': 'عبد', 'abdullah': 'عبد الله',
+                'abdillah': 'عبد الله', 'nur': 'نور', 'rahim': 'رحيم', 'rahman': 'رحمن',
+                'hamid': 'حامد', 'hamzah': 'حمزة', 'fauzi': 'فوزي', 'rizki': 'رزقي', 'rizky': 'رزقي',
+                'taufiq': 'توفيق', 'taufik': 'توفيق', 'sholeh': 'صالح', 'soleh': 'صالح',
+                'miftah': 'مفتاح', 'hafidz': 'حافظ', 'hafiz': 'حافظ', 'anas': 'أنس',
+                'jabir': 'جابر', 'khalid': 'خالد', 'kholid': 'خالد', 'wahid': 'واحد',
+                'luthfi': 'لطفي', 'lutfi': 'لطفي', 'najib': 'نجيب', 'akbar': 'أكبر',
+                'ramadhan': 'رمضان', 'ramadan': 'رمضان', 'aziz': 'عزيز', 'hilmi': 'حلمي',
+                'arif': 'عارف', 'irfan': 'عرفان', 'zaki': 'زكي', 'fuad': 'فؤاد',
+                'syarif': 'شريف', 'burhan': 'برهان', 'mustafa': 'مصطفى', 'mustofa': 'مصطفى',
+                'farid': 'فريد', 'mansur': 'منصور', 'said': 'سعيد', 'salim': 'سالم',
+                'bilal': 'بلال', 'habib': 'حبيب', 'ihsan': 'إحسان', 'ilham': 'إلهام',
+                'ridho': 'رضا', 'ridha': 'رضا', 'zaid': 'زيد', 'hanif': 'حنيف',
+            }
+            return KATA[w.toLowerCase()] || w
+        }).join(' ')
+        : musyrif
+
     return (
         <div className="raport-card" style={{
             fontFamily: "'Times New Roman', serif",
@@ -199,23 +261,29 @@ const RaportPrintCard = ({ student, scores, extra, bulanObj, tahun, musyrif, cla
             pageBreakAfter: 'always'
         }}>
             {/* Header */}
-            <div style={{ borderBottom: '3px double #1a5c35', paddingBottom: 8, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 16 }}>
-                <img src="/src/assets/mbs.png" alt="MBS Logo" style={{ width: 80, height: 80, objectFit: 'contain', flexShrink: 0, mixBlendMode: 'multiply' }} />
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontSize: '8pt', color: '#444', direction: 'rtl', marginBottom: 3, fontFamily: "'Traditional Arabic', serif" }}>
-                        المجلس التعليمي للمرحلتين الابتدائية والمتوسطة التابع للرئاسة الفرعية للجمعية المحمدية
+            <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingBottom: 6 }}>
+                    <div style={{ flexShrink: 0, width: 80, height: 80, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src="/src/assets/mbs.png" alt="MBS Logo" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
                     </div>
-                    <div style={{ fontSize: '20pt', fontWeight: 900, color: '#1a5c35', direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5 }}>
-                        معهد محمدية الإسلامي تانجول
+                    <div style={{ flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: '8pt', color: '#444', direction: 'rtl', marginBottom: 3, fontFamily: "'Traditional Arabic', serif" }}>
+                            المجلس التعليمي للمرحلتين الابتدائية والمتوسطة التابع للرئاسة الفرعية للجمعية المحمدية
+                        </div>
+                        <div style={{ fontSize: '20pt', fontWeight: 900, color: '#1a5c35', direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5 }}>
+                            معهد محمدية الإسلامي تانجول
+                        </div>
+                        <div style={{ fontSize: '10pt', fontWeight: 700, letterSpacing: 2.5, color: '#333', marginTop: 1 }}>
+                            MUHAMMADIYAH BOARDING SCHOOL (MBS) TANGGUL
+                        </div>
+                        <div style={{ fontSize: '7.5pt', color: '#666', marginTop: 2 }}>
+                            Muhammadiyah Boarding School (MBS) | Jl. Pemandian no. 88 RT 002 RW 003 Patemon, Tanggul, Jember 68155
+                        </div>
                     </div>
-                    <div style={{ fontSize: '10pt', fontWeight: 700, letterSpacing: 2.5, color: '#333', marginTop: 1 }}>
-                        MUHAMMADIYAH BOARDING SCHOOL (MBS) TANGGUL
-                    </div>
-                    <div style={{ fontSize: '7.5pt', color: '#666', marginTop: 2 }}>
-                        Muhammadiyah Boarding School (MBS) | Jl. Pembangunan no. 88 Rt 003/003 kelurahan Tanggul Jember 68155
-                    </div>
-                    <div style={{ marginTop: 5, height: 3, background: 'linear-gradient(90deg,#1a5c35,#c8a400,#1a5c35)' }} />
                 </div>
+                {/* Garis full width di luar flex agar tidak terpotong */}
+                <div style={{ height: 3, background: 'linear-gradient(90deg,#1a5c35,#c8a400,#1a5c35)', marginBottom: 0 }} />
+                <div style={{ borderBottom: '3px double #1a5c35', marginTop: 3 }} />
             </div>
 
             {/* Judul */}
@@ -237,7 +305,7 @@ const RaportPrintCard = ({ student, scores, extra, bulanObj, tahun, musyrif, cla
                     </tr>
                     <tr>
                         <td style={{ fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: isAr ? 'right' : 'left' }}>{L.class} :</td>
-                        <td style={{ fontWeight: 700, textAlign: isAr ? 'right' : 'left' }}>{className}</td>
+                        <td style={{ fontWeight: 700, textAlign: isAr ? 'right' : 'left' }}>{displayClassName}</td>
                         <td style={{ fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: isAr ? 'right' : 'left' }}>{L.year} :</td>
                         <td style={{ fontWeight: 700, textAlign: isAr ? 'right' : 'left' }}>{yearDisplay}</td>
                     </tr>
@@ -250,19 +318,19 @@ const RaportPrintCard = ({ student, scores, extra, bulanObj, tahun, musyrif, cla
             </div>
 
             {/* Tabel Nilai */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5pt', marginBottom: 12, direction: tableDir }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5pt', marginBottom: 12 }}>
                 <thead>
                     <tr style={{ background: '#e8f5e9' }}>
                         {isAr ? <>
-                            <th style={{ border: '1px solid #999', padding: '4px 8px', width: '8%', fontFamily: "'Traditional Arabic', serif" }}>{L.num}</th>
-                            <th style={{ border: '1px solid #999', padding: '4px 8px', fontFamily: "'Traditional Arabic', serif" }}>{L.subject}</th>
-                            <th style={{ border: '1px solid #999', padding: '4px 8px', width: '14%', fontFamily: "'Traditional Arabic', serif" }}>{L.score}</th>
-                            <th style={{ border: '1px solid #999', padding: '4px 8px', width: '18%', fontFamily: "'Traditional Arabic', serif" }}>{L.grade}</th>
+                            <th style={{ border: '1px solid #999', padding: '4px 8px', width: '19%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.grade}</th>
+                            <th style={{ border: '1px solid #999', padding: '4px 6px', width: '11%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.score}</th>
+                            <th style={{ border: '1px solid #999', padding: '4px 10px', fontFamily: "'Traditional Arabic', serif", textAlign: 'right' }}>{L.subject}</th>
+                            <th style={{ border: '1px solid #999', padding: '4px 6px', width: '6%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.num}</th>
                         </> : <>
-                            <th style={{ border: '1px solid #999', padding: '4px 8px', width: '8%' }}>{L.num}</th>
-                            <th style={{ border: '1px solid #999', padding: '4px 8px' }}>{L.subject}</th>
-                            <th style={{ border: '1px solid #999', padding: '4px 8px', width: '14%' }}>{L.score}</th>
-                            <th style={{ border: '1px solid #999', padding: '4px 8px', width: '18%' }}>{L.grade}</th>
+                            <th style={{ border: '1px solid #999', padding: '4px 6px', width: '6%', textAlign: 'center' }}>{L.num}</th>
+                            <th style={{ border: '1px solid #999', padding: '4px 10px', textAlign: 'left' }}>{L.subject}</th>
+                            <th style={{ border: '1px solid #999', padding: '4px 6px', width: '11%', textAlign: 'center' }}>{L.score}</th>
+                            <th style={{ border: '1px solid #999', padding: '4px 8px', width: '19%', textAlign: 'center' }}>{L.grade}</th>
                         </>}
                     </tr>
                 </thead>
@@ -273,14 +341,14 @@ const RaportPrintCard = ({ student, scores, extra, bulanObj, tahun, musyrif, cla
                         return (
                             <tr key={k.key}>
                                 {isAr ? <>
-                                    <td style={{ border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontFamily: "'Traditional Arabic', serif" }}>{numRows[i]}</td>
-                                    <td style={{ border: '1px solid #999', padding: '4px 8px', fontFamily: "'Traditional Arabic', serif" }}>{k.ar}</td>
-                                    <td style={{ border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700, fontFamily: "'Traditional Arabic', serif" }}>{displayVal(val)}</td>
                                     <td style={{ border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: g?.color, fontFamily: "'Traditional Arabic', serif" }}>{g ? gradeLabel(val) : '—'}</td>
+                                    <td style={{ border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontWeight: 700, fontFamily: "'Traditional Arabic', serif" }}>{displayVal(val)}</td>
+                                    <td style={{ border: '1px solid #999', padding: '4px 10px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{k.ar}</td>
+                                    <td style={{ border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontFamily: "'Traditional Arabic', serif" }}>{numRows[i]}</td>
                                 </> : <>
-                                    <td style={{ border: '1px solid #999', padding: '4px 8px', textAlign: 'center' }}>{numRows[i]}</td>
-                                    <td style={{ border: '1px solid #999', padding: '4px 8px' }}>{k.id}</td>
-                                    <td style={{ border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700 }}>{val ?? '—'}</td>
+                                    <td style={{ border: '1px solid #999', padding: '4px 6px', textAlign: 'center' }}>{numRows[i]}</td>
+                                    <td style={{ border: '1px solid #999', padding: '4px 10px', textAlign: 'left' }}>{k.id}</td>
+                                    <td style={{ border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontWeight: 700 }}>{val ?? '—'}</td>
                                     <td style={{ border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: g?.color }}>{g ? gradeLabel(val) : '—'}</td>
                                 </>}
                             </tr>
@@ -292,103 +360,142 @@ const RaportPrintCard = ({ student, scores, extra, bulanObj, tahun, musyrif, cla
             {/* Extra Data Row */}
             <div style={{ display: 'flex', gap: 14, marginBottom: 14, flexDirection: isAr ? 'row-reverse' : 'row' }}>
                 {/* BB / TB */}
-                <table style={{ flex: 1, borderCollapse: 'collapse', fontSize: '9.5pt', direction: tableDir }}>
+                <table style={{ flex: 1, borderCollapse: 'collapse', fontSize: '9.5pt' }}>
                     <tbody>
                         <tr>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>{L.weight}</td>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.berat_badan)}</td>
+                            {isAr ? <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.berat_badan)}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.weight}</td>
+                            </> : <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.weight}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.berat_badan)}</td>
+                            </>}
                         </tr>
                         <tr>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>{L.height}</td>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.tinggi_badan)}</td>
+                            {isAr ? <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.tinggi_badan)}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.height}</td>
+                            </> : <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.height}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.tinggi_badan)}</td>
+                            </>}
                         </tr>
                     </tbody>
                 </table>
                 {/* Ziyadah / Murojaah */}
-                <table style={{ flex: 1, borderCollapse: 'collapse', fontSize: '9.5pt', direction: tableDir }}>
+                <table style={{ flex: 1, borderCollapse: 'collapse', fontSize: '9.5pt' }}>
                     <tbody>
                         <tr>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>{L.ziyadah}</td>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.ziyadah)}</td>
+                            {isAr ? <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.ziyadah)}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.ziyadah}</td>
+                            </> : <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.ziyadah}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.ziyadah)}</td>
+                            </>}
                         </tr>
                         <tr>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>{L.murojaah}</td>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.murojaah)}</td>
+                            {isAr ? <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.murojaah)}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.murojaah}</td>
+                            </> : <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.murojaah}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.murojaah)}</td>
+                            </>}
                         </tr>
                     </tbody>
                 </table>
                 {/* Sakit / Pulang */}
-                <table style={{ flex: 1, borderCollapse: 'collapse', fontSize: '9.5pt', direction: tableDir }}>
+                <table style={{ flex: 1, borderCollapse: 'collapse', fontSize: '9.5pt' }}>
                     <tbody>
                         <tr>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>{L.sick}</td>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.hari_sakit)}</td>
+                            {isAr ? <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.hari_sakit)}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.sick}</td>
+                            </> : <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.sick}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.hari_sakit)}</td>
+                            </>}
                         </tr>
                         <tr>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>{L.home}</td>
-                            <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.hari_pulang)}</td>
+                            {isAr ? <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.hari_pulang)}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.home}</td>
+                            </> : <>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.home}</td>
+                                <td style={{ border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.hari_pulang)}</td>
+                            </>}
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            {/* Skala + TTD */}
-            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginTop: 8, flexDirection: isAr ? 'row-reverse' : 'row' }}>
-                {isAr ? <>
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around', paddingBottom: 4 }}>
-                        {[
-                            { label: L.headmaster, sub: L.headmasterSub },
-                            { label: L.musyrif, sub: musyrif || '...' },
-                            { label: L.guardian, sub: '' }
-                        ].map((item, i) => (
-                            <div key={i} style={{ textAlign: 'center', fontSize: '8.5pt', fontFamily: "'Traditional Arabic', serif" }}>
-                                <div>{item.label}</div>
-                                <div style={{ height: 44 }} />
-                                <div style={{ borderTop: '1px solid #333', paddingTop: 2, fontWeight: 700, fontSize: '8pt' }}>{item.sub || '......................'}</div>
-                            </div>
-                        ))}
-                    </div>
-                    <table style={{ borderCollapse: 'collapse', fontSize: '9pt', direction: 'rtl' }}>
-                        <thead>
-                            <tr><th colSpan={2} style={{ border: '1px solid #999', padding: '3px 10px', background: '#e8f5e9', fontFamily: "'Traditional Arabic', serif" }}>{L.gradeScale}</th></tr>
-                        </thead>
-                        <tbody>
-                            {[['٩', 'ممتاز'], ['٨', 'جيد جدا'], ['٦ – ٧', 'جيد'], ['٤ – ٥', 'مقبول'], ['٠ – ٣', 'راسب']].map(([n, l]) => (
+            {/* Skala Penilaian — lebar sesuai konten, tidak full width */}
+            <div style={{ marginTop: 10, display: 'inline-block' }}>
+                <table style={{ borderCollapse: 'collapse', fontSize: '9pt', direction: isAr ? 'rtl' : 'ltr' }}>
+                    <thead>
+                        <tr>
+                            <th colSpan={2} style={{ border: '1px solid #999', padding: '3px 16px', background: '#e8f5e9', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: 'center' }}>
+                                {L.gradeScale}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {isAr
+                            ? [['٩', 'ممتاز'], ['٨', 'جيد جدا'], ['٦ – ٧', 'جيد'], ['٤ – ٥', 'مقبول'], ['٠ – ٣', 'راسب']].map(([n, l]) => (
                                 <tr key={n}>
-                                    <td style={{ border: '1px solid #999', padding: '2px 10px', fontFamily: "'Traditional Arabic', serif" }}>{l}</td>
-                                    <td style={{ border: '1px solid #999', padding: '2px 10px', textAlign: 'center', fontFamily: "'Traditional Arabic', serif" }}>{n}</td>
+                                    <td style={{ border: '1px solid #999', padding: '2px 14px', fontFamily: "'Traditional Arabic', serif", textAlign: 'right' }}>{l}</td>
+                                    <td style={{ border: '1px solid #999', padding: '2px 14px', textAlign: 'center', fontFamily: "'Traditional Arabic', serif", whiteSpace: 'nowrap' }}>{n}</td>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </> : <>
-                    <table style={{ borderCollapse: 'collapse', fontSize: '9pt' }}>
-                        <thead>
-                            <tr><th colSpan={2} style={{ border: '1px solid #999', padding: '3px 10px', background: '#e8f5e9' }}>{L.gradeScale}</th></tr>
-                        </thead>
-                        <tbody>
-                            {[['9', 'Istimewa'], ['8', 'Sangat Baik'], ['6 – 7', 'Baik'], ['4 – 5', 'Cukup'], ['0 – 3', 'Kurang']].map(([n, l]) => (
+                            ))
+                            : [['9', 'Istimewa'], ['8', 'Sangat Baik'], ['6 – 7', 'Baik'], ['4 – 5', 'Cukup'], ['0 – 3', 'Kurang']].map(([n, l]) => (
                                 <tr key={n}>
-                                    <td style={{ border: '1px solid #999', padding: '2px 10px' }}>{l}</td>
-                                    <td style={{ border: '1px solid #999', padding: '2px 10px', textAlign: 'center' }}>{n}</td>
+                                    <td style={{ border: '1px solid #999', padding: '2px 14px' }}>{l}</td>
+                                    <td style={{ border: '1px solid #999', padding: '2px 14px', textAlign: 'center', whiteSpace: 'nowrap' }}>{n}</td>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around', paddingBottom: 4 }}>
-                        {[
-                            { label: L.headmaster, sub: L.headmasterSub },
-                            { label: L.musyrif, sub: musyrif || '...' },
-                            { label: L.guardian, sub: '' }
-                        ].map((item, i) => (
-                            <div key={i} style={{ textAlign: 'center', fontSize: '8.5pt' }}>
-                                <div>{item.label}</div>
-                                <div style={{ height: 44 }} />
-                                <div style={{ borderTop: '1px solid #333', paddingTop: 2, fontWeight: 700, fontSize: '8pt' }}>{item.sub || '......................'}</div>
-                            </div>
-                        ))}
+                            ))
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            {/* TTD 3 Kolom — penuh lebar, RTL untuk AR */}
+            <div style={{
+                display: 'flex',
+                marginTop: 32,
+                flexDirection: isAr ? 'row-reverse' : 'row',
+                justifyContent: 'space-between',
+                direction: isAr ? 'rtl' : 'ltr',
+            }}>
+                {[
+                    { label: L.headmaster, sub: L.headmasterSub },
+                    { label: L.musyrif, sub: displayMusyrif || '......................' },
+                    { label: L.guardian, sub: '' }
+                ].map((item, i) => (
+                    <div key={i} style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit',
+                        fontSize: '9pt',
+                        direction: isAr ? 'rtl' : 'ltr',
+                    }}>
+                        <div style={{ fontWeight: 700 }}>{item.label}</div>
+                        <div style={{ height: 70 }} />
+                        <div style={{
+                            borderTop: '1px solid #333',
+                            paddingTop: 4,
+                            width: '75%',
+                            fontWeight: 700,
+                            fontSize: '8.5pt',
+                            textAlign: 'center',
+                        }}>
+                            {item.sub || '......................'}
+                        </div>
                     </div>
-                </>}
+                ))}
             </div>
 
             {/* Catatan */}
@@ -434,6 +541,10 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
 
     // ── Preview State
     const [previewStudentId, setPreviewStudentId] = useState(null)
+
+    // ── WA + Supabase Storage State
+    const [sendingWA, setSendingWA] = useState({})     // { studentId: 'generating'|'uploading'|'done'|null }
+    const [raportLinks, setRaportLinks] = useState({}) // { studentId: url } — cache sesi ini
 
     // ── Refs for keyboard nav
     const cellRefs = useRef({}) // key: `${studentIndex}-${kriteriaIndex}`
@@ -988,6 +1099,52 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
 
 
 
+    // ── Print: set santri yang akan dicetak, render di hidden container, ambil HTML
+    const [printQueue, setPrintQueue] = useState([]) // list student id yang akan dicetak
+    const [printRenderedCount, setPrintRenderedCount] = useState(0)
+    const printContainerRef = useRef(null)
+
+    const openPrintWindow = useCallback((stuList) => {
+        if (!stuList?.length) { addToast('Tidak ada data untuk dicetak', 'warning'); return }
+        setPrintRenderedCount(0)
+        setPrintQueue(stuList.map(s => s.id))
+    }, [addToast])
+
+    const executePrint = useCallback((stuList) => {
+        const container = printContainerRef.current
+        if (!container) return
+        const cards = container.querySelectorAll('.raport-card')
+        if (!cards.length) { addToast('Gagal menyiapkan raport', 'error'); return }
+        const html = [...cards].map(c => c.outerHTML).join('')
+        const titleStr = stuList.length === 1
+            ? `Raport ${stuList[0].name}_${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}`
+            : `Raport Kelas ${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}`
+        const win = window.open('', '_blank')
+        win.document.write(`<!DOCTYPE html><html><head>
+            <meta charset="utf-8">
+            <title>${titleStr}</title>
+            <style>
+                @page { size: A4; margin: 0; }
+                body { margin: 0; padding: 0; }
+                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                img { mix-blend-mode: multiply; }
+                .raport-card { page-break-after: always; }
+            </style>
+        </head><body>${html}</body></html>`)
+        win.document.close()
+        win.focus()
+        setTimeout(() => { win.print(); setPrintQueue([]); setPrintRenderedCount(0) }, 700)
+    }, [selectedClass, bulanObj, selectedYear, addToast])
+
+    // Tunggu semua kartu selesai render baru execute print
+    useEffect(() => {
+        if (!printQueue.length || printRenderedCount < printQueue.length) return
+        const stuList = students.filter(s => printQueue.includes(s.id))
+        executePrint(stuList)
+    }, [printRenderedCount, printQueue, students, executePrint])
+
+
+
     // ── Export Bulk — buka window baru dengan semua raport, siap print ke PDF
     const exportBulkPDF = useCallback(async (entry) => {
         await loadArchiveDetail(entry)
@@ -1044,8 +1201,8 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
         }
     }
 
-    // ── WA Message builder
-    const buildWaMessage = (student) => {
+    // ── WA Message builder (dengan optional link PDF)
+    const buildWaMessage = useCallback((student, pdfUrl = null) => {
         const sc = scores[student.id] || {}
         const avg = calcAvg(sc)
         const g = avg ? GRADE(Number(avg)) : null
@@ -1065,20 +1222,223 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
             ``,
             avg ? `📊 Rata-rata: *${avg}* — ${g?.id}` : '',
             ``,
+            ...(pdfUrl ? [
+                `📄 *Unduh Raport PDF:*`,
+                pdfUrl,
+                `_(Link aktif 3 hari)_`,
+                ``
+            ] : []),
             `Wassalamu'alaikum Wr. Wb.`,
             `_MBS Tanggul · Sistem Laporanmu_`
         ].filter(l => l !== undefined)
         return encodeURIComponent(lines.join('\n'))
-    }
+    }, [scores, bulanObj, selectedYear, selectedClass, musyrif])
 
-    const openWA = (student) => {
-        if (!student.phone) {
-            addToast('Nomor WA tidak tersedia', 'warning')
+    // ── Load html2pdf.js dari CDN (sekali saja)
+    const loadHtml2Pdf = useCallback(() => {
+        return new Promise((resolve, reject) => {
+            if (window.html2pdf) { resolve(); return }
+            const s = document.createElement('script')
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
+            s.onload = () => resolve()
+            s.onerror = () => reject(new Error('Gagal memuat html2pdf.js'))
+            document.head.appendChild(s)
+        })
+    }, [])
+
+    // ── Render card santri → HTML string → PDF Blob
+    const generatePDFBlob = useCallback(async (student) => {
+        await loadHtml2Pdf()
+
+        const bulanStr = bulanObj?.id_str || String(selectedMonth)
+        const safeName = student.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
+        const filename = `${safeName}_${bulanStr}_${selectedYear}.pdf`
+
+        // Strategi: cari card yang sudah ada di DOM (preview atau print container)
+        let cardEl = null
+        const allCards = document.querySelectorAll('.raport-card')
+        for (const c of allCards) {
+            const text = c.innerText || c.textContent || ''
+            if (text.includes(student.name) || text.includes(student.name.split(' ')[0])) {
+                cardEl = c
+                break
+            }
+        }
+
+        // Kalau tidak ketemu, trigger printQueue dan tunggu render
+        if (!cardEl) {
+            setPrintRenderedCount(0)
+            setPrintQueue([student.id])
+            await new Promise((resolve) => {
+                let t = 0
+                const timer = setInterval(() => {
+                    const container = printContainerRef.current
+                    const card = container?.querySelector('.raport-card')
+                    if (card) { cardEl = card; clearInterval(timer); resolve() }
+                    if (++t > 30) { clearInterval(timer); resolve() }
+                }, 100)
+            })
+            setPrintQueue([])
+            setPrintRenderedCount(0)
+        }
+
+        if (!cardEl) throw new Error('Gagal render raport card')
+
+        // Pakai HTML yang sama persis dengan executePrint
+        const cardHTML = cardEl.outerHTML
+
+        // html2pdf dengan A4 strict — scale konten agar muat 1 halaman
+        const wrapper = document.createElement('div')
+        wrapper.style.cssText = `position:fixed;left:-9999px;top:0;width:794px;background:white;`
+        wrapper.innerHTML = `
+            <style>
+                @page { size: A4; margin: 0; }
+                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+                img { mix-blend-mode: multiply; }
+                .raport-card {
+                    width: 210mm !important;
+                    transform-origin: top left;
+                }
+            </style>
+            ${cardHTML}
+        `
+        document.body.appendChild(wrapper)
+
+        // Ukur tinggi aktual card di dalam wrapper (di posisi fixed, bukan scaled)
+        const cardInWrapper = wrapper.querySelector('.raport-card')
+        const naturalHeight = cardInWrapper ? cardInWrapper.scrollHeight : 1123
+        // Scale agar muat tepat di A4 (1123px = 297mm @96dpi)
+        const scale = Math.min(1, 1123 / naturalHeight)
+
+        if (cardInWrapper && scale < 1) {
+            cardInWrapper.style.transform = `scale(${scale})`
+            cardInWrapper.style.height = `${naturalHeight * scale}px`
+        }
+
+        try {
+            const blob = await window.html2pdf()
+                .set({
+                    margin: 0,
+                    filename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        width: 794,
+                        height: Math.round(naturalHeight * scale),
+                        windowWidth: 794,
+                        windowHeight: Math.round(naturalHeight * scale),
+                    },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+                    pagebreak: { mode: 'avoid-all' },
+                })
+                .from(cardInWrapper || wrapper)
+                .outputPdf('blob')
+
+            if (!blob || blob.size < 5000) throw new Error(`PDF terlalu kecil (${blob?.size ?? 0} bytes)`)
+            return { blob, filename }
+        } finally {
+            if (document.body.contains(wrapper)) document.body.removeChild(wrapper)
+        }
+    }, [loadHtml2Pdf, bulanObj, selectedMonth, selectedYear])
+
+    // ── Upload ke Supabase Storage, return public URL (pendek, tidak expire)
+    const uploadToSupabase = useCallback(async (blob, filename) => {
+        const bulanStr = bulanObj?.id_str || String(selectedMonth)
+        const path = `${selectedYear}/${bulanStr}/${filename}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('raport-mbs')
+            .upload(path, blob, {
+                contentType: 'application/pdf',
+                upsert: true,
+            })
+
+        if (uploadError) throw new Error(`Upload gagal: ${uploadError.message}`)
+
+        // Pakai public URL — pendek dan tidak expire
+        // (bucket raport-mbs harus Public agar bisa diakses)
+        const { data } = supabase.storage
+            .from('raport-mbs')
+            .getPublicUrl(path)
+
+        return data.publicUrl
+    }, [supabase, bulanObj, selectedMonth, selectedYear])
+
+    // ── MAIN: Generate PDF → Upload Supabase → Kirim WA
+    const generateAndSendWA = useCallback(async (student) => {
+        if (!student.phone) { addToast('Nomor WA tidak tersedia', 'warning'); return }
+
+        const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
+
+        // Sudah ada link di cache → langsung buka WA dengan PDF
+        if (raportLinks[student.id]) {
+            window.open(`https://wa.me/${phone}?text=${buildWaMessage(student, raportLinks[student.id])}`, '_blank')
             return
         }
+
+        // ── KUNCI: buka tab WA dulu saat masih dalam user gesture
+        // Browser izinkan window.open hanya langsung dari click, bukan setelah await
+        // Buka dulu dengan pesan tanpa link, nanti kita update setelah upload selesai
+        const waTab = window.open(`https://wa.me/${phone}?text=${buildWaMessage(student)}`, '_blank')
+
+        setSendingWA(prev => ({ ...prev, [student.id]: 'generating' }))
+        try {
+            // Step 1: Generate PDF
+            addToast(`📄 Membuat PDF ${student.name.split(' ')[0]}...`, 'info')
+            const { blob, filename } = await generatePDFBlob(student)
+
+            // Step 2: Upload ke Supabase
+            setSendingWA(prev => ({ ...prev, [student.id]: 'uploading' }))
+            addToast(`☁️ Mengupload PDF ${student.name.split(' ')[0]}...`, 'info')
+            const signedUrl = await uploadToSupabase(blob, filename)
+
+            // Step 3: Update tab WA yang sudah terbuka dengan URL baru yang ada link PDF
+            setRaportLinks(prev => ({ ...prev, [student.id]: signedUrl }))
+            setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
+
+            // Coba update tab yang sudah terbuka
+            try {
+                if (waTab && !waTab.closed) {
+                    waTab.location.href = `https://wa.me/${phone}?text=${buildWaMessage(student, signedUrl)}`
+                } else {
+                    // Tab ditutup user atau diblokir — buka tab baru
+                    window.open(`https://wa.me/${phone}?text=${buildWaMessage(student, signedUrl)}`, '_blank')
+                }
+            } catch {
+                // Cross-origin block — buka tab baru
+                window.open(`https://wa.me/${phone}?text=${buildWaMessage(student, signedUrl)}`, '_blank')
+            }
+
+            addToast(`✅ WA + PDF siap untuk wali ${student.name.split(' ')[0]}`, 'success')
+
+        } catch (err) {
+            console.error('[generateAndSendWA]', err)
+            addToast(`Gagal: ${err.message}`, 'error')
+            setSendingWA(prev => ({ ...prev, [student.id]: null }))
+        }
+    }, [raportLinks, buildWaMessage, generatePDFBlob, uploadToSupabase, addToast])
+
+    // ── Broadcast semua WA secara berurutan
+    const broadcastAllWA = useCallback(async () => {
+        const withPhone = students.filter(s => s.phone)
+        if (!withPhone.length) { addToast('Tidak ada santri dengan nomor WA', 'warning'); return }
+        addToast(`📲 Memulai broadcast ke ${withPhone.length} wali santri...`, 'info')
+        for (const s of withPhone) {
+            await generateAndSendWA(s)
+            await new Promise(r => setTimeout(r, 1200))
+        }
+        addToast(`🎉 Broadcast selesai!`, 'success')
+    }, [students, generateAndSendWA, addToast])
+
+    const openWA = useCallback((student) => {
+        if (!student.phone) { addToast('Nomor WA tidak tersedia', 'warning'); return }
         const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
         window.open(`https://wa.me/${phone}?text=${buildWaMessage(student)}`, '_blank')
-    }
+    }, [buildWaMessage, addToast])
 
     // ── Step 1: Setup ─────────────────────────────────────────────────────────
     const renderSetup = () => (
@@ -1409,11 +1769,34 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                                                     title="Preview PDF">
                                                     <FontAwesomeIcon icon={faFilePdf} /> PDF
                                                 </button>
-                                                <button onClick={() => openWA(student)}
-                                                    className={`h-8 px-2 rounded-md border text-[11px] font-black flex items-center justify-center gap-1 transition-all ${student.phone ? 'bg-green-500/10 border-green-500/20 text-green-600 hover:bg-green-500/20' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] opacity-40 cursor-not-allowed'}`}
-                                                    title={student.phone ? 'Kirim WA' : 'No. WA tidak ada'}
-                                                    disabled={!student.phone}>
-                                                    <FontAwesomeIcon icon={faWhatsapp} /> WA
+                                                <button onClick={() => generateAndSendWA(student)}
+                                                    className={`h-8 px-2 rounded-md border text-[11px] font-black flex items-center justify-center gap-1 transition-all
+                                                        ${!student.phone
+                                                            ? 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] opacity-40 cursor-not-allowed'
+                                                            : sendingWA[student.id] === 'done'
+                                                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/20'
+                                                                : sendingWA[student.id]
+                                                                    ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 cursor-wait'
+                                                                    : 'bg-green-500/10 border-green-500/20 text-green-600 hover:bg-green-500/20'
+                                                        }`}
+                                                    title={
+                                                        !student.phone ? 'No. WA tidak ada'
+                                                            : sendingWA[student.id] === 'generating' ? 'Membuat PDF...'
+                                                                : sendingWA[student.id] === 'uploading' ? 'Mengupload...'
+                                                                    : sendingWA[student.id] === 'done' ? 'Terkirim! Klik untuk kirim ulang'
+                                                                        : 'Generate PDF + Kirim WA'
+                                                    }
+                                                    disabled={!student.phone || (!!sendingWA[student.id] && sendingWA[student.id] !== 'done')}>
+                                                    <FontAwesomeIcon
+                                                        icon={
+                                                            sendingWA[student.id] === 'generating' || sendingWA[student.id] === 'uploading'
+                                                                ? faSpinner
+                                                                : sendingWA[student.id] === 'done'
+                                                                    ? faCircleCheck
+                                                                    : faWhatsapp
+                                                        }
+                                                        className={sendingWA[student.id] === 'generating' || sendingWA[student.id] === 'uploading' ? 'animate-spin' : ''}
+                                                    /> WA
                                                 </button>
                                             </div>
                                         </div>
@@ -1434,7 +1817,7 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                     return (
                         <div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center">
                             <div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>{k.id}</div>
-                            <div className="text-lg font-black" style={{ color: g?.color || 'var(--color-text-muted)' }}>{avg}</div>
+                            <div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>{avg}</div>
                             <div className="text-[7px] font-bold text-[var(--color-text-muted)]" style={{ direction: 'rtl' }}>{g?.label || 'rata kelas'}</div>
                         </div>
                     )
@@ -1459,10 +1842,16 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                     <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{completedCount}/{students.length} raport lengkap</span>
                     <div className="flex-1" />
                     <button
-                        onClick={() => window.print()}
+                        onClick={() => openPrintWindow([previewStudent].filter(Boolean))}
+                        className="h-8 px-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black hover:bg-emerald-500/20 transition-all flex items-center gap-2"
+                    >
+                        <FontAwesomeIcon icon={faPrint} /> Cetak Ini
+                    </button>
+                    <button
+                        onClick={() => openPrintWindow(students)}
                         className="h-8 px-4 rounded-lg bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-2"
                     >
-                        <FontAwesomeIcon icon={faPrint} /> Cetak Semua (PDF)
+                        <FontAwesomeIcon icon={faPrint} /> Cetak Semua ({students.length})
                     </button>
                 </div>
 
@@ -1472,19 +1861,53 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                     {students.map(s => {
                         const complete = isComplete(scores[s.id] || {})
                         const isActive = previewStudentId === s.id || (!previewStudentId && s.id === students[0]?.id)
+                        const waStatus = sendingWA[s.id]
                         return (
-                            <button
-                                key={s.id}
-                                onClick={() => setPreviewStudentId(s.id)}
-                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border ${isActive
-                                    ? 'bg-indigo-500 border-indigo-500 text-white'
-                                    : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-indigo-500/30'
-                                    }`}
-                            >
-                                <span className={`w-1.5 h-1.5 rounded-full ${complete ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                                {s.name.split(' ')[0]}
-                                {s.phone && <FontAwesomeIcon icon={faWhatsapp} className={`text-[8px] ${isActive ? 'text-white/70' : 'text-green-500'}`} />}
-                            </button>
+                            <div key={s.id} className="flex items-center">
+                                {/* Nama — klik untuk preview */}
+                                <button
+                                    onClick={() => setPreviewStudentId(s.id)}
+                                    className={`flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-l-lg text-[10px] font-bold transition-all border-y border-l ${isActive
+                                        ? 'bg-indigo-500 border-indigo-500 text-white'
+                                        : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-indigo-500/30'
+                                        }`}
+                                >
+                                    <span className={`w-1.5 h-1.5 rounded-full ${complete ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                                    {s.name.split(' ')[0]}
+                                </button>
+                                {/* Tombol WA per-santri */}
+                                <button
+                                    onClick={() => generateAndSendWA(s)}
+                                    disabled={!s.phone || (!!waStatus && waStatus !== 'done')}
+                                    title={!s.phone ? 'No. WA tidak ada' : waStatus === 'done' ? 'Terkirim! Klik kirim ulang' : 'Kirim PDF via WA'}
+                                    className={`h-full px-1.5 py-1 text-[8px] transition-all border-y ${!s.phone
+                                            ? 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] opacity-30 cursor-not-allowed'
+                                            : waStatus === 'done'
+                                                ? 'bg-[var(--color-surface)] border-[var(--color-border)] text-emerald-500'
+                                                : waStatus
+                                                    ? 'bg-[var(--color-surface)] border-[var(--color-border)] text-amber-500 cursor-wait'
+                                                    : isActive
+                                                        ? 'bg-indigo-600 border-indigo-500 text-white/80 hover:text-white'
+                                                        : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-green-500 hover:border-green-500/30'
+                                        }`}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={waStatus === 'generating' || waStatus === 'uploading' ? faSpinner : waStatus === 'done' ? faCircleCheck : faWhatsapp}
+                                        className={waStatus === 'generating' || waStatus === 'uploading' ? 'animate-spin' : ''}
+                                    />
+                                </button>
+                                {/* Tombol Cetak per-santri */}
+                                <button
+                                    onClick={() => openPrintWindow([s])}
+                                    title={`Cetak raport ${s.name}`}
+                                    className={`h-full px-1.5 py-1 rounded-r-lg text-[8px] transition-all border-y border-r ${isActive
+                                        ? 'bg-indigo-600 border-indigo-500 text-white/80 hover:text-white'
+                                        : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-indigo-500 hover:border-indigo-500/30'
+                                        }`}
+                                >
+                                    <FontAwesomeIcon icon={faPrint} />
+                                </button>
+                            </div>
                         )
                     })}
                 </div>
@@ -1494,19 +1917,14 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                     <div>
                         <p className="text-[11px] font-black text-green-700 dark:text-green-400 flex items-center gap-1.5"><FontAwesomeIcon icon={faWhatsapp} /> Broadcast via WhatsApp</p>
                         <p className="text-[9px] text-green-600/70 dark:text-green-500/70 font-bold">
-                            Kirim ringkasan raport ke semua wali santri yang punya nomor WA
+                            Generate PDF + upload ke Supabase (link aktif 3 hari) + kirim ke semua wali santri
                         </p>
                     </div>
                     <button
-                        onClick={() => {
-                            const withPhone = students.filter(s => s.phone)
-                            if (!withPhone.length) { addToast('Tidak ada siswa dengan nomor WA', 'warning'); return }
-                            withPhone.forEach((s, i) => setTimeout(() => openWA(s), i * 800))
-                            addToast(`📲 Membuka WA untuk ${withPhone.length} wali santri...`, 'info')
-                        }}
+                        onClick={broadcastAllWA}
                         className="h-9 px-4 rounded-xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all flex items-center gap-2 shrink-0"
                     >
-                        <FontAwesomeIcon icon={faWhatsapp} /> Kirim Semua WA
+                        <FontAwesomeIcon icon={faWhatsapp} /> Kirim Semua WA + PDF
                     </button>
                 </div>
 
@@ -1527,23 +1945,6 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                         </div>
                     </div>
                 )}
-
-                {/* Print all — only shown when printing */}
-                <div className="hidden print:block">
-                    {students.map(s => (
-                        <RaportPrintCard
-                            key={s.id}
-                            student={s}
-                            scores={scores[s.id]}
-                            extra={extras[s.id]}
-                            bulanObj={bulanObj}
-                            tahun={selectedYear}
-                            musyrif={musyrif}
-                            className={selectedClass?.name}
-                            lang={lang}
-                        />
-                    ))}
-                </div>
             </div>
         )
     }
@@ -1765,14 +2166,28 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
             {step === 3 && renderPreview()}
             {step === 4 && renderArchive()}
 
-            <style>{`
-                @media print {
-                    body > *:not(.raport-print-root) { display: none !important; }
-                    .raport-card { page-break-after: always; }
-                    .print\\:hidden { display: none !important; }
-                    .hidden.print\\:block { display: block !important; }
-                }
-            `}</style>
+            {/* Hidden print container — render semua kartu yang akan dicetak */}
+            {printQueue.length > 0 && (
+                <div
+                    ref={printContainerRef}
+                    style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}
+                >
+                    {students.filter(s => printQueue.includes(s.id)).map(s => (
+                        <RaportPrintCard
+                            key={s.id}
+                            student={s}
+                            scores={scores[s.id]}
+                            extra={extras[s.id]}
+                            bulanObj={bulanObj}
+                            tahun={selectedYear}
+                            musyrif={musyrif}
+                            className={selectedClass?.name}
+                            lang={lang}
+                            onRendered={() => setPrintRenderedCount(c => c + 1)}
+                        />
+                    ))}
+                </div>
+            )}
         </Modal>
     )
 }
