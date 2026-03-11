@@ -462,16 +462,16 @@ export default function ClassesPage() {
             {/* Stats Overview */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                 {[
-                    { label: 'Total Kelas', val: stats.total, icon: faSchool, gradient: 'from-blue-600 to-indigo-500' },
-                    { label: 'Boarding', val: stats.boarding, icon: faBed, gradient: 'from-amber-500 to-orange-500' },
-                    { label: 'Reguler', val: stats.reguler, icon: faBuilding, gradient: 'from-emerald-600 to-teal-500' },
-                    { label: 'Total Siswa', val: stats.totalStudents, icon: faUsers, gradient: 'from-pink-600 to-rose-500' },
+                    { icon: faSchool, label: 'Total Kelas', value: stats.total, top: 'border-t-[var(--color-primary)]', ibg: 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]', hover: 'hover:bg-[var(--color-primary)]/5' },
+                    { icon: faBed, label: 'Boarding', value: stats.boarding, top: 'border-t-amber-500', ibg: 'bg-amber-500/10 text-amber-500', hover: 'hover:bg-amber-500/5' },
+                    { icon: faBuilding, label: 'Reguler', value: stats.reguler, top: 'border-t-emerald-500', ibg: 'bg-emerald-500/10 text-emerald-500', hover: 'hover:bg-emerald-500/5' },
+                    { icon: faUsers, label: 'Total Siswa', value: stats.totalStudents, top: 'border-t-pink-500', ibg: 'bg-pink-500/10 text-pink-500', hover: 'hover:bg-pink-500/5' },
                 ].map((s, i) => (
-                    <div key={i} className="bg-[var(--color-surface)] rounded-2xl p-4 border border-[var(--color-border)] flex items-center gap-4 transition-all hover:border-[var(--color-primary)]/30 shadow-sm">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white text-[15px] shrink-0 shadow-lg`}><FontAwesomeIcon icon={s.icon} /></div>
-                        <div className="min-w-0">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] truncate">{s.label}</p>
-                            <p className="text-xl font-black text-[var(--color-text)] leading-none mt-1 tracking-tight">{s.val}</p>
+                    <div key={i} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.top} flex items-center gap-3 group ${s.hover} transition-all`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform shrink-0 ${s.ibg}`}><FontAwesomeIcon icon={s.icon} /></div>
+                        <div>
+                            <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">{s.label}</p>
+                            <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{s.value}</h3>
                         </div>
                     </div>
                 ))}
