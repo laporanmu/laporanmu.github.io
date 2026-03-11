@@ -1,15 +1,20 @@
 import { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheckCircle, faExclamationCircle, faInfoCircle, faXmark, faRotateLeft } from '@fortawesome/free-solid-svg-icons'
+import {
+    faCheckCircle, faExclamationTriangle, faXmarkCircle,
+    faXmark, faRotateLeft, faCircleInfo, faFilePdf, faCloudArrowUp
+} from '@fortawesome/free-solid-svg-icons'
 
 const ToastContext = createContext({})
 
 const TOAST_TYPES = {
-    success: { icon: faCheckCircle, className: 'bg-emerald-500' },
-    error: { icon: faExclamationCircle, className: 'bg-red-500' },
-    info: { icon: faInfoCircle, className: 'bg-blue-500' },
-    warning: { icon: faExclamationCircle, className: 'bg-amber-500' },
-    undo: { icon: faCheckCircle, className: 'bg-[#3730a3]' }, // indigo — beda dari success biasa
+    success: { icon: faCheckCircle, bg: 'bg-emerald-600', border: 'border-emerald-400/30' },
+    error: { icon: faXmarkCircle, bg: 'bg-red-600', border: 'border-red-400/30' },
+    info: { icon: faCircleInfo, bg: 'bg-indigo-600', border: 'border-indigo-400/30' },
+    warning: { icon: faExclamationTriangle, bg: 'bg-amber-500', border: 'border-amber-300/30' },
+    undo: { icon: faCheckCircle, bg: 'bg-[#3730a3]', border: 'border-indigo-400/30' },
+    pdf: { icon: faFilePdf, bg: 'bg-rose-600', border: 'border-rose-400/30' },
+    upload: { icon: faCloudArrowUp, bg: 'bg-sky-600', border: 'border-sky-400/30' },
 }
 
 export function ToastProvider({ children }) {
@@ -34,10 +39,6 @@ export function ToastProvider({ children }) {
         return id
     }, [removeToast])
 
-    // ── Undo Toast ─────────────────────────────────────────────────────────
-    // Tampilkan toast dengan tombol "Batalkan" selama `undoDuration` ms.
-    // Jika user klik Batalkan sebelum timer habis → panggil onUndo().
-    // Return: { id, cancel } — cancel() bisa dipakai untuk dismiss manual.
     const addUndoToast = useCallback((message, onUndo, undoDuration = 5000) => {
         const id = Date.now() + Math.random()
 
@@ -81,8 +82,8 @@ export function ToastProvider({ children }) {
                     return (
                         <div
                             key={toast.id}
-                            className={`${config.className} ${toast.exiting ? 'toast-exit' : 'toast-enter'}
-                                text-white px-3 py-2.5 sm:px-4 rounded-xl shadow-xl flex items-center gap-3 border border-white/10 relative overflow-hidden`}
+                            className={`${config.bg} ${config.border} ${toast.exiting ? 'toast-exit' : 'toast-enter'}
+                                text-white px-3 py-2.5 sm:px-4 rounded-xl shadow-xl flex items-center gap-3 border relative overflow-hidden`}
                         >
                             {/* Progress bar untuk undo toast */}
                             {isUndo && (
