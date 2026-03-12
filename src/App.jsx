@@ -9,16 +9,18 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/auth/LoginPage'
 import ParentCheckPage from './pages/auth/ParentCheckPage'
 import DashboardPage from './pages/dashboard/DashboardPage'
-import ReportsPage from './pages/ReportsPage'
+import RaportPage from './pages/RaportPage'
+import PoinPage from './pages/PoinPage'
 import SettingsPage from './pages/SettingsPage'
 import DeveloperPage from './pages/DeveloperPage'
 import LogsPage from './pages/LogsPage'
+import AbsensiPage from './pages/AbsensiPage'
 
 // Master Data Pages
 import StudentsPage from './pages/master/StudentsPage'
 import TeachersPage from './pages/master/TeachersPage'
 import ClassesPage from './pages/master/ClassesPage'
-import ViolationsPage from './pages/master/ViolationsPage'
+import ViolationsTypePage from './pages/master/ViolationsPage'
 import AcademicYearsPage from './pages/master/AcademicYearsPage'
 
 // Protected Route Wrapper
@@ -80,16 +82,18 @@ function AppRoutes() {
       {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/raport" element={<RaportPage />} />
+        <Route path="/poin" element={<PoinPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/developer" element={<DeveloperPage />} />
         <Route path="/logs" element={<LogsPage />} />
+        <Route path="/absensi" element={<AbsensiPage />} />
 
         {/* Master Data */}
         <Route path="/master/students" element={<StudentsPage />} />
         <Route path="/master/teachers" element={<TeachersPage />} />
         <Route path="/master/classes" element={<ClassesPage />} />
-        <Route path="/master/violations" element={<ViolationsPage />} />
+        <Route path="/master/violations" element={<ViolationsTypePage />} />
         <Route path="/master/academic-years" element={<AcademicYearsPage />} />
       </Route>
 

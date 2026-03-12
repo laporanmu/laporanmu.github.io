@@ -5,18 +5,26 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
     faBell, faChevronDown, faMoon, faSun, faGear, faRightFromBracket,
     faLayerGroup, faXmark, faArrowRight, faRotateRight, faCircleExclamation,
-    faTriangleExclamation, faCircleInfo, faCircleCheck
+    faTriangleExclamation, faCircleInfo, faCircleCheck,
+    faClipboardList, faCalendarWeek, faShieldHalved, faTrophy,
+    faUsers, faChalkboardTeacher, faSchool, faExclamationTriangle, faCalendarAlt,
 } from "@fortawesome/free-solid-svg-icons"
 import { useTheme } from "../../context/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
 import { useNotifications } from "../../hooks/useNotifications"
 
 const MASTER_ITEMS = [
-    { to: "/master/students", label: "Data Siswa" },
-    { to: "/master/teachers", label: "Data Guru" },
-    { to: "/master/classes", label: "Data Kelas" },
-    { to: "/master/violations", label: "Jenis Pelanggaran" },
-    { to: "/master/academic-years", label: "Tahun Pelajaran" },
+    { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Kelola data santri aktif" },
+    { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Daftar musyrif & pengajar" },
+    { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Manajemen kelas & kamar" },
+    { to: "/master/violations", label: "Jenis Pelanggaran", icon: faExclamationTriangle, desc: "Kategori & bobot pelanggaran" },
+    { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Periode tahun ajaran aktif" },
+]
+
+const REPORTS_ITEMS = [
+    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan" },
+    { to: "/absensi", label: "Absensi Mingguan", icon: faCalendarWeek, desc: "Rekap kehadiran per pekan" },
+    { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa" },
 ]
 
 const LOGS_ROUTE = "/logs"
@@ -177,10 +185,12 @@ export default function TopNav({ title, subtitle }) {
     const { notifications, loading, refreshing, dismiss, refresh } = useNotifications()
 
     const [masterOpen, setMasterOpen] = useState(false)
+    const [reportsOpen, setReportsOpen] = useState(false)
     const [profileOpen, setProfileOpen] = useState(false)
     const [notifOpen, setNotifOpen] = useState(false)
 
     const masterRef = useRef(null)
+    const reportsRef = useRef(null)
     const mobileProfileRef = useRef(null)
     const desktopProfileRef = useRef(null)
     const notifBtnRef = useRef(null)
@@ -194,6 +204,7 @@ export default function TopNav({ title, subtitle }) {
     useEffect(() => {
         const onClick = (e) => {
             if (masterRef.current && !masterRef.current.contains(e.target)) setMasterOpen(false)
+            if (reportsRef.current && !reportsRef.current.contains(e.target)) setReportsOpen(false)
 
             const isOutsideMobile = mobileProfileRef.current && !mobileProfileRef.current.contains(e.target)
             const isOutsideDesktop = desktopProfileRef.current && !desktopProfileRef.current.contains(e.target)
@@ -347,11 +358,53 @@ export default function TopNav({ title, subtitle }) {
                             <div className="flex justify-center">
                                 <nav className="flex items-center gap-2 bg-[var(--color-surface-alt)]/60 rounded-2xl p-1.5">
                                     <NavLink to="/dashboard" className={tabClass}>Dashboard</NavLink>
-                                    <NavLink to="/reports" className={tabClass}>Reports</NavLink>
 
+                                    {/* Reports Dropdown */}
+                                    <div className="relative" ref={reportsRef}>
+                                        <button
+                                            onClick={() => { setReportsOpen(v => !v); setMasterOpen(false) }}
+                                            className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2
+                                                ${reportsOpen
+                                                    ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]"
+                                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`}
+                                            type="button"
+                                        >
+                                            <FontAwesomeIcon icon={faClipboardList} />
+                                            Reports
+                                            <FontAwesomeIcon icon={faChevronDown} className={`text-xs transition-transform ${reportsOpen ? "rotate-180" : ""}`} />
+                                        </button>
+
+                                        {reportsOpen && (
+                                            <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
+                                                <div className="px-3 py-2 text-[11px] font-extrabold tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">
+                                                    Laporan & Rekap
+                                                </div>
+                                                <div className="p-2">
+                                                    {REPORTS_ITEMS.map(it => (
+                                                        <button
+                                                            key={it.to}
+                                                            onClick={() => { setReportsOpen(false); navigate(it.to) }}
+                                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group"
+                                                            type="button"
+                                                        >
+                                                            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                                                                <FontAwesomeIcon icon={it.icon} className="text-xs" />
+                                                            </div>
+                                                            <div className="text-left">
+                                                                <p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p>
+                                                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">{it.desc}</p>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Master Dropdown */}
                                     <div className="relative" ref={masterRef}>
                                         <button
-                                            onClick={() => setMasterOpen(v => !v)}
+                                            onClick={() => { setMasterOpen(v => !v); setReportsOpen(false) }}
                                             className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2
                                                 ${masterOpen
                                                     ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]"
@@ -365,7 +418,7 @@ export default function TopNav({ title, subtitle }) {
 
                                         {masterOpen && (
                                             <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
-                                                <div className="px-3 py-2 text-[11px] font-extrabold tracking-widest text-[var(--color-text-muted)] uppercase">
+                                                <div className="px-3 py-2 text-[11px] font-extrabold tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">
                                                     Master Data
                                                 </div>
                                                 <div className="p-2">
@@ -373,10 +426,16 @@ export default function TopNav({ title, subtitle }) {
                                                         <button
                                                             key={it.to}
                                                             onClick={() => { setMasterOpen(false); navigate(it.to) }}
-                                                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition font-bold text-sm text-[var(--color-text)]"
+                                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group"
                                                             type="button"
                                                         >
-                                                            {it.label}
+                                                            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                                                                <FontAwesomeIcon icon={it.icon} className="text-xs" />
+                                                            </div>
+                                                            <div className="text-left">
+                                                                <p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p>
+                                                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">{it.desc}</p>
+                                                            </div>
                                                         </button>
                                                     ))}
                                                 </div>

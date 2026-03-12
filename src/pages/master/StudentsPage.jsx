@@ -1,5 +1,6 @@
 import React from 'react'
 import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -136,7 +137,6 @@ const maskInfo = (str, visibleLen = 3) => {
 
 import StudentFormModal from '../../components/students/StudentFormModal'
 import { StudentRow, StudentMobileCard } from '../../components/students/StudentRow'
-import RaportBulananModal from '../../components/students/RaportBulananModal'
 
 // ── BehaviorHeatmap — outside StudentsPage to prevent re-creation on every render ──
 const BehaviorHeatmap = memo(({ history }) => {
@@ -247,8 +247,8 @@ export default function StudentsPage() {
     const [importEditCell, setImportEditCell] = useState(null) // { idx, key }
     const [importCachedDBStudents, setImportCachedDBStudents] = useState({ names: new Set(), nisns: new Set() })
     const [exporting, setExporting] = useState(false)
-    // Raport Bulanan
-    const [isRaportModalOpen, setIsRaportModalOpen] = useState(false)
+    // Raport Bulanan → navigate ke /raport
+    const navigate = useNavigate()
 
     const importReadyRows = useMemo(() => {
         if (!importPreview.length) return []
@@ -340,7 +340,10 @@ export default function StudentsPage() {
     const [isShortcutOpen, setIsShortcutOpen] = useState(false)
     const [timelineFilter, setTimelineFilter] = useState('all')
     const [timelineVisible, setTimelineVisible] = useState(8)
-    const [profileTab, setProfileTab] = useState('info') // 'info' | 'statistik' | 'laporan'
+    const [profileTab, setProfileTab] = useState('info') // 'info' | 'statistik' | 'laporan' | 'raport'
+    // ── Monthly raport history state
+    const [raportHistory, setRaportHistory] = useState([])
+    const [loadingRaport, setLoadingRaport] = useState(false)
 
     // Bulk Point Update (Fitur 14)
     const [isBulkPointModalOpen, setIsBulkPointModalOpen] = useState(false)
@@ -709,10 +712,22 @@ export default function StudentsPage() {
         }
     }, [])
 
-    useEffect(() => {
-        fetchStats()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    const fetchRaportHistory = useCallback(async (studentId) => {
+        setLoadingRaport(true)
+        try {
+            const { data, error } = await supabase
+                .from('student_monthly_reports')
+                .select('id, month, year, nilai_akhlak, nilai_ibadah, nilai_kebersihan, nilai_quran, nilai_bahasa, berat_badan, tinggi_badan, hari_sakit, hari_izin, hari_alpa, hari_pulang, catatan, musyrif_name')
+                .eq('student_id', studentId)
+                .order('year', { ascending: false })
+                .order('month', { ascending: false })
+                .limit(24)
+            if (error) { setRaportHistory([]) }
+            else { setRaportHistory(data || []) }
+        } catch { setRaportHistory([]) }
+        finally { setLoadingRaport(false) }
     }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         fetchData()
@@ -1774,12 +1789,14 @@ export default function StudentsPage() {
     const handleViewProfile = (student) => {
         setSelectedStudent(student)
         setBehaviorHistory([])        // clear stale data from prev student
+        setRaportHistory([])          // clear raport stale data
         setTimelineFilter('all')      // reset filter
         setTimelineVisible(8)         // reset lazy render count
         setProfileTab('info')         // always open on Info tab
         setIsProfileModalOpen(true)
         // fetch AFTER modal opens — skeleton shows instantly
         fetchBehaviorHistory(student.id)
+        fetchRaportHistory(student.id)
     }
 
     const handleViewQR = (student) => {
@@ -3297,7 +3314,7 @@ export default function StudentsPage() {
                                     </div>
                                 </button>
 
-                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsRaportModalOpen(true) }}
+                                <button onClick={() => { setIsHeaderMenuOpen(false); navigate('/raport') }}
                                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
                                     <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                                         <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
@@ -3407,7 +3424,7 @@ export default function StudentsPage() {
                     />
 
                     <button
-                        onClick={() => setIsRaportModalOpen(true)}
+                        onClick={() => navigate('/raport')}
                         className="h-9 px-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500/20 transition-all"
                     >
                         <FontAwesomeIcon icon={faClipboardList} />
@@ -5424,6 +5441,10 @@ export default function StudentsPage() {
                                             key: 'laporan', label: 'Laporan', icon: faHistory,
                                             badge: !loadingHistory && behaviorHistory.length > 0 ? behaviorHistory.length : null
                                         },
+                                        {
+                                            key: 'raport', label: 'Raport', icon: faTableList,
+                                            badge: !loadingRaport && raportHistory.length > 0 ? raportHistory.length : null
+                                        },
                                     ].map(tab => (
                                         <button
                                             key={tab.key}
@@ -5675,6 +5696,180 @@ export default function StudentsPage() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* ── TAB: RAPORT BULANAN ── */}
+                                {profileTab === 'raport' && (() => {
+                                    const BULAN_STR = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+                                    const KRITERIA = [
+                                        { key: 'nilai_akhlak', label: 'Akhlak', color: '#f59e0b' },
+                                        { key: 'nilai_ibadah', label: 'Ibadah', color: '#6366f1' },
+                                        { key: 'nilai_kebersihan', label: 'Kebersihan', color: '#06b6d4' },
+                                        { key: 'nilai_quran', label: "Al-Qur'an", color: '#10b981' },
+                                        { key: 'nilai_bahasa', label: 'Bahasa', color: '#8b5cf6' },
+                                    ]
+                                    const calcAvg = (r) => {
+                                        const vals = KRITERIA.map(k => r[k.key]).filter(v => v !== null && v !== undefined && v !== '')
+                                        if (!vals.length) return null
+                                        return (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1)
+                                    }
+                                    const gradeColor = (n) => {
+                                        const v = Number(n)
+                                        if (v >= 9) return '#10b981'
+                                        if (v >= 8) return '#3b82f6'
+                                        if (v >= 6) return '#6366f1'
+                                        if (v >= 4) return '#f59e0b'
+                                        return '#ef4444'
+                                    }
+                                    const gradeLabel = (n) => {
+                                        const v = Number(n)
+                                        if (v >= 9) return 'Istimewa'
+                                        if (v >= 8) return 'Sangat Baik'
+                                        if (v >= 6) return 'Baik'
+                                        if (v >= 4) return 'Cukup'
+                                        return 'Kurang'
+                                    }
+
+                                    return (
+                                        <div className="space-y-3">
+                                            {loadingRaport ? (
+                                                <div className="space-y-2">
+                                                    {[1, 2, 3].map(i => (
+                                                        <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />
+                                                    ))}
+                                                </div>
+                                            ) : raportHistory.length === 0 ? (
+                                                <div className="py-10 flex flex-col items-center justify-center opacity-30 gap-2">
+                                                    <FontAwesomeIcon icon={faTableList} className="text-2xl" />
+                                                    <p className="text-[9px] font-black uppercase tracking-widest">Belum ada raport bulanan</p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {/* ── Mini trend chart (avg per bulan) ── */}
+                                                    {raportHistory.length >= 2 && (() => {
+                                                        const sorted = [...raportHistory].reverse() // oldest first
+                                                        const avgs = sorted.map(r => Number(calcAvg(r) ?? 0))
+                                                        const maxV = Math.max(...avgs, 1)
+                                                        return (
+                                                            <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                                                                <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2 flex items-center gap-1.5">
+                                                                    <FontAwesomeIcon icon={faArrowTrendUp} className="text-emerald-500" />
+                                                                    Tren Rata-rata Nilai
+                                                                </p>
+                                                                <div className="flex items-end gap-1 h-14">
+                                                                    {sorted.map((r, i) => {
+                                                                        const avg = Number(calcAvg(r) ?? 0)
+                                                                        const pct = maxV > 0 ? Math.max((avg / maxV) * 100, 8) : 8
+                                                                        return (
+                                                                            <div key={i} className="flex-1 flex flex-col items-center gap-0.5 h-full justify-end" title={`${BULAN_STR[r.month]} ${r.year}: ${avg}`}>
+                                                                                <div className="w-full rounded-t-[3px] transition-all hover:brightness-110 cursor-help"
+                                                                                    style={{ height: `${pct}%`, background: gradeColor(avg) + 'aa' }} />
+                                                                                <span className="text-[7px] font-black text-[var(--color-text-muted)]">{BULAN_STR[r.month]}</span>
+                                                                            </div>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })()}
+
+                                                    {/* ── Raport cards per bulan ── */}
+                                                    <div className="space-y-2">
+                                                        {raportHistory.map((r) => {
+                                                            const avg = calcAvg(r)
+                                                            const color = avg ? gradeColor(avg) : 'var(--color-text-muted)'
+                                                            const totalAbsen = (r.hari_sakit || 0) + (r.hari_izin || 0) + (r.hari_alpa || 0)
+                                                            return (
+                                                                <details key={r.id} className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 overflow-hidden">
+                                                                    <summary className="flex items-center gap-3 p-3 cursor-pointer select-none hover:bg-[var(--color-surface-alt)]/40 transition-colors list-none">
+                                                                        {/* Bulan badge */}
+                                                                        <div className="w-10 h-10 rounded-lg flex flex-col items-center justify-center shrink-0 font-black border"
+                                                                            style={{ background: color + '15', borderColor: color + '30', color }}>
+                                                                            <span className="text-[9px] leading-none">{BULAN_STR[r.month]}</span>
+                                                                            <span className="text-[8px] leading-none opacity-70">{r.year}</span>
+                                                                        </div>
+                                                                        {/* Nilai bars mini */}
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex gap-0.5 h-2 mb-1">
+                                                                                {KRITERIA.map(k => {
+                                                                                    const v = r[k.key]
+                                                                                    const pct = v !== null && v !== undefined && v !== '' ? (Number(v) / 9) * 100 : 0
+                                                                                    return (
+                                                                                        <div key={k.key} className="flex-1 rounded-full bg-[var(--color-border)] overflow-hidden" title={`${k.label}: ${v ?? '—'}`}>
+                                                                                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: k.color }} />
+                                                                                        </div>
+                                                                                    )
+                                                                                })}
+                                                                            </div>
+                                                                            <p className="text-[9px] text-[var(--color-text-muted)] font-bold truncate">
+                                                                                {r.musyrif_name || 'Musyrif tidak dicatat'}
+                                                                                {totalAbsen > 0 && <span className="ml-2 text-amber-500">· {totalAbsen} hari absen</span>}
+                                                                            </p>
+                                                                        </div>
+                                                                        {/* Avg badge */}
+                                                                        <div className="shrink-0 text-right">
+                                                                            {avg ? (
+                                                                                <>
+                                                                                    <p className="text-sm font-black leading-none" style={{ color }}>{avg}</p>
+                                                                                    <p className="text-[7px] font-bold" style={{ color }}>{gradeLabel(avg)}</p>
+                                                                                </>
+                                                                            ) : (
+                                                                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold">—</p>
+                                                                            )}
+                                                                        </div>
+                                                                        <FontAwesomeIcon icon={faChevronDown} className="text-[9px] text-[var(--color-text-muted)] group-open:rotate-180 transition-transform shrink-0" />
+                                                                    </summary>
+
+                                                                    {/* Expanded detail */}
+                                                                    <div className="px-3 pb-3 pt-1 border-t border-[var(--color-border)]/50">
+                                                                        <div className="grid grid-cols-5 gap-2 mb-3">
+                                                                            {KRITERIA.map(k => {
+                                                                                const v = r[k.key]
+                                                                                const hasVal = v !== null && v !== undefined && v !== ''
+                                                                                return (
+                                                                                    <div key={k.key} className="flex flex-col items-center gap-1 p-2 rounded-lg border"
+                                                                                        style={{ background: hasVal ? k.color + '10' : 'transparent', borderColor: hasVal ? k.color + '30' : 'var(--color-border)' }}>
+                                                                                        <span className="text-base font-black leading-none" style={{ color: hasVal ? k.color : 'var(--color-text-muted)' }}>
+                                                                                            {hasVal ? v : '—'}
+                                                                                        </span>
+                                                                                        <span className="text-[7px] font-black text-center leading-tight" style={{ color: hasVal ? k.color : 'var(--color-text-muted)' }}>
+                                                                                            {k.label}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )
+                                                                            })}
+                                                                        </div>
+                                                                        {/* Absensi & fisik */}
+                                                                        <div className="grid grid-cols-4 gap-2 text-center">
+                                                                            {[
+                                                                                { label: 'Sakit', val: r.hari_sakit, color: 'text-red-400' },
+                                                                                { label: 'Izin', val: r.hari_izin, color: 'text-amber-400' },
+                                                                                { label: 'Alpa', val: r.hari_alpa, color: 'text-red-600' },
+                                                                                { label: 'Pulang', val: r.hari_pulang, color: 'text-blue-400' },
+                                                                            ].map(item => (
+                                                                                <div key={item.label} className="p-1.5 rounded-lg bg-[var(--color-surface-alt)]/60 border border-[var(--color-border)]">
+                                                                                    <p className={`text-sm font-black ${item.color}`}>{item.val ?? 0}</p>
+                                                                                    <p className="text-[7px] text-[var(--color-text-muted)] font-bold uppercase">{item.label}</p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                        {/* BB/TB & catatan */}
+                                                                        {(r.berat_badan || r.tinggi_badan || r.catatan) && (
+                                                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                                                {r.berat_badan && <span className="text-[9px] font-bold text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] px-2 py-1 rounded-lg border border-[var(--color-border)]">⚖ {r.berat_badan} kg</span>}
+                                                                                {r.tinggi_badan && <span className="text-[9px] font-bold text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] px-2 py-1 rounded-lg border border-[var(--color-border)]">📏 {r.tinggi_badan} cm</span>}
+                                                                                {r.catatan && <span className="text-[9px] font-medium text-[var(--color-text-muted)] italic">"{r.catatan}"</span>}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </details>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
 
                                 {/* Footer Actions */}
                                 <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-[var(--color-border)]">
@@ -6766,15 +6961,6 @@ export default function StudentsPage() {
                     </Modal>
                 )
             }
-
-            {/* ===================== */}
-            {/* MODAL RAPORT BULANAN  */}
-            {/* ===================== */}
-            <RaportBulananModal
-                isOpen={isRaportModalOpen}
-                onClose={() => setIsRaportModalOpen(false)}
-                classesList={classesList}
-            />
 
         </DashboardLayout >
     )

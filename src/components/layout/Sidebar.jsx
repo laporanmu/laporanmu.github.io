@@ -21,7 +21,7 @@ import { useSidebar } from '../../context/SidebarContext'
 
 const MENU_ITEMS = [
     { path: '/dashboard', icon: faHome, label: 'Dashboard' },
-    { path: '/reports', icon: faClipboardList, label: 'Laporan' },
+    { path: '/raport', icon: faClipboardList, label: 'Laporan' },
     {
         label: 'Master Data',
         icon: faDatabase,

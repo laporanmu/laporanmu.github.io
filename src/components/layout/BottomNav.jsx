@@ -3,25 +3,23 @@ import { NavLink, useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
     faHouse,
-    faClipboardList,
-    faLayerGroup,
+    faTableList,
     faClockRotateLeft,
     faCog,
 } from "@fortawesome/free-solid-svg-icons"
 import MasterSheet from "./MasterSheet"
 
-const LOGS_ROUTE = "/logs" // <-- ganti kalau route kamu beda
+const LOGS_ROUTE = "/logs"
 
 export default function BottomNav() {
-    const [isMasterOpen, setIsMasterOpen] = useState(false)
+    const [isSheetOpen, setIsSheetOpen] = useState(false)
     const navigate = useNavigate()
 
     const Item = ({ to, icon, label }) => (
-        <NavLink
-            to={to}
+        <NavLink to={to}
             className={({ isActive }) =>
                 `py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition
-        ${isActive ? "text-indigo-600" : "text-[var(--color-text-muted)] hover:text-indigo-600"}`
+                 ${isActive ? "text-indigo-600" : "text-[var(--color-text-muted)] hover:text-indigo-600"}`
             }
         >
             <FontAwesomeIcon icon={icon} className="text-base" />
@@ -34,21 +32,20 @@ export default function BottomNav() {
             <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200]">
                 <div className="mx-auto max-w-7xl px-3 pb-3">
                     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
-                        <div className="grid grid-cols-5">
+                        <div className="grid grid-cols-4">
                             <Item to="/dashboard" icon={faHouse} label="Home" />
-                            <Item to="/reports" icon={faClipboardList} label="Reports" />
 
-                            {/* Master - opens bottom sheet */}
+                            {/* Menu — buka bottom sheet (Reports + Master) */}
                             <button
-                                onClick={() => setIsMasterOpen(true)}
+                                onClick={() => setIsSheetOpen(true)}
                                 className="py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-indigo-600 transition"
                                 type="button"
                             >
-                                <FontAwesomeIcon icon={faLayerGroup} className="text-base" />
-                                <span className="tracking-tight">Master</span>
+                                <FontAwesomeIcon icon={faTableList} className="text-base" />
+                                <span className="tracking-tight">Menu</span>
                             </button>
 
-                            {/* Logs / Riwayat */}
+                            {/* History */}
                             <button
                                 onClick={() => navigate(LOGS_ROUTE)}
                                 className="py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-indigo-600 transition"
@@ -64,7 +61,7 @@ export default function BottomNav() {
                 </div>
             </nav>
 
-            <MasterSheet isOpen={isMasterOpen} onClose={() => setIsMasterOpen(false)} />
+            <MasterSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} />
         </>
     )
 }

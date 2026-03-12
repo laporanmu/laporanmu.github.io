@@ -81,6 +81,9 @@ export default function DashboardPage() {
     const [chartData, setChartData] = useState([]) // [{name, pelanggaran, prestasi}]
     const [pieData, setPieData] = useState([])     // [{name, value, color}]
     const [recentReports, setRecentReports] = useState([])
+    const [raportProgress, setRaportProgress] = useState([])  // [{className, filled, total, pct}]
+    const [riskStudents, setRiskStudents] = useState([])  // [{id, name, className, points}]
+    const [classRanking, setClassRanking] = useState([])  // [{className, avg, count}]
 
     const COLORS = useMemo(() => ([
         '#ef4444', '#f59e0b', '#6366f1', '#8b5cf6', '#10b981', '#3b82f6'
@@ -263,6 +266,82 @@ export default function DashboardPage() {
                 setChartData(chart)
                 setPieData(pie)
                 setRecentReports(recent)
+
+                // ── 7) Progress Raport Bulanan per Kelas ──────────────────────
+                const nowD = new Date()
+                const curMonth = nowD.getMonth() + 1
+                const curYear = nowD.getFullYear()
+
+                // Ambil semua kelas + jumlah siswa aktif per kelas
+                const { data: classesData } = await supabase
+                    .from('classes')
+                    .select('id, name')
+
+                const { data: studentsByClass } = await supabase
+                    .from('students')
+                    .select('id, class_id')
+                    .is('deleted_at', null)
+
+                // Raport bulan ini yang sudah diisi
+                const { data: raportThisMonth } = await supabase
+                    .from('student_monthly_reports')
+                    .select('student_id, students:student_id(class_id)')
+                    .eq('month', curMonth)
+                    .eq('year', curYear)
+
+                if (classesData && studentsByClass) {
+                    const filledSet = new Set((raportThisMonth || []).map(r => r.student_id))
+                    const progress = classesData.map(cls => {
+                        const members = studentsByClass.filter(s => s.class_id === cls.id)
+                        const filled = members.filter(s => filledSet.has(s.id)).length
+                        const total = members.length
+                        return { className: cls.name, filled, total, pct: total > 0 ? Math.round((filled / total) * 100) : 0 }
+                    }).filter(c => c.total > 0).sort((a, b) => b.pct - a.pct)
+                    setRaportProgress(progress)
+                }
+
+                // ── 8) Siswa Risiko (total_points paling rendah) ──────────────
+                const RiskThreshold = 0
+                const { data: riskData } = await supabase
+                    .from('students')
+                    .select('id, name, total_points, classes:class_id(name)')
+                    .is('deleted_at', null)
+                    .lt('total_points', RiskThreshold)
+                    .order('total_points', { ascending: true })
+                    .limit(5)
+
+                if (riskData) {
+                    setRiskStudents(riskData.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        className: s.classes?.name || '-',
+                        points: s.total_points ?? 0,
+                    })))
+                }
+
+                // ── 9) Ranking Kelas (rata-rata poin) ─────────────────────────
+                const { data: allStudentPoints } = await supabase
+                    .from('students')
+                    .select('class_id, total_points, classes:class_id(name)')
+                    .is('deleted_at', null)
+
+                if (allStudentPoints && classesData) {
+                    const rankMap = {}
+                    for (const s of allStudentPoints) {
+                        const cn = s.classes?.name || 'Tanpa Kelas'
+                        if (!rankMap[cn]) rankMap[cn] = { sum: 0, count: 0 }
+                        rankMap[cn].sum += s.total_points ?? 0
+                        rankMap[cn].count += 1
+                    }
+                    const ranking = Object.entries(rankMap)
+                        .map(([className, { sum, count }]) => ({
+                            className,
+                            avg: count > 0 ? Math.round(sum / count) : 0,
+                            count,
+                        }))
+                        .sort((a, b) => b.avg - a.avg)
+                    setClassRanking(ranking)
+                }
             } catch (e) {
                 console.error('Dashboard fetch error:', e)
             } finally {
@@ -424,7 +503,7 @@ export default function DashboardPage() {
                             Laporan Terbaru
                         </h3>
                         <Link
-                            to="/reports"
+                            to="/raport"
                             className="text-[10px] font-black text-[var(--color-primary)] hover:text-[var(--color-accent)] uppercase tracking-widest transition-colors flex items-center gap-1"
                         >
                             Lihat Semua <FontAwesomeIcon icon={faArrowRight} className="text-[8px]" />
@@ -476,7 +555,7 @@ export default function DashboardPage() {
                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-6">Aksi Cepat</h3>
                     <div className="space-y-3">
                         <Link
-                            to="/reports/new"
+                            to="/raport/new"
                             className="flex items-center gap-4 p-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] 
               rounded-xl text-white shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5 transition-all"
                         >
@@ -504,7 +583,7 @@ export default function DashboardPage() {
                         </Link>
 
                         <Link
-                            to="/reports"
+                            to="/raport"
                             className="flex items-center gap-4 p-4 bg-[var(--color-surface)] border border-[var(--color-border)]
               rounded-xl hover:border-[var(--color-primary)]/30 group transition-all"
                         >
@@ -517,6 +596,148 @@ export default function DashboardPage() {
                             </div>
                         </Link>
                     </div>
+                </div>
+            </div>
+            {/* ── BOTTOM ROW: 3 Analytics Sections ── */}
+            <div className="grid lg:grid-cols-3 gap-6 mt-6">
+
+                {/* ① Progress Raport Bulanan */}
+                <div className="glass rounded-[1.5rem] p-5 flex flex-col">
+                    <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
+                            Raport Bulan Ini
+                        </h3>
+                        <span className="text-[9px] font-black text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-lg">
+                            {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                        </span>
+                    </div>
+                    {loading ? (
+                        <div className="space-y-3">
+                            {[1, 2, 3, 4].map(i => <div key={i} className="h-8 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}
+                        </div>
+                    ) : raportProgress.length === 0 ? (
+                        <p className="text-[10px] text-[var(--color-text-muted)] font-bold py-4 text-center opacity-50">Belum ada data raport</p>
+                    ) : (
+                        <div className="space-y-2.5 flex-1">
+                            {raportProgress.map((cls, i) => (
+                                <div key={i}>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[11px] font-black text-[var(--color-text)] truncate flex-1">{cls.className}</span>
+                                        <span className="text-[10px] font-black shrink-0 ml-2"
+                                            style={{ color: cls.pct === 100 ? '#10b981' : cls.pct >= 50 ? '#f59e0b' : '#ef4444' }}>
+                                            {cls.filled}/{cls.total}
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-2 bg-[var(--color-border)] rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full transition-all duration-700"
+                                            style={{
+                                                width: `${cls.pct}%`,
+                                                background: cls.pct === 100 ? '#10b981' : cls.pct >= 50 ? '#f59e0b' : '#ef4444'
+                                            }} />
+                                    </div>
+                                    <p className="text-[8px] text-[var(--color-text-muted)] font-bold mt-0.5 text-right">{cls.pct}%</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {/* Ringkasan total */}
+                    {!loading && raportProgress.length > 0 && (() => {
+                        const totalFilled = raportProgress.reduce((a, c) => a + c.filled, 0)
+                        const totalAll = raportProgress.reduce((a, c) => a + c.total, 0)
+                        const overallPct = totalAll > 0 ? Math.round((totalFilled / totalAll) * 100) : 0
+                        return (
+                            <div className="mt-4 pt-4 border-t border-[var(--color-border)] flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Total Keseluruhan</span>
+                                <span className="text-sm font-black" style={{ color: overallPct === 100 ? '#10b981' : overallPct >= 50 ? '#f59e0b' : '#ef4444' }}>
+                                    {overallPct}%
+                                </span>
+                            </div>
+                        )
+                    })()}
+                </div>
+
+                {/* ② Siswa Risiko */}
+                <div className="glass rounded-[1.5rem] p-5 flex flex-col">
+                    <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
+                            Siswa Risiko
+                        </h3>
+                        <span className="text-[9px] font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded-lg">
+                            Poin Negatif
+                        </span>
+                    </div>
+                    {loading ? (
+                        <div className="space-y-2">
+                            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-11 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}
+                        </div>
+                    ) : riskStudents.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center gap-2 py-6 opacity-40">
+                            <FontAwesomeIcon icon={faHandPeace} className="text-2xl text-emerald-500" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Tidak ada siswa berisiko</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2 flex-1">
+                            {riskStudents.map((s, i) => (
+                                <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-red-500/5 border border-red-500/10 hover:border-red-500/20 transition-all">
+                                    <div className="w-6 h-6 rounded-lg bg-red-500/15 text-red-500 flex items-center justify-center text-[9px] font-black shrink-0">
+                                        {i + 1}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] font-black text-[var(--color-text)] truncate">{s.name}</p>
+                                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] truncate">{s.className}</p>
+                                    </div>
+                                    <span className="text-[11px] font-black text-red-500 shrink-0">{s.points}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <Link to="/master/students"
+                        className="mt-4 pt-4 border-t border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-primary)] hover:text-[var(--color-accent)] flex items-center justify-end gap-1 transition-colors">
+                        Lihat Semua Siswa <FontAwesomeIcon icon={faArrowRight} className="text-[8px]" />
+                    </Link>
+                </div>
+
+                {/* ③ Ranking Kelas */}
+                <div className="glass rounded-[1.5rem] p-5 flex flex-col">
+                    <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
+                            Ranking Kelas
+                        </h3>
+                        <span className="text-[9px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg">
+                            Rata-rata Poin
+                        </span>
+                    </div>
+                    {loading ? (
+                        <div className="space-y-2">
+                            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-11 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}
+                        </div>
+                    ) : classRanking.length === 0 ? (
+                        <p className="text-[10px] text-[var(--color-text-muted)] font-bold py-4 text-center opacity-50">Belum ada data kelas</p>
+                    ) : (
+                        <div className="space-y-2 flex-1">
+                            {classRanking.map((cls, i) => {
+                                const MEDALS = ['🥇', '🥈', '🥉']
+                                const maxAvg = classRanking[0]?.avg || 1
+                                const barPct = maxAvg > 0 ? Math.max((cls.avg / maxAvg) * 100, 4) : 4
+                                const barColor = i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#c2763e' : '#6366f1'
+                                return (
+                                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-all">
+                                        <span className="text-sm shrink-0 w-5 text-center">{MEDALS[i] || <span className="text-[9px] font-black text-[var(--color-text-muted)]">{i + 1}</span>}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-black text-[var(--color-text)] truncate">{cls.className}</p>
+                                            <div className="w-full h-1.5 bg-[var(--color-border)] rounded-full overflow-hidden mt-1">
+                                                <div className="h-full rounded-full" style={{ width: `${barPct}%`, background: barColor }} />
+                                            </div>
+                                        </div>
+                                        <div className="shrink-0 text-right">
+                                            <p className="text-[11px] font-black" style={{ color: barColor }}>{cls.avg > 0 ? '+' : ''}{cls.avg}</p>
+                                            <p className="text-[8px] text-[var(--color-text-muted)] font-bold">{cls.count} siswa</p>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
         </DashboardLayout>

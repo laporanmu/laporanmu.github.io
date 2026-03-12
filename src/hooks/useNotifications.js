@@ -184,7 +184,7 @@ export function useNotifications() {
                     icon: '⚠️',
                     title: `Pelanggaran bulan ${BULAN.find(b => b.id === month)?.str}`,
                     body: `${violationCount} pelanggaran tercatat bulan ini`,
-                    action: { label: 'Lihat Laporan', route: '/reports' },
+                    action: { label: 'Lihat Laporan', route: '/raport' },
                     priority: 4,
                 })
             }
