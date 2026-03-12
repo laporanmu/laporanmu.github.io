@@ -13,8 +13,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import Modal from '../ui/Modal'
+import DashboardLayout from '../layout/DashboardLayout'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
+import { useSchoolSettings } from '../../context/SchoolSettingsContext'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -60,8 +62,6 @@ const LABEL = {
         ziyadah: 'الزيادة', murojaah: 'المراجعة', sick: 'المريض', home: 'الإجازة',
         izin: 'الإذن', alpa: 'الغياب',
         gradeScale: 'نظام التقدير',
-        headmaster: 'مدير معهد محمدية الإسلامي تانجول',
-        headmasterSub: 'كياهي الحاج محمد علي معصوم، ليسانس',
         musyrif: 'رائد الحجرة', guardian: 'ولي الأمر',
         reportTitle: 'نتيجة الشخصية', month: 'شهر',
     },
@@ -71,8 +71,7 @@ const LABEL = {
         grade: 'Predikat', num: 'No', weight: 'Berat Badan', height: 'Tinggi Badan',
         ziyadah: 'Ziyadah', murojaah: "Muroja'ah", sick: 'Hari Sakit', home: 'Hari Pulang',
         izin: 'Hari Izin', alpa: 'Hari Alpa',
-        gradeScale: 'Skala Penilaian', headmaster: 'Direktur MBS Tanggul',
-        headmasterSub: 'KH. Muhammad Ali Maksum, Lc',
+        gradeScale: 'Skala Penilaian',
         musyrif: 'Musyrif / Wali Kamar', guardian: 'Wali Santri',
         reportTitle: 'Raport Bulanan', month: 'Bulan',
     }
@@ -169,7 +168,7 @@ const ScoreCell = memo(({ value, onChange, onKeyDown, inputRef, kriteria }) => {
 
 // ─── Raport Print Template ────────────────────────────────────────────────────
 
-const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif, className, lang = 'ar', onRendered }) => {
+const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif, className, lang = 'ar', settings = {}, onRendered }) => {
     const sc = scores || {}
     const ex = extra || {}
     const L = LABEL[lang]
@@ -267,26 +266,28 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             <div style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingBottom: 6 }}>
                     <div style={{ flexShrink: 0, width: 80, height: 80, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src="/src/assets/mbs.png" alt="MBS Logo" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
+                        <img src={settings.logo_url || '/src/assets/mbs.png'} alt="Logo" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
                     </div>
                     <div style={{ flex: 1, textAlign: 'center' }}>
-                        <div style={{ fontSize: '8pt', color: '#444', direction: 'rtl', marginBottom: 3, fontFamily: "'Traditional Arabic', serif" }}>
-                            المجلس التعليمي للمرحلتين الابتدائية والمتوسطة التابع للرئاسة الفرعية للجمعية المحمدية
-                        </div>
-                        <div style={{ fontSize: '20pt', fontWeight: 900, color: '#1a5c35', direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5 }}>
-                            معهد محمدية الإسلامي تانجول
+                        {settings.school_subtitle_ar && (
+                            <div style={{ fontSize: '8pt', color: '#444', direction: 'rtl', marginBottom: 3, fontFamily: "'Traditional Arabic', serif" }}>
+                                {settings.school_subtitle_ar}
+                            </div>
+                        )}
+                        <div style={{ fontSize: '20pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35', direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5 }}>
+                            {settings.school_name_ar || ''}
                         </div>
                         <div style={{ fontSize: '10pt', fontWeight: 700, letterSpacing: 2.5, color: '#333', marginTop: 1 }}>
-                            MUHAMMADIYAH BOARDING SCHOOL (MBS) TANGGUL
+                            {settings.school_name_id || ''}
                         </div>
                         <div style={{ fontSize: '7.5pt', color: '#666', marginTop: 2 }}>
-                            Muhammadiyah Boarding School (MBS) | Jl. Pemandian no. 88 RT 002 RW 003 Patemon, Tanggul, Jember 68155
+                            {settings.school_address || ''}
                         </div>
                     </div>
                 </div>
-                {/* Garis full width di luar flex agar tidak terpotong */}
-                <div style={{ height: 3, background: 'linear-gradient(90deg,#1a5c35,#c8a400,#1a5c35)', marginBottom: 0 }} />
-                <div style={{ borderBottom: '3px double #1a5c35', marginTop: 3 }} />
+                {/* Garis warna dari settings */}
+                <div style={{ height: 3, background: `linear-gradient(90deg, ${settings.report_color_primary || '#1a5c35'}, ${settings.report_color_secondary || '#c8a400'}, ${settings.report_color_primary || '#1a5c35'})`, marginBottom: 0 }} />
+                <div style={{ borderBottom: `3px double ${settings.report_color_primary || '#1a5c35'}`, marginTop: 3 }} />
             </div>
 
             {/* Judul */}
@@ -489,7 +490,14 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 direction: isAr ? 'rtl' : 'ltr',
             }}>
                 {[
-                    { label: L.headmaster, sub: L.headmasterSub },
+                    {
+                        label: isAr
+                            ? (settings.headmaster_title_ar || 'مدير المعهد')
+                            : (settings.headmaster_title_id || 'Direktur'),
+                        sub: isAr
+                            ? (settings.headmaster_name_ar || '—')
+                            : (settings.headmaster_name_id || '—')
+                    },
                     { label: L.musyrif, sub: displayMusyrif || '......................' },
                     { label: L.guardian, sub: '' }
                 ].map((item, i) => (
@@ -532,8 +540,9 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
-export default function RaportBulananModal({ isOpen, onClose, classesList = [] }) {
+export default function RaportBulananModal({ isOpen, onClose, classesList = [], asPage = false }) {
     const { addToast } = useToast()
+    const { settings } = useSchoolSettings()
 
     // ── Setup State
     const now = new Date()
@@ -1190,11 +1199,21 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
             const existingId = existingReportIds[studentId]
             let error
             if (existingId) {
-                ; ({ error } = await supabase.from('student_monthly_reports').update(payload).eq('id', existingId))
+                // Kalau sudah punya ID, langsung UPDATE by ID (lebih efisien)
+                ; ({ error } = await supabase
+                    .from('student_monthly_reports')
+                    .update(payload)
+                    .eq('id', existingId))
             } else {
-                const { data, error: insErr } = await supabase.from('student_monthly_reports').insert(payload).select('id').single()
-                error = insErr
-                if (!insErr && data) {
+                // Pakai upsert agar aman dari duplicate key,
+                // meski existingReportIds belum ter-populate
+                const { data, error: upsErr } = await supabase
+                    .from('student_monthly_reports')
+                    .upsert(payload, { onConflict: 'student_id,month,year' })
+                    .select('id')
+                    .single()
+                error = upsErr
+                if (!upsErr && data) {
                     setExistingReportIds(prev => ({ ...prev, [studentId]: data.id }))
                 }
             }
@@ -1672,7 +1691,7 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                 ``
             ] : []),
             `Wassalamu'alaikum Wr. Wb.`,
-            `_MBS Tanggul · Sistem Laporanmu_`
+            `_${settings.wa_footer || 'Sistem Laporanmu'}_`
         ].filter(l => l !== undefined)
         return encodeURIComponent(lines.join('\n'))
     }, [scores, bulanObj, selectedYear, selectedClass, musyrif])
@@ -2659,6 +2678,7 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                                 musyrif={musyrif}
                                 className={selectedClass?.name}
                                 lang={lang}
+                                settings={settings}
                             />
                         </div>
                     </div>
@@ -2718,7 +2738,7 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                             <div className="overflow-auto rounded-2xl border border-[var(--color-border)] bg-gray-100 dark:bg-gray-900 p-4 flex justify-center print:p-0 print:bg-white print:border-none">
                                 <div className="shadow-2xl">
                                     <RaportPrintCard student={pStudent} scores={pSc[pStudent.id]} extra={pEx[pStudent.id]}
-                                        bulanObj={pBulan} tahun={pTahun} musyrif={pMus} className={pClass} lang={pLang} />
+                                        bulanObj={pBulan} tahun={pTahun} musyrif={pMus} className={pClass} lang={pLang} settings={settings} />
                                 </div>
                             </div>
                         ) : null
@@ -2726,7 +2746,7 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                     <div className="hidden print:block">
                         {pStu.map(s => (
                             <RaportPrintCard key={s.id} student={s} scores={pSc[s.id]} extra={pEx[s.id]}
-                                bulanObj={pBulan} tahun={pTahun} musyrif={pMus} className={pClass} lang={pLang} />
+                                bulanObj={pBulan} tahun={pTahun} musyrif={pMus} className={pClass} lang={pLang} settings={settings} />
                         ))}
                     </div>
                 </div>
@@ -2839,6 +2859,128 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
     // ─── Render ───────────────────────────────────────────────────────────────
     const stepLabels = ['Setup', 'Input Nilai', 'Preview & Cetak']
 
+    // ── Konten utama (shared antara mode page dan modal) ─────────────────────
+    const headerContent = (
+        <div className="flex items-center gap-3 flex-wrap">
+            {step !== 4 && (
+                <div className="flex items-center gap-1.5">
+                    {stepLabels.map((label, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${step === i + 1 ? 'bg-emerald-500 text-white' :
+                                step > i + 1 ? 'bg-emerald-500/20 text-emerald-500' :
+                                    'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'
+                                }`}>
+                                {step > i + 1 ? <FontAwesomeIcon icon={faCheck} className="text-[7px]" /> : i + 1}
+                            </div>
+                            <span className={`text-[9px] font-bold hidden sm:inline ${step === i + 1 ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'}`}>{label}</span>
+                            {i < stepLabels.length - 1 && <div className="w-4 h-px bg-[var(--color-border)]" />}
+                        </div>
+                    ))}
+                </div>
+            )}
+            {step === 4 && (
+                <div className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[9px] font-black flex items-center gap-1.5">
+                    <FontAwesomeIcon icon={faTableList} /> Arsip Riwayat
+                </div>
+            )}
+            <button
+                onClick={() => { setStep(4); loadArchive() }}
+                className={`h-7 px-3 rounded-lg border text-[9px] font-black flex items-center gap-1.5 transition-all ${step === 4 ? 'bg-amber-500/15 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+            >
+                <FontAwesomeIcon icon={faTableList} /> Riwayat
+            </button>
+        </div>
+    )
+
+    const printContainer = printQueue.length > 0 && (
+        <div
+            ref={printContainerRef}
+            style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}
+        >
+            {students.filter(s => printQueue.includes(s.id)).map(s => (
+                <RaportPrintCard
+                    key={s.id}
+                    student={s}
+                    scores={scores[s.id]}
+                    extra={extras[s.id]}
+                    bulanObj={bulanObj}
+                    tahun={selectedYear}
+                    musyrif={musyrif}
+                    className={selectedClass?.name}
+                    lang={lang}
+                    settings={settings}
+                    onRendered={() => setPrintRenderedCount(c => c + 1)}
+                />
+            ))}
+        </div>
+    )
+
+    const confirmPortal = (confirmDelete || confirmModal) && (() => {
+        const isDelete = !!confirmDelete && !confirmModal
+        const variant = confirmModal?.variant ?? 'red'
+        const accentColor = variant === 'amber' ? { bg: '#f59e0b', bgLight: '#f59e0b15', border: '#f59e0b30', hover: '#d97706' } : { bg: '#ef4444', bgLight: '#ef444415', border: '#ef444430', hover: '#dc2626' }
+        const icon = faTriangleExclamation
+        const title = isDelete ? 'Hapus Arsip' : confirmModal?.title
+        const subtitle = isDelete ? 'Aksi ini tidak bisa dibatalkan' : confirmModal?.subtitle
+        const confirmLabel = isDelete ? 'Ya, Hapus' : confirmModal?.confirmLabel ?? 'Lanjutkan'
+        const onConfirm = isDelete ? () => executeDeleteArchive(confirmDelete) : confirmModal?.onConfirm
+        const onCancel = isDelete ? () => setConfirmDelete(null) : () => setConfirmModal(null)
+        return createPortal(
+            <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+                style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
+                onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
+                <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl"
+                    style={{ background: 'var(--color-surface)', border: `1px solid ${accentColor.border}` }}>
+                    <div className="flex items-start gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: accentColor.bgLight }}>
+                            <FontAwesomeIcon icon={icon} className="text-lg" style={{ color: accentColor.bg }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="font-black text-[13px] text-[var(--color-text)] leading-tight">{title}</div>
+                            {subtitle && <div className="text-[11px] font-medium mt-0.5" style={{ color: accentColor.bg }}>{subtitle}</div>}
+                        </div>
+                    </div>
+                    <div className="text-[12px] text-[var(--color-text-muted)] leading-relaxed mb-5 pl-[52px]">
+                        {isDelete ? (
+                            <>Yakin ingin menghapus semua raport <strong className="text-[var(--color-text)]">{BULAN.find(b => b.id === confirmDelete.month)?.id_str} {confirmDelete.year}</strong> kelas <strong className="text-[var(--color-text)]">{confirmDelete.class_name}</strong>?
+                                <br /><span className="font-bold" style={{ color: accentColor.bg }}>{confirmDelete.count} raport akan dihapus permanen.</span></>
+                        ) : confirmModal?.body}
+                    </div>
+                    <div className="flex gap-2">
+                        <button onClick={onCancel} className="flex-1 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[11px] font-black hover:text-[var(--color-text)] transition-all">Batal</button>
+                        <button onClick={onConfirm}
+                            className="flex-1 h-9 rounded-xl text-white text-[11px] font-black transition-all flex items-center justify-center gap-1.5"
+                            style={{ background: accentColor.bg }}
+                            onMouseEnter={e => e.currentTarget.style.background = accentColor.hover}
+                            onMouseLeave={e => e.currentTarget.style.background = accentColor.bg}>
+                            {confirmLabel}
+                        </button>
+                    </div>
+                </div>
+            </div>,
+            document.body
+        )
+    })()
+
+    // ── Mode PAGE: render dalam DashboardLayout ───────────────────────────────
+    if (asPage) {
+        return (
+            <>
+                <DashboardLayout title="Raport Bulanan" subtitle={headerContent}>
+                    <div className="mx-auto max-w-7xl px-3 sm:px-4 lg:px-6 py-4">
+                        {step === 1 && renderSetup()}
+                        {step === 2 && renderInput()}
+                        {step === 3 && renderPreview()}
+                        {step === 4 && renderArchive()}
+                        {printContainer}
+                    </div>
+                </DashboardLayout>
+                {confirmPortal}
+            </>
+        )
+    }
+
+    // ── Mode MODAL (default) ──────────────────────────────────────────────────
     return (
         <>
             <Modal
@@ -2909,6 +3051,7 @@ export default function RaportBulananModal({ isOpen, onClose, classesList = [] }
                                 musyrif={musyrif}
                                 className={selectedClass?.name}
                                 lang={lang}
+                                settings={settings}
                                 onRendered={() => setPrintRenderedCount(c => c + 1)}
                             />
                         ))}

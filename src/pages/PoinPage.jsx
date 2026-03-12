@@ -94,7 +94,7 @@ function PaginationStrip({ page, totalPages, totalRows, fromRow, toRow, pageSize
     )
 }
 
-export default function ReportsPage() {
+export default function PoinPage() {
     const { profile } = useAuth()
     const { addToast } = useToast()
 
