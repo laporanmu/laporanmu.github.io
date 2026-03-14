@@ -25,7 +25,7 @@
  *
  *   // Tampilkan indikator di form:
  *   {loadingRekap && <span>Memuat data absensi...</span>}
- *   {rekap && <span className="text-xs text-emerald-500">✓ Diisi otomatis dari absensi mingguan</span>}
+ *   {rekap && <span className="text-xs text-emerald-500">✓ Diisi otomatis dari Absensi Bulanan</span>}
  *   {!loadingRekap && !rekap && <span className="text-xs text-amber-500">Belum ada rekap absensi bulan ini</span>}
  * ──────────────────────────────────────────────────────────────────────────────
  */
