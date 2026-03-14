@@ -10,7 +10,7 @@ import {
 
 const REPORTS_ITEMS = [
     { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" },
-    { to: "/absensi", label: "Absensi Mingguan", icon: faCalendarWeek, desc: "Rekap kehadiran per pekan", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" },
+    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekap kehadiran per bulan", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" },
     { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400" },
 ]
 

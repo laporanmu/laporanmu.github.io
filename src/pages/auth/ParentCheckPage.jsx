@@ -243,6 +243,10 @@ const KATA_ARAB = {
 // ─── Konstanta ────────────────────────────────────────────────────────────────
 const MAX_SCORE = 9
 
+// ─── Feature Flag ─────────────────────────────────────────────────────────────
+// Ganti ke `true` jika fitur unduh PDF raport sudah siap diaktifkan kembali
+const ENABLE_PDF_DOWNLOAD = false
+
 // FIX #15: Helper withTimeout agar generatePDFBlob tidak hang selamanya
 const withTimeout = (promise, ms, label = 'Operasi') =>
     Promise.race([
@@ -593,15 +597,55 @@ export default function ParentCheckPage() {
     const [printQueue, setPrintQueue] = useState([])
     const [printRenderedCount, setPrintRenderedCount] = useState(0)
     const [printRaportData, setPrintRaportData] = useState(null)
+    // Rate limiting — cooldown counter (detik tersisa)
+    const [loginCooldown, setLoginCooldown] = useState(0)
     const printContainerRef = useRef(null)
+    const cooldownTimerRef = useRef(null)
     const { addToast } = useToast()
     const { isDark, toggleTheme } = useTheme()
+
+    // Bersihkan interval cooldown saat unmount
+    useEffect(() => () => { if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current) }, [])
+
+    // ── Helpers rate limiting (sessionStorage agar reset saat tab ditutup)
+    const RATE_KEY = 'laporanmu_login_attempts' // prefix unik agar tidak konflik jika multi-app di domain sama
+    const RATE_MAX = 5       // max percobaan sebelum cooldown
+    const RATE_COOLDOWN = 30 // detik cooldown
+
+    const getRateData = () => {
+        try { return JSON.parse(sessionStorage.getItem(RATE_KEY) || '{"count":0,"until":0}') }
+        catch { return { count: 0, until: 0 } }
+    }
+    const setRateData = (data) => {
+        try { sessionStorage.setItem(RATE_KEY, JSON.stringify(data)) } catch { }
+    }
+    const startCooldownTimer = (seconds) => {
+        setLoginCooldown(seconds)
+        if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current)
+        cooldownTimerRef.current = setInterval(() => {
+            setLoginCooldown(prev => {
+                if (prev <= 1) { clearInterval(cooldownTimerRef.current); return 0 }
+                return prev - 1
+            })
+        }, 1000)
+    }
 
     const performCheck = useCallback(async (checkCode, checkPin) => {
         if (!checkCode || !checkPin) {
             setErrorMessage('Kode registrasi dan PIN harus diisi')
             return
         }
+
+        // Cek rate limit sebelum request ke Supabase
+        const rateData = getRateData()
+        const now = Date.now()
+        if (rateData.until > now) {
+            const secsLeft = Math.ceil((rateData.until - now) / 1000)
+            startCooldownTimer(secsLeft)
+            setErrorMessage(`Terlalu banyak percobaan. Coba lagi dalam ${secsLeft} detik.`)
+            return
+        }
+
         const normalizedCode = checkCode.trim().toUpperCase()
         const normalizedPin = checkPin.trim()
 
@@ -611,20 +655,36 @@ export default function ParentCheckPage() {
         try {
             const { data: studentData, error: studentError } = await supabase
                 .from('students')
-                .select(`*, classes (id, name)`)
+                .select(`*, classes (id, name, homeroom_teacher_id, teachers:homeroom_teacher_id(name, phone))`)
                 .eq('registration_code', normalizedCode)
                 .eq('pin', normalizedPin)
                 .single()
 
             if (studentError || !studentData) {
-                throw new Error('Kode registrasi atau PIN tidak valid. Pastikan Anda memasukkan data yang benar.')
+                // Tambah hitungan percobaan gagal
+                const rd = getRateData()
+                const newCount = rd.count + 1
+                if (newCount >= RATE_MAX) {
+                    const until = Date.now() + RATE_COOLDOWN * 1000
+                    setRateData({ count: newCount, until })
+                    startCooldownTimer(RATE_COOLDOWN)
+                    throw new Error(`Terlalu banyak percobaan gagal. Silakan tunggu ${RATE_COOLDOWN} detik.`)
+                }
+                setRateData({ count: newCount, until: 0 })
+                throw new Error(`Kode registrasi atau PIN tidak valid. Pastikan Anda memasukkan data yang benar. (${newCount}/${RATE_MAX})`)
             }
 
+            // Login sukses — reset counter
+            setRateData({ count: 0, until: 0 })
+
+            // Batasi 200 riwayat terbaru — wali santri tidak perlu lebih dari itu,
+            // dan mencegah silent truncation di Supabase (default limit 1000)
             const { data: historyData } = await supabase
                 .from('behavior_reports')
-                .select('*')
+                .select('id, created_at, type, points, teacher_name')
                 .eq('student_id', studentData.id)
                 .order('created_at', { ascending: false })
+                .limit(200)
 
             const reports = (historyData || []).filter(h => h.points < 0).map(h => ({
                 id: h.id,
@@ -646,25 +706,45 @@ export default function ParentCheckPage() {
                 ...studentData,
                 class: studentData.classes?.name || '-',
                 points: studentData.total_points || 0,
+                homeroomTeacher: {
+                    name: studentData.classes?.teachers?.name || null,
+                    phone: studentData.classes?.teachers?.phone || null,
+                },
                 reports,
                 achievements
             })
 
-            // Fetch raport bulanan
-            setRaportLoading(true)
-            const { data: raportData } = await supabase
-                .from('student_monthly_reports')
-                .select('*')
-                .eq('student_id', studentData.id)
-                .order('year', { ascending: false })
-                .order('month', { ascending: false })
-            setRaportHistory(raportData || [])
-            setRaportLoading(false)
-
             addToast('Data siswa berhasil ditemukan!', 'success')
+
+            // Fetch raport bulanan — blok terpisah agar error di sini
+            // tidak menimpa pesan error login, dan raportLoading SELALU
+            // di-reset lewat finally meski query gagal / timeout.
+            setRaportLoading(true)
+            try {
+                const { data: raportData, error: raportError } = await supabase
+                    .from('student_monthly_reports')
+                    .select('*')
+                    .eq('student_id', studentData.id)
+                    .order('year', { ascending: false })
+                    .order('month', { ascending: false })
+                if (raportError) throw raportError
+                setRaportHistory(raportData || [])
+            } catch (raportErr) {
+                console.error('Gagal memuat raport history:', raportErr)
+                addToast('Gagal memuat riwayat raport. Coba muat ulang halaman.', 'error')
+                setRaportHistory([])
+            } finally {
+                // FIX MAJOR: raportLoading SELALU di-reset di sini.
+                // Sebelumnya hanya di-reset di happy path sehingga
+                // spinner bisa stuck selamanya jika query error.
+                setRaportLoading(false)
+            }
         } catch (err) {
+            // FIX MINOR: Hanya setErrorMessage — tidak perlu addToast juga.
+            // Sebelumnya error muncul dua kali (inline form + toast pojok layar).
+            // Form login sudah punya inline error area sendiri; toast cocok untuk
+            // aksi background yang tidak punya area error di UI.
             setErrorMessage(err.message)
-            addToast(err.message, 'error')
         } finally {
             setLoading(false)
             setAutoChecking(false)
@@ -918,16 +998,37 @@ export default function ParentCheckPage() {
                                 <FontAwesomeIcon icon={linkCopied ? faCheck : faLink} className="text-[10px]" />
                                 {linkCopied ? 'Link tersalin!' : 'Salin Link'}
                             </button>
-                            <a
-                                href={`https://wa.me/?text=${encodeURIComponent(`Assalamu'alaikum, berikut link raport ${student.name} di Pondok:\n${window.location.origin}/check?code=${student.registration_code}&pin=${pin}`)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-[11px] font-black bg-emerald-500/10 border-emerald-500/25 text-emerald-600 hover:bg-emerald-500/20 transition-all"
-                            >
-                                <FontAwesomeIcon icon={faWhatsapp} className="text-[11px]" />
-                                Bagikan WA
-                            </a>
+                            {(() => {
+                                const waPhone = student.phone
+                                    ? student.phone.replace(/\D/g, '').replace(/^0/, '62')
+                                    : null
+                                const waText = encodeURIComponent(
+                                    `Assalamu'alaikum, berikut link raport ${student.name} di Pondok:\n${window.location.origin}/check?code=${student.registration_code}&pin=${pin}`
+                                )
+                                // Jika nomor Whatsapp tersedia → langsung buka chat ke nomor wali santri
+                                // Jika tidak → buka Whatsapp tanpa nomor (wali santri pilih sendiri)
+                                const waHref = waPhone
+                                    ? `https://wa.me/${waPhone}?text=${waText}`
+                                    : `https://wa.me/?text=${waText}`
+                                return (
+                                    <a
+                                        href={waHref}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-[11px] font-black bg-emerald-500/10 border-emerald-500/25 text-emerald-600 hover:bg-emerald-500/20 transition-all"
+                                        title={waPhone ? `Kirim ke ${student.phone}` : 'Nomor Whatsapp tidak tersedia, pilih kontak sendiri'}
+                                    >
+                                        <FontAwesomeIcon icon={faWhatsapp} className="text-[11px]" />
+                                        {waPhone ? 'Kirim ke Whatsapp Saya' : 'Bagikan Whatsapp'}
+                                    </a>
+                                )
+                            })()}
                         </div>
+                        {/* Catatan keamanan untuk wali santri */}
+                        <p className="px-4 pb-3 text-[10px] text-amber-600 font-medium leading-relaxed flex items-start gap-1.5">
+                            <FontAwesomeIcon icon={faShieldHalved} className="mt-0.5 shrink-0" />
+                            Link ini mengandung PIN pribadi Anda. Jangan bagikan ke orang lain selain anggota keluarga yang Anda percaya.
+                        </p>
                     </div>
 
                     {/* Tabs */}
@@ -937,13 +1038,19 @@ export default function ParentCheckPage() {
                                 ${activeTab === 'perilaku' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                             <FontAwesomeIcon icon={faChartBar} className="text-[10px]" /> Perilaku
                         </button>
-                        <button onClick={() => setActiveTab('raport')}
+                        <button onClick={() => { setActiveTab('raport'); localStorage.setItem('raport_last_viewed_month', `${currentYear}-${currentMonth}`) }}
                             className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 relative
                                 ${activeTab === 'raport' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                             <FontAwesomeIcon icon={faClipboardList} className="text-[10px]" /> Raport Bulanan
-                            {latestRaport && latestRaport.month === currentMonth && latestRaport.year === currentYear && (
-                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[var(--color-surface)]" />
+                            {raportHistory.length > 0 && (
+                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border ${activeTab === 'raport' ? 'bg-white/20 border-white/30 text-white' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                    {raportHistory.length}
+                                </span>
                             )}
+                            {latestRaport && latestRaport.month === currentMonth && latestRaport.year === currentYear &&
+                                localStorage.getItem('raport_last_viewed_month') !== `${currentYear}-${currentMonth}` && (
+                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-[var(--color-surface)]" />
+                                )}
                         </button>
                     </div>
 
@@ -1038,188 +1145,259 @@ export default function ParentCheckPage() {
                                     ))}
                                 </div>
                             ) : raportHistory.length === 0 ? (
-                                <div className="py-14 bg-[var(--color-surface-alt)] rounded-2xl border border-dashed border-[var(--color-border)] text-center">
-                                    <FontAwesomeIcon icon={faClipboardList} className="text-3xl text-[var(--color-border)] mb-3" />
-                                    <p className="text-sm font-bold text-[var(--color-text-muted)]">Belum ada raport tersimpan</p>
-                                    <p className="text-xs text-[var(--color-text-muted)] opacity-60 mt-1">Raport akan muncul setelah musyrif mengisi nilai</p>
+                                <div className="py-12 bg-[var(--color-surface-alt)] rounded-2xl border border-dashed border-[var(--color-border)] text-center px-6">
+                                    <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center mx-auto mb-3">
+                                        <FontAwesomeIcon icon={faCalendarAlt} className="text-2xl text-[var(--color-primary)] opacity-60" />
+                                    </div>
+                                    <p className="text-sm font-black text-[var(--color-text-muted)]">Raport belum tersedia</p>
+                                    <p className="text-xs text-[var(--color-text-muted)] opacity-60 mt-1.5 leading-relaxed">
+                                        Raport bulan <span className="font-bold">{BULAN_STR[currentMonth]} {currentYear}</span> belum diisi oleh musyrif.
+                                        Silakan hubungi wali kelas untuk informasi lebih lanjut.
+                                    </p>
+                                    {student.homeroomTeacher?.phone && (
+                                        <a
+                                            href={`https://wa.me/${student.homeroomTeacher.phone.replace(/\D/g, '').replace(/^0/, '62')}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 text-xs font-black hover:bg-emerald-500/20 transition-all"
+                                        >
+                                            <FontAwesomeIcon icon={faWhatsapp} className="text-sm" />
+                                            Hubungi {student.homeroomTeacher.name || 'Wali Kelas'}
+                                        </a>
+                                    )}
                                 </div>
                             ) : (
-                                raportHistory.map((r, idx) => {
-                                    const avg = calcAvg(r)
-                                    const g = avg ? getGrade(avg) : null
-                                    const isLatest = r.month === currentMonth && r.year === currentYear
-                                    const isExpanded = expandedRaport === r.id
-                                    const allFilled = KRITERIA_LIST.every(k => r[k.key] !== null && r[k.key] !== undefined && r[k.key] !== '')
-                                    const prevR = raportHistory[idx + 1] || null
-
-                                    return (
-                                        <div key={r.id}
-                                            className="glass rounded-2xl border overflow-hidden transition-all"
-                                            style={{ borderColor: isLatest ? 'rgba(16,185,129,0.3)' : 'var(--color-border)', background: isLatest ? 'rgba(16,185,129,0.03)' : undefined }}>
-                                            {/* Card Header — always visible */}
-                                            <button className="w-full px-5 py-4 flex items-center gap-3 text-left"
-                                                onClick={() => setExpandedRaport(isExpanded ? null : r.id)}>
-                                                <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border"
-                                                    style={{ background: g ? g.bg : 'var(--color-surface-alt)', borderColor: g ? g.border : 'var(--color-border)' }}>
-                                                    <FontAwesomeIcon icon={faClipboardList} className="text-sm" style={{ color: g ? g.color : 'var(--color-text-muted)' }} />
+                                <>
+                                    {/* ── Mini Trend Chart rata-rata bulanan ── */}
+                                    {raportHistory.length >= 2 && (() => {
+                                        const chronological = [...raportHistory].reverse()
+                                        const avgs = chronological.map(r => {
+                                            const vals = KRITERIA_LIST.map(k => r[k.key]).filter(v => v !== null && v !== undefined && v !== '')
+                                            return vals.length ? vals.reduce((a, b) => a + Number(b), 0) / vals.length : null
+                                        }).filter(v => v !== null)
+                                        if (avgs.length < 2) return null
+                                        const W = 260, H = 52, pad = 6
+                                        const minV = Math.min(...avgs), maxV = Math.max(...avgs)
+                                        const range = maxV - minV || 0.5
+                                        const pts = avgs.map((v, i) => {
+                                            const x = pad + (i / (avgs.length - 1)) * (W - pad * 2)
+                                            const y = H - pad - ((v - minV) / range) * (H - pad * 2)
+                                            return `${x},${y}`
+                                        }).join(' ')
+                                        const last = avgs[avgs.length - 1], prev = avgs[avgs.length - 2]
+                                        const trendColor = last > prev ? '#10b981' : last < prev ? '#ef4444' : '#6366f1'
+                                        const trendLabel = last > prev ? '↑ Naik' : last < prev ? '↓ Turun' : '→ Stabil'
+                                        return (
+                                            <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tren Rata-rata Nilai</p>
+                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: trendColor + '20', color: trendColor }}>{trendLabel} · {last.toFixed(1)}</span>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <p className="text-sm font-black text-[var(--color-text)]">
-                                                            {BULAN_STR[r.month]} {r.year}
-                                                        </p>
-                                                        {isLatest && (
-                                                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/20">
-                                                                ✦ Terbaru
-                                                            </span>
-                                                        )}
-                                                        {!allFilled && (
-                                                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/20">
-                                                                Belum lengkap
-                                                            </span>
+                                                <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} aria-hidden="true" style={{ overflow: 'visible' }}>
+                                                    {[0.25, 0.5, 0.75].map((sc, i) => (
+                                                        <line key={i} x1={pad} y1={pad + sc * (H - pad * 2)} x2={W - pad} y2={pad + sc * (H - pad * 2)} stroke="var(--color-border)" strokeWidth="0.8" strokeDasharray="3,3" />
+                                                    ))}
+                                                    <defs>
+                                                        <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="0%" stopColor={trendColor} stopOpacity="0.18" />
+                                                            <stop offset="100%" stopColor={trendColor} stopOpacity="0.02" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <polygon points={`${pad},${H - pad} ${pts} ${W - pad},${H - pad}`} fill="url(#trendFill)" />
+                                                    <polyline points={pts} fill="none" stroke={trendColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                                                    {avgs.map((v, i) => {
+                                                        const x = pad + (i / (avgs.length - 1)) * (W - pad * 2)
+                                                        const y = H - pad - ((v - minV) / range) * (H - pad * 2)
+                                                        const label = BULAN_STR[chronological[i]?.month]?.slice(0, 3) || ''
+                                                        return (
+                                                            <g key={i}>
+                                                                <circle cx={x} cy={y} r={i === avgs.length - 1 ? 4 : 2.5} fill={i === avgs.length - 1 ? trendColor : 'var(--color-surface)'} stroke={trendColor} strokeWidth="1.5" />
+                                                                <text x={x} y={H} textAnchor="middle" fontSize="7" fontWeight="700" fill="var(--color-text-muted)">{label}</text>
+                                                            </g>
+                                                        )
+                                                    })}
+                                                </svg>
+                                            </div>
+                                        )
+                                    })()}
+                                    {raportHistory.map((r, idx) => {
+                                        const avg = calcAvg(r)
+                                        const g = avg ? getGrade(avg) : null
+                                        const isLatest = r.month === currentMonth && r.year === currentYear
+                                        const isExpanded = expandedRaport === r.id
+                                        const allFilled = KRITERIA_LIST.every(k => r[k.key] !== null && r[k.key] !== undefined && r[k.key] !== '')
+                                        const prevR = raportHistory[idx + 1] || null
+
+                                        return (
+                                            <div key={r.id}
+                                                className="glass rounded-2xl border overflow-hidden transition-all"
+                                                style={{ borderColor: isLatest ? 'rgba(16,185,129,0.3)' : 'var(--color-border)', background: isLatest ? 'rgba(16,185,129,0.03)' : undefined }}>
+                                                {/* Card Header — always visible */}
+                                                <button className="w-full px-5 py-4 flex items-center gap-3 text-left"
+                                                    onClick={() => setExpandedRaport(isExpanded ? null : r.id)}>
+                                                    <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border"
+                                                        style={{ background: g ? g.bg : 'var(--color-surface-alt)', borderColor: g ? g.border : 'var(--color-border)' }}>
+                                                        <FontAwesomeIcon icon={faClipboardList} className="text-sm" style={{ color: g ? g.color : 'var(--color-text-muted)' }} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <p className="text-sm font-black text-[var(--color-text)]">
+                                                                {BULAN_STR[r.month]} {r.year}
+                                                            </p>
+                                                            {isLatest && (
+                                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/20">
+                                                                    ✦ Terbaru
+                                                                </span>
+                                                            )}
+                                                            {!allFilled && (
+                                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/20">
+                                                                    Belum lengkap
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            {r.musyrif && (
+                                                                <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
+                                                                    <FontAwesomeIcon icon={faUser} className="text-[8px]" /> {r.musyrif}
+                                                                </span>
+                                                            )}
+                                                            {avg && g && (
+                                                                <span className="text-[10px] font-black px-2 py-0.5 rounded-md" style={{ background: g.bg, color: g.color }}>
+                                                                    Rata-rata {avg} — {g.label}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {/* ── Sparkline 5 kriteria ── */}
+                                                        {allFilled && (
+                                                            <div className="flex items-end gap-1 mt-2 h-6">
+                                                                {KRITERIA_LIST.map(k => {
+                                                                    const v = Number(r[k.key]) || 0
+                                                                    return (
+                                                                        <div key={k.key} className="flex-1" title={`${k.label}: ${v}`}>
+                                                                            <div className="w-full rounded-sm"
+                                                                                style={{
+                                                                                    height: `${Math.max(3, Math.round(24 * v / 9))}px`,
+                                                                                    background: k.color,
+                                                                                    opacity: 0.65
+                                                                                }} />
+                                                                        </div>
+                                                                    )
+                                                                })}
+                                                            </div>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        {r.musyrif && (
-                                                            <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
-                                                                <FontAwesomeIcon icon={faUser} className="text-[8px]" /> {r.musyrif}
-                                                            </span>
-                                                        )}
-                                                        {avg && g && (
-                                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md" style={{ background: g.bg, color: g.color }}>
-                                                                Rata-rata {avg} — {g.label}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {/* ── Sparkline 5 kriteria ── */}
-                                                    {allFilled && (
-                                                        <div className="flex items-end gap-1 mt-2 h-6">
+                                                    <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown}
+                                                        className="text-[10px] text-[var(--color-text-muted)] shrink-0" />
+                                                </button>
+
+                                                {/* Expanded detail */}
+                                                {isExpanded && (
+                                                    <div className="px-5 pb-5 pt-1 border-t border-[var(--color-border)] space-y-4">
+                                                        {/* Nilai 5 kriteria + delta arrow */}
+                                                        <div className="grid grid-cols-5 gap-2 pt-3">
                                                             {KRITERIA_LIST.map(k => {
-                                                                const v = Number(r[k.key]) || 0
+                                                                const val = r[k.key]
+                                                                const vNum = val !== null && val !== undefined && val !== '' ? Number(val) : null
+                                                                const kg = vNum !== null ? getGrade(vNum) : null
+                                                                const prevVal = prevR?.[k.key]
+                                                                const prevNum = prevVal !== null && prevVal !== undefined && prevVal !== '' ? Number(prevVal) : null
+                                                                const delta = (vNum !== null && prevNum !== null) ? vNum - prevNum : null
                                                                 return (
-                                                                    <div key={k.key} className="flex-1" title={`${k.label}: ${v}`}>
-                                                                        <div className="w-full rounded-sm"
+                                                                    <div key={k.key} className="flex flex-col items-center gap-1">
+                                                                        <FontAwesomeIcon icon={k.icon} className="text-[10px]" style={{ color: k.color }} />
+                                                                        <span className="text-[8px] font-black text-center leading-tight" style={{ color: k.color }}>
+                                                                            {k.label}
+                                                                        </span>
+                                                                        <div className="w-full h-9 rounded-xl flex items-center justify-center text-[14px] font-black border"
                                                                             style={{
-                                                                                height: `${Math.max(3, Math.round(24 * v / 9))}px`,
-                                                                                background: k.color,
-                                                                                opacity: 0.65
-                                                                            }} />
+                                                                                background: kg ? kg.bg : 'var(--color-surface-alt)',
+                                                                                color: kg ? kg.color : 'var(--color-text-muted)',
+                                                                                borderColor: kg ? kg.border : 'var(--color-border)'
+                                                                            }}>
+                                                                            {vNum !== null ? vNum : '—'}
+                                                                        </div>
+                                                                        {delta !== null && delta !== 0 && (
+                                                                            <span className={`text-[8px] font-black flex items-center gap-0.5 ${delta > 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+                                                                                <FontAwesomeIcon icon={delta > 0 ? faArrowUp : faArrowDown} className="text-[7px]" />
+                                                                                {Math.abs(delta)}
+                                                                            </span>
+                                                                        )}
+                                                                        {delta === 0 && prevNum !== null && (
+                                                                            <span className="text-[8px] text-[var(--color-text-muted)]">—</span>
+                                                                        )}
                                                                     </div>
                                                                 )
                                                             })}
                                                         </div>
-                                                    )}
-                                                </div>
-                                                <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown}
-                                                    className="text-[10px] text-[var(--color-text-muted)] shrink-0" />
-                                            </button>
 
-                                            {/* Expanded detail */}
-                                            {isExpanded && (
-                                                <div className="px-5 pb-5 pt-1 border-t border-[var(--color-border)] space-y-4">
-                                                    {/* Nilai 5 kriteria + delta arrow */}
-                                                    <div className="grid grid-cols-5 gap-2 pt-3">
-                                                        {KRITERIA_LIST.map(k => {
-                                                            const val = r[k.key]
-                                                            const vNum = val !== null && val !== undefined && val !== '' ? Number(val) : null
-                                                            const kg = vNum !== null ? getGrade(vNum) : null
-                                                            const prevVal = prevR?.[k.key]
-                                                            const prevNum = prevVal !== null && prevVal !== undefined && prevVal !== '' ? Number(prevVal) : null
-                                                            const delta = (vNum !== null && prevNum !== null) ? vNum - prevNum : null
-                                                            return (
-                                                                <div key={k.key} className="flex flex-col items-center gap-1">
-                                                                    <FontAwesomeIcon icon={k.icon} className="text-[10px]" style={{ color: k.color }} />
-                                                                    <span className="text-[8px] font-black text-center leading-tight" style={{ color: k.color }}>
-                                                                        {k.label}
-                                                                    </span>
-                                                                    <div className="w-full h-9 rounded-xl flex items-center justify-center text-[14px] font-black border"
-                                                                        style={{
-                                                                            background: kg ? kg.bg : 'var(--color-surface-alt)',
-                                                                            color: kg ? kg.color : 'var(--color-text-muted)',
-                                                                            borderColor: kg ? kg.border : 'var(--color-border)'
-                                                                        }}>
-                                                                        {vNum !== null ? vNum : '—'}
+                                                        {/* Data tambahan jika ada */}
+                                                        {(r.ziyadah || r.murojaah || r.hari_sakit || r.hari_izin || r.hari_alpa || r.berat_badan || r.tinggi_badan) && (
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                {r.ziyadah && (
+                                                                    <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                                                        <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Ziyadah</p>
+                                                                        <p className="text-sm font-black text-emerald-500">{r.ziyadah}</p>
                                                                     </div>
-                                                                    {delta !== null && delta !== 0 && (
-                                                                        <span className={`text-[8px] font-black flex items-center gap-0.5 ${delta > 0 ? 'text-emerald-500' : 'text-red-400'}`}>
-                                                                            <FontAwesomeIcon icon={delta > 0 ? faArrowUp : faArrowDown} className="text-[7px]" />
-                                                                            {Math.abs(delta)}
-                                                                        </span>
-                                                                    )}
-                                                                    {delta === 0 && prevNum !== null && (
-                                                                        <span className="text-[8px] text-[var(--color-text-muted)]">—</span>
-                                                                    )}
-                                                                </div>
-                                                            )
-                                                        })}
+                                                                )}
+                                                                {r.murojaah && (
+                                                                    <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                                                        <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Muroja'ah</p>
+                                                                        <p className="text-sm font-black text-indigo-500">{r.murojaah}</p>
+                                                                    </div>
+                                                                )}
+                                                                {(r.hari_sakit !== null && r.hari_sakit !== undefined) && (
+                                                                    <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                                                        <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Hari Sakit</p>
+                                                                        <p className="text-sm font-black text-red-400">{r.hari_sakit} hari</p>
+                                                                    </div>
+                                                                )}
+                                                                {(r.hari_izin !== null && r.hari_izin !== undefined) && (
+                                                                    <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                                                        <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Hari Izin</p>
+                                                                        <p className="text-sm font-black text-amber-500">{r.hari_izin} hari</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Catatan musyrif */}
+                                                        {r.catatan && (
+                                                            <div className="px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
+                                                                <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Catatan Musyrif</p>
+                                                                <p className="text-xs text-[var(--color-text)] leading-relaxed italic">{r.catatan}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Tombol Unduh PDF — dikontrol oleh ENABLE_PDF_DOWNLOAD di atas
+                                                         Ubah konstanta tersebut menjadi `true` untuk mengaktifkan kembali */}
+                                                        {ENABLE_PDF_DOWNLOAD && (
+                                                            <button
+                                                                onClick={() => handlePrintRaport(r)}
+                                                                disabled={pdfLoading === r.id}
+                                                                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-[11px] font-black transition-all mt-1
+                                                                ${pdfLoading === r.id
+                                                                        ? 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] opacity-60 cursor-not-allowed'
+                                                                        : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500 hover:bg-indigo-500/20'
+                                                                    }`}
+                                                            >
+                                                                <FontAwesomeIcon
+                                                                    icon={pdfLoading === r.id ? faSpinner : faFilePdf}
+                                                                    className={`text-[10px] ${pdfLoading === r.id ? 'animate-spin' : ''}`}
+                                                                />
+                                                                {pdfLoading === r.id ? 'Membuat PDF...' : `Unduh PDF — ${BULAN_STR[r.month]} ${r.year}`}
+                                                            </button>
+                                                        )}
                                                     </div>
-
-                                                    {/* Data tambahan jika ada */}
-                                                    {(r.ziyadah || r.murojaah || r.hari_sakit || r.hari_izin || r.hari_alpa || r.berat_badan || r.tinggi_badan) && (
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {r.ziyadah && (
-                                                                <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                                                                    <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Ziyadah</p>
-                                                                    <p className="text-sm font-black text-emerald-500">{r.ziyadah}</p>
-                                                                </div>
-                                                            )}
-                                                            {r.murojaah && (
-                                                                <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                                                                    <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Muroja'ah</p>
-                                                                    <p className="text-sm font-black text-indigo-500">{r.murojaah}</p>
-                                                                </div>
-                                                            )}
-                                                            {(r.hari_sakit !== null && r.hari_sakit !== undefined) && (
-                                                                <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                                                                    <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Hari Sakit</p>
-                                                                    <p className="text-sm font-black text-red-400">{r.hari_sakit} hari</p>
-                                                                </div>
-                                                            )}
-                                                            {(r.hari_izin !== null && r.hari_izin !== undefined) && (
-                                                                <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                                                                    <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Hari Izin</p>
-                                                                    <p className="text-sm font-black text-amber-500">{r.hari_izin} hari</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Catatan musyrif */}
-                                                    {r.catatan && (
-                                                        <div className="px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
-                                                            <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Catatan Musyrif</p>
-                                                            <p className="text-xs text-[var(--color-text)] leading-relaxed italic">{r.catatan}</p>
-                                                        </div>
-                                                    )}
-
-                                                    {/* PDF Download Button */}
-                                                    <button
-                                                        onClick={() => handlePrintRaport(r)}
-                                                        disabled={pdfLoading === r.id}
-                                                        className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-[11px] font-black transition-all mt-1
-                                                            ${pdfLoading === r.id
-                                                                ? 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] opacity-60 cursor-not-allowed'
-                                                                : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500 hover:bg-indigo-500/20'
-                                                            }`}
-                                                    >
-                                                        <FontAwesomeIcon
-                                                            icon={pdfLoading === r.id ? faSpinner : faFilePdf}
-                                                            className={`text-[10px] ${pdfLoading === r.id ? 'animate-spin' : ''}`}
-                                                        />
-                                                        {pdfLoading === r.id ? 'Membuat PDF...' : `Unduh PDF — ${BULAN_STR[r.month]} ${r.year}`}
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                })
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </>
                             )}
                         </div>
                     )}
 
-                    {/* Hidden container for PDF rendering */}
-                    {/* Hidden print container — render JSX langsung persis RaportPage */}
-                    {printQueue.length > 0 && printRaportData && (
+                    {/* Hidden container untuk render PDF — dikontrol oleh ENABLE_PDF_DOWNLOAD */}
+                    {ENABLE_PDF_DOWNLOAD && printQueue.length > 0 && printRaportData && (
                         <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
                             <RaportPrintCard
                                 student={printRaportData.student}
@@ -1253,21 +1431,55 @@ export default function ParentCheckPage() {
                     )}
 
                     {/* Support */}
-                    <div className="bg-gradient-to-r from-gray-900 to-slate-800 rounded-2xl p-5 flex items-center justify-between gap-4 mt-2 shadow-xl">
-                        <div className="min-w-0">
-                            <p className="font-bold text-white mb-1">Perlu Bantuan?</p>
-                            <p className="text-xs text-slate-300 truncate">Konsultasi langsung dengan wali kelas / BK</p>
-                        </div>
-                        <div className="flex gap-2">
-                            {/* TODO: ganti nomor WA dengan kontak BK/wali kelas pondok */}
-                            <a href="https://wa.me/6281234567890" className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-lg hover:bg-emerald-500 hover:text-white transition-all">
-                                <FontAwesomeIcon icon={faWhatsapp} />
-                            </a>
-                            <a href="tel:+6281234567890" className="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white text-sm hover:bg-white/20 transition-all">
-                                <FontAwesomeIcon icon={faPhone} />
-                            </a>
-                        </div>
-                    </div>
+                    {(() => {
+                        const htPhone = student.homeroomTeacher?.phone
+                            ? student.homeroomTeacher.phone.replace(/\D/g, '').replace(/^0/, '62')
+                            : null
+                        const htName = student.homeroomTeacher?.name
+                        return (
+                            <div className="bg-gradient-to-r from-gray-900 to-slate-800 rounded-2xl p-5 flex items-center justify-between gap-4 mt-2 shadow-xl">
+                                <div className="min-w-0">
+                                    <p className="font-bold text-white mb-1">Perlu Bantuan?</p>
+                                    <p className="text-xs text-slate-300 truncate">
+                                        {htName
+                                            ? `Hubungi ${htName} — wali kelas ${student.class}`
+                                            : 'Konsultasi langsung dengan wali kelas / BK'}
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    {htPhone ? (
+                                        <>
+                                            <a
+                                                href={`https://wa.me/${htPhone}`}
+                                                target="_blank" rel="noopener noreferrer"
+                                                title={`Whatsapp ${htName || 'Wali Kelas'}`}
+                                                className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-lg hover:bg-emerald-500 hover:text-white transition-all"
+                                            >
+                                                <FontAwesomeIcon icon={faWhatsapp} />
+                                            </a>
+                                            <a
+                                                href={`tel:+${htPhone}`}
+                                                title={`Telepon ${htName || 'Wali Kelas'}`}
+                                                className="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white text-sm hover:bg-white/20 transition-all"
+                                            >
+                                                <FontAwesomeIcon icon={faPhone} />
+                                            </a>
+                                        </>
+                                    ) : (
+                                        // Nomor wali kelas belum diisi di database — tombol dinonaktifkan
+                                        <>
+                                            <span className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400/40 text-lg cursor-not-allowed" title="Nomor wali kelas belum tersedia">
+                                                <FontAwesomeIcon icon={faWhatsapp} />
+                                            </span>
+                                            <span className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/30 text-sm cursor-not-allowed" title="Nomor wali kelas belum tersedia">
+                                                <FontAwesomeIcon icon={faPhone} />
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })()}
 
                     <p className="text-center text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-[0.2em] pt-4 opacity-70">
                         Laporanmu © 2026
@@ -1353,11 +1565,13 @@ export default function ParentCheckPage() {
 
                         <button
                             type="submit"
-                            disabled={loading}
-                            className={`btn btn-primary w-full py-3.5 mt-2 shadow-lg shadow-[var(--color-primary)]/20 ${loading ? 'opacity-70' : ''}`}
+                            disabled={loading || loginCooldown > 0}
+                            className={`btn btn-primary w-full py-3.5 mt-2 shadow-lg shadow-[var(--color-primary)]/20 ${(loading || loginCooldown > 0) ? 'opacity-70' : ''}`}
                         >
                             {loading ? (
                                 <><FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm" /> Memeriksa...</>
+                            ) : loginCooldown > 0 ? (
+                                <><FontAwesomeIcon icon={faSpinner} className="animate-spin text-sm" /> Tunggu {loginCooldown}d...</>
                             ) : (
                                 <><FontAwesomeIcon icon={faSearch} className="text-sm mr-1" /> Cek Data</>
                             )}

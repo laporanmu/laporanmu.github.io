@@ -23,7 +23,7 @@ const MASTER_ITEMS = [
 
 const REPORTS_ITEMS = [
     { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan" },
-    { to: "/absensi", label: "Absensi Mingguan", icon: faCalendarWeek, desc: "Rekap kehadiran per pekan" },
+    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekap kehadiran per bulan" },
     { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa" },
 ]
 
