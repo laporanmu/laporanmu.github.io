@@ -213,6 +213,7 @@ export default function UserManagementPage() {
     const hasFilters = !!(search || filterRole || filterLinked || sortBy !== 'name_asc')
 
     // ── Handle Create User (via Edge Function) ─────────────────────────────────
+    // ── Handle Create User (via Edge Function) ─────────────────────────────────
     const handleCreate = async () => {
         if (!createEmail.trim() || !createName.trim()) {
             addToast('Email dan nama wajib diisi', 'error'); return
@@ -226,7 +227,12 @@ export default function UserManagementPage() {
         setSubmitting(true)
         try {
             const { data: { session } } = await supabase.auth.getSession()
+            if (!session) throw new Error('Sesi tidak ditemukan. Silakan login ulang.')
+
             const res = await supabase.functions.invoke('create-user', {
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,  // ← kirim token manual
+                },
                 body: {
                     email: createEmail.trim(),
                     name: createName.trim(),
@@ -236,19 +242,40 @@ export default function UserManagementPage() {
                     send_email: createSendEmail,
                 }
             })
-            if (res.error) throw new Error(res.error.message || 'Edge Function error')
+
+            // Tangkap error dari network/invocation
+            if (res.error) {
+                const msg = res.error.message || ''
+                // FunctionsHttpError — baca body-nya untuk pesan asli
+                if (res.error.context) {
+                    try {
+                        const body = await res.error.context.json()
+                        throw new Error(body?.error || msg)
+                    } catch {
+                        throw new Error(msg)
+                    }
+                }
+                throw new Error(msg)
+            }
+
+            // Tangkap error yang dikembalikan di body response
+            if (res.data?.error) {
+                throw new Error(res.data.error)
+            }
+
             addToast(`Akun berhasil dibuat untuk ${createName} ✓`, 'success')
             setCreateModal(false)
             setCreateEmail(''); setCreateName(''); setCreateRole('guru')
             setCreateTeacherId(''); setCreatePassword('')
             fetchUsers(); fetchUnlinked()
         } catch (err) {
-            // Edge function belum deploy? Tampilkan panduan SQL
-            if (err.message?.includes('not found') || err.message?.includes('Edge Function')) {
-                addToast('Edge Function belum tersedia. Lihat panduan SQL.', 'warning')
+            const msg = err.message || ''
+            console.error('[handleCreate]', msg)  // buka DevTools > Console untuk lihat detail
+            if (msg.includes('not found') || msg.includes('Failed to send')) {
+                addToast('Edge Function tidak ditemukan. Lihat panduan SQL.', 'warning')
                 setSqlModal(true)
             } else {
-                addToast('Gagal membuat akun: ' + err.message, 'error')
+                addToast('Gagal membuat akun: ' + msg, 'error')
             }
         } finally {
             setSubmitting(false)
