@@ -15,18 +15,20 @@ import { useAuth } from "../../context/AuthContext"
 import { useNotifications } from "../../hooks/useNotifications"
 
 // ─── Portal container helper ──────────────────────────────────────────────────
-function usePortalContainer(id) {
-    const ref = useRef(null)
-    if (!ref.current) {
+// Singleton di module-level — dibuat SEKALI saat module di-load, tidak pernah
+// dihapus. Mencegah removeChild crash di React 18 Strict Mode / concurrent render.
+const _portalContainers = {}
+function getPortalContainer(id) {
+    if (!_portalContainers[id]) {
         let el = document.getElementById(id)
         if (!el) {
             el = document.createElement('div')
             el.id = id
             document.body.appendChild(el)
         }
-        ref.current = el
+        _portalContainers[id] = el
     }
-    return ref.current
+    return _portalContainers[id]
 }
 
 const MASTER_ITEMS = [
@@ -108,7 +110,7 @@ function NotifItem({ notif, onDismiss, onNavigate }) {
 function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onRefresh, onNavigate, isMobile, anchorRef, panelRef }) {
     const errCount = notifications.filter(n => n.type === 'error').length
     const warnCount = notifications.filter(n => n.type === 'warning').length
-    const container = usePortalContainer('portal-notif')
+    const container = getPortalContainer('portal-notif')
 
     // Hitung posisi SAAT render (sync) — tidak ada useEffect, tidak ada glitch
     let style = {}
