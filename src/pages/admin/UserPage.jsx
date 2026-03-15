@@ -9,7 +9,7 @@ import {
     faTriangleExclamation, faCircleInfo, faCircleCheck,
     faFilter, faSortAmountDown, faEyeSlash, faEye,
     faSliders, faCopy, faArrowRotateRight, faExclamationTriangle,
-    faUserShield, faDatabase, faCode,
+    faUserShield, faDatabase, faCode, faWifi
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
@@ -24,6 +24,7 @@ const ROLE_META = {
     developer: { label: 'Developer', color: 'text-rose-600', bg: 'bg-rose-500/10', border: 'border-rose-500/20', icon: faCode },
     admin: { label: 'Admin', color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-500/20', icon: faUserShield },
     guru: { label: 'Guru', color: 'text-indigo-600', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', icon: faChalkboardTeacher },
+    karyawan: { label: 'Karyawan', color: 'text-green-600', bg: 'bg-green-500/10', border: 'border-green-500/20', icon: faBriefcase },
     satpam: { label: 'Satpam', color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: faShield },
     viewer: { label: 'Viewer', color: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/20', icon: faEye },
 }
@@ -68,6 +69,16 @@ export default function UserManagementPage() {
     const [submitting, setSubmitting] = useState(false)
     const [stats, setStats] = useState({ total: 0, guru: 0, karyawan: 0, admin: 0, noAccount: 0 })
     const [profileIdExists, setProfileIdExists] = useState(true)  // whether teachers.profile_id column exists
+    const [resetPassword, setResetPassword] = useState('')
+    const [showResetPw, setShowResetPw] = useState(false)
+    const [sessions, setSessions] = useState([])
+    const [loadingSessions, setLoadingSessions] = useState(false)
+    const [sessionModal, setSessionModal] = useState(false)
+    const [sessionSearch, setSessionSearch] = useState('')
+    const [sessionFilterRole, setSessionFilterRole] = useState('')
+    const [confirmRevokeAll, setConfirmRevokeAll] = useState(null) // { userId, userName }
+    const [onlineUserIds, setOnlineUserIds] = useState(new Set())
+    const sessionPollingRef = useRef(null)
 
     // ── State: filter/sort/pagination ─────────────────────────────────────────
     const [search, setSearch] = useState('')
@@ -87,6 +98,15 @@ export default function UserManagementPage() {
     const [deleteModal, setDeleteModal] = useState(null)   // profile object
     const [detailModal, setDetailModal] = useState(null)   // profile object
     const [sqlModal, setSqlModal] = useState(false)
+
+    // ── State: privacy mode ────────────────────────────────────────────────────
+    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
+    const maskInfo = (str, vis = 4) => {
+        if (!str) return '—'
+        if (str.length <= vis) return str[0] + '*'.repeat(str.length - 1)
+        return str.substring(0, vis) + '***'
+    }
+    const disp = (val) => isPrivacyMode ? maskInfo(String(val || '')) : (val || '—')
 
     // ── State: create form ─────────────────────────────────────────────────────
     const [createEmail, setCreateEmail] = useState('')
@@ -127,7 +147,7 @@ export default function UserManagementPage() {
             try {
                 const { data: teachersData } = await supabase
                     .from('teachers')
-                    .select('id, name, nbm, type, status, profile_id')
+                    .select('id, name, nbm, type, status, profile_id, phone, email')
                     .not('profile_id', 'is', null)
                     .is('deleted_at', null)
 
@@ -141,13 +161,14 @@ export default function UserManagementPage() {
             }
 
             setUsers(enriched)
-            setStats({
+            setStats(prev => ({
+                ...prev,
                 total: enriched.length,
                 guru: enriched.filter(u => u.role === 'guru').length,
                 karyawan: enriched.filter(u => u.role === 'karyawan').length,
-                admin: enriched.filter(u => u.role === 'admin').length,
-                noAccount: 0, // will be set in fetchUnlinked
-            })
+                admin: enriched.filter(u => ['admin', 'developer'].includes(u.role)).length,
+                // noAccount stays from fetchUnlinked — don't overwrite
+            }))
         } catch (err) {
             addToast('Gagal memuat data user: ' + err.message, 'error')
         } finally {
@@ -212,7 +233,119 @@ export default function UserManagementPage() {
     const resetFilters = () => { setSearch(''); setFilterRole(''); setFilterLinked(''); setSortBy('name_asc'); setPage(1) }
     const hasFilters = !!(search || filterRole || filterLinked || sortBy !== 'name_asc')
 
-    // ── Handle Create User (via Edge Function) ─────────────────────────────────
+    // ── Session helpers ────────────────────────────────────────────────────────
+    const fetchSessions = useCallback(async (quiet = false) => {
+        if (!quiet) setLoadingSessions(true)
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) return
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/get-sessions`, {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+                }
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error)
+            const list = json.sessions || []
+            setSessions(list)
+            // Compute online users (active in last 5 min)
+            const fiveMinAgo = Date.now() - 5 * 60 * 1000
+            const online = new Set(
+                list
+                    .filter(s => new Date(s.updated_at).getTime() > fiveMinAgo)
+                    .map(s => s.user_id)
+            )
+            setOnlineUserIds(online)
+        } catch (err) {
+            if (!quiet) addToast('Gagal memuat sessions: ' + err.message, 'error')
+        } finally {
+            if (!quiet) setLoadingSessions(false)
+        }
+    }, [addToast])
+
+    // Auto-refresh polling when session modal is open
+    useEffect(() => {
+        if (sessionModal) {
+            fetchSessions()
+            sessionPollingRef.current = setInterval(() => fetchSessions(true), 30000)
+        } else {
+            clearInterval(sessionPollingRef.current)
+        }
+        return () => clearInterval(sessionPollingRef.current)
+    }, [sessionModal, fetchSessions])
+
+    const handleRevokeSession = async (sessionId) => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/revoke-session`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+                },
+                body: JSON.stringify({ session_id: sessionId }),
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error)
+            addToast('Session dicabut ✓', 'success')
+            fetchSessions(true)
+        } catch (err) {
+            addToast('Gagal revoke: ' + err.message, 'error')
+        }
+    }
+
+    const handleRevokeAllUserSessions = async (userId, userName) => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/revoke-session`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+                },
+                body: JSON.stringify({ user_id: userId }),
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error)
+            addToast(`Semua session ${userName} dicabut ✓`, 'success')
+            setConfirmRevokeAll(null)
+            fetchSessions(true)
+        } catch (err) {
+            addToast('Gagal revoke: ' + err.message, 'error')
+        }
+    }
+
+    // Filtered sessions for modal
+    const filteredSessions = useMemo(() => {
+        let grouped = sessions
+        if (sessionSearch) {
+            const q = sessionSearch.toLowerCase()
+            grouped = grouped.filter(s =>
+                s.profile?.name?.toLowerCase().includes(q) ||
+                s.profile?.email?.toLowerCase().includes(q)
+            )
+        }
+        if (sessionFilterRole) {
+            grouped = grouped.filter(s => s.profile?.role === sessionFilterRole)
+        }
+        return grouped
+    }, [sessions, sessionSearch, sessionFilterRole])
+
+    // Group filtered sessions by user
+    const groupedSessions = useMemo(() => {
+        return Object.entries(
+            filteredSessions.reduce((acc, s) => {
+                const uid = s.user_id
+                if (!acc[uid]) acc[uid] = { profile: s.profile, sessions: [] }
+                acc[uid].sessions.push(s)
+                return acc
+            }, {})
+        )
+    }, [filteredSessions])
+
     // ── Handle Create User (via Edge Function) ─────────────────────────────────
     const handleCreate = async () => {
         if (!createEmail.trim() || !createName.trim()) {
@@ -227,56 +360,36 @@ export default function UserManagementPage() {
         setSubmitting(true)
         try {
             const { data: { session } } = await supabase.auth.getSession()
-            if (!session) throw new Error('Sesi tidak ditemukan. Silakan login ulang.')
+            if (!session) throw new Error('Sesi tidak ditemukan, silakan login ulang.')
 
-            const res = await supabase.functions.invoke('create-user', {
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+                method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${session.access_token}`,  // ← kirim token manual
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
                 },
-                body: {
+                body: JSON.stringify({
                     email: createEmail.trim(),
                     name: createName.trim(),
                     role: createRole,
                     teacher_id: createTeacherId || null,
                     password: createPassword,
                     send_email: createSendEmail,
-                }
+                }),
             })
 
-            // Tangkap error dari network/invocation
-            if (res.error) {
-                const msg = res.error.message || ''
-                // FunctionsHttpError — baca body-nya untuk pesan asli
-                if (res.error.context) {
-                    try {
-                        const body = await res.error.context.json()
-                        throw new Error(body?.error || msg)
-                    } catch {
-                        throw new Error(msg)
-                    }
-                }
-                throw new Error(msg)
-            }
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`)
 
-            // Tangkap error yang dikembalikan di body response
-            if (res.data?.error) {
-                throw new Error(res.data.error)
-            }
-
-            addToast(`Akun berhasil dibuat untuk ${createName} ✓`, 'success')
+            addToast(`Akun berhasil dibuat untuk ${createName}`, 'success')
             setCreateModal(false)
-            setCreateEmail(''); setCreateName(''); setCreateRole('guru')
+            setCreateEmail(''); setCreateName(''); setCreateRole(createRole)
             setCreateTeacherId(''); setCreatePassword('')
             fetchUsers(); fetchUnlinked()
         } catch (err) {
-            const msg = err.message || ''
-            console.error('[handleCreate]', msg)  // buka DevTools > Console untuk lihat detail
-            if (msg.includes('not found') || msg.includes('Failed to send')) {
-                addToast('Edge Function tidak ditemukan. Lihat panduan SQL.', 'warning')
-                setSqlModal(true)
-            } else {
-                addToast('Gagal membuat akun: ' + msg, 'error')
-            }
+            console.error('[handleCreate]', err.message)
+            addToast('Gagal membuat akun: ' + err.message, 'error')
         } finally {
             setSubmitting(false)
         }
@@ -284,17 +397,36 @@ export default function UserManagementPage() {
 
     // ── Handle Reset Password ─────────────────────────────────────────────────
     const handleResetPassword = async () => {
-        if (!resetModal?.email) return
+        if (!resetModal) return
+        if (!resetPassword.trim() || resetPassword.length < 8) {
+            addToast('Password minimal 8 karakter', 'error'); return
+        }
         setSubmitting(true)
         try {
-            const { error } = await supabase.auth.resetPasswordForEmail(resetModal.email, {
-                redirectTo: `${window.location.origin}/reset-password`,
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) throw new Error('Sesi tidak ditemukan')
+
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+                },
+                body: JSON.stringify({
+                    user_id: resetModal.id,
+                    new_password: resetPassword,
+                }),
             })
-            if (error) throw error
-            addToast(`Email reset password dikirim ke ${resetModal.email} ✓`, 'success')
+
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`)
+
+            addToast(`Password ${resetModal.name} berhasil diubah ✓`, 'success')
             setResetModal(null)
+            setResetPassword('')
         } catch (err) {
-            addToast('Gagal kirim reset: ' + err.message, 'error')
+            addToast('Gagal reset: ' + err.message, 'error')
         } finally {
             setSubmitting(false)
         }
@@ -363,11 +495,25 @@ export default function UserManagementPage() {
         if (!deleteModal) return
         setSubmitting(true)
         try {
-            const { error } = await supabase.from('profiles').delete().eq('id', deleteModal.id)
-            if (error) throw error
-            addToast(`Profil ${deleteModal.name} dihapus ✓`, 'success')
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) throw new Error('Sesi tidak ditemukan')
+
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-user`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+                },
+                body: JSON.stringify({ user_id: deleteModal.id }),
+            })
+
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`)
+
+            addToast(`Akun ${deleteModal.name} dihapus permanen ✓`, 'success')
             setDeleteModal(null)
-            fetchUsers()
+            fetchUsers(); fetchUnlinked()
         } catch (err) {
             addToast('Gagal hapus: ' + err.message, 'error')
         } finally {
@@ -384,6 +530,16 @@ export default function UserManagementPage() {
     return (
         <DashboardLayout title="Manajemen User">
             <div className="p-4 md:p-6 space-y-5 max-w-[1800px] mx-auto">
+
+                {/* ── Privacy Banner ── */}
+                {isPrivacyMode && (
+                    <div className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-amber-600 text-[11px] font-bold">
+                            <FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disembunyikan
+                        </div>
+                        <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">Matikan</button>
+                    </div>
+                )}
 
                 {/* ── Banner: profile_id belum ada ── */}
                 {!profileIdExists && (
@@ -410,11 +566,37 @@ export default function UserManagementPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* Privacy toggle */}
+                        <button
+                            onClick={() => setIsPrivacyMode(v => !v)}
+                            className={`h-9 px-3 rounded-xl border flex items-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest
+                                ${isPrivacyMode
+                                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
+                                    : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                                }`}
+                            title={isPrivacyMode ? 'Matikan Mode Privasi' : 'Aktifkan Mode Privasi'}
+                        >
+                            <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
+                            <span className="hidden sm:inline">{isPrivacyMode ? 'Privacy On' : 'Privacy'}</span>
+                        </button>
                         <button onClick={() => { fetchUsers(); fetchUnlinked() }}
                             className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all flex items-center justify-center"
                             title="Refresh">
                             <FontAwesomeIcon icon={faArrowRotateRight} className="text-sm" />
                         </button>
+                        {currentUser?.role === 'developer' && (
+                            <button
+                                onClick={() => setSessionModal(true)}
+                                className="h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all flex items-center gap-2 text-[10px] font-black">
+                                <FontAwesomeIcon icon={faShield} className="text-sm" />
+                                <span className="hidden sm:inline">Sessions</span>
+                                {onlineUserIds.size > 0 && (
+                                    <span className="w-4 h-4 rounded-full bg-emerald-500 text-white text-[8px] font-black flex items-center justify-center">
+                                        {onlineUserIds.size}
+                                    </span>
+                                )}
+                            </button>
+                        )}
                         <button
                             onClick={() => { setCreateEmail(''); setCreateName(''); setCreateRole('guru'); setCreateTeacherId(''); setCreatePassword(''); setCreateModal(true) }}
                             disabled={!canCreateUsers(currentUser?.role)}
@@ -555,6 +737,8 @@ export default function UserManagementPage() {
                                             key={user.id}
                                             user={user}
                                             currentUser={currentUser}
+                                            isPrivacyMode={isPrivacyMode}
+                                            isOnline={onlineUserIds.has(user.id)}
                                             onDetail={() => setDetailModal(user)}
                                             onEdit={() => { setEditModal(user); setEditRole(user.role || ''); setEditName(user.name || '') }}
                                             onLink={() => { setLinkModal(user); setLinkTeacherId('') }}
@@ -625,14 +809,14 @@ export default function UserManagementPage() {
                                         {t.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[12px] font-black text-[var(--color-text)] truncate">{t.name}</p>
+                                        <p className="text-[12px] font-black text-[var(--color-text)] truncate">{disp(t.name)}</p>
                                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                             {t.nbm && <span className="text-[9px] font-bold text-[var(--color-text-muted)]">{t.nbm}</span>}
                                             {t.type && <RoleBadge role={t.type} />}
-                                            {t.email && <span className="text-[9px] text-[var(--color-text-muted)] opacity-70">{t.email}</span>}
+                                            {t.email && <span className="text-[9px] text-[var(--color-text-muted)] opacity-70">{disp(t.email)}</span>}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex items-center gap-2 shrink-0">
                                         <button
                                             onClick={() => {
                                                 setCreateEmail(t.email || '')
@@ -838,7 +1022,7 @@ export default function UserManagementPage() {
             </Modal>
 
             {/* ── Modal: Reset Password ── */}
-            <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title="Reset Password" size="sm">
+            <Modal isOpen={!!resetModal} onClose={() => { setResetModal(null); setResetPassword('') }} title="Reset Password" size="sm">
                 {resetModal && (
                     <div className="space-y-4">
                         <div className="p-4 rounded-2xl bg-[var(--color-primary)]/8 border border-[var(--color-primary)]/20 flex items-center gap-4">
@@ -850,18 +1034,204 @@ export default function UserManagementPage() {
                                 <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{resetModal.email}</p>
                             </div>
                         </div>
-                        <p className="text-[11px] text-[var(--color-text)] leading-relaxed">
-                            Sistem akan mengirim <strong>email berisi link reset password</strong> ke alamat di atas. User klik link tersebut untuk membuat password baru.
-                        </p>
+
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">
+                                Password Baru <span className="text-red-400">*</span>
+                            </label>
+                            <div className="relative">
+                                <FontAwesomeIcon icon={faLock} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
+                                <input
+                                    type={showResetPw ? 'text' : 'password'}
+                                    value={resetPassword}
+                                    onChange={e => setResetPassword(e.target.value)}
+                                    placeholder="Min. 8 karakter..."
+                                    className="w-full h-10 pl-8 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all"
+                                />
+                                <button type="button" onClick={() => setShowResetPw(v => !v)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors">
+                                    <FontAwesomeIcon icon={showResetPw ? faEyeSlash : faEye} className="text-[10px]" />
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="flex gap-3 pt-2">
-                            <button onClick={() => setResetModal(null)} className="flex-1 h-10 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Batal</button>
-                            <button onClick={handleResetPassword} disabled={submitting}
+                            <button onClick={() => { setResetModal(null); setResetPassword('') }}
+                                className="flex-1 h-10 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">
+                                Batal
+                            </button>
+                            <button onClick={handleResetPassword} disabled={submitting || resetPassword.length < 8}
                                 className="flex-1 h-10 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:opacity-90 transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-primary)]/20">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <FontAwesomeIcon icon={faEnvelope} className="text-[10px]" />} Kirim Link Reset
+                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <FontAwesomeIcon icon={faKey} className="text-[10px]" />}
+                                Set Password
                             </button>
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            {/* ── Modal: Session ── */}
+            <Modal isOpen={sessionModal} onClose={() => { setSessionModal(false); setSessionSearch(''); setSessionFilterRole('') }} title="Active Sessions" size="lg">
+                <div className="space-y-3">
+                    {/* Header bar */}
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <p className="text-[11px] font-bold text-[var(--color-text-muted)]">
+                                {sessions.length} session aktif
+                            </p>
+                            {onlineUserIds.size > 0 && (
+                                <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    {onlineUserIds.size} online
+                                </span>
+                            )}
+                            <span className="text-[9px] text-[var(--color-text-muted)] opacity-50">Auto-refresh 30s</span>
+                        </div>
+                        <button onClick={() => fetchSessions()} disabled={loadingSessions}
+                            className="h-8 px-3 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-1.5 transition-all">
+                            <FontAwesomeIcon icon={faArrowRotateRight} className={loadingSessions ? 'animate-spin' : ''} />
+                            Refresh
+                        </button>
+                    </div>
+
+                    {/* Search + filter */}
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
+                            <input
+                                value={sessionSearch}
+                                onChange={e => setSessionSearch(e.target.value)}
+                                placeholder="Cari nama atau email..."
+                                className="w-full h-8 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all"
+                            />
+                        </div>
+                        <select value={sessionFilterRole} onChange={e => setSessionFilterRole(e.target.value)}
+                            className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-all">
+                            <option value="">Semua Role</option>
+                            {ROLES.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+                        </select>
+                        {(sessionSearch || sessionFilterRole) && (
+                            <button onClick={() => { setSessionSearch(''); setSessionFilterRole('') }}
+                                className="h-8 px-3 rounded-xl text-[10px] font-black text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all">
+                                Reset
+                            </button>
+                        )}
+                    </div>
+
+                    {loadingSessions ? (
+                        <div className="flex items-center justify-center py-12 gap-2 text-[var(--color-text-muted)]">
+                            <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                            <span className="text-xs font-bold">Memuat sessions...</span>
+                        </div>
+                    ) : groupedSessions.length === 0 ? (
+                        <div className="py-12 text-center text-[var(--color-text-muted)] text-sm">
+                            {sessionSearch || sessionFilterRole ? 'Tidak ada session yang cocok' : 'Tidak ada session aktif'}
+                        </div>
+                    ) : (
+                        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                            {groupedSessions.map(([userId, { profile, sessions: userSessions }]) => {
+                                const isOnline = onlineUserIds.has(userId)
+                                const isConfirmingRevoke = confirmRevokeAll?.userId === userId
+                                return (
+                                    <div key={userId} className="rounded-2xl border border-[var(--color-border)] overflow-hidden">
+                                        {/* User header */}
+                                        <div className="flex items-center gap-3 px-4 py-3 bg-[var(--color-surface-alt)]/50 border-b border-[var(--color-border)]">
+                                            <div className="relative shrink-0">
+                                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-primary)] font-black text-sm">
+                                                    {(profile?.name || profile?.email || '?').charAt(0).toUpperCase()}
+                                                </div>
+                                                {isOnline && (
+                                                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[var(--color-surface)]" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[12px] font-black text-[var(--color-text)]">{profile?.name || '—'}</p>
+                                                <p className="text-[10px] text-[var(--color-text-muted)]">{profile?.email}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <RoleBadge role={profile?.role} />
+                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                                                    {userSessions.length} session
+                                                </span>
+                                                {userId !== currentUser?.id && (
+                                                    isConfirmingRevoke ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[9px] font-bold text-red-500">Yakin?</span>
+                                                            <button onClick={() => handleRevokeAllUserSessions(userId, profile?.name)}
+                                                                className="h-6 px-2 rounded-lg text-[9px] font-black bg-red-500 text-white hover:bg-red-600 transition-all">
+                                                                Ya
+                                                            </button>
+                                                            <button onClick={() => setConfirmRevokeAll(null)}
+                                                                className="h-6 px-2 rounded-lg text-[9px] font-black border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">
+                                                                Batal
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setConfirmRevokeAll({ userId, userName: profile?.name })}
+                                                            className="h-7 px-2.5 rounded-lg text-[9px] font-black text-red-500 border border-red-500/20 hover:bg-red-500/10 transition-all flex items-center gap-1">
+                                                            <FontAwesomeIcon icon={faUserSlash} className="text-[8px]" />
+                                                            Logout Semua
+                                                        </button>
+                                                    )
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Sessions list */}
+                                        <div className="divide-y divide-[var(--color-border)]">
+                                            {userSessions.map(s => {
+                                                const isOwnSession = s.user_id === currentUser?.id
+                                                const lastActive = new Date(s.updated_at)
+                                                const minutesAgo = Math.floor((Date.now() - lastActive) / 60000)
+                                                const activeLabel = minutesAgo < 1 ? 'Baru saja' : minutesAgo < 60 ? `${minutesAgo}m lalu` : minutesAgo < 1440 ? `${Math.floor(minutesAgo / 60)}j lalu` : `${Math.floor(minutesAgo / 1440)}h lalu`
+                                                const expiresAt = s.not_after ? new Date(s.not_after) : null
+                                                const isExpiringSoon = expiresAt && (expiresAt - Date.now()) < 60 * 60 * 1000 // < 1 jam
+
+                                                return (
+                                                    <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+                                                        <div className={`w-2 h-2 rounded-full shrink-0 ${minutesAgo < 5 ? 'bg-emerald-500 animate-pulse' : minutesAgo < 60 ? 'bg-amber-400' : 'bg-[var(--color-border)]'}`} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <p className="text-[11px] font-bold text-[var(--color-text)]">
+                                                                    Session {s.id.slice(0, 8)}...
+                                                                </p>
+                                                                {isOwnSession && (
+                                                                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+                                                                        Sesi ini
+                                                                    </span>
+                                                                )}
+                                                                {isExpiringSoon && (
+                                                                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                                                        Segera expired
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[9px] text-[var(--color-text-muted)]">
+                                                                Aktif: {activeLabel}
+                                                                {expiresAt && (
+                                                                    <> · Expired: {expiresAt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        {!isOwnSession && (
+                                                            <button
+                                                                onClick={() => handleRevokeSession(s.id)}
+                                                                className="h-7 w-7 rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 flex items-center justify-center transition-all shrink-0"
+                                                                title="Cabut session ini">
+                                                                <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
             </Modal>
 
             {/* ── Modal: Hapus Profile ── */}
@@ -881,7 +1251,7 @@ export default function UserManagementPage() {
                             <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-600 text-[11px] mt-0.5 shrink-0" />
                             <div className="text-[10px] font-bold text-amber-700 leading-relaxed space-y-1">
                                 <p>Ini hanya menghapus <strong>data profil</strong> dari tabel <code className="bg-amber-100 px-1 rounded">profiles</code>.</p>
-                                <p>Akun auth Supabase <strong>tidak ikut terhapus</strong> — hapus manual dari Supabase Dashboard → Authentication → Users jika diperlukan.</p>
+                                <p>Akun auth Supabase <strong>akan ikut terhapus permanen</strong> dari Authentication. Tindakan ini tidak bisa dibatalkan.</p>
                             </div>
                         </div>
                         <div className="flex gap-3">
@@ -910,8 +1280,8 @@ export default function UserManagementPage() {
                                 {(detailModal.name || detailModal.email || '?').charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[14px] font-black text-[var(--color-text)]">{detailModal.name || '—'}</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{detailModal.email}</p>
+                                <p className="text-[14px] font-black text-[var(--color-text)]">{disp(detailModal.name)}</p>
+                                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{disp(detailModal.email)}</p>
                                 <div className="mt-1.5"><RoleBadge role={detailModal.role} /></div>
                             </div>
                         </div>
@@ -919,8 +1289,8 @@ export default function UserManagementPage() {
                         <div className="grid grid-cols-2 gap-2">
                             {[
                                 { label: 'ID', val: detailModal.id?.slice(0, 8) + '...', full: detailModal.id, copyable: true },
-                                { label: 'Email', val: detailModal.email, copyable: true },
-                                { label: 'Phone', val: detailModal.phone || '—' },
+                                { label: 'Email', val: isPrivacyMode ? maskInfo(detailModal.email || '') : detailModal.email, full: detailModal.email, copyable: !isPrivacyMode },
+                                { label: 'Phone', val: isPrivacyMode ? maskInfo(detailModal.linkedTeacher?.phone || detailModal.phone || '') : (detailModal.linkedTeacher?.phone || detailModal.phone || '—') },
                                 { label: 'Dibuat', val: detailModal.created_at ? new Date(detailModal.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' },
                             ].map((item, i) => (
                                 <div key={i} className="p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
@@ -942,7 +1312,7 @@ export default function UserManagementPage() {
                                 <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-1.5 flex items-center gap-1.5">
                                     <FontAwesomeIcon icon={faLink} />Linked Teacher
                                 </p>
-                                <p className="text-[12px] font-black text-[var(--color-text)]">{detailModal.linkedTeacher.name}</p>
+                                <p className="text-[12px] font-black text-[var(--color-text)]">{disp(detailModal.linkedTeacher.name)}</p>
                                 <div className="flex items-center gap-2 mt-0.5">
                                     {detailModal.linkedTeacher.nbm && <span className="text-[9px] text-[var(--color-text-muted)]">{detailModal.linkedTeacher.nbm}</span>}
                                     <RoleBadge role={detailModal.linkedTeacher.type} />
@@ -1047,23 +1417,34 @@ Deno.serve(async (req) => {
 
 // ─── UserRow sub-component ────────────────────────────────────────────────────
 
-function UserRow({ user, currentUser, onDetail, onEdit, onLink, onUnlink, onReset, onDelete }) {
+function UserRow({ user, currentUser, isPrivacyMode, isOnline, onDetail, onEdit, onLink, onUnlink, onReset, onDelete }) {
     const isSelf = user.id === currentUser?.id
+    const maskInfo = (str, vis = 4) => {
+        if (!str) return '—'
+        if (str.length <= vis) return str[0] + '*'.repeat(str.length - 1)
+        return str.substring(0, vis) + '***'
+    }
+    const disp = (val) => isPrivacyMode ? maskInfo(String(val || '')) : (val || '—')
 
     return (
         <tr className="border-t border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors group cursor-pointer" onClick={onDetail}>
             {/* User info */}
             <td className="px-5 py-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-primary)] font-black text-sm shrink-0">
-                        {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                    <div className="relative shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-primary)] font-black text-sm">
+                            {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                        </div>
+                        {isOnline && (
+                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[var(--color-surface)]" title="Online" />
+                        )}
                     </div>
                     <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                            <p className="text-[12px] font-black text-[var(--color-text)] truncate">{user.name || '—'}</p>
+                            <p className="text-[12px] font-black text-[var(--color-text)] truncate">{disp(user.name)}</p>
                             {isSelf && <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">Saya</span>}
                         </div>
-                        <p className="text-[10px] text-[var(--color-text-muted)] truncate">{user.email}</p>
+                        <p className="text-[10px] text-[var(--color-text-muted)] truncate">{disp(user.email)}</p>
                     </div>
                 </div>
             </td>
@@ -1079,7 +1460,7 @@ function UserRow({ user, currentUser, onDetail, onEdit, onLink, onUnlink, onRese
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1.5 text-[10px]">
                             <FontAwesomeIcon icon={faLink} className="text-emerald-500 text-[9px]" />
-                            <span className="font-black text-[var(--color-text)] truncate max-w-[140px]">{user.linkedTeacher.name}</span>
+                            <span className="font-black text-[var(--color-text)] truncate max-w-[140px]">{disp(user.linkedTeacher.name)}</span>
                             {user.linkedTeacher.nbm && <span className="text-[var(--color-text-muted)] opacity-60">{user.linkedTeacher.nbm}</span>}
                         </div>
                         <button
@@ -1096,7 +1477,7 @@ function UserRow({ user, currentUser, onDetail, onEdit, onLink, onUnlink, onRese
 
             {/* Actions */}
             <td className="px-5 py-3 text-right pr-6" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center justify-end gap-1">
                     {/* Link/Unlink teacher */}
                     {!user.linkedTeacher && (
                         <button onClick={onLink} title="Link ke teacher"

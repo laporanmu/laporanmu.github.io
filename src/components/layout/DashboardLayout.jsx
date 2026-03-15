@@ -1,25 +1,14 @@
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBars, faBell, faAnglesLeft, faAnglesRight, faSun, faMoon } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useSidebar } from '../../context/SidebarContext'
+import { useSessionGuard } from '../../hooks/useSessionGuard'
 import BottomNav from "./BottomNav"
 import TopNav from './TopNav'
 
 export default function DashboardLayout({ children, title }) {
-    const [sidebarOpen, setSidebarOpen] = useState(false)
-    const location = useLocation()
-    const { profile } = useAuth()
-    const { isDark, toggleTheme } = useTheme()
-    const { isCollapsed, toggleSidebar } = useSidebar()
-
-    const derivedTitle = title || (() => {
-        if (location.pathname === '/dashboard') return 'Dashboard'
-        const path = location.pathname.replace('/master/', '').replace('/', ' ')
-        return path.charAt(0).toUpperCase() + path.slice(1)
-    })()
+    useSessionGuard(15000)
 
     return (
         <div className="min-h-screen bg-[var(--color-app-bg)] transition-colors">

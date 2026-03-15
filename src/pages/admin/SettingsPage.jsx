@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faLayerGroup, faCompass, faUserShield, faGear,
@@ -6,7 +6,8 @@ import {
     faRotateRight, faBolt, faFileLines, faSave,
     faRotateLeft, faUpload, faSchool, faUser,
     faPalette, faEye, faCheck,
-    faChevronRight,
+    faChevronRight, faSearch, faXmark, faSkull,
+    faTrash, faCircleExclamation, faCode,
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -18,6 +19,7 @@ import { useSchoolSettings, DEFAULT_SETTINGS } from '../../context/SchoolSetting
 const TABS = [
     { id: 'flags', label: 'Feature Flags', icon: faToggleOn },
     { id: 'raport', label: 'Raport', icon: faFileLines },
+    { id: 'danger', label: 'Bahaya', icon: faSkull },
 ]
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -332,7 +334,18 @@ export default function AdminSettingsPage() {
 
     const maintenanceOn = flags.find(f => f.key === 'system.maintenance')?.enabled
     const activeCat = CATEGORIES.find(c => c.id === activeCategory)
-    const activeFlagRows = flags.filter(f => f.category === activeCategory).sort((a, b) => a.sort_order - b.sort_order)
+
+    // ── Search flags
+    const [flagSearch, setFlagSearch] = useState('')
+    const activeFlagRows = useMemo(() => {
+        let rows = flags.filter(f => f.category === activeCategory).sort((a, b) => a.sort_order - b.sort_order)
+        if (flagSearch.trim()) {
+            const q = flagSearch.toLowerCase()
+            rows = rows.filter(f => f.label?.toLowerCase().includes(q) || f.description?.toLowerCase().includes(q) || f.key?.toLowerCase().includes(q))
+        }
+        return rows
+    }, [flags, activeCategory, flagSearch])
+
     const totalEnabled = flags.filter(f => f.enabled).length
     const totalFlags = flags.length
 
@@ -476,8 +489,24 @@ export default function AdminSettingsPage() {
                                     )}
 
                                     <div className="p-3 space-y-2">
+                                        {/* Search inside flags */}
+                                        <div className="relative mb-1">
+                                            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
+                                            <input
+                                                type="text" value={flagSearch} onChange={e => setFlagSearch(e.target.value)}
+                                                placeholder="Cari flag..."
+                                                className="w-full h-8 pl-8 pr-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-medium focus:outline-none focus:border-[var(--color-primary)] transition-all"
+                                            />
+                                            {flagSearch && (
+                                                <button onClick={() => setFlagSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+                                                    <FontAwesomeIcon icon={faXmark} className="text-[9px]" />
+                                                </button>
+                                            )}
+                                        </div>
                                         {activeFlagRows.length === 0
-                                            ? <div className="py-12 text-center text-[var(--color-text-muted)] text-[12px]">Tidak ada flag</div>
+                                            ? <div className="py-12 text-center text-[var(--color-text-muted)] text-[12px]">
+                                                {flagSearch ? 'Tidak ada flag yang cocok' : 'Tidak ada flag'}
+                                            </div>
                                             : activeFlagRows.map(flag => (
                                                 <FlagRow
                                                     key={flag.key}
@@ -645,6 +674,125 @@ export default function AdminSettingsPage() {
                                         Tampil sebagai: <em className="text-[var(--color-text)]">_{form.wa_footer || '...'}_</em>
                                     </p>
                                 </div>
+                            </div>
+                        </div>
+
+                    </div>
+                )}
+
+                {/* ══════════════════════════════════════════════════════
+                    TAB: BAHAYA (DANGER ZONE)
+                ══════════════════════════════════════════════════════ */}
+                {activeTab === 'danger' && (
+                    <div className="space-y-4">
+
+                        {/* Warning banner */}
+                        <div className="flex items-start gap-3 p-4 rounded-2xl border border-red-500/30 bg-red-500/8">
+                            <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-red-500" />
+                            </div>
+                            <div>
+                                <p className="font-black text-sm text-red-600">Zona Berbahaya</p>
+                                <p className="text-[11px] text-red-500/80 mt-0.5">
+                                    Tindakan di halaman ini bersifat permanen dan tidak dapat dibatalkan. Lanjutkan dengan hati-hati.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Maintenance Mode */}
+                        <div className="glass rounded-2xl border border-[var(--color-border)] overflow-hidden">
+                            <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--color-border)] bg-gradient-to-r from-rose-500/8 to-transparent">
+                                <div className="w-9 h-9 rounded-xl bg-rose-500/10 flex items-center justify-center shrink-0">
+                                    <FontAwesomeIcon icon={faGear} className="text-rose-500 text-sm" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-black text-[13px] text-[var(--color-text)]">Maintenance Mode</p>
+                                    <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Nonaktifkan akses semua user kecuali developer</p>
+                                </div>
+                                {(() => {
+                                    const mFlag = flags.find(f => f.key === 'system.maintenance')
+                                    if (!mFlag) return <span className="text-[10px] text-[var(--color-text-muted)]">Flag tidak ditemukan</span>
+                                    return (
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            {mFlag.enabled && (
+                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-500 border border-rose-500/30 animate-pulse uppercase tracking-widest">
+                                                    AKTIF
+                                                </span>
+                                            )}
+                                            <button
+                                                onClick={() => handleToggle(mFlag)}
+                                                disabled={savingKey === mFlag.key}
+                                                className={`h-9 px-4 rounded-xl text-[11px] font-black flex items-center gap-2 transition-all ${mFlag.enabled
+                                                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white'
+                                                    : 'bg-rose-500/10 text-rose-600 border border-rose-500/30 hover:bg-rose-500 hover:text-white'}`}>
+                                                {savingKey === mFlag.key
+                                                    ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                                                    : null}
+                                                {mFlag.enabled ? 'Matikan Maintenance' : 'Aktifkan Maintenance'}
+                                            </button>
+                                        </div>
+                                    )
+                                })()}
+                            </div>
+                            <div className="px-5 py-4">
+                                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
+                                    Saat maintenance mode aktif, seluruh user yang login akan mendapat halaman maintenance. Hanya akun dengan role <code className="bg-[var(--color-surface-alt)] px-1 rounded text-[10px]">developer</code> yang tetap bisa mengakses sistem.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* System Info */}
+                        <div className="glass rounded-2xl border border-[var(--color-border)] overflow-hidden">
+                            <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--color-border)] bg-gradient-to-r from-slate-500/8 to-transparent">
+                                <div className="w-9 h-9 rounded-xl bg-slate-500/10 flex items-center justify-center shrink-0">
+                                    <FontAwesomeIcon icon={faCode} className="text-slate-500 text-sm" />
+                                </div>
+                                <div>
+                                    <p className="font-black text-[13px] text-[var(--color-text)]">Info Sistem</p>
+                                    <p className="text-[11px] text-[var(--color-text-muted)]">Status dan informasi konfigurasi</p>
+                                </div>
+                            </div>
+                            <div className="p-5 grid sm:grid-cols-2 gap-3">
+                                {[
+                                    { label: 'Total Feature Flags', val: `${totalFlags} flag (${totalEnabled} aktif)` },
+                                    { label: 'Supabase URL', val: import.meta.env.VITE_SUPABASE_URL?.replace('https://', '').slice(0, 24) + '...' || '—' },
+                                    { label: 'Environment', val: import.meta.env.MODE || 'production' },
+                                    { label: 'App Version', val: import.meta.env.VITE_APP_VERSION || '1.0.0' },
+                                ].map((item, i) => (
+                                    <div key={i} className="p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">{item.label}</p>
+                                        <p className="text-[11px] font-bold text-[var(--color-text)] font-mono">{item.val}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Reset Settings */}
+                        <div className="glass rounded-2xl border border-red-500/20 overflow-hidden">
+                            <div className="flex items-center gap-3 px-5 py-4 border-b border-red-500/20 bg-gradient-to-r from-red-500/8 to-transparent">
+                                <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                                    <FontAwesomeIcon icon={faTrash} className="text-red-500 text-sm" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-black text-[13px] text-red-600">Reset Konfigurasi Raport</p>
+                                    <p className="text-[11px] text-red-500/70 mt-0.5">Kembalikan semua konfigurasi raport ke nilai default</p>
+                                </div>
+                            </div>
+                            <div className="px-5 py-4 flex items-center justify-between gap-4">
+                                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
+                                    Ini akan menghapus nama sekolah, logo, warna, dan semua konfigurasi raport. Tidak mempengaruhi data siswa atau laporan.
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        if (confirm('Reset semua konfigurasi raport ke default? Tindakan ini tidak bisa dibatalkan.')) {
+                                            handleReset()
+                                            addToast('Konfigurasi direset ke default', 'success')
+                                        }
+                                    }}
+                                    className="shrink-0 h-9 px-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-600 text-[11px] font-black hover:bg-red-500 hover:text-white transition-all flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
+                                    Reset
+                                </button>
                             </div>
                         </div>
 

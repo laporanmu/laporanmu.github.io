@@ -4,6 +4,10 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { SidebarProvider } from './context/SidebarContext'
+import { FeatureFlagsProvider, useFeatureFlags } from './context/FeatureFlagsContext'
+import DashboardLayout from './components/layout/DashboardLayout'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faLock, faSpinner } from '@fortawesome/free-solid-svg-icons'
 
 
 // ─── Lazy-loaded Pages ────────────────────────────────────────────────────────
@@ -36,6 +40,7 @@ const AcademicYearsPage = lazy(() => import('./pages/master/AcademicYearsPage'))
 // developer > admin > guru = satpam > viewer
 const DEV_ONLY = ['developer']
 const DEV_ADMIN = ['developer', 'admin']
+const DEV_ADMIN_TEACHER = ['developer', 'admin', 'guru']
 const DEV_ADMIN_GATE = ['developer', 'admin', 'satpam']
 const ALL_STAFF = ['developer', 'admin', 'guru', 'satpam']
 
@@ -113,7 +118,114 @@ function RoleRoute({ children, roles = [] }) {
   return children
 }
 
-// ─── 404 Page ─────────────────────────────────────────────────────────────────
+/**
+ * Feature flag guard — wraps a single page element.
+ * Jika flag off: tampilkan "Akses Ditolak" di dalam DashboardLayout (tidak redirect).
+ * Jika flag sedang load: tampilkan spinner.
+ *
+ * Usage:
+ *   <Route path="/absensi" element={<FlagRoute flag="module.absensi"><AbsensiPage /></FlagRoute>} />
+ */
+function FlagRoute({ children, flag, label }) {
+  const { flags, loading } = useFeatureFlags()
+  const navigate = useNavigate()
+
+  if (loading) return (
+    <DashboardLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-[var(--color-primary)]" />
+      </div>
+    </DashboardLayout>
+  )
+
+  if (flags[flag] === false) return (
+    <DashboardLayout>
+      <div className="p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
+          <FontAwesomeIcon icon={faLock} className="text-2xl text-red-500" />
+        </div>
+        <div>
+          <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Modul Tidak Aktif</h2>
+          <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">
+            Modul <strong>{label || flag}</strong> sedang dinonaktifkan oleh administrator.
+          </p>
+        </div>
+        <button
+          onClick={() => navigate(-1)}
+          className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:opacity-90 transition-all">
+          Kembali
+        </button>
+      </div>
+    </DashboardLayout>
+  )
+
+  return children
+}
+
+/**
+ * Combined Role + Flag guard.
+ * Cek role dulu, lalu cek feature flag.
+ */
+function RoleFlagRoute({ children, roles = [], flag, label }) {
+  const { profile } = useAuth()
+  const { flags, loading } = useFeatureFlags()
+  const navigate = useNavigate()
+
+  const role = profile?.role?.toLowerCase()
+  const hasRole = !roles.length || (role && roles.includes(role))
+
+  if (loading) return (
+    <DashboardLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-[var(--color-primary)]" />
+      </div>
+    </DashboardLayout>
+  )
+
+  // Role tidak sesuai
+  if (!hasRole) return (
+    <DashboardLayout>
+      <div className="p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
+          <FontAwesomeIcon icon={faLock} className="text-2xl text-red-500" />
+        </div>
+        <div>
+          <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Akses Ditolak</h2>
+          <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">
+            Halaman ini tidak tersedia untuk role <strong>{role.toUpperCase() || 'Kamu'}</strong>.
+          </p>
+        </div>
+        <button onClick={() => navigate(-1)}
+          className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:opacity-90 transition-all">
+          Kembali
+        </button>
+      </div>
+    </DashboardLayout>
+  )
+
+  // Flag off
+  if (flag && flags[flag] === false) return (
+    <DashboardLayout>
+      <div className="p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+          <FontAwesomeIcon icon={faLock} className="text-2xl text-amber-500" />
+        </div>
+        <div>
+          <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Modul Tidak Aktif</h2>
+          <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">
+            Modul <strong>{label || flag}</strong> sedang dinonaktifkan oleh administrator.
+          </p>
+        </div>
+        <button onClick={() => navigate(-1)}
+          className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:opacity-90 transition-all">
+          Kembali
+        </button>
+      </div>
+    </DashboardLayout>
+  )
+
+  return children
+}
 function NotFoundPage() {
   const navigate = useNavigate()
   return (
@@ -159,25 +271,61 @@ function AppRoutes() {
         {/* ── Protected ── */}
         <Route element={<ProtectedRoute />}>
 
-          {/* Core — any authenticated user */}
+          {/* Core — module flag guarded */}
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/raport" element={<RaportPage />} />
-          <Route path="/poin" element={<PoinPage />} />
-          <Route path="/absensi" element={<AbsensiPage />} />
+          <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Bulanan"><RaportPage /></FlagRoute>} />
+          <Route path="/poin" element={<FlagRoute flag="module.poin" label="Poin Siswa"><PoinPage /></FlagRoute>} />
+          <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AbsensiPage /></FlagRoute>} />
           <Route path="/settings" element={<SettingsPage />} />
 
-          {/* Role-restricted */}
-          <Route path="/gate" element={<RoleRoute roles={DEV_ADMIN_GATE}><GatePage /></RoleRoute>} />
-          <Route path="/admin/logs" element={<RoleRoute roles={DEV_ADMIN}><LogsPage /></RoleRoute>} />
-          <Route path="/admin/users" element={<RoleRoute roles={DEV_ADMIN}><UserPage /></RoleRoute>} />
-          <Route path="/admin/settings" element={<RoleRoute roles={DEV_ADMIN}><AdminSettingsPage /></RoleRoute>} />
+          {/* Role + flag guarded */}
+          <Route path="/gate" element={
+            <RoleFlagRoute roles={DEV_ADMIN_GATE} flag="module.gate" label="Portal Keluar Masuk">
+              <GatePage />
+            </RoleFlagRoute>
+          } />
+          <Route path="/admin/logs" element={
+            <RoleFlagRoute roles={DEV_ADMIN}>
+              <LogsPage />
+            </RoleFlagRoute>
+          } />
+          <Route path="/admin/users" element={
+            <RoleFlagRoute roles={DEV_ADMIN}>
+              <UserPage />
+            </RoleFlagRoute>
+          } />
+          <Route path="/admin/settings" element={
+            <RoleFlagRoute roles={DEV_ADMIN}>
+              <AdminSettingsPage />
+            </RoleFlagRoute>
+          } />
 
-          {/* Master Data — developer & admin */}
-          <Route path="/master/students" element={<RoleRoute roles={DEV_ADMIN}><StudentsPage /></RoleRoute>} />
-          <Route path="/master/teachers" element={<RoleRoute roles={DEV_ADMIN}><TeachersPage /></RoleRoute>} />
-          <Route path="/master/classes" element={<RoleRoute roles={DEV_ADMIN}><ClassesPage /></RoleRoute>} />
-          <Route path="/master/violations" element={<RoleRoute roles={DEV_ADMIN}><ViolationsTypePage /></RoleRoute>} />
-          <Route path="/master/academic-years" element={<RoleRoute roles={DEV_ADMIN}><AcademicYearsPage /></RoleRoute>} />
+          {/* Master Data */}
+          <Route path="/master/students" element={
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+              <StudentsPage />
+            </RoleFlagRoute>
+          } />
+          <Route path="/master/teachers" element={
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+              <TeachersPage />
+            </RoleFlagRoute>
+          } />
+          <Route path="/master/classes" element={
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+              <ClassesPage />
+            </RoleFlagRoute>
+          } />
+          <Route path="/master/violations" element={
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+              <ViolationsTypePage />
+            </RoleFlagRoute>
+          } />
+          <Route path="/master/academic-years" element={
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+              <AcademicYearsPage />
+            </RoleFlagRoute>
+          } />
 
           {/* Route Aliases */}
           {ROUTE_ALIASES.map(({ from, to }) => (
@@ -201,7 +349,9 @@ export default function App() {
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>
-              <AppRoutes />
+              <FeatureFlagsProvider>
+                <AppRoutes />
+              </FeatureFlagsProvider>
             </AuthProvider>
           </ToastProvider>
         </ThemeProvider>

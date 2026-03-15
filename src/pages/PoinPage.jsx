@@ -15,6 +15,7 @@ import DashboardLayout from '../components/layout/DashboardLayout'
 import Modal from '../components/ui/Modal'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
+import { useFlag } from '../context/FeatureFlagsContext'
 import { supabase } from '../lib/supabase'
 
 import Papa from 'papaparse'
@@ -97,6 +98,10 @@ function PaginationStrip({ page, totalPages, totalRows, fromRow, toRow, pageSize
 export default function PoinPage() {
     const { profile } = useAuth()
     const { addToast } = useToast()
+
+    // access.teacher_poin flag — kalau off, guru tidak bisa tambah/edit/hapus poin
+    const { enabled: teacherPoinEnabled } = useFlag('access.teacher_poin')
+    const canInput = profile?.role === 'guru' ? teacherPoinEnabled : true
 
     const [reports, setReports] = useState([])
     const [students, setStudents] = useState([])
@@ -764,6 +769,14 @@ export default function PoinPage() {
                     </div>
                 )}
 
+                {/* Read-only Banner — access.teacher_poin flag off */}
+                {!canInput && (
+                    <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faEyeSlash} className="text-rose-500 shrink-0" />
+                        <p className="text-[11px] font-bold text-rose-600 flex-1">Mode Read-only — Input poin dinonaktifkan oleh administrator.</p>
+                    </div>
+                )}
+
                 <ExportModal />
                 <ImportModal />
 
@@ -887,10 +900,10 @@ export default function PoinPage() {
                         </div>
 
                         {/* Primary Add Button */}
-                        <button onClick={handleAdd}
-                            className="btn btn-primary h-9 px-4 lg:px-5 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2">
+                        <button onClick={handleAdd} disabled={!canInput}
+                            className="btn btn-primary h-9 px-4 lg:px-5 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
                             <FontAwesomeIcon icon={faPlus} className="text-sm" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Buat Laporan</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">{canInput ? 'Buat Laporan' : 'Read-only'}</span>
                         </button>
                     </div>
                 </div>
@@ -1027,8 +1040,8 @@ export default function PoinPage() {
                         <p className="text-sm text-[var(--color-text-muted)] max-w-xs mx-auto mb-6 opacity-70">
                             Gunakan tombol "Buat Laporan" untuk mulai mendata perilaku siswa.
                         </p>
-                        <button onClick={handleAdd} className="btn btn-primary h-10 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20">
-                            Buat Sekarang
+                        <button onClick={handleAdd} disabled={!canInput} className="btn btn-primary h-10 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed">
+                            {canInput ? 'Buat Sekarang' : 'Read-only'}
                         </button>
                     </div>
                 ) : reports.length === 0 ? (
