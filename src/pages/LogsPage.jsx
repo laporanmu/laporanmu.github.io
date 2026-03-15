@@ -304,9 +304,6 @@ export default function LogsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
                         <div className="flex items-center gap-2.5 mb-1">
-                            <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center">
-                                <FontAwesomeIcon icon={faShieldHalved} className="text-red-500 text-sm" />
-                            </div>
                             <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Audit Logs</h1>
                             <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 uppercase tracking-widest">
                                 Admin Only
