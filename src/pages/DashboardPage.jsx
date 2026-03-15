@@ -9,7 +9,6 @@ import {
     faArrowRight,
     faExclamationTriangle,
     faTrophy,
-    faHandPeace,
 } from '@fortawesome/free-solid-svg-icons'
 import { Link } from 'react-router-dom'
 import {
@@ -24,10 +23,9 @@ import {
     Pie,
     Cell,
 } from 'recharts'
-import DashboardLayout from '../../components/layout/DashboardLayout'
-import { StatCard } from '../../components/ui/DataDisplay'
-import { useAuth } from '../../context/AuthContext'
-import { supabase } from '../../lib/supabase'
+import DashboardLayout from '../components/layout/DashboardLayout'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 
 function startOfDay(d = new Date()) {
     const x = new Date(d)
@@ -360,7 +358,8 @@ export default function DashboardPage() {
             value: loading ? '…' : String(stats.totalStudents),
             trend: stats.trendStudents,
             trendUp: true,
-            color: 'indigo',
+            borderColor: 'border-t-[var(--color-primary)]',
+            iconBg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
         },
         {
             icon: faClipboardList,
@@ -368,15 +367,17 @@ export default function DashboardPage() {
             value: loading ? '…' : String(stats.todayReports),
             trend: stats.trendReports,
             trendUp: true,
-            color: 'blue',
+            borderColor: 'border-t-blue-500',
+            iconBg: 'bg-blue-500/10 text-blue-500',
         },
         {
             icon: faExclamationTriangle,
             label: 'Pelanggaran',
             value: loading ? '…' : String(stats.weekViolations),
             trend: stats.trendViolations,
-            trendUp: !stats.trendViolations.startsWith('+'), // kalau naik pelanggaran, trendUp false
-            color: 'red',
+            trendUp: !stats.trendViolations.startsWith('+'),
+            borderColor: 'border-t-red-500',
+            iconBg: 'bg-red-500/10 text-red-500',
         },
         {
             icon: faTrophy,
@@ -384,67 +385,78 @@ export default function DashboardPage() {
             value: loading ? '…' : String(stats.weekAchievements),
             trend: stats.trendAchievements,
             trendUp: stats.trendAchievements.startsWith('+') || stats.weekAchievements > 0,
-            color: 'green',
+            borderColor: 'border-t-emerald-500',
+            iconBg: 'bg-emerald-500/10 text-emerald-500',
         },
     ]), [loading, stats])
 
     return (
         <DashboardLayout title="Dashboard">
-            {/* TAMBAH INI: */}
-            <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
-                {/* Welcome */}
-                <div className="mb-5">
-                    <h1 className="text-2xl font-black font-heading text-[var(--color-text)] tracking-tight flex items-center gap-2">
-                        Selamat Datang, {profile?.name?.split(' ')[0] || 'User'}!
-                        <FontAwesomeIcon icon={faHandPeace} className="text-amber-400 animate-bounce" />
-                    </h1>
-                    <p className="text-[var(--color-text-muted)] text-[11px] font-medium tracking-widest">
-                        Ringkasan Aktivitas Perilaku Siswa Hari Ini
-                    </p>
+            <div className="p-4 md:p-6 max-w-[1800px] mx-auto">
+
+                {/* ── PAGE HEADER ── */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)] flex items-center gap-2">
+                            Selamat Datang, {profile?.name?.split(' ')[0] || 'User'}!
+                            <span className="text-amber-400">👋</span>
+                        </h1>
+                        <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium opacity-70">
+                            Ringkasan aktivitas perilaku siswa hari ini.
+                        </p>
+                    </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {/* ── STATS GRID ── */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                     {STATS.map((stat, idx) => (
-                        <StatCard key={idx} {...stat} />
+                        <div key={idx} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${stat.borderColor} flex items-center gap-3 hover:border-t-4 transition-all`}>
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${stat.iconBg}`}>
+                                <FontAwesomeIcon icon={stat.icon} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 leading-none mb-1">{stat.label}</p>
+                                <h3 className="font-black font-heading leading-none text-[var(--color-text)] text-xl tabular-nums">
+                                    {loading ? <span className="inline-block w-8 h-5 rounded bg-[var(--color-border)] animate-pulse" /> : stat.value}
+                                </h3>
+                                <p className={`text-[9px] font-black mt-1 flex items-center gap-1 ${stat.trendUp ? 'text-emerald-500' : 'text-red-500'}`}>
+                                    <FontAwesomeIcon icon={stat.trendUp ? faArrowUp : faArrowDown} className="text-[8px]" />
+                                    {stat.trend}
+                                </p>
+                            </div>
+                        </div>
                     ))}
                 </div>
 
-                {/* Charts Row */}
-                <div className="grid lg:grid-cols-3 gap-6 mb-6">
+                {/* ── CHARTS ROW ── */}
+                <div className="grid lg:grid-cols-3 gap-4 mb-6">
                     {/* Line Chart */}
                     <div className="lg:col-span-2 glass rounded-[1.5rem] p-5 flex flex-col">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
-                                Tren Mingguan
-                            </h3>
-                            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
+                        <div className="flex items-center justify-between mb-5">
+                            <div>
+                                <p className="text-[13px] font-black text-[var(--color-text)]">Tren Mingguan</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">7 hari terakhir</p>
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] font-bold">
                                 <span className="flex items-center gap-1.5">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50" />
+                                    <span className="w-2 h-2 rounded-full bg-red-500" />
                                     <span className="text-[var(--color-text-muted)]">Pelanggaran</span>
                                 </span>
                                 <span className="flex items-center gap-1.5">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                     <span className="text-[var(--color-text-muted)]">Prestasi</span>
                                 </span>
                             </div>
                         </div>
-
-                        <div className="h-64">
+                        <div className="h-56">
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                                    <XAxis dataKey="name" stroke="var(--color-text-muted)" fontSize={12} />
-                                    <YAxis stroke="var(--color-text-muted)" fontSize={12} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: 'var(--color-surface)',
-                                            border: '1px solid var(--color-border)',
-                                            borderRadius: '8px',
-                                        }}
-                                    />
-                                    <Line type="monotone" dataKey="pelanggaran" stroke="#ef4444" strokeWidth={2} dot={{ fill: '#ef4444' }} />
-                                    <Line type="monotone" dataKey="prestasi" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981' }} />
+                                    <XAxis dataKey="name" stroke="var(--color-text-muted)" fontSize={11} />
+                                    <YAxis stroke="var(--color-text-muted)" fontSize={11} />
+                                    <Tooltip contentStyle={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', fontSize: 11 }} />
+                                    <Line type="monotone" dataKey="pelanggaran" stroke="#ef4444" strokeWidth={2} dot={{ fill: '#ef4444', r: 3 }} />
+                                    <Line type="monotone" dataKey="prestasi" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 3 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -452,99 +464,69 @@ export default function DashboardPage() {
 
                     {/* Pie Chart */}
                     <div className="glass rounded-[1.5rem] p-5 flex flex-col">
-                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-6">
-                            Jenis Pelanggaran
-                        </h3>
-
-                        <div className="h-48">
+                        <div className="mb-5">
+                            <p className="text-[13px] font-black text-[var(--color-text)]">Jenis Pelanggaran</p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Minggu ini</p>
+                        </div>
+                        <div className="h-44">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie
-                                        data={pieData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={50}
-                                        outerRadius={70}
-                                        paddingAngle={2}
-                                        dataKey="value"
-                                    >
+                                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value">
                                         {pieData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <Tooltip contentStyle={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', fontSize: 11 }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-3 mt-6">
+                        <div className="grid grid-cols-2 gap-2 mt-4">
                             {pieData.map((item, idx) => (
-                                <div key={idx} className="flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-widest">
-                                    <span
-                                        className="w-2.5 h-2.5 rounded-full shadow-sm"
-                                        style={{ backgroundColor: item.color, boxShadow: `0 2px 8px ${item.color}40` }}
-                                    />
+                                <div key={idx} className="flex items-center gap-2 text-[10px] font-bold">
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                                     <span className="text-[var(--color-text-muted)] truncate">{item.name}</span>
                                 </div>
                             ))}
                             {!loading && pieData.length === 0 && (
-                                <div className="col-span-2 text-[10px] font-bold tracking-widest text-[var(--color-text-muted)]">
-                                    Belum ada data pelanggaran minggu ini.
-                                </div>
+                                <p className="col-span-2 text-[10px] text-[var(--color-text-muted)] opacity-50 text-center py-2">Belum ada data pelanggaran</p>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Recent Reports & Quick Actions */}
-                <div className="grid lg:grid-cols-3 gap-6">
+                {/* ── LAPORAN TERBARU + AKSI CEPAT ── */}
+                <div className="grid lg:grid-cols-3 gap-4 mb-6">
                     {/* Recent Reports */}
                     <div className="lg:col-span-2 glass rounded-[1.5rem] p-5">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
-                                Laporan Terbaru
-                            </h3>
-                            <Link
-                                to="/raport"
-                                className="text-[10px] font-black text-[var(--color-primary)] hover:text-[var(--color-accent)] uppercase tracking-widest transition-colors flex items-center gap-1"
-                            >
+                        <div className="flex items-center justify-between mb-5">
+                            <div>
+                                <p className="text-[13px] font-black text-[var(--color-text)]">Laporan Terbaru</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Aktivitas perilaku terkini</p>
+                            </div>
+                            <Link to="/raport" className="h-7 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-1.5 transition-all">
                                 Lihat Semua <FontAwesomeIcon icon={faArrowRight} className="text-[8px]" />
                             </Link>
                         </div>
-
                         <div className="space-y-2">
-                            {!loading && recentReports.length === 0 ? (
-                                <div className="p-4 text-xs text-[var(--color-text-muted)]">
-                                    Belum ada laporan terbaru.
-                                </div>
+                            {loading ? (
+                                [1, 2, 3, 4].map(i => <div key={i} className="h-14 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)
+                            ) : recentReports.length === 0 ? (
+                                <p className="text-[11px] text-[var(--color-text-muted)] text-center py-8 opacity-50">Belum ada laporan terbaru.</p>
                             ) : (
                                 recentReports.map((report) => (
-                                    <div
-                                        key={report.id}
-                                        className="flex items-center justify-between p-3.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl group hover:border-[var(--color-primary)]/30 transition-all"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div
-                                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-white text-[12px] font-black shadow-lg
-                      ${report.points > 0
-                                                        ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/20'
-                                                        : 'bg-gradient-to-br from-red-500 to-rose-500 shadow-red-500/20'
-                                                    }`}
-                                            >
-                                                {report.points > 0 ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-[14px] text-[var(--color-text)] leading-tight mb-0.5">{report.student}</p>
-                                                <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">
-                                                    {report.class} <span className="opacity-40 mx-1">•</span> {report.type}
-                                                </p>
-                                            </div>
+                                    <div key={report.id} className="flex items-center gap-3 p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl hover:border-[var(--color-primary)]/30 transition-all">
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white text-[11px] font-black shrink-0 ${report.points > 0 ? 'bg-emerald-500/15 text-emerald-500' : 'bg-red-500/15 text-red-500'}`}>
+                                            <FontAwesomeIcon icon={report.points > 0 ? faArrowUp : faArrowDown} />
                                         </div>
-                                        <div className="text-right">
-                                            <p className={`font-black text-[12px] font-mono tracking-tighter ${report.points > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                                {report.points > 0 ? '+' : ''}{report.points} POIN
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[12px] font-black text-[var(--color-text)] truncate">{report.student}</p>
+                                            <p className="text-[10px] text-[var(--color-text-muted)] truncate">{report.class} · {report.type}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className={`text-[12px] font-black ${report.points > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                {report.points > 0 ? '+' : ''}{report.points}
                                             </p>
-                                            <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-1 uppercase tracking-widest">{report.time}</p>
+                                            <p className="text-[9px] text-[var(--color-text-muted)] font-bold">{report.time}</p>
                                         </div>
                                     </div>
                                 ))
@@ -554,63 +536,54 @@ export default function DashboardPage() {
 
                     {/* Quick Actions */}
                     <div className="glass rounded-[1.5rem] p-5">
-                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-6">Aksi Cepat</h3>
-                        <div className="space-y-3">
-                            <Link
-                                to="/raport/new"
-                                className="flex items-center gap-4 p-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] 
-              rounded-xl text-white shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-xl hover:shadow-[var(--color-primary)]/30 hover:-translate-y-0.5 transition-all"
-                            >
-                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                                    <FontAwesomeIcon icon={faPlus} className="text-lg" />
+                        <div className="mb-5">
+                            <p className="text-[13px] font-black text-[var(--color-text)]">Aksi Cepat</p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Navigasi halaman utama</p>
+                        </div>
+                        <div className="space-y-2.5">
+                            <Link to="/raport/new" className="flex items-center gap-3 p-3.5 rounded-xl bg-[var(--color-primary)] hover:opacity-90 text-white transition-all shadow-lg shadow-[var(--color-primary)]/20">
+                                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+                                    <FontAwesomeIcon icon={faPlus} className="text-sm" />
                                 </div>
-                                <div>
-                                    <p className="font-bold text-sm font-heading leading-tight mb-0.5">Buat Laporan</p>
-                                    <p className="text-[10px] text-white/80 font-bold uppercase tracking-widest">PELANGGARAN / PRESTASI</p>
-                                </div>
-                            </Link>
-
-                            <Link
-                                to="/master/students"
-                                className="flex items-center gap-4 p-4 bg-[var(--color-surface)] border border-[var(--color-border)]
-              rounded-xl hover:border-[var(--color-primary)]/30 group transition-all"
-                            >
-                                <div className="w-10 h-10 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <FontAwesomeIcon icon={faUsers} className="text-lg" />
-                                </div>
-                                <div>
-                                    <p className="font-bold text-sm text-[var(--color-text)] font-heading leading-tight mb-0.5">Data Siswa</p>
-                                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">KELOLA DATABASE SISWA</p>
+                                <div className="min-w-0">
+                                    <p className="text-[12px] font-black leading-tight">Buat Laporan</p>
+                                    <p className="text-[10px] text-white/70 font-bold">Pelanggaran / Prestasi</p>
                                 </div>
                             </Link>
-
-                            <Link
-                                to="/raport"
-                                className="flex items-center gap-4 p-4 bg-[var(--color-surface)] border border-[var(--color-border)]
-              rounded-xl hover:border-[var(--color-primary)]/30 group transition-all"
-                            >
-                                <div className="w-10 h-10 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <FontAwesomeIcon icon={faClipboardList} className="text-lg" />
+                            <Link to="/master/students" className="flex items-center gap-3 p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/30 group transition-all">
+                                <div className="w-8 h-8 bg-blue-500/10 text-blue-500 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                    <FontAwesomeIcon icon={faUsers} />
                                 </div>
-                                <div>
-                                    <p className="font-bold text-sm text-[var(--color-text)] font-heading leading-tight mb-0.5">Semua Laporan</p>
-                                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">LIHAT RIWAYAT LENGKAP</p>
+                                <div className="min-w-0">
+                                    <p className="text-[12px] font-black text-[var(--color-text)] leading-tight">Data Siswa</p>
+                                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold">Kelola database siswa</p>
+                                </div>
+                            </Link>
+                            <Link to="/raport" className="flex items-center gap-3 p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/30 group transition-all">
+                                <div className="w-8 h-8 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                    <FontAwesomeIcon icon={faClipboardList} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[12px] font-black text-[var(--color-text)] leading-tight">Semua Laporan</p>
+                                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold">Lihat riwayat lengkap</p>
                                 </div>
                             </Link>
                         </div>
                     </div>
                 </div>
-                {/* ── BOTTOM ROW: 3 Analytics Sections ── */}
-                <div className="grid lg:grid-cols-3 gap-6 mt-6">
+
+                {/* ── BOTTOM ROW: 3 Analytics ── */}
+                <div className="grid lg:grid-cols-3 gap-4">
 
                     {/* ① Progress Raport Bulanan */}
                     <div className="glass rounded-[1.5rem] p-5 flex flex-col">
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
-                                Raport Bulan Ini
-                            </h3>
-                            <span className="text-[9px] font-black text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-lg">
-                                {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                            <div>
+                                <p className="text-[13px] font-black text-[var(--color-text)]">Raport Bulan Ini</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Progress pengisian per kelas</p>
+                            </div>
+                            <span className="text-[9px] font-black text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-1 rounded-lg">
+                                {new Date().toLocaleDateString('id-ID', { month: 'long' })}
                             </span>
                         </div>
                         {loading ? (
@@ -618,38 +591,33 @@ export default function DashboardPage() {
                                 {[1, 2, 3, 4].map(i => <div key={i} className="h-8 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}
                             </div>
                         ) : raportProgress.length === 0 ? (
-                            <p className="text-[10px] text-[var(--color-text-muted)] font-bold py-4 text-center opacity-50">Belum ada data raport</p>
+                            <p className="text-[11px] text-[var(--color-text-muted)] text-center py-6 opacity-50">Belum ada data raport</p>
                         ) : (
-                            <div className="space-y-2.5 flex-1">
+                            <div className="space-y-3 flex-1">
                                 {raportProgress.map((cls, i) => (
                                     <div key={i}>
                                         <div className="flex items-center justify-between mb-1">
                                             <span className="text-[11px] font-black text-[var(--color-text)] truncate flex-1">{cls.className}</span>
-                                            <span className="text-[10px] font-black shrink-0 ml-2"
+                                            <span className="text-[10px] font-black shrink-0 ml-2 tabular-nums"
                                                 style={{ color: cls.pct === 100 ? '#10b981' : cls.pct >= 50 ? '#f59e0b' : '#ef4444' }}>
                                                 {cls.filled}/{cls.total}
                                             </span>
                                         </div>
-                                        <div className="w-full h-2 bg-[var(--color-border)] rounded-full overflow-hidden">
+                                        <div className="w-full h-1.5 bg-[var(--color-border)] rounded-full overflow-hidden">
                                             <div className="h-full rounded-full transition-all duration-700"
-                                                style={{
-                                                    width: `${cls.pct}%`,
-                                                    background: cls.pct === 100 ? '#10b981' : cls.pct >= 50 ? '#f59e0b' : '#ef4444'
-                                                }} />
+                                                style={{ width: `${cls.pct}%`, background: cls.pct === 100 ? '#10b981' : cls.pct >= 50 ? '#f59e0b' : '#ef4444' }} />
                                         </div>
-                                        <p className="text-[8px] text-[var(--color-text-muted)] font-bold mt-0.5 text-right">{cls.pct}%</p>
                                     </div>
                                 ))}
                             </div>
                         )}
-                        {/* Ringkasan total */}
                         {!loading && raportProgress.length > 0 && (() => {
                             const totalFilled = raportProgress.reduce((a, c) => a + c.filled, 0)
                             const totalAll = raportProgress.reduce((a, c) => a + c.total, 0)
                             const overallPct = totalAll > 0 ? Math.round((totalFilled / totalAll) * 100) : 0
                             return (
                                 <div className="mt-4 pt-4 border-t border-[var(--color-border)] flex items-center justify-between">
-                                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Total Keseluruhan</span>
+                                    <span className="text-[10px] font-black text-[var(--color-text-muted)] opacity-60">Total keseluruhan</span>
                                     <span className="text-sm font-black" style={{ color: overallPct === 100 ? '#10b981' : overallPct >= 50 ? '#f59e0b' : '#ef4444' }}>
                                         {overallPct}%
                                     </span>
@@ -661,11 +629,12 @@ export default function DashboardPage() {
                     {/* ② Siswa Risiko */}
                     <div className="glass rounded-[1.5rem] p-5 flex flex-col">
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
-                                Siswa Risiko
-                            </h3>
-                            <span className="text-[9px] font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded-lg">
-                                Poin Negatif
+                            <div>
+                                <p className="text-[13px] font-black text-[var(--color-text)]">Siswa Risiko</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Poin total negatif</p>
+                            </div>
+                            <span className="text-[9px] font-black text-red-500 bg-red-500/10 px-2 py-1 rounded-lg">
+                                Perlu Perhatian
                             </span>
                         </div>
                         {loading ? (
@@ -673,9 +642,9 @@ export default function DashboardPage() {
                                 {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-11 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}
                             </div>
                         ) : riskStudents.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center gap-2 py-6 opacity-40">
-                                <FontAwesomeIcon icon={faHandPeace} className="text-2xl text-emerald-500" />
-                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Tidak ada siswa berisiko</p>
+                            <div className="flex-1 flex flex-col items-center justify-center gap-2 py-6 opacity-50">
+                                <span className="text-2xl">👍</span>
+                                <p className="text-[10px] font-black text-emerald-500">Tidak ada siswa berisiko</p>
                             </div>
                         ) : (
                             <div className="space-y-2 flex-1">
@@ -686,15 +655,15 @@ export default function DashboardPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[11px] font-black text-[var(--color-text)] truncate">{s.name}</p>
-                                            <p className="text-[9px] font-bold text-[var(--color-text-muted)] truncate">{s.className}</p>
+                                            <p className="text-[9px] text-[var(--color-text-muted)] font-bold truncate">{s.className}</p>
                                         </div>
-                                        <span className="text-[11px] font-black text-red-500 shrink-0">{s.points}</span>
+                                        <span className="text-[11px] font-black text-red-500 shrink-0 tabular-nums">{s.points}</span>
                                     </div>
                                 ))}
                             </div>
                         )}
                         <Link to="/master/students"
-                            className="mt-4 pt-4 border-t border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-primary)] hover:text-[var(--color-accent)] flex items-center justify-end gap-1 transition-colors">
+                            className="mt-4 pt-4 border-t border-[var(--color-border)] text-[10px] font-black text-[var(--color-primary)] hover:opacity-70 flex items-center justify-end gap-1.5 transition-all">
                             Lihat Semua Siswa <FontAwesomeIcon icon={faArrowRight} className="text-[8px]" />
                         </Link>
                     </div>
@@ -702,11 +671,12 @@ export default function DashboardPage() {
                     {/* ③ Ranking Kelas */}
                     <div className="glass rounded-[1.5rem] p-5 flex flex-col">
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
-                                Ranking Kelas
-                            </h3>
-                            <span className="text-[9px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg">
-                                Rata-rata Poin
+                            <div>
+                                <p className="text-[13px] font-black text-[var(--color-text)]">Ranking Kelas</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Berdasarkan rata-rata poin</p>
+                            </div>
+                            <span className="text-[9px] font-black text-amber-500 bg-amber-500/10 px-2 py-1 rounded-lg">
+                                Top Kelas
                             </span>
                         </div>
                         {loading ? (
@@ -714,7 +684,7 @@ export default function DashboardPage() {
                                 {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-11 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}
                             </div>
                         ) : classRanking.length === 0 ? (
-                            <p className="text-[10px] text-[var(--color-text-muted)] font-bold py-4 text-center opacity-50">Belum ada data kelas</p>
+                            <p className="text-[11px] text-[var(--color-text-muted)] text-center py-6 opacity-50">Belum ada data kelas</p>
                         ) : (
                             <div className="space-y-2 flex-1">
                                 {classRanking.map((cls, i) => {
@@ -724,16 +694,18 @@ export default function DashboardPage() {
                                     const barColor = i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#c2763e' : '#6366f1'
                                     return (
                                         <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-all">
-                                            <span className="text-sm shrink-0 w-5 text-center">{MEDALS[i] || <span className="text-[9px] font-black text-[var(--color-text-muted)]">{i + 1}</span>}</span>
+                                            <span className="text-sm shrink-0 w-5 text-center">
+                                                {MEDALS[i] || <span className="text-[9px] font-black text-[var(--color-text-muted)]">{i + 1}</span>}
+                                            </span>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-[11px] font-black text-[var(--color-text)] truncate">{cls.className}</p>
                                                 <div className="w-full h-1.5 bg-[var(--color-border)] rounded-full overflow-hidden mt-1">
-                                                    <div className="h-full rounded-full" style={{ width: `${barPct}%`, background: barColor }} />
+                                                    <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, background: barColor }} />
                                                 </div>
                                             </div>
                                             <div className="shrink-0 text-right">
-                                                <p className="text-[11px] font-black" style={{ color: barColor }}>{cls.avg > 0 ? '+' : ''}{cls.avg}</p>
-                                                <p className="text-[8px] text-[var(--color-text-muted)] font-bold">{cls.count} siswa</p>
+                                                <p className="text-[11px] font-black tabular-nums" style={{ color: barColor }}>{cls.avg > 0 ? '+' : ''}{cls.avg}</p>
+                                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold">{cls.count} siswa</p>
                                             </div>
                                         </div>
                                     )
