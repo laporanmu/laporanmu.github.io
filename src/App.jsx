@@ -5,6 +5,7 @@ import { ToastProvider } from './context/ToastContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { SidebarProvider } from './context/SidebarContext'
 
+
 // ─── Lazy-loaded Pages ────────────────────────────────────────────────────────
 // Public
 const LandingPage = lazy(() => import('./pages/LandingPage'))
@@ -17,12 +18,12 @@ const RaportPage = lazy(() => import('./pages/RaportPage'))
 const PoinPage = lazy(() => import('./pages/PoinPage'))
 const AbsensiPage = lazy(() => import('./pages/AbsensiPage'))
 const GatePage = lazy(() => import('./pages/GatePage'))
-
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 // Admin-only
 const UserPage = lazy(() => import('./pages/admin/UserPage'))
 const LogsPage = lazy(() => import('./pages/admin/LogsPage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const AdminSettingsPage = lazy(() => import('./pages/admin/SettingsPage'))
 
 // Master Data
 const StudentsPage = lazy(() => import('./pages/master/StudentsPage'))
@@ -54,8 +55,8 @@ const ROUTE_ALIASES = [
 
   // Admin data aliases
   { from: '/admin/log', to: '/admin/logs' },
-  { from: '/admin/user', to: '/master/users' },
-  { from: '/master/setting', to: '/master/settings' },
+  { from: '/admin/user', to: '/admin/users' },
+  { from: '/admin/setting', to: '/admin/settings' },
 ]
 
 // ─── Loading Spinner ──────────────────────────────────────────────────────────
@@ -169,6 +170,7 @@ function AppRoutes() {
           <Route path="/gate" element={<RoleRoute roles={DEV_ADMIN_GATE}><GatePage /></RoleRoute>} />
           <Route path="/admin/logs" element={<RoleRoute roles={DEV_ADMIN}><LogsPage /></RoleRoute>} />
           <Route path="/admin/users" element={<RoleRoute roles={DEV_ADMIN}><UserPage /></RoleRoute>} />
+          <Route path="/admin/settings" element={<RoleRoute roles={DEV_ADMIN}><AdminSettingsPage /></RoleRoute>} />
 
           {/* Master Data — developer & admin */}
           <Route path="/master/students" element={<RoleRoute roles={DEV_ADMIN}><StudentsPage /></RoleRoute>} />
