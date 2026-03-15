@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
@@ -6,21 +6,54 @@ import {
     faUsers, faChalkboardTeacher, faSchool,
     faExclamationTriangle, faCalendarAlt,
     faClipboardList, faCalendarWeek, faShieldHalved,
+    faPersonWalkingArrowRight, faClockRotateLeft, faUserGear,
+    faScrewdriverWrench
 } from "@fortawesome/free-solid-svg-icons"
+import { useAuth } from "../../context/AuthContext"
 
+// ─── Portal container ─────────────────────────────────────────────────────────
+function usePortalContainer(id) {
+    const ref = useRef(null)
+    if (!ref.current) {
+        let el = document.getElementById(id)
+        if (!el) {
+            el = document.createElement('div')
+            el.id = id
+            document.body.appendChild(el)
+        }
+        ref.current = el
+    }
+    return ref.current
+}
+
+// ─── Items ────────────────────────────────────────────────────────────────────
 const REPORTS_ITEMS = [
-    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" },
-    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekap kehadiran per bulan", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" },
-    { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400" },
+    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Izin keluar guru & kunjungan tamu", color: "bg-red-50 dark:bg-red-900/20 text-red-500" },
+    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
+    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekap kehadiran per bulan", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" },
+    { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-500" },
 ]
 
 const MASTER_ITEMS = [
-    { to: "/master/students", label: "Data Siswa", icon: faUsers, color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" },
-    { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" },
-    { to: "/master/classes", label: "Data Kelas", icon: faSchool, color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" },
-    { to: "/master/violations", label: "Jenis Pelanggaran", icon: faExclamationTriangle, color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" },
-    { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" },
+    { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Kelola data santri aktif", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
+    { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Daftar musyrif & pengajar", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
+    { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Manajemen kelas & kamar", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
+    { to: "/master/violations", label: "Jenis Pelanggaran", icon: faExclamationTriangle, desc: "Kategori & bobot pelanggaran", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
+    { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Periode tahun ajaran aktif", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
 ]
+
+const ADMIN_ITEMS = [
+    { to: "/admin/logs", label: "Audit Logs", icon: faClockRotateLeft, desc: "Riwayat aktivitas sistem", color: "bg-purple-500/10 text-purple-600" },
+    { to: "/admin/users", label: "User Management", icon: faUserGear, desc: "Kelola akun & hak akses", color: "bg-rose-500/10 text-rose-600" },
+    { to: "/admin/settings", label: "Pengaturan", icon: faScrewdriverWrench, desc: "Konfigurasi sistem & aplikasi", color: "bg-slate-500/10 text-slate-600" },
+]
+
+// ─── Section titles per key ───────────────────────────────────────────────────
+const SECTION_TITLE = {
+    reports: "Laporan & Rekap",
+    master: "Master Data",
+    admin: "Admin Panel",
+}
 
 function Section({ title, items, onNavigate }) {
     return (
@@ -46,8 +79,40 @@ function Section({ title, items, onNavigate }) {
     )
 }
 
-export default function MasterSheet({ isOpen, onClose }) {
+// ─── Divider ──────────────────────────────────────────────────────────────────
+function Divider() {
+    return <div className="h-px bg-[var(--color-border)] mx-4 my-1" />
+}
+
+// ─── MasterSheet ─────────────────────────────────────────────────────────────
+// Props:
+//   isOpen   — boolean, whether the sheet is visible
+//   onClose  — callback to close the sheet
+//   section  — 'reports' | 'master' | 'admin' | null
+//              null/undefined = tampilkan semua section sesuai role (legacy / full menu)
+export default function MasterSheet({ isOpen, onClose, section }) {
     const navigate = useNavigate()
+    const { profile } = useAuth()
+
+    const container = usePortalContainer('portal-sheet')
+
+    const role = profile?.role?.toLowerCase()
+    const isSatpam = role === 'satpam'
+    const isAdminUp = ['developer', 'admin'].includes(role)
+
+    // Filter items berdasarkan role
+    const visibleReports = isSatpam
+        ? REPORTS_ITEMS.filter(it => it.to === '/gate')
+        : REPORTS_ITEMS
+    const visibleMaster = isSatpam ? [] : MASTER_ITEMS
+
+    // Tentukan section mana yang perlu ditampilkan
+    // section prop = spesifik 1 section; null = tampil semua (fallback full-menu)
+    const show = {
+        reports: !section || section === 'reports',
+        master: (!section || section === 'master') && visibleMaster.length > 0,
+        admin: (!section || section === 'admin') && isAdminUp,
+    }
 
     useEffect(() => {
         if (!isOpen) return
@@ -63,29 +128,58 @@ export default function MasterSheet({ isOpen, onClose }) {
         return () => window.removeEventListener("keydown", onKeyDown)
     }, [isOpen, onClose])
 
-    if (!isOpen) return null
-
     const handleNav = (to) => { onClose?.(); navigate(to) }
 
     return createPortal(
-        <div className="fixed inset-0 z-[100000]" onClick={onClose}>
-            <div className="absolute inset-0 bg-black/35" />
-            <div className="absolute left-0 right-0 bottom-0 px-3 pb-3" onClick={(e) => e.stopPropagation()}>
-                <div className="mx-auto max-w-xl rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden">
+        !isOpen ? null : (
+            <div className="fixed inset-0 z-[100000]" onClick={onClose}>
+                <div className="absolute inset-0 bg-black/35" />
+                <div className="absolute left-0 right-0 bottom-0 px-3 pb-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="mx-auto max-w-xl rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden">
 
-                    {/* Grabber */}
-                    <div className="flex justify-center pt-3 pb-1">
-                        <div className="h-1 w-10 rounded-full bg-gray-300/80 dark:bg-gray-700/80" />
+                        {/* Grabber */}
+                        <div className="flex justify-center pt-3 pb-1">
+                            <div className="h-1 w-10 rounded-full bg-gray-300/80 dark:bg-gray-700/80" />
+                        </div>
+
+                        {/* ── Reports ── */}
+                        {show.reports && (
+                            <Section
+                                title={SECTION_TITLE.reports}
+                                items={visibleReports}
+                                onNavigate={handleNav}
+                            />
+                        )}
+
+                        {/* ── Master Data ── */}
+                        {show.master && (
+                            <>
+                                {show.reports && <Divider />}
+                                <Section
+                                    title={SECTION_TITLE.master}
+                                    items={visibleMaster}
+                                    onNavigate={handleNav}
+                                />
+                            </>
+                        )}
+
+                        {/* ── Admin Panel ── */}
+                        {show.admin && (
+                            <>
+                                {(show.reports || show.master) && <Divider />}
+                                <Section
+                                    title={SECTION_TITLE.admin}
+                                    items={ADMIN_ITEMS}
+                                    onNavigate={handleNav}
+                                />
+                            </>
+                        )}
+
+                        <div className="h-3" />
                     </div>
-
-                    <Section title="Laporan & Rekap" items={REPORTS_ITEMS} onNavigate={handleNav} />
-                    <div className="h-px bg-[var(--color-border)] mx-4 my-1" />
-                    <Section title="Master Data" items={MASTER_ITEMS} onNavigate={handleNav} />
-
-                    <div className="h-3" />
                 </div>
             </div>
-        </div>,
-        document.body
+        ),
+        container
     )
 }

@@ -8,10 +8,10 @@ import {
     faUsers, faSchool, faGraduationCap, faTable, faEye, faSpinner,
     faDatabase, faCode, faBolt, faCheckCircle, faTimeline,
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '../components/layout/DashboardLayout'
-import { useToast } from '../context/ToastContext'
-import { useAuth } from '../context/AuthContext'
-import { supabase } from '../lib/supabase'
+import DashboardLayout from '../../components/layout/DashboardLayout'
+import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
+import { supabase } from '../../lib/supabase'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

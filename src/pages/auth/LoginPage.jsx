@@ -147,17 +147,33 @@ export default function LoginPage() {
 
                 {/* Demo Mode */}
                 {isDemoMode && (
-                    <div className="p-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 rounded-lg text-xs">
-                        <p className="font-semibold text-amber-600 dark:text-amber-400 mb-2">🎮 Mode Demo</p>
-                        <div className="text-gray-500 dark:text-gray-400 space-y-1 font-medium">
-                            <p className="flex justify-between"><span>Admin:</span> <code className="bg-amber-100 dark:bg-amber-900/30 px-1 rounded">admin@laporanmu.id</code></p>
-                            <p className="flex justify-between"><span>Guru:</span> <code className="bg-amber-100 dark:bg-amber-900/30 px-1 rounded">guru@laporanmu.id</code></p>
-                            <p className="flex justify-between"><span>Pengurus:</span> <code className="bg-amber-100 dark:bg-amber-900/30 px-1 rounded">pengurus@laporanmu.id</code></p>
-                            <div className="border-t border-amber-200/60 dark:border-amber-500/20 pt-1.5 mt-1.5 flex justify-between">
-                                <span>Password:</span>
-                                <code className="bg-amber-100 dark:bg-amber-900/30 px-1 rounded font-bold">demo123</code>
-                            </div>
+                    <div className="p-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 rounded-xl text-xs space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <p className="font-black text-amber-600 dark:text-amber-400 text-[11px] uppercase tracking-widest">🎮 Mode Demo</p>
+                            <span className="text-[9px] font-bold text-amber-500/70 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">password: demo123</span>
                         </div>
+                        <div className="grid grid-cols-1 gap-1">
+                            {[
+                                { role: 'Developer', email: 'dev@laporanmu.id', desc: 'Akses penuh semua fitur', color: 'hover:border-rose-400/50   hover:bg-rose-500/5   hover:text-rose-600' },
+                                { role: 'Admin', email: 'admin@laporanmu.id', desc: 'Kelola data & user', color: 'hover:border-purple-400/50 hover:bg-purple-500/5 hover:text-purple-600' },
+                                { role: 'Guru', email: 'guru@laporanmu.id', desc: 'Laporan & presensi', color: 'hover:border-indigo-400/50 hover:bg-indigo-500/5 hover:text-indigo-600' },
+                                { role: 'Satpam', email: 'satpam@laporanmu.id', desc: 'Portal keluar masuk', color: 'hover:border-blue-400/50   hover:bg-blue-500/5   hover:text-blue-600' },
+                                { role: 'Viewer', email: 'viewer@laporanmu.id', desc: 'Hanya dashboard (read-only)', color: 'hover:border-gray-400/50   hover:bg-gray-500/5   hover:text-gray-500' },
+                            ].map(u => (
+                                <button
+                                    key={u.role}
+                                    type="button"
+                                    onClick={() => { setEmail(u.email); setPassword('demo123') }}
+                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border border-transparent bg-amber-100/50 dark:bg-amber-900/20 transition-all group ${u.color}`}>
+                                    <div className="flex items-center gap-2 text-left">
+                                        <span className="text-[10px] font-black text-amber-700 dark:text-amber-300 group-hover:text-inherit transition-colors w-16">{u.role}</span>
+                                        <span className="text-[9px] text-amber-600/60 dark:text-amber-400/60 font-medium">{u.desc}</span>
+                                    </div>
+                                    <code className="text-[9px] font-mono text-amber-600/70 dark:text-amber-400/70 shrink-0">{u.email}</code>
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-[9px] text-amber-500/60 text-center font-medium">Klik baris untuk isi otomatis</p>
                     </div>
                 )}
 
@@ -172,7 +188,7 @@ export default function LoginPage() {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="nama@sekolah.id"
+                                    placeholder="nama@laporan.mu"
                                     ref={emailInputRef}
                                     className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-50 transition-all outline-none"
                                 />
@@ -187,20 +203,7 @@ export default function LoginPage() {
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    onKeyUp={(e) => {
-                                        if (e.getModifierState('CapsLock')) {
-                                            setCapsLockOn(true);
-                                        } else {
-                                            setCapsLockOn(false);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.getModifierState('CapsLock')) {
-                                            setCapsLockOn(true);
-                                        } else {
-                                            setCapsLockOn(false);
-                                        }
-                                    }}
+                                    onKeyDown={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
                                     placeholder="••••••••"
                                     className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl pl-11 pr-12 py-3.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-50 transition-all outline-none"
                                 />
