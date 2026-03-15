@@ -46,7 +46,12 @@ const TeacherRow = memo(({
                     </div>
                     <div>
                         <button onClick={() => openProfile(teacher)} className="text-sm font-bold text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors text-left leading-snug">{teacher.name}</button>
-                        {teacher.nbm && <p className="text-[10px] text-[var(--color-text-muted)] font-mono">{teacher.nbm}</p>}
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            {teacher.nbm && <p className="text-[10px] text-[var(--color-text-muted)] font-mono">{teacher.nbm}</p>}
+                            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase ${teacher.type === 'karyawan' ? 'bg-blue-500/10 text-blue-600' : 'bg-indigo-500/10 text-indigo-600'}`}>
+                                {teacher.type === 'karyawan' ? 'Karyawan' : 'Guru'}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </td>
@@ -124,6 +129,9 @@ const TeacherMobileCard = memo(({
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 {teacher.subject && <span className="px-2 py-0.5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-black uppercase">{teacher.subject}</span>}
                                 <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-black uppercase ${STATUS_CONFIG[teacher.status]?.color}`}>{STATUS_CONFIG[teacher.status]?.label}</span>
+                                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${teacher.type === 'karyawan' ? 'bg-blue-500/10 text-blue-600' : 'bg-indigo-500/10 text-indigo-600'}`}>
+                                    {teacher.type === 'karyawan' ? 'Karyawan' : 'Guru'}
+                                </span>
                             </div>
                         </div>
                         <div className="flex gap-1 shrink-0">

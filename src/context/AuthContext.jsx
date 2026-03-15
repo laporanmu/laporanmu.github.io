@@ -3,11 +3,13 @@ import { supabase, isDemoMode } from '../lib/supabase'
 
 const AuthContext = createContext({})
 
-// Demo user for testing without Supabase
+// ─── Role Hierarchy: developer > admin > guru = satpam > viewer ───────────────
 const DEMO_USERS = {
+    developer: { id: 'demo-dev', email: 'dev@laporanmu.id', role: 'developer', name: 'Developer' },
     admin: { id: 'demo-admin', email: 'admin@laporanmu.id', role: 'admin', name: 'Administrator' },
     guru: { id: 'demo-guru', email: 'guru@laporanmu.id', role: 'guru', name: 'Budi Santoso' },
-    pengurus: { id: 'demo-pengurus', email: 'pengurus@laporanmu.id', role: 'pengurus', name: 'Osis' },
+    satpam: { id: 'demo-satpam', email: 'satpam@laporanmu.id', role: 'satpam', name: 'Penjaga Gerbang' },
+    viewer: { id: 'demo-viewer', email: 'viewer@laporanmu.id', role: 'viewer', name: 'Demo Viewer' },
 }
 
 export function AuthProvider({ children }) {
@@ -87,9 +89,24 @@ export function AuthProvider({ children }) {
             setUser(null)
             setProfile(null)
             localStorage.removeItem('laporanmu_demo_session')
+            sessionStorage.removeItem('laporanmu_demo_session')
             return
         }
         await supabase.auth.signOut()
+    }
+
+    // ─── Role Helpers ─────────────────────────────────────────────────────────
+    // Hierarchy order: developer(4) > admin(3) > guru=satpam(2) > viewer(1)
+    const ROLE_LEVEL = { developer: 4, admin: 3, guru: 2, satpam: 2, viewer: 1 }
+
+    /** Check if current user has one of the given roles */
+    const hasRole = (...roles) => roles.includes(profile?.role?.toLowerCase())
+
+    /** Check if current user's level is >= the given role's level */
+    const isAtLeast = (minRole) => {
+        const userLevel = ROLE_LEVEL[profile?.role?.toLowerCase()] ?? 0
+        const minLevel = ROLE_LEVEL[minRole?.toLowerCase()] ?? 99
+        return userLevel >= minLevel
     }
 
     const value = {
@@ -99,6 +116,10 @@ export function AuthProvider({ children }) {
         signIn,
         signOut,
         isDemoMode,
+
+        // Permission helpers
+        hasRole,
+        isAtLeast,
     }
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

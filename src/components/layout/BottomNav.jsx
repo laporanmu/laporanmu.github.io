@@ -1,67 +1,106 @@
 import { useState } from "react"
-import { NavLink, useNavigate } from "react-router-dom"
+import { NavLink } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
-    faHouse,
-    faTableList,
-    faClockRotateLeft,
-    faCog,
+    faHouse, faClipboardList, faLayerGroup, faUserGear, faCog,
 } from "@fortawesome/free-solid-svg-icons"
+import { useAuth } from "../../context/AuthContext"
 import MasterSheet from "./MasterSheet"
 
-const LOGS_ROUTE = "/logs"
+// Warna aktif konsisten dengan TopNav (indigo-600)
+const ACTIVE = "text-indigo-600"
+const INACTIVE = "text-[var(--color-text-muted)] hover:text-indigo-500"
 
-export default function BottomNav() {
-    const [isSheetOpen, setIsSheetOpen] = useState(false)
-    const navigate = useNavigate()
-
-    const Item = ({ to, icon, label }) => (
-        <NavLink to={to}
+// NavItem: pakai NavLink → active state otomatis + dot indicator
+function NavItem({ to, icon, label }) {
+    return (
+        <NavLink
+            to={to}
             className={({ isActive }) =>
-                `py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition
-                 ${isActive ? "text-indigo-600" : "text-[var(--color-text-muted)] hover:text-indigo-600"}`
+                `py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors relative
+                 ${isActive ? ACTIVE : INACTIVE}`
             }
         >
-            <FontAwesomeIcon icon={icon} className="text-base" />
-            <span className="tracking-tight">{label}</span>
+            {({ isActive }) => (
+                <>
+                    {isActive && (
+                        <span className="absolute top-1.5 w-1 h-1 rounded-full bg-indigo-600" />
+                    )}
+                    <FontAwesomeIcon icon={icon} className="text-[17px]" />
+                    <span className="tracking-tight leading-none">{label}</span>
+                </>
+            )}
         </NavLink>
     )
+}
+
+// MenuButton: non-route button, styling mirip NavItem
+function MenuButton({ icon, label, onClick, active = false }) {
+    return (
+        <button
+            onClick={onClick}
+            type="button"
+            className={`py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors relative ${active ? ACTIVE : INACTIVE}`}
+        >
+            {active && <span className="absolute top-1.5 w-1 h-1 rounded-full bg-indigo-600" />}
+            <FontAwesomeIcon icon={icon} className="text-[17px]" />
+            <span className="tracking-tight leading-none">{label}</span>
+        </button>
+    )
+}
+
+export default function BottomNav() {
+    // openSheet: null | 'reports' | 'master' | 'admin'
+    const [openSheet, setOpenSheet] = useState(null)
+    const { profile } = useAuth()
+
+    const role = profile?.role?.toLowerCase()
+    const isAdminUp = ['developer', 'admin'].includes(role)
+    const isSatpam = role === 'satpam'
+
+    const open = (section) => setOpenSheet(section)
+    const close = () => setOpenSheet(null)
 
     return (
         <>
             <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200]">
                 <div className="mx-auto max-w-7xl px-3 pb-3">
                     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
-                        <div className="grid grid-cols-4">
-                            <Item to="/dashboard" icon={faHouse} label="Home" />
 
-                            {/* Menu — buka bottom sheet (Reports + Master) */}
-                            <button
-                                onClick={() => setIsSheetOpen(true)}
-                                className="py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-indigo-600 transition"
-                                type="button"
-                            >
-                                <FontAwesomeIcon icon={faTableList} className="text-base" />
-                                <span className="tracking-tight">Menu</span>
-                            </button>
+                        {/* ── Admin / Developer: Home | Reports | Master | Admin ── */}
+                        {isAdminUp && (
+                            <div className="grid grid-cols-4">
+                                <NavItem to="/dashboard" icon={faHouse} label="Home" />
+                                <MenuButton icon={faClipboardList} label="Reports" onClick={() => open('reports')} active={openSheet === 'reports'} />
+                                <MenuButton icon={faLayerGroup} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
+                                <MenuButton icon={faUserGear} label="Admin" onClick={() => open('admin')} active={openSheet === 'admin'} />
+                            </div>
+                        )}
 
-                            {/* History */}
-                            <button
-                                onClick={() => navigate(LOGS_ROUTE)}
-                                className="py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-indigo-600 transition"
-                                type="button"
-                            >
-                                <FontAwesomeIcon icon={faClockRotateLeft} className="text-base" />
-                                <span className="tracking-tight">History</span>
-                            </button>
+                        {/* ── Satpam: Home | Reports | Settings (3 col) ── */}
+                        {isSatpam && (
+                            <div className="grid grid-cols-3">
+                                <NavItem to="/dashboard" icon={faHouse} label="Home" />
+                                <MenuButton icon={faClipboardList} label="Reports" onClick={() => open('reports')} active={openSheet === 'reports'} />
+                                <NavItem to="/settings" icon={faCog} label="Setting" />
+                            </div>
+                        )}
 
-                            <Item to="/settings" icon={faCog} label="Setting" />
-                        </div>
+                        {/* ── Staff biasa: Home | Reports | Master | Settings ── */}
+                        {!isAdminUp && !isSatpam && (
+                            <div className="grid grid-cols-4">
+                                <NavItem to="/dashboard" icon={faHouse} label="Home" />
+                                <MenuButton icon={faClipboardList} label="Reports" onClick={() => open('reports')} active={openSheet === 'reports'} />
+                                <MenuButton icon={faLayerGroup} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
+                                <NavItem to="/settings" icon={faCog} label="Setting" />
+                            </div>
+                        )}
+
                     </div>
                 </div>
             </nav>
 
-            <MasterSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} />
+            <MasterSheet isOpen={openSheet !== null} section={openSheet} onClose={close} />
         </>
     )
 }

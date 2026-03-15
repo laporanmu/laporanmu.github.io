@@ -10,7 +10,7 @@ import {
     faEnvelope, faCalendar, faMapMarkerAlt, faNoteSticky,
     faCircleCheck, faUsers, faFileLines, faAnglesLeft, faAnglesRight,
     faChevronLeft, faChevronRight,
-    faBullhorn, faIdCard,
+    faBullhorn, faIdCard, faBriefcase,
     faFileImport, faFileExport
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
@@ -49,13 +49,14 @@ export default function TeachersPage() {
     const [totalRows, setTotalRows] = useState(0)
     const [subjectsList, setSubjectsList] = useState([])
     const [classesList, setClassesList] = useState([])
-    const [stats, setStats] = useState({ total: 0, active: 0, male: 0, female: 0 })
+    const [stats, setStats] = useState({ total: 0, active: 0, male: 0, female: 0, guru: 0, karyawan: 0 })
     // filters
     const [searchQuery, setSearchQuery] = useState('')
     const [debouncedSearch, setDebouncedSearch] = useState('')
     const [filterSubject, setFilterSubject] = useState('')
     const [filterGender, setFilterGender] = useState('')
     const [filterStatus, setFilterStatus] = useState('active')
+    const [filterType, setFilterType] = useState('') // '' | 'guru' | 'karyawan'
     const [filterMissing, setFilterMissing] = useState('')
     const [sortBy, setSortBy] = useState('name_asc')
     const [page, setPage] = useState(1)
@@ -127,10 +128,10 @@ export default function TeachersPage() {
 
     // ── persist ──────────────────────────────────────────────────────────────
     useEffect(() => {
-        try { const f = JSON.parse(localStorage.getItem(LS_FILTERS) || '{}'); if (f.filterGender) setFilterGender(f.filterGender); if (f.filterStatus !== undefined) setFilterStatus(f.filterStatus); if (f.filterSubject) setFilterSubject(f.filterSubject); if (f.sortBy) setSortBy(f.sortBy) } catch { }
+        try { const f = JSON.parse(localStorage.getItem(LS_FILTERS) || '{}'); if (f.filterGender) setFilterGender(f.filterGender); if (f.filterStatus !== undefined) setFilterStatus(f.filterStatus); if (f.filterSubject) setFilterSubject(f.filterSubject); if (f.filterType) setFilterType(f.filterType); if (f.sortBy) setSortBy(f.sortBy) } catch { }
         try { const c = JSON.parse(localStorage.getItem(LS_COLS) || '{}'); if (Object.keys(c).length) setVisibleCols(c) } catch { }
     }, [])
-    useEffect(() => { try { localStorage.setItem(LS_FILTERS, JSON.stringify({ filterGender, filterStatus, filterSubject, sortBy })) } catch { } }, [filterGender, filterStatus, filterSubject, sortBy])
+    useEffect(() => { try { localStorage.setItem(LS_FILTERS, JSON.stringify({ filterGender, filterStatus, filterSubject, filterType, sortBy })) } catch { } }, [filterGender, filterStatus, filterSubject, filterType, sortBy])
     useEffect(() => { try { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) } catch { } }, [visibleCols])
     useEffect(() => { try { localStorage.setItem(LS_PAGE_SIZE, pageSize) } catch { } }, [pageSize])
 
@@ -150,9 +151,9 @@ export default function TeachersPage() {
     }, [])
 
     // ── computed ──────────────────────────────────────────────────────────────
-    const activeFilterCount = [filterGender, filterSubject, filterMissing, filterStatus !== 'active' ? filterStatus : ''].filter(Boolean).length
+    const activeFilterCount = [filterGender, filterSubject, filterMissing, filterType, filterStatus !== 'active' ? filterStatus : ''].filter(Boolean).length
     const hasActiveFilters = !!(searchQuery || activeFilterCount)
-    const resetAllFilters = () => { setSearchQuery(''); setFilterSubject(''); setFilterGender(''); setFilterMissing(''); setFilterStatus('active'); setPage(1) }
+    const resetAllFilters = () => { setSearchQuery(''); setFilterSubject(''); setFilterGender(''); setFilterMissing(''); setFilterStatus('active'); setFilterType(''); setPage(1) }
 
     // ── keyboard shortcuts ────────────────────────────────────────────────────
     useEffect(() => {
@@ -187,6 +188,7 @@ export default function TeachersPage() {
             if (filterStatus) q = q.eq('status', filterStatus)
             if (filterGender) q = q.eq('gender', filterGender)
             if (filterSubject) q = q.eq('subject', filterSubject)
+            if (filterType) q = q.eq('type', filterType)
             if (filterMissing === 'wa') q = q.or('phone.is.null,phone.eq.""')
             if (debouncedSearch) { const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_'); q = q.or(`name.ilike.%${s}%,nbm.ilike.%${s}%,email.ilike.%${s}%,subject.ilike.%${s}%`) }
             const { data, error, count } = await q
@@ -199,12 +201,12 @@ export default function TeachersPage() {
             if (cls) setClassesList(cls)
         } catch { addToast('Gagal memuat data guru', 'error') }
         finally { setLoading(false) }
-    }, [page, sortBy, filterStatus, filterGender, filterSubject, filterMissing, debouncedSearch, addToast])
+    }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, debouncedSearch, addToast])
 
     const fetchStats = useCallback(async () => {
         try {
-            const { data } = await supabase.from('teachers').select('id,gender,status').is('deleted_at', null)
-            if (data) setStats({ total: data.length, active: data.filter(t => t.status === 'active').length, male: data.filter(t => t.gender === 'L').length, female: data.filter(t => t.gender === 'P').length })
+            const { data } = await supabase.from('teachers').select('id,gender,status,type').is('deleted_at', null)
+            if (data) setStats({ total: data.length, active: data.filter(t => t.status === 'active').length, male: data.filter(t => t.gender === 'L').length, female: data.filter(t => t.gender === 'P').length, guru: data.filter(t => !t.type || t.type === 'guru').length, karyawan: data.filter(t => t.type === 'karyawan').length })
         } catch { }
     }, [])
 
@@ -218,7 +220,7 @@ export default function TeachersPage() {
     }, [])
 
     useEffect(() => { fetchStats() }, [])
-    useEffect(() => { fetchData() }, [page, sortBy, filterStatus, filterGender, filterSubject, filterMissing, debouncedSearch])
+    useEffect(() => { fetchData() }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, debouncedSearch])
 
     const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
     const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1
@@ -429,7 +431,7 @@ export default function TeachersPage() {
     // ── export ────────────────────────────────────────────────────────────────
     const getExportData = async () => {
         let q = supabase.from('teachers').select('name,nbm,subject,gender,phone,email,status,join_date,address').is('deleted_at', null).order('name')
-        if (exportScope === 'filtered') { if (filterStatus) q = q.eq('status', filterStatus); if (filterGender) q = q.eq('gender', filterGender); if (filterSubject) q = q.eq('subject', filterSubject) }
+        if (exportScope === 'filtered') { if (filterStatus) q = q.eq('status', filterStatus); if (filterGender) q = q.eq('gender', filterGender); if (filterSubject) q = q.eq('subject', filterSubject); if (filterType) q = q.eq('type', filterType) }
         const { data, error } = await q; if (error) throw error
         const colMap = { nama: 'Nama', nbm: 'NBM', subject: 'Mata Pelajaran', gender: 'Gender', phone: 'No. HP/WA', email: 'Email', status: 'Status', join_date: 'Tgl Bergabung', address: 'Alamat' }
         return (data || []).map(t => { const row = {}; Object.entries(exportColumns).forEach(([k, v]) => { if (v) row[colMap[k] || k] = k === 'gender' ? (t.gender === 'L' ? 'Laki-laki' : t.gender === 'P' ? 'Perempuan' : '-') : (k === 'status' ? STATUS_CONFIG[t[k]]?.label || t[k] : t[k] || '-') }); return row })
@@ -477,7 +479,7 @@ export default function TeachersPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Data Guru</h1>
-                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} data guru dan staff pengajar dalam sistem.</p>
+                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} data {filterType === 'karyawan' ? 'karyawan' : filterType === 'guru' ? 'guru' : 'guru dan karyawan'} dalam sistem.</p>
                     </div>
                     <div className="flex gap-2 items-center">
                         {/* Sliders dropdown */}
@@ -567,12 +569,12 @@ export default function TeachersPage() {
                 {/* ── Stats ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                     {[
-                        { icon: faChalkboardTeacher, label: 'Total Guru', value: stats.total, top: 'border-t-[var(--color-primary)]', ibg: 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]', hover: 'hover:bg-[var(--color-primary)]/5' },
-                        { icon: faCheckCircle, label: 'Aktif', value: stats.active, top: 'border-t-emerald-500', ibg: 'bg-emerald-500/10 text-emerald-500', hover: 'hover:bg-emerald-500/5' },
-                        { icon: faMars, label: 'Laki-laki', value: stats.male, top: 'border-t-blue-500', ibg: 'bg-blue-500/10 text-blue-500', hover: 'hover:bg-blue-500/5' },
-                        { icon: faVenus, label: 'Perempuan', value: stats.female, top: 'border-t-pink-500', ibg: 'bg-pink-500/10 text-pink-500', hover: 'hover:bg-pink-500/5' },
+                        { icon: faChalkboardTeacher, label: 'Total', value: stats.total, top: 'border-t-[var(--color-primary)]', ibg: 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]', hover: 'hover:bg-[var(--color-primary)]/5', onClick: () => { setFilterType(''); setPage(1) } },
+                        { icon: faCheckCircle, label: 'Aktif', value: stats.active, top: 'border-t-emerald-500', ibg: 'bg-emerald-500/10 text-emerald-500', hover: 'hover:bg-emerald-500/5', onClick: () => { setFilterStatus('active'); setPage(1) } },
+                        { icon: faChalkboardTeacher, label: 'Guru', value: stats.guru, top: 'border-t-indigo-500', ibg: 'bg-indigo-500/10 text-indigo-500', hover: 'hover:bg-indigo-500/5', onClick: () => { setFilterType('guru'); setPage(1) } },
+                        { icon: faBriefcase, label: 'Karyawan', value: stats.karyawan, top: 'border-t-blue-500', ibg: 'bg-blue-500/10 text-blue-500', hover: 'hover:bg-blue-500/5', onClick: () => { setFilterType('karyawan'); setPage(1) } },
                     ].map((s, i) => (
-                        <div key={i} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.top} flex items-center gap-3 group ${s.hover} hover:border-t-4 transition-all`}>
+                        <div key={i} onClick={s.onClick} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.top} flex items-center gap-3 group ${s.hover} hover:border-t-4 transition-all ${s.onClick ? 'cursor-pointer' : ''}`}>
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform shrink-0 ${s.ibg}`}><FontAwesomeIcon icon={s.icon} /></div>
                             <div>
                                 <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">{s.label}</p>
@@ -626,6 +628,14 @@ export default function TeachersPage() {
                     {showAdvFilter && (
                         <div className="border-t border-[var(--color-border)] px-4 py-4 bg-[var(--color-surface-alt)]/40">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                <div>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Jenis</label>
+                                    <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">
+                                        <option value="">Semua Jenis</option>
+                                        <option value="guru">Guru</option>
+                                        <option value="karyawan">Karyawan</option>
+                                    </select>
+                                </div>
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Mata Pelajaran</label>
                                     <select value={filterSubject} onChange={e => { setFilterSubject(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">

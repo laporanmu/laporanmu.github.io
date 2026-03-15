@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect, useCallback, useRef, useMemo, memo } fro
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faGraduationCap, faCalendarAlt, faChevronLeft, faChevronRight,
+    faLock, faCalendarAlt, faChevronLeft, faChevronRight,
     faPrint, faCheck, faSpinner, faFloppyDisk,
     faChartPie, faTableList, faMagnifyingGlass, faArrowLeft, faDownload,
     faCircleCheck, faCircleExclamation, faTriangleExclamation,
@@ -1224,6 +1224,9 @@ export default function RaportPage() {
     const { profile } = useAuth()
     // FIX #10: now sebagai ref agar tidak berubah setiap render
     const now = useRef(new Date()).current
+
+    const ALLOWED_ROLES = ['admin', 'guru', 'developer']
+    const isAllowed = profile ? ALLOWED_ROLES.includes(profile.role?.toLowerCase()) : null
 
     // ── Page-level state
     const [classesList, setClassesList] = useState([])
@@ -3789,6 +3792,30 @@ export default function RaportPage() {
     })()
 
     const stepLabels = ['Setup', 'Input Nilai', 'Preview & Cetak']
+
+    // ── Guards ─────────────────────────────────────────────────────────────────
+
+    if (isAllowed === null) return (
+        <DashboardLayout>
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-[var(--color-primary)]" />
+            </div>
+        </DashboardLayout>
+    )
+    if (!isAllowed) return (
+        <DashboardLayout>
+            <div className="p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faLock} className="text-2xl text-red-500" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Akses Ditolak</h2>
+                    <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">Halaman ini hanya dapat diakses oleh <strong>Guru</strong> dan <strong>Admin</strong>.</p>
+                </div>
+                <button onClick={() => navigate(-1)} className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:opacity-90 transition-all">Kembali</button>
+            </div>
+        </DashboardLayout>
+    )
 
     // FIX MINOR: pageLoading pakai skeleton layout, bukan full-page spinner kosong
     if (pageLoading) {

@@ -6,12 +6,28 @@ import {
     faBell, faChevronDown, faMoon, faSun, faGear, faRightFromBracket,
     faLayerGroup, faXmark, faArrowRight, faRotateRight, faCircleExclamation,
     faTriangleExclamation, faCircleInfo, faCircleCheck,
-    faClipboardList, faCalendarWeek, faShieldHalved, faTrophy,
+    faClipboardList, faCalendarWeek, faShieldHalved,
     faUsers, faChalkboardTeacher, faSchool, faExclamationTriangle, faCalendarAlt,
+    faPersonWalkingArrowRight, faUserGear, faClockRotateLeft, faScrewdriverWrench,
 } from "@fortawesome/free-solid-svg-icons"
 import { useTheme } from "../../context/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
 import { useNotifications } from "../../hooks/useNotifications"
+
+// ─── Portal container helper ──────────────────────────────────────────────────
+function usePortalContainer(id) {
+    const ref = useRef(null)
+    if (!ref.current) {
+        let el = document.getElementById(id)
+        if (!el) {
+            el = document.createElement('div')
+            el.id = id
+            document.body.appendChild(el)
+        }
+        ref.current = el
+    }
+    return ref.current
+}
 
 const MASTER_ITEMS = [
     { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Kelola data santri aktif" },
@@ -22,12 +38,18 @@ const MASTER_ITEMS = [
 ]
 
 const REPORTS_ITEMS = [
-    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan" },
-    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekap kehadiran per bulan" },
-    { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa" },
+    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Izin keluar guru & kunjungan tamu", color: "bg-red-500/10 text-red-500" },
+    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekap kehadiran per bulan", color: "bg-emerald-500/10 text-emerald-600" },
+    { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa", color: "bg-orange-500/10 text-orange-500" },
 ]
 
-const LOGS_ROUTE = "/logs"
+// Admin-only items — hanya tampil untuk developer & admin
+const ADMIN_ITEMS = [
+    { to: "/admin/logs", label: "Audit Logs", icon: faClockRotateLeft, desc: "Riwayat aktivitas sistem", color: "bg-purple-500/10 text-purple-600" },
+    { to: "/admin/users", label: "User Management", icon: faUserGear, desc: "Kelola akun & hak akses", color: "bg-rose-500/10 text-rose-600" },
+    { to: "/admin/settings", label: "Pengaturan", icon: faScrewdriverWrench, desc: "Konfigurasi sistem & aplikasi", color: "bg-slate-500/10 text-slate-600" },
+]
 
 // ── Warna & icon per type notifikasi
 const TYPE_STYLE = {
@@ -81,10 +103,12 @@ function NotifItem({ notif, onDismiss, onNavigate }) {
 }
 
 // Panel dropdown notifikasi
-// NotifPanel — pakai createPortal + posisi dihitung sync dari anchorRef saat render
-function NotifPanel({ notifications, loading, refreshing, onDismiss, onRefresh, onNavigate, isMobile, anchorRef, panelRef }) {
+// KEY FIX: menerima isOpen prop — portal selalu di-render, content dikondisikan di dalam.
+// Pola ini mencegah removeChild crash saat concurrent unmount.
+function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onRefresh, onNavigate, isMobile, anchorRef, panelRef }) {
     const errCount = notifications.filter(n => n.type === 'error').length
     const warnCount = notifications.filter(n => n.type === 'warning').length
+    const container = usePortalContainer('portal-notif')
 
     // Hitung posisi SAAT render (sync) — tidak ada useEffect, tidak ada glitch
     let style = {}
@@ -163,17 +187,21 @@ function NotifPanel({ notifications, loading, refreshing, onDismiss, onRefresh, 
     // Mobile: full-width di bawah header
     if (isMobile) {
         return createPortal(
-            <div ref={panelRef} className="fixed inset-x-0 top-[72px] z-[9999] px-3">
-                {inner}
-            </div>,
-            document.body
+            !isOpen ? null : (
+                <div ref={panelRef} className="fixed inset-x-0 top-[72px] z-[9999] px-3">
+                    {inner}
+                </div>
+            ),
+            container
         )
     }
 
-    // Desktop: portal dengan posisi fixed yang sudah dihitung sync di wrapper
+    // Desktop
     return createPortal(
-        <div ref={panelRef} style={{ ...style, zIndex: 9999 }}>{inner}</div>,
-        document.body
+        !isOpen ? null : (
+            <div ref={panelRef} style={{ ...style, zIndex: 9999 }}>{inner}</div>
+        ),
+        container
     )
 }
 
@@ -186,11 +214,13 @@ export default function TopNav({ title, subtitle }) {
 
     const [masterOpen, setMasterOpen] = useState(false)
     const [reportsOpen, setReportsOpen] = useState(false)
+    const [adminOpen, setAdminOpen] = useState(false)
     const [profileOpen, setProfileOpen] = useState(false)
     const [notifOpen, setNotifOpen] = useState(false)
 
     const masterRef = useRef(null)
     const reportsRef = useRef(null)
+    const adminRef = useRef(null)
     const mobileProfileRef = useRef(null)
     const desktopProfileRef = useRef(null)
     const notifBtnRef = useRef(null)
@@ -205,6 +235,7 @@ export default function TopNav({ title, subtitle }) {
         const onClick = (e) => {
             if (masterRef.current && !masterRef.current.contains(e.target)) setMasterOpen(false)
             if (reportsRef.current && !reportsRef.current.contains(e.target)) setReportsOpen(false)
+            if (adminRef.current && !adminRef.current.contains(e.target)) setAdminOpen(false)
 
             const isOutsideMobile = mobileProfileRef.current && !mobileProfileRef.current.contains(e.target)
             const isOutsideDesktop = desktopProfileRef.current && !desktopProfileRef.current.contains(e.target)
@@ -387,7 +418,7 @@ export default function TopNav({ title, subtitle }) {
                                                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group"
                                                             type="button"
                                                         >
-                                                            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${it.color}`}>
                                                                 <FontAwesomeIcon icon={it.icon} className="text-xs" />
                                                             </div>
                                                             <div className="text-left">
@@ -443,13 +474,49 @@ export default function TopNav({ title, subtitle }) {
                                         )}
                                     </div>
 
-                                    <button
-                                        onClick={() => navigate(LOGS_ROUTE)}
-                                        className="px-3 py-2 rounded-xl text-sm font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5 transition"
-                                        type="button"
-                                    >
-                                        History
-                                    </button>
+                                    {/* Admin Dropdown — developer & admin only */}
+                                    {['developer', 'admin'].includes(profile?.role?.toLowerCase()) && (
+                                        <div className="relative" ref={adminRef}>
+                                            <button
+                                                onClick={() => { setAdminOpen(v => !v); setReportsOpen(false); setMasterOpen(false) }}
+                                                className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2
+                                                    ${adminOpen
+                                                        ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]"
+                                                        : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`}
+                                                type="button"
+                                            >
+                                                <FontAwesomeIcon icon={faUserGear} />
+                                                Admin
+                                                <FontAwesomeIcon icon={faChevronDown} className={`text-xs transition-transform ${adminOpen ? "rotate-180" : ""}`} />
+                                            </button>
+
+                                            {adminOpen && (
+                                                <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
+                                                    <div className="px-3 py-2 text-[11px] font-extrabold tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">
+                                                        Admin Panel
+                                                    </div>
+                                                    <div className="p-2">
+                                                        {ADMIN_ITEMS.map(it => (
+                                                            <button
+                                                                key={it.to}
+                                                                onClick={() => { setAdminOpen(false); navigate(it.to) }}
+                                                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group"
+                                                                type="button"
+                                                            >
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${it.color}`}>
+                                                                    <FontAwesomeIcon icon={it.icon} className="text-xs" />
+                                                                </div>
+                                                                <div className="text-left">
+                                                                    <p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p>
+                                                                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">{it.desc}</p>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </nav>
                             </div>
 
@@ -510,20 +577,21 @@ export default function TopNav({ title, subtitle }) {
 
                 </div>
             </header>
-            {/* ── Satu NotifPanel untuk semua screen size ── */}
-            {notifOpen && (
-                <NotifPanel
-                    notifications={notifications}
-                    loading={loading}
-                    refreshing={refreshing}
-                    onDismiss={dismiss}
-                    onRefresh={refresh}
-                    onNavigate={handleNotifNavigate}
-                    isMobile={isMobileScreen}
-                    anchorRef={notifBtnRef}
-                    panelRef={notifPanelRef}
-                />
-            )}
+            {/* KEY FIX: Selalu render NotifPanel, jangan conditional mount.
+                Portal unmount = crash. Pass isOpen sebagai prop, biarkan
+                NotifPanel yang putuskan render null di dalam portal. */}
+            <NotifPanel
+                isOpen={notifOpen}
+                notifications={notifications}
+                loading={loading}
+                refreshing={refreshing}
+                onDismiss={dismiss}
+                onRefresh={refresh}
+                onNavigate={handleNotifNavigate}
+                isMobile={isMobileScreen}
+                anchorRef={notifBtnRef}
+                panelRef={notifPanelRef}
+            />
         </>
     )
 }

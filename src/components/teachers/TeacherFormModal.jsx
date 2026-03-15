@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpinner, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons'
 
-const EMPTY_FORM = { name: '', nbm: '', subject: '', gender: 'L', phone: '', email: '', status: 'active', join_date: '', address: '', notes: '', class_id: '' }
+const EMPTY_FORM = { name: '', nbm: '', subject: '', gender: 'L', phone: '', email: '', status: 'active', join_date: '', address: '', notes: '', class_id: '', type: 'guru' }
 
 const TeacherFormModal = memo(function TeacherFormModal({
     isOpen, onClose, selectedItem, classesList, subjectsList,
@@ -28,6 +28,7 @@ const TeacherFormModal = memo(function TeacherFormModal({
                 address: selectedItem.address || '',
                 notes: selectedItem.notes || '',
                 class_id: selectedItem.class_id || '',
+                type: selectedItem.type || 'guru',
             })
         } else {
             setForm(EMPTY_FORM)
@@ -51,6 +52,7 @@ const TeacherFormModal = memo(function TeacherFormModal({
             address: (form.address || '').trim() || null,
             notes: (form.notes || '').trim() || null,
             class_id: form.class_id || null,
+            type: form.type || 'guru',
         }
         const result = await onSubmit(payload)
         if (result?.error) {
@@ -79,16 +81,28 @@ const TeacherFormModal = memo(function TeacherFormModal({
                         <FontAwesomeIcon icon={faXmark} />
                     </button>
                     <h2 className="text-lg font-black font-heading tracking-tight text-[var(--color-text)]">
-                        {selectedItem ? 'Update Data Guru' : 'Tambah Guru Baru'}
+                        {selectedItem ? `Update Data ${form.type === 'karyawan' ? 'Karyawan' : 'Guru'}` : `Tambah ${form.type === 'karyawan' ? 'Karyawan' : 'Guru'} Baru`}
                     </h2>
                     <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest mt-1">
-                        {selectedItem ? 'Pembaruan data personal' : 'Input data guru baru'}
+                        {selectedItem ? 'Pembaruan data personal' : 'Input data baru'}
                     </p>
                 </div>
 
                 {/* Form Body */}
                 <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto scrollbar-none">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Jenis toggle — di atas semua field */}
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Jenis</label>
+                            <div className="flex gap-2">
+                                {[{ v: 'guru', l: 'Guru', c: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30' }, { v: 'karyawan', l: 'Karyawan', c: 'bg-blue-500/10 text-blue-600 border-blue-500/30' }].map(opt => (
+                                    <button key={opt.v} type="button" onClick={() => setForm(p => ({ ...p, type: opt.v }))}
+                                        className={`flex-1 h-10 rounded-xl border text-[12px] font-black transition-all ${form.type === opt.v ? opt.c : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
+                                        {opt.l}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                         <div className="md:col-span-2">
                             <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Nama Lengkap <span className="text-red-500">*</span></label>
                             <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Nama lengkap dengan gelar" className="input-field w-full h-11 font-bold text-sm" />
