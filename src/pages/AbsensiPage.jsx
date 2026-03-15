@@ -17,6 +17,7 @@ import {
     faCopy, faEye, faEyeSlash, faFilter, faFileImport,
     faPrint, faBell, faStickyNote, faArrowDown, faCrosshairs,
     faArrowTrendUp, faArrowTrendDown, faGear, faUpload,
+    faBorderAll, faList, faTableCells,
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import { useToast } from '../context/ToastContext'
@@ -308,13 +309,28 @@ function RowSkeleton({ colCount = 31 }) {
 
 function MassActionDropdown({ studentList, dataMap, setDataMap, tahun, bulan, daysInMonth, onDirty, addToast }) {
     const [open, setOpen] = useState(false)
-    const ref = useRef(null)
+    const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
+    const btnRef = useRef(null)
+    const menuRef = useRef(null)
 
     useEffect(() => {
-        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+        const h = (e) => {
+            if (
+                btnRef.current && !btnRef.current.contains(e.target) &&
+                menuRef.current && !menuRef.current.contains(e.target)
+            ) setOpen(false)
+        }
         document.addEventListener('mousedown', h)
         return () => document.removeEventListener('mousedown', h)
     }, [])
+
+    const handleToggle = () => {
+        if (!open && btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect()
+            setMenuPos({ x: r.left, y: r.bottom + 6 })
+        }
+        setOpen(v => !v)
+    }
 
     const applyAll = useCallback((statusCode) => {
         setDataMap(prev => {
@@ -330,8 +346,7 @@ function MassActionDropdown({ studentList, dataMap, setDataMap, tahun, bulan, da
         })
         onDirty()
         setOpen(false)
-        const meta = STATUS_META[statusCode]
-        addToast(`Semua hari kerja diisi: ${meta.label}`, 'success')
+        addToast(`Semua hari kerja diisi: ${STATUS_META[statusCode].label}`, 'success')
     }, [studentList, tahun, bulan, daysInMonth, setDataMap, onDirty, addToast])
 
     const handleReset = useCallback(() => {
@@ -345,49 +360,41 @@ function MassActionDropdown({ studentList, dataMap, setDataMap, tahun, bulan, da
         addToast('Semua data absensi direset', 'info')
     }, [studentList, setDataMap, onDirty, addToast])
 
-    const ACTIONS = [
-        ...STATUS_LIST.map(s => ({
-            key: s,
-            label: `Semua: ${STATUS_META[s].label}`,
-            color: STATUS_META[s].color,
-            cellBg: STATUS_META[s].cellBg,
-            icon: STATUS_META[s].icon,
-            action: () => applyAll(s),
-        })),
-        {
-            key: 'reset',
-            label: 'Reset Semua',
-            color: 'text-[var(--color-text-muted)]',
-            cellBg: 'bg-[var(--color-surface-alt)]',
-            icon: faArrowsRotate,
-            action: handleReset,
-        },
-    ]
-
     return (
-        <div className="relative" ref={ref}>
+        <>
             <button
+                ref={btnRef}
                 type="button"
-                onClick={() => setOpen(v => !v)}
-                className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5"
+                onClick={handleToggle}
+                className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
             >
                 <FontAwesomeIcon icon={faListCheck} className="text-[9px]" />
                 Aksi Massal
                 <FontAwesomeIcon icon={faChevronDown} className={`text-[8px] transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
 
-            {open && (
-                <div className="absolute left-0 top-full mt-1.5 w-52 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl z-50 overflow-hidden py-1">
+            {open && createPortal(
+                <div
+                    ref={menuRef}
+                    style={{
+                        position: 'fixed',
+                        left: Math.min(menuPos.x, window.innerWidth - 216),
+                        top: menuPos.y,
+                        zIndex: 9999,
+                        width: 208,
+                    }}
+                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden py-1"
+                >
                     <p className="px-3 pt-1.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                         Isi semua hari kerja dengan:
                     </p>
-                    {ACTIONS.filter(a => a.key !== 'reset').map(a => (
-                        <button key={a.key} onClick={a.action}
+                    {STATUS_LIST.map(s => (
+                        <button key={s} onClick={() => applyAll(s)}
                             className="w-full flex items-center gap-2.5 px-3 py-2 text-[11px] font-bold hover:bg-[var(--color-surface-alt)] transition-colors text-left">
-                            <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black border ${a.cellBg} ${a.color.replace('text-', 'border-').replace('600', '500/30')}`}>
-                                {a.key}
+                            <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black border ${STATUS_META[s].cellBg} ${STATUS_META[s].color.replace('text-', 'border-').replace('600', '500/30')}`}>
+                                {s}
                             </span>
-                            <span className={a.color}>{STATUS_META[a.key].label}</span>
+                            <span className={STATUS_META[s].color}>{STATUS_META[s].label}</span>
                         </button>
                     ))}
                     <div className="my-1 border-t border-[var(--color-border)]" />
@@ -398,9 +405,10 @@ function MassActionDropdown({ studentList, dataMap, setDataMap, tahun, bulan, da
                         </span>
                         Reset Semua
                     </button>
-                </div>
+                </div>,
+                document.body
             )}
-        </div>
+        </>
     )
 }
 
@@ -646,6 +654,358 @@ function AlertThresholdModal({ threshold, onSave, onClose }) {
                         <FontAwesomeIcon icon={faCheck} className="text-[9px]" />
                         Simpan
                     </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    )
+}
+
+// ─── MobileCardView — Option B: card per siswa dengan dot grid ───────────────
+
+const STATUS_COLORS = {
+    H: { bg: '#dcfce7', text: '#166534', border: '#86efac' },
+    S: { bg: '#fef9c3', text: '#854d0e', border: '#fde047' },
+    I: { bg: '#dbeafe', text: '#1e3a8a', border: '#93c5fd' },
+    A: { bg: '#fee2e2', text: '#7f1d1d', border: '#fca5a5' },
+    P: { bg: '#f3e8ff', text: '#581c87', border: '#d8b4fe' },
+}
+
+function MobileCardView({ filteredStudents, dataMap, tahun, bulan, daysInMonth, todayDate, onCellClick, notesMap, onNoteClick, alpaThreshold, hadirThreshold, loadingData }) {
+    // ── Semua hooks sebelum early return (Rules of Hooks) ──
+    const weekdays = useMemo(() => countWeekdays(tahun, bulan), [tahun, bulan])
+
+    if (loadingData) return (
+        <div className="p-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 animate-pulse">
+                    <div className="h-3 w-32 rounded bg-[var(--color-border)] mb-3" />
+                    <div className="flex flex-wrap gap-1">
+                        {Array.from({ length: 31 }).map((_, j) => <div key={j} className="w-8 h-8 rounded-lg bg-[var(--color-border)]/40" />)}
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+    if (filteredStudents.length === 0) return (
+        <div className="py-16 flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
+            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-2xl opacity-20" />
+            <p className="text-[12px] font-bold">Tidak ada siswa</p>
+        </div>
+    )
+    return (
+        <div className="p-3 space-y-2.5">
+            {filteredStudents.map((s, idx) => {
+                const days = dataMap[s.id] || {}
+                const sum = { H: 0, S: 0, I: 0, A: 0, P: 0 }
+                for (let d = 1; d <= daysInMonth; d++) { const v = days[d]; if (sum[v] !== undefined) sum[v]++ }
+                const pct = weekdays > 0 ? Math.round((sum.H / weekdays) * 100) : 0
+                const alertAlpa = sum.A >= (alpaThreshold ?? 3)
+                const alertHadir = pct < (hadirThreshold ?? 75) && weekdays > 0 && Object.keys(days).length > 0
+                const hasNote = !!notesMap[s.id]
+
+                return (
+                    <div key={s.id} className={`rounded-2xl border bg-[var(--color-surface)] overflow-hidden transition-all ${alertAlpa ? 'border-red-300 dark:border-red-800' : 'border-[var(--color-border)]'}`}>
+                        {/* Card header */}
+                        <div className={`flex items-center justify-between px-4 py-2.5 border-b border-[var(--color-border)] ${alertAlpa ? 'bg-red-500/5' : 'bg-[var(--color-surface-alt)]/40'}`}>
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-6 h-6 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[9px] font-black text-[var(--color-text-muted)] shrink-0">
+                                    {idx + 1}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[13px] font-bold text-[var(--color-text)] truncate">{s.name}</p>
+                                    {alertAlpa && <p className="text-[9px] font-black text-red-500 flex items-center gap-1"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[8px]" />Alpa {sum.A}×</p>}
+                                    {!alertAlpa && alertHadir && <p className="text-[9px] font-black text-amber-500 flex items-center gap-1"><FontAwesomeIcon icon={faBell} className="text-[8px]" />Hadir {pct}%</p>}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                                {/* Mini stats */}
+                                {['H', 'S', 'I', 'A', 'P'].filter(k => sum[k] > 0).map(k => (
+                                    <span key={k} style={{ background: STATUS_COLORS[k].bg, color: STATUS_COLORS[k].text, border: `1px solid ${STATUS_COLORS[k].border}` }}
+                                        className="text-[9px] font-black px-1.5 py-0.5 rounded-md">
+                                        {k}{sum[k]}
+                                    </span>
+                                ))}
+                                {/* Note btn */}
+                                <button onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); onNoteClick({ student: s, x: r.left, y: r.bottom }) }}
+                                    className={`w-6 h-6 rounded-md flex items-center justify-center ml-1 transition-all ${hasNote ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                    <FontAwesomeIcon icon={faStickyNote} className="text-[9px]" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Dot grid — angka & status dalam 1 tombol */}
+                        <div className="px-3 py-3">
+                            <div className="flex flex-wrap gap-1">
+                                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
+                                    const v = days[d] || ''
+                                    const isWknd = isWeekend(tahun, bulan, d)
+                                    const isT = d === todayDate
+                                    const meta = STATUS_COLORS[v]
+                                    return (
+                                        <button key={d}
+                                            onMouseDown={() => onCellClick(s.id, d)}
+                                            style={meta
+                                                ? { background: meta.bg, color: meta.text, border: `1.5px solid ${meta.border}`, boxShadow: isT ? '0 0 0 2px #6366f1' : undefined }
+                                                : { background: isWknd ? 'var(--color-surface-alt)' : 'var(--color-surface)', border: isT ? '1.5px solid #6366f1' : '1px solid var(--color-border)' }
+                                            }
+                                            className="w-8 h-9 rounded-lg transition-all active:scale-90 select-none flex flex-col items-center justify-center gap-0"
+                                        >
+                                            <span style={{ fontSize: 11, fontWeight: 900, lineHeight: 1, color: meta ? meta.text : 'transparent' }}>
+                                                {v}
+                                            </span>
+                                            <span style={{ fontSize: 7, fontWeight: 700, lineHeight: 1, color: isWknd ? '#fca5a5' : meta ? meta.text : 'var(--color-text-muted)', opacity: meta ? 0.6 : isWknd ? 0.5 : 0.4 }}>
+                                                {d}
+                                            </span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="px-3 pb-3 flex items-center gap-2">
+                            <div className="flex-1 h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
+                                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct >= 80 ? '#059669' : pct >= 60 ? '#d97706' : '#dc2626' }} />
+                            </div>
+                            <span className={`text-[10px] font-black tabular-nums min-w-[32px] text-right ${pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{pct}%</span>
+                        </div>
+                    </div>
+                )
+            })}
+        </div>
+    )
+}
+
+// ─── MobileListView — Option C: list ringkas + bottom drawer detail ──────────
+
+function MobileListView({ filteredStudents, dataMap, tahun, bulan, daysInMonth, todayDate, onCellClick, notesMap, onNoteClick, alpaThreshold, hadirThreshold, loadingData }) {
+    const [expandedId, setExpandedId] = useState(null)
+    const weekdays = useMemo(() => countWeekdays(tahun, bulan), [tahun, bulan])
+
+    // ── Semua hooks HARUS sebelum early return (Rules of Hooks) ──
+    const handleBackdrop = useCallback((e) => {
+        if (e.target === e.currentTarget) setExpandedId(null)
+    }, [])
+
+    // Last 5 weekdays — dihitung selalu, bukan setelah early return
+    const lastFiveDays = useMemo(() => {
+        const today = new Date()
+        const maxD = (bulan === today.getMonth() + 1 && tahun === today.getFullYear()) ? today.getDate() : daysInMonth
+        const result = []
+        for (let d = maxD; d >= 1 && result.length < 5; d--) {
+            if (!isWeekend(tahun, bulan, d)) result.unshift(d)
+        }
+        return result
+    }, [tahun, bulan, daysInMonth])
+
+    const expanded = expandedId ? filteredStudents.find(s => s.id === expandedId) : null
+
+    // ── Early returns setelah semua hooks ──
+    if (loadingData) return (
+        <div className="divide-y divide-[var(--color-border)]">
+            {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                    <div className="w-6 h-6 rounded-full bg-[var(--color-border)]" />
+                    <div className="flex-1"><div className="h-3 w-28 rounded bg-[var(--color-border)] mb-1.5" /><div className="h-2 w-16 rounded bg-[var(--color-border)]" /></div>
+                    <div className="flex gap-1">{Array.from({ length: 5 }).map((_, j) => <div key={j} className="w-7 h-7 rounded-lg bg-[var(--color-border)]/40" />)}</div>
+                </div>
+            ))}
+        </div>
+    )
+
+    if (filteredStudents.length === 0) return (
+        <div className="py-16 flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
+            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-2xl opacity-20" />
+            <p className="text-[12px] font-bold">Tidak ada siswa</p>
+        </div>
+    )
+
+    return (
+        <>
+            <div className="divide-y divide-[var(--color-border)]">
+                {filteredStudents.map((s, idx) => {
+                    const days = dataMap[s.id] || {}
+                    const sum = { H: 0, S: 0, I: 0, A: 0, P: 0 }
+                    for (let d = 1; d <= daysInMonth; d++) { const v = days[d]; if (sum[v] !== undefined) sum[v]++ }
+                    const pct = weekdays > 0 ? Math.round((sum.H / weekdays) * 100) : 0
+                    const alertAlpa = sum.A >= (alpaThreshold ?? 3)
+                    const hasNote = !!notesMap[s.id]
+
+                    return (
+                        <div key={s.id} className={`flex items-center gap-2.5 px-4 py-2.5 transition-colors ${alertAlpa ? 'bg-red-500/[0.02]' : ''}`}>
+                            {/* No */}
+                            <div className="w-5 h-5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[8px] font-black text-[var(--color-text-muted)] shrink-0">
+                                {idx + 1}
+                            </div>
+
+                            {/* Name + progress */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1">
+                                    <p className="text-[12px] font-bold text-[var(--color-text)] truncate">{s.name}</p>
+                                    {hasNote && <FontAwesomeIcon icon={faStickyNote} className="text-[8px] text-amber-500 shrink-0" />}
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                    <div className="w-12 h-1 rounded-full bg-[var(--color-border)] overflow-hidden">
+                                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 80 ? '#059669' : pct >= 60 ? '#d97706' : '#dc2626' }} />
+                                    </div>
+                                    <span className={`text-[9px] font-black tabular-nums ${alertAlpa ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>
+                                        {alertAlpa ? `⚠ Alpa ${sum.A}×` : `${pct}%`}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Last 5 days — merged day+status */}
+                            <div className="flex items-center gap-0.5 shrink-0">
+                                {lastFiveDays.map(d => {
+                                    const v = days[d] || ''
+                                    const meta = STATUS_COLORS[v]
+                                    const isT = d === todayDate
+                                    return (
+                                        <button key={d}
+                                            onMouseDown={() => onCellClick(s.id, d)}
+                                            style={meta
+                                                ? { background: meta.bg, border: `1.5px solid ${meta.border}`, boxShadow: isT ? '0 0 0 1.5px #6366f1' : undefined }
+                                                : { background: 'var(--color-surface-alt)', border: isT ? '1.5px solid #6366f1' : '1px solid var(--color-border)' }
+                                            }
+                                            className="w-8 h-9 rounded-lg transition-all active:scale-90 select-none flex flex-col items-center justify-center">
+                                            <span style={{ fontSize: 11, fontWeight: 900, lineHeight: 1, color: meta ? meta.text : 'transparent' }}>{v}</span>
+                                            <span style={{ fontSize: 7, fontWeight: 700, lineHeight: 1.2, color: meta ? meta.text : 'var(--color-text-muted)', opacity: 0.45 }}>{d}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+
+                            {/* Expand button */}
+                            <button onClick={() => setExpandedId(s.id)}
+                                className="w-8 h-8 rounded-xl bg-[var(--color-primary)] flex items-center justify-center text-white transition-all hover:opacity-85 active:scale-90 shrink-0 shadow-sm shadow-[var(--color-primary)]/20">
+                                <FontAwesomeIcon icon={faChevronRight} className="text-[9px]" />
+                            </button>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Bottom drawer — detail bulan penuh */}
+            {expanded && createPortal(
+                <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={handleBackdrop}>
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setExpandedId(null)} />
+                    <div
+                        className="relative bg-[var(--color-surface)] rounded-t-3xl border-t border-[var(--color-border)] shadow-2xl flex flex-col"
+                        style={{ maxHeight: 'calc(100dvh - 80px)' }}
+                    >
+                        {/* Handle */}
+                        <div className="flex justify-center pt-2.5 pb-1 shrink-0">
+                            <div className="w-9 h-1 rounded-full bg-[var(--color-border)]" />
+                        </div>
+
+                        {/* Drawer header */}
+                        <div className="flex items-center justify-between px-5 pb-3 pt-1 border-b border-[var(--color-border)] shrink-0">
+                            <div className="min-w-0">
+                                <p className="text-[15px] font-black text-[var(--color-text)] truncate">{expanded.name}</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{BULAN_NAMA[bulan]} {tahun} · {daysInMonth} hari</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 ml-3">
+                                <button
+                                    onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); onNoteClick({ student: expanded, x: r.left, y: r.bottom }); setExpandedId(null) }}
+                                    className={`h-8 px-3 rounded-xl text-[10px] font-black flex items-center gap-1.5 transition-all ${notesMap[expanded.id]
+                                        ? 'text-amber-600 bg-amber-500/10 border border-amber-500/20'
+                                        : 'text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] border border-[var(--color-border)]'}`}>
+                                    <FontAwesomeIcon icon={faStickyNote} className="text-[9px]" />
+                                    Catatan
+                                </button>
+                                <button
+                                    onClick={() => setExpandedId(null)}
+                                    className="w-8 h-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                                    <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Scrollable content */}
+                        <div className="overflow-y-auto flex-1 px-5 py-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+                            {(() => {
+                                const days = dataMap[expanded.id] || {}
+                                const sum = { H: 0, S: 0, I: 0, A: 0, P: 0 }
+                                for (let d = 1; d <= daysInMonth; d++) { const v = days[d]; if (sum[v] !== undefined) sum[v]++ }
+                                const pct = weekdays > 0 ? Math.round((sum.H / weekdays) * 100) : 0
+                                return (
+                                    <>
+                                        {/* Stats grid — 3 kolom */}
+                                        <div className="grid grid-cols-3 gap-2 mb-4">
+                                            {STATUS_LIST.map(k => (
+                                                <div key={k} style={{ background: STATUS_COLORS[k].bg, border: `1px solid ${STATUS_COLORS[k].border}` }}
+                                                    className="rounded-xl px-3 py-2 flex flex-col">
+                                                    <span style={{ color: STATUS_COLORS[k].text, fontSize: 9, fontWeight: 900, opacity: 0.7 }} className="uppercase tracking-wider">{STATUS_META[k].label}</span>
+                                                    <span style={{ color: STATUS_COLORS[k].text, fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>{sum[k]}</span>
+                                                </div>
+                                            ))}
+                                            <div className="rounded-xl px-3 py-2 flex flex-col bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                                <span className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)]" style={{ opacity: 0.7 }}>Kehadiran</span>
+                                                <span className={`font-black leading-tight`} style={{ fontSize: 22, color: pct >= 80 ? '#059669' : pct >= 60 ? '#d97706' : '#dc2626' }}>{pct}%</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Dot grid */}
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
+                                                const v = days[d] || ''
+                                                const isWknd = isWeekend(tahun, bulan, d)
+                                                const isT = d === todayDate
+                                                const meta = STATUS_COLORS[v]
+                                                return (
+                                                    <button key={d} onMouseDown={() => onCellClick(expanded.id, d)}
+                                                        style={meta
+                                                            ? { background: meta.bg, border: `2px solid ${meta.border}`, boxShadow: isT ? '0 0 0 2px #6366f1' : undefined }
+                                                            : { background: isWknd ? 'var(--color-surface-alt)' : 'var(--color-surface)', border: isT ? '2px solid #6366f1' : '1px solid var(--color-border)' }
+                                                        }
+                                                        className="w-10 h-11 rounded-xl transition-all active:scale-90 select-none flex flex-col items-center justify-center">
+                                                        <span style={{ fontSize: 13, fontWeight: 900, lineHeight: 1, color: meta ? meta.text : 'transparent' }}>{v}</span>
+                                                        <span style={{ fontSize: 8, fontWeight: 700, lineHeight: 1.2, color: isWknd ? '#fca5a5' : meta ? meta.text : 'var(--color-text-muted)', opacity: meta ? 0.6 : isWknd ? 0.5 : 0.4 }}>{d}</span>
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </>
+                                )
+                            })()}
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+        </>
+    )
+}
+
+// ─── MobileToolbarSheet — bottom drawer untuk overflow actions di mobile ──────
+
+function MobileToolbarSheet({ open, onClose, children }) {
+    useEffect(() => {
+        if (open) document.body.style.overflow = 'hidden'
+        else document.body.style.overflow = ''
+        return () => { document.body.style.overflow = '' }
+    }, [open])
+
+    if (!open) return null
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            {/* Sheet */}
+            <div className="relative bg-[var(--color-surface)] rounded-t-2xl border-t border-[var(--color-border)] shadow-2xl overflow-hidden">
+                {/* Handle */}
+                <div className="flex justify-center pt-3 pb-1">
+                    <div className="w-8 h-1 rounded-full bg-[var(--color-border)]" />
+                </div>
+                <div className="px-4 pb-2 pt-1 flex items-center justify-between">
+                    <p className="text-[11px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Pengaturan Tampilan</p>
+                    <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]">
+                        <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
+                    </button>
+                </div>
+                <div className="px-4 pb-6 space-y-1">
+                    {children}
                 </div>
             </div>
         </div>,
@@ -1387,6 +1747,11 @@ export default function AbsensiPage() {
         catch { return { alpa: 3, hadirPct: 75 } }
     })
     const [showAlertConfig, setShowAlertConfig] = useState(false)
+    const [showMobileSheet, setShowMobileSheet] = useState(false)
+    // ── Mobile view mode: 'table' | 'card' | 'list' ──────────────────────────
+    const [mobileView, setMobileView] = useState(() => {
+        try { return localStorage.getItem('absensi_mobile_view') || 'table' } catch { return 'table' }
+    })
 
     const daysInMonth = useMemo(() => getDaysInMonth(tahun, bulan), [tahun, bulan])
 
@@ -1845,79 +2210,100 @@ export default function AbsensiPage() {
                 <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
 
                     {/* Page header */}
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h1 className="text-[18px] font-black text-[var(--color-text)] flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center">
-                                    <FontAwesomeIcon icon={faCalendarDays} className="text-[var(--color-primary)] text-[14px]" />
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                            <h1 className="text-[16px] md:text-[18px] font-black text-[var(--color-text)] flex items-center gap-2">
+                                <div className="w-7 h-7 md:w-8 md:h-8 shrink-0 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center">
+                                    <FontAwesomeIcon icon={faCalendarDays} className="text-[var(--color-primary)] text-[12px] md:text-[14px]" />
                                 </div>
                                 Absensi Bulanan
                             </h1>
-                            <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5 ml-10.5">
-                                Klik sel untuk ganti status · Tahan &amp; geser untuk isi banyak sekaligus · Klik nama/tanggal untuk isi cepat
+                            <p className="hidden md:block text-[11px] text-[var(--color-text-muted)] mt-0.5 ml-9">
+                                Klik sel untuk ganti status · Tahan &amp; geser untuk isi banyak · Klik nama/tanggal untuk isi cepat
                             </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                             {/* Tutorial button */}
                             <button
                                 onClick={() => setShowTutorial(true)}
-                                className="h-8 px-3 rounded-xl border border-emerald-500/30 bg-emerald-500/8 text-emerald-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-emerald-500/15 transition-all"
+                                className="h-8 px-2.5 md:px-3 rounded-xl border border-emerald-500/30 bg-emerald-500/8 text-emerald-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-emerald-500/15 transition-all"
                                 title="Panduan & Tutorial"
                             >
                                 <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
-                                Tutorial
+                                <span className="hidden sm:inline">Tutorial</span>
                             </button>
                             {/* Online indicator */}
-                            <div className={`flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-full border transition-colors ${isOnline
+                            <div className={`flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-full border transition-colors ${isOnline
                                 ? 'text-emerald-600 border-emerald-500/20 bg-emerald-500/5'
                                 : 'text-red-500 border-red-500/20 bg-red-500/5'}`}>
-                                <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                                {isOnline ? 'Online' : 'Offline'}
+                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                                <span className="hidden sm:inline">{isOnline ? 'Online' : 'Offline'}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Controls bar */}
-                    <div className="flex flex-wrap items-center gap-2.5">
-                        {loadingClass ? (
-                            <div className="h-9 w-40 rounded-xl bg-[var(--color-border)] animate-pulse" />
-                        ) : (
-                            <div className="relative">
-                                <FontAwesomeIcon icon={faChalkboardTeacher} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
-                                <select value={classId} onChange={e => handleChangeClass(e.target.value)}
-                                    className="h-9 pl-8 pr-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-colors appearance-none cursor-pointer">
-                                    {classList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                            </div>
-                        )}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        {/* Baris 1 mobile: Kelas + Tabs */}
+                        <div className="flex items-center gap-2">
+                            {loadingClass ? (
+                                <div className="h-9 flex-1 sm:flex-none sm:w-40 rounded-xl bg-[var(--color-border)] animate-pulse" />
+                            ) : (
+                                <div className="relative flex-1 sm:flex-none">
+                                    <FontAwesomeIcon icon={faChalkboardTeacher} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
+                                    <select value={classId} onChange={e => handleChangeClass(e.target.value)}
+                                        className="w-full h-9 pl-8 pr-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-colors appearance-none cursor-pointer">
+                                        {classList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                            )}
 
-                        {/* Month nav */}
-                        <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5">
-                            <button onClick={prevBulan} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all">
-                                <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
-                            </button>
-                            <span className="px-3 text-[12px] font-black text-[var(--color-text)] min-w-[115px] text-center tabular-nums">
-                                {BULAN_NAMA[bulan]} {tahun}
-                            </span>
-                            <button onClick={nextBulan} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all">
-                                <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
-                            </button>
+                            {/* Tabs — muncul di kanan kelas pada mobile */}
+                            <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 sm:hidden ml-auto">
+                                {[
+                                    { key: 'input', icon: faCalendarDays },
+                                    { key: 'rekap', icon: faChartSimple },
+                                ].map(t => (
+                                    <button key={t.key} onClick={() => setActiveTab(t.key)}
+                                        className={`h-8 px-3 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all ${activeTab === t.key
+                                            ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm'
+                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                        <FontAwesomeIcon icon={t.icon} className="text-[10px]" />
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Tabs */}
-                        <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 ml-auto">
-                            {[
-                                { key: 'input', label: 'Input', icon: faCalendarDays },
-                                { key: 'rekap', label: 'Rekap', icon: faChartSimple },
-                            ].map(t => (
-                                <button key={t.key} onClick={() => setActiveTab(t.key)}
-                                    className={`h-8 px-4 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all ${activeTab === t.key
-                                        ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm'
-                                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                    <FontAwesomeIcon icon={t.icon} className="text-[10px]" />
-                                    {t.label}
+                        {/* Baris 2 mobile / sama baris desktop: Month nav + Tabs */}
+                        <div className="flex items-center gap-2">
+                            {/* Month nav */}
+                            <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 flex-1 sm:flex-none justify-between sm:justify-start">
+                                <button onClick={prevBulan} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all">
+                                    <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
                                 </button>
-                            ))}
+                                <span className="px-2 text-[12px] font-black text-[var(--color-text)] min-w-[110px] text-center tabular-nums">
+                                    {BULAN_NAMA[bulan]} {tahun}
+                                </span>
+                                <button onClick={nextBulan} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all">
+                                    <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
+                                </button>
+                            </div>
+
+                            {/* Tabs — hanya di desktop */}
+                            <div className="hidden sm:flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 ml-auto">
+                                {[
+                                    { key: 'input', label: 'Input', icon: faCalendarDays },
+                                    { key: 'rekap', label: 'Rekap', icon: faChartSimple },
+                                ].map(t => (
+                                    <button key={t.key} onClick={() => setActiveTab(t.key)}
+                                        className={`h-8 px-4 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all ${activeTab === t.key
+                                            ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm'
+                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                        <FontAwesomeIcon icon={t.icon} className="text-[10px]" />
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -1946,80 +2332,71 @@ export default function AbsensiPage() {
                         {activeTab === 'input' && (
                             <>
                                 {/* ── Toolbar ── */}
-                                <div className="px-4 py-2.5 border-b border-[var(--color-border)] space-y-2">
+                                <div className="px-3 md:px-4 py-2 border-b border-[var(--color-border)] space-y-1.5">
 
-                                    {/* ── Baris 1: Actions & View controls ── */}
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    {/* ── Baris 1: Actions utama ── */}
+                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                                        {/* Aksi Massal */}
+                                        <MassActionDropdown
+                                            studentList={studentList}
+                                            dataMap={dataMap}
+                                            setDataMap={setDataMap}
+                                            tahun={tahun}
+                                            bulan={bulan}
+                                            daysInMonth={daysInMonth}
+                                            onDirty={markDirty}
+                                            addToast={addToast}
+                                        />
 
-                                        {/* Grup kiri: Data actions */}
-                                        <div className="flex items-center gap-1.5">
-                                            {/* Aksi Massal */}
-                                            <MassActionDropdown
-                                                studentList={studentList}
-                                                dataMap={dataMap}
-                                                setDataMap={setDataMap}
-                                                tahun={tahun}
-                                                bulan={bulan}
-                                                daysInMonth={daysInMonth}
-                                                onDirty={markDirty}
-                                                addToast={addToast}
-                                            />
+                                        {/* Copy Bln Lalu */}
+                                        <button
+                                            onClick={handleCopyLastMonth}
+                                            disabled={copyingLastMonth || loadingData}
+                                            className="h-8 px-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+                                            title="Copy bulan lalu"
+                                        >
+                                            {copyingLastMonth ? <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[9px]" /> : <FontAwesomeIcon icon={faCopy} className="text-[9px]" />}
+                                            <span className="hidden sm:inline">Copy Bln Lalu</span>
+                                            <span className="sm:hidden">Copy</span>
+                                        </button>
 
-                                            {/* Feature 1: Copy bulan lalu */}
-                                            <button
-                                                onClick={handleCopyLastMonth}
-                                                disabled={copyingLastMonth || loadingData}
-                                                className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-40"
-                                                title="Salin semua data dari bulan lalu"
-                                            >
-                                                {copyingLastMonth
-                                                    ? <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[9px]" />
-                                                    : <FontAwesomeIcon icon={faCopy} className="text-[9px]" />
-                                                }
-                                                Copy Bln Lalu
+                                        {/* Import */}
+                                        <button
+                                            onClick={() => setShowImport(true)}
+                                            className="h-8 px-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+                                            title="Import Excel/CSV"
+                                        >
+                                            <FontAwesomeIcon icon={faFileImport} className="text-[9px]" />
+                                            <span className="hidden sm:inline">Import</span>
+                                        </button>
+
+                                        {/* Divider */}
+                                        <div className="w-px h-5 bg-[var(--color-border)] mx-0.5 shrink-0" />
+
+                                        {/* Undo / Redo */}
+                                        <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shrink-0">
+                                            <button onClick={applyUndo} disabled={!canUndo} title="Batalkan (Ctrl+Z)"
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                                                <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
                                             </button>
-
-                                            {/* Feature 7: Import */}
-                                            <button
-                                                onClick={() => setShowImport(true)}
-                                                className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5"
-                                                title="Import dari file Excel/CSV"
-                                            >
-                                                <FontAwesomeIcon icon={faFileImport} className="text-[9px]" />
-                                                Import
+                                            <button onClick={applyRedo} disabled={!canRedo} title="Ulangi (Ctrl+Y)"
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                                                <FontAwesomeIcon icon={faRotateRight} className="text-[10px]" />
                                             </button>
+                                        </div>
 
-                                            {/* Separator */}
-                                            <div className="w-px h-5 bg-[var(--color-border)] mx-1" />
-
-                                            {/* Undo / Redo */}
-                                            <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5">
-                                                <button onClick={applyUndo} disabled={!canUndo} title="Batalkan (Ctrl+Z)"
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
-                                                </button>
-                                                <button onClick={applyRedo} disabled={!canRedo} title="Ulangi (Ctrl+Y)"
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                                                    <FontAwesomeIcon icon={faRotateRight} className="text-[10px]" />
-                                                </button>
-                                            </div>
-
-                                            {/* Separator */}
-                                            <div className="w-px h-5 bg-[var(--color-border)] mx-1" />
-
-                                            {/* Feature 3: Hide Weekend */}
+                                        {/* Desktop-only: separator + Hide Weekend + Filter */}
+                                        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                                            <div className="w-px h-5 bg-[var(--color-border)] mx-0.5" />
                                             <button
                                                 onClick={() => setHideWeekend(v => !v)}
-                                                className={`h-8 px-3 rounded-xl border text-[10px] font-black active:scale-95 transition-all flex items-center gap-1.5 ${hideWeekend
+                                                className={`h-8 px-2.5 rounded-xl border text-[10px] font-black active:scale-95 transition-all flex items-center gap-1.5 shrink-0 ${hideWeekend
                                                     ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600'
                                                     : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                                                title="Sembunyikan kolom Sabtu & Minggu"
                                             >
                                                 <FontAwesomeIcon icon={hideWeekend ? faEyeSlash : faEye} className="text-[9px]" />
                                                 {hideWeekend ? 'Tampilkan Weekend' : 'Sembunyikan Weekend'}
                                             </button>
-
-                                            {/* Feature 4: Filter row */}
                                             <select
                                                 value={filterMode}
                                                 onChange={e => setFilterMode(e.target.value)}
@@ -2027,7 +2404,6 @@ export default function AbsensiPage() {
                                                     ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
                                                     : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}
                                                 style={{ backgroundImage: 'none' }}
-                                                title="Filter siswa"
                                             >
                                                 <option value="all">Semua Siswa</option>
                                                 <option value="alpa">Alpa ≥ {alertThreshold.alpa} hari</option>
@@ -2035,38 +2411,63 @@ export default function AbsensiPage() {
                                             </select>
                                         </div>
 
-                                        {/* Grup kanan: Legend */}
-                                        <div className="hidden xl:flex items-center gap-1.5">
+                                        {/* Legend — xl only, di ujung kanan */}
+                                        <div className="hidden xl:flex items-center gap-1.5 ml-1 shrink-0">
                                             {STATUS_LIST.map(s => (
                                                 <span key={s} className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${STATUS_META[s].cellBg} ${STATUS_META[s].color} ${STATUS_META[s].cellBorder}`}>
                                                     {s} = {STATUS_META[s].label}
                                                 </span>
                                             ))}
                                         </div>
+
+                                        {/* Spacer */}
+                                        <div className="flex-1" />
+
+                                        {/* More/Settings — mobile only, sticky kanan */}
+                                        <button
+                                            onClick={() => setShowMobileSheet(true)}
+                                            className={`sm:hidden h-8 px-2.5 rounded-xl border text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0 ${(hideWeekend || filterMode !== 'all')
+                                                ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
+                                                : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}
+                                        >
+                                            <FontAwesomeIcon icon={faGear} className="text-[10px]" />
+                                            {(hideWeekend || filterMode !== 'all') && <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />}
+                                        </button>
                                     </div>
 
                                     {/* ── Baris 2: Konteks & Search ── */}
                                     <div className="flex items-center justify-between gap-2">
-
-                                        {/* Grup kiri: Nav shortcuts */}
+                                        {/* Grup kiri */}
                                         <div className="flex items-center gap-1.5">
-                                            {/* Feature 5: Scroll ke hari ini */}
+                                            {/* View switcher — mobile only */}
+                                            <div className="sm:hidden flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5">
+                                                {[
+                                                    { key: 'table', icon: faTableCells, label: 'Tabel' },
+                                                    { key: 'card', icon: faBorderAll, label: 'Card' },
+                                                    { key: 'list', icon: faList, label: 'List' },
+                                                ].map(v => (
+                                                    <button key={v.key}
+                                                        onClick={() => { setMobileView(v.key); try { localStorage.setItem('absensi_mobile_view', v.key) } catch { } }}
+                                                        title={v.label}
+                                                        className={`w-8 h-7 rounded-lg flex items-center justify-center text-[10px] transition-all ${mobileView === v.key ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                                        <FontAwesomeIcon icon={v.icon} />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {/* Hari Ini */}
                                             {todayDate && (
                                                 <button
                                                     onClick={handleScrollToToday}
-                                                    className="h-7 px-3 rounded-lg border border-indigo-500/30 bg-indigo-500/8 text-indigo-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-indigo-500/15 transition-all"
-                                                    title="Auto-scroll ke kolom hari ini"
+                                                    className="h-7 px-2.5 rounded-lg border border-indigo-500/30 bg-indigo-500/8 text-indigo-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-indigo-500/15 active:scale-95 transition-all"
                                                 >
                                                     <FontAwesomeIcon icon={faCrosshairs} className="text-[9px]" />
                                                     Hari Ini
                                                 </button>
                                             )}
-
-                                            {/* Feature 10: Alert config */}
+                                            {/* Alert config — desktop only */}
                                             <button
                                                 onClick={() => setShowAlertConfig(true)}
-                                                className="h-7 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-all flex items-center gap-1.5"
-                                                title="Konfigurasi ambang batas alert"
+                                                className="hidden sm:flex h-7 px-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-all items-center gap-1.5"
                                             >
                                                 <FontAwesomeIcon icon={faBell} className="text-[9px]" />
                                                 Alert
@@ -2074,19 +2475,28 @@ export default function AbsensiPage() {
                                         </div>
 
                                         {/* Grup kanan: Progress + Search */}
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2">
                                             {/* Completion progress */}
                                             {studentList.length > 0 && (
                                                 <div className="hidden sm:flex items-center gap-2">
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Terisi</span>
-                                                    <div className="w-24 h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
+                                                    <div className="w-20 h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
                                                         <div className="h-full rounded-full transition-all duration-300"
-                                                            style={{
-                                                                width: `${completionPct}%`,
-                                                                background: completionPct === 100 ? '#059669' : completionPct >= 60 ? '#6366f1' : '#d97706',
-                                                            }} />
+                                                            style={{ width: `${completionPct}%`, background: completionPct === 100 ? '#059669' : completionPct >= 60 ? '#6366f1' : '#d97706' }} />
                                                     </div>
-                                                    <span className={`text-[10px] font-black tabular-nums min-w-[32px] ${completionPct === 100 ? 'text-emerald-600' : completionPct >= 60 ? 'text-indigo-500' : 'text-amber-600'}`}>
+                                                    <span className={`text-[10px] font-black tabular-nums min-w-[28px] ${completionPct === 100 ? 'text-emerald-600' : completionPct >= 60 ? 'text-indigo-500' : 'text-amber-600'}`}>
+                                                        {completionPct}%
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {/* Completion mobile compact */}
+                                            {studentList.length > 0 && (
+                                                <div className="sm:hidden flex items-center gap-1.5">
+                                                    <div className="w-16 h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
+                                                        <div className="h-full rounded-full transition-all duration-300"
+                                                            style={{ width: `${completionPct}%`, background: completionPct === 100 ? '#059669' : completionPct >= 60 ? '#6366f1' : '#d97706' }} />
+                                                    </div>
+                                                    <span className={`text-[10px] font-black tabular-nums ${completionPct === 100 ? 'text-emerald-600' : completionPct >= 60 ? 'text-indigo-500' : 'text-amber-600'}`}>
                                                         {completionPct}%
                                                     </span>
                                                 </div>
@@ -2094,7 +2504,7 @@ export default function AbsensiPage() {
 
                                             {/* Search */}
                                             {studentList.length > 5 && (
-                                                <div className="flex items-center gap-2 h-7 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 w-52">
+                                                <div className="flex items-center gap-2 h-7 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 w-40 sm:w-52">
                                                     <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[var(--color-text-muted)] text-[10px] shrink-0" />
                                                     <input type="text" placeholder="Cari nama / NISN..."
                                                         value={searchRaw} onChange={e => setSearchRaw(e.target.value)}
@@ -2104,225 +2514,322 @@ export default function AbsensiPage() {
                                                     )}
                                                 </div>
                                             )}
-                                        </div>{/* end grup kanan baris 2 */}
-                                    </div>{/* end baris 2 */}
+                                        </div>
+                                    </div>
                                 </div>{/* end toolbar */}
 
-                                {/* Landscape table */}
-                                <div className="overflow-x-auto">
-                                    <table style={{ borderCollapse: 'collapse', minWidth: 'max-content', width: '100%' }}>
-                                        <thead>
-                                            {/* Row 1: angka tanggal — # dan Nama span 2 baris */}
-                                            <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-                                                {/* No header — rowSpan 2 */}
-                                                <th
-                                                    rowSpan={2}
-                                                    style={{
-                                                        position: 'sticky', left: 0, zIndex: 6,
-                                                        width: W_NO, minWidth: W_NO,
-                                                        backgroundColor: 'var(--color-surface-alt)',
-                                                        borderRight: '1px solid var(--color-border)',
-                                                        borderBottom: '2px solid var(--color-border)',
-                                                        padding: '8px 4px', textAlign: 'center',
-                                                        boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)',
-                                                        verticalAlign: 'middle',
-                                                    }}
-                                                >
-                                                    <span className="text-[9px] font-black text-[var(--color-text-muted)]">#</span>
-                                                </th>
-                                                {/* Nama header — rowSpan 2 */}
-                                                <th
-                                                    rowSpan={2}
-                                                    style={{
-                                                        position: 'sticky', left: W_NO, zIndex: 6,
-                                                        width: W_NAMA, minWidth: W_NAMA,
-                                                        backgroundColor: 'var(--color-surface-alt)',
-                                                        borderRight: '2px solid var(--color-border)',
-                                                        borderBottom: '2px solid var(--color-border)',
-                                                        padding: '8px 12px', textAlign: 'left',
-                                                        boxShadow: '4px 0 8px -4px rgba(0,0,0,0.08)',
-                                                        verticalAlign: 'middle',
-                                                    }}
-                                                >
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Nama Siswa</span>
-                                                </th>
-                                                {/* Day number headers */}
-                                                {dayMeta.filter(dm => !(hideWeekend && dm.weekend) && !dm.invalid).map(({ d, weekend, dow }) => (
-                                                    <th key={d}
-                                                        ref={d === todayDate ? todayColRef : undefined}
-                                                        onClick={!loadingData && studentList.length > 0
-                                                            ? (e) => {
-                                                                const rect = e.currentTarget.getBoundingClientRect()
-                                                                setColFillTarget({ d, dow, x: rect.left, y: rect.bottom })
-                                                            }
-                                                            : undefined
-                                                        }
-                                                        style={{
-                                                            width: 32, minWidth: 32,
-                                                            padding: '6px 0',
-                                                            textAlign: 'center',
-                                                            borderBottom: '2px solid var(--color-border)',
-                                                            borderLeft: d === todayDate ? '1px solid #6366f180' : '1px solid var(--color-border)',
-                                                            backgroundColor: d === todayDate ? '#6366f108' : 'var(--color-surface-alt)',
-                                                            cursor: 'pointer',
-                                                        }}
-                                                        title={`Klik untuk isi semua siswa — tgl ${d}`}
-                                                        className="hover:brightness-95"
-                                                    >
-                                                        <span style={{
-                                                            fontSize: 10, fontWeight: 900,
-                                                            color: d === todayDate ? '#6366f1' : weekend ? '#f87171' : 'var(--color-text-muted)',
-                                                        }}>
-                                                            {d}
-                                                        </span>
-                                                    </th>
-                                                ))}
-                                                {/* Summary headers — rowSpan 2, merge vertikal */}
-                                                {STATUS_LIST.map((s, i) => (
-                                                    <th key={s}
+                                {/* ── Mobile toolbar sheet ── */}
+                                <MobileToolbarSheet open={showMobileSheet} onClose={() => setShowMobileSheet(false)}>
+                                    {/* Hide Weekend */}
+                                    <button
+                                        onClick={() => { setHideWeekend(v => !v) }}
+                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${hideWeekend
+                                            ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600'
+                                            : 'border-[var(--color-border)] text-[var(--color-text)]'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <FontAwesomeIcon icon={hideWeekend ? faEyeSlash : faEye} className="text-[13px] w-4" />
+                                            <div className="text-left">
+                                                <p className="text-[12px] font-black">Sembunyikan Weekend</p>
+                                                <p className="text-[10px] text-[var(--color-text-muted)]">Sembunyikan kolom Sabtu & Minggu</p>
+                                            </div>
+                                        </div>
+                                        <div className={`w-8 h-4 rounded-full transition-colors ${hideWeekend ? 'bg-indigo-500' : 'bg-[var(--color-border)]'}`}>
+                                            <div className={`w-3.5 h-3.5 rounded-full bg-white shadow mt-0.5 transition-all ${hideWeekend ? 'ml-4' : 'ml-0.5'}`} />
+                                        </div>
+                                    </button>
+
+                                    {/* Filter siswa */}
+                                    <div className="px-4 py-3 rounded-xl border border-[var(--color-border)]">
+                                        <p className="text-[11px] font-black text-[var(--color-text)] mb-2 flex items-center gap-2">
+                                            <FontAwesomeIcon icon={faFilter} className="text-[11px]" />
+                                            Filter Siswa
+                                        </p>
+                                        <div className="flex flex-col gap-1.5">
+                                            {[
+                                                { val: 'all', label: 'Semua Siswa', sub: 'Tampilkan semua' },
+                                                { val: 'alpa', label: `Alpa ≥ ${alertThreshold.alpa} hari`, sub: 'Siswa perlu perhatian' },
+                                                { val: 'belum', label: 'Belum diisi', sub: 'Data masih kosong' },
+                                            ].map(opt => (
+                                                <button key={opt.val}
+                                                    onClick={() => setFilterMode(opt.val)}
+                                                    className={`flex items-center justify-between px-3 py-2 rounded-lg border text-left transition-all ${filterMode === opt.val
+                                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-700'
+                                                        : 'border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                                    <div>
+                                                        <p className="text-[11px] font-black">{opt.label}</p>
+                                                        <p className="text-[9px] opacity-70">{opt.sub}</p>
+                                                    </div>
+                                                    {filterMode === opt.val && <FontAwesomeIcon icon={faCheck} className="text-amber-600 text-[11px]" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Alert threshold */}
+                                    <button
+                                        onClick={() => { setShowMobileSheet(false); setTimeout(() => setShowAlertConfig(true), 200) }}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--color-border)] text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-alt)]"
+                                    >
+                                        <FontAwesomeIcon icon={faBell} className="text-[13px] w-4 text-amber-500" />
+                                        <div className="text-left">
+                                            <p className="text-[12px] font-black">Konfigurasi Alert</p>
+                                            <p className="text-[10px] text-[var(--color-text-muted)]">Alpa ≥ {alertThreshold.alpa} hari · Hadir &lt; {alertThreshold.hadirPct}%</p>
+                                        </div>
+                                        <FontAwesomeIcon icon={faChevronRight} className="ml-auto text-[10px] text-[var(--color-text-muted)]" />
+                                    </button>
+                                </MobileToolbarSheet>
+
+                                {/* ── Mobile: Card View ── */}
+                                <div className={`sm:hidden ${mobileView === 'card' ? '' : 'hidden'}`}>
+                                    <MobileCardView
+                                        filteredStudents={filteredStudents}
+                                        dataMap={dataMap}
+                                        tahun={tahun} bulan={bulan} daysInMonth={daysInMonth}
+                                        todayDate={todayDate}
+                                        onCellClick={handleCellClick}
+                                        notesMap={notesMap}
+                                        onNoteClick={setNoteTarget}
+                                        alpaThreshold={alertThreshold.alpa}
+                                        hadirThreshold={alertThreshold.hadirPct}
+                                        loadingData={loadingData}
+                                    />
+                                </div>
+
+                                {/* ── Mobile: List View ── */}
+                                <div className={`sm:hidden ${mobileView === 'list' ? '' : 'hidden'}`}>
+                                    <MobileListView
+                                        filteredStudents={filteredStudents}
+                                        dataMap={dataMap}
+                                        tahun={tahun} bulan={bulan} daysInMonth={daysInMonth}
+                                        todayDate={todayDate}
+                                        onCellClick={handleCellClick}
+                                        notesMap={notesMap}
+                                        onNoteClick={setNoteTarget}
+                                        alpaThreshold={alertThreshold.alpa}
+                                        hadirThreshold={alertThreshold.hadirPct}
+                                        loadingData={loadingData}
+                                    />
+                                </div>
+
+                                {/* ── Desktop always table + Mobile table view ── */}
+                                <div className={`${mobileView !== 'table' ? 'hidden sm:block' : ''}`}>
+                                    {/* Landscape table */}
+                                    <div className="overflow-x-auto">
+                                        <table style={{ borderCollapse: 'collapse', minWidth: 'max-content', width: '100%' }}>
+                                            <thead>
+                                                {/* Row 1: angka tanggal — # dan Nama span 2 baris */}
+                                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                                    {/* No header — rowSpan 2 */}
+                                                    <th
                                                         rowSpan={2}
                                                         style={{
-                                                            width: 14, minWidth: 14,
-                                                            padding: '4px 2px', textAlign: 'center',
+                                                            position: 'sticky', left: 0, zIndex: 6,
+                                                            width: W_NO, minWidth: W_NO,
+                                                            backgroundColor: 'var(--color-surface-alt)',
+                                                            borderRight: '1px solid var(--color-border)',
                                                             borderBottom: '2px solid var(--color-border)',
-                                                            borderLeft: i === 0 ? '2px solid var(--color-border)' : '1px solid var(--color-border)',
-                                                            background: 'var(--color-surface-alt)',
+                                                            padding: '8px 4px', textAlign: 'center',
+                                                            boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)',
                                                             verticalAlign: 'middle',
                                                         }}
                                                     >
-                                                        <span className={`text-[9px] font-black ${STATUS_META[s].color}`}>{s}</span>
+                                                        <span className="text-[9px] font-black text-[var(--color-text-muted)]">#</span>
                                                     </th>
-                                                ))}
-                                                <th rowSpan={2} style={{
-                                                    width: 40, minWidth: 40,
-                                                    padding: '6px 2px', textAlign: 'center',
-                                                    borderBottom: '2px solid var(--color-border)',
-                                                    borderLeft: '2px solid var(--color-border)',
-                                                    background: 'var(--color-surface-alt)',
-                                                    verticalAlign: 'middle',
-                                                }}>
-                                                    <span className="text-[9px] font-black text-[var(--color-text-muted)]">%</span>
-                                                </th>
-                                            </tr>
-
-                                            {/* Row 2: nama hari */}
-                                            <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-                                                {/* # dan Nama sudah di-rowSpan dari Row 1, tidak perlu placeholder */}
-                                                {dayMeta.filter(dm => !(hideWeekend && dm.weekend) && !dm.invalid).map(({ d, weekend, dow }) => (
-                                                    <th key={d}
+                                                    {/* Nama header — rowSpan 2 */}
+                                                    <th
+                                                        rowSpan={2}
                                                         style={{
-                                                            width: 32, minWidth: 32, padding: '2px 0', textAlign: 'center',
-                                                            borderBottom: '1px solid var(--color-border)',
-                                                            borderLeft: '1px solid var(--color-border)',
-                                                            background: 'var(--color-surface-alt)',
+                                                            position: 'sticky', left: W_NO, zIndex: 6,
+                                                            width: W_NAMA, minWidth: W_NAMA,
+                                                            backgroundColor: 'var(--color-surface-alt)',
+                                                            borderRight: '2px solid var(--color-border)',
+                                                            borderBottom: '2px solid var(--color-border)',
+                                                            padding: '8px 12px', textAlign: 'left',
+                                                            boxShadow: '4px 0 8px -4px rgba(0,0,0,0.08)',
+                                                            verticalAlign: 'middle',
                                                         }}
                                                     >
-                                                        <span style={{ fontSize: 8, fontWeight: 700, color: weekend ? '#fca5a5' : 'var(--color-text-muted)', opacity: weekend ? 0.8 : 0.4 }}>
-                                                            {DOW_SHORT[dow]}
-                                                        </span>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Nama Siswa</span>
                                                     </th>
-                                                ))}
-                                                {/* H/S/I/A/P dan % sudah di-rowSpan dari Row 1, tidak perlu placeholder */}
-                                            </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            {loadingData
-                                                ? Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} colCount={visibleDays.length} />)
-                                                : filteredStudents.length === 0
-                                                    ? (
-                                                        <tr>
-                                                            <td colSpan={38} className="py-16 text-center border border-[var(--color-border)]">
-                                                                <div className="flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
-                                                                    <FontAwesomeIcon icon={faMagnifyingGlass} className="text-2xl opacity-20" />
-                                                                    <p className="text-[12px] font-bold">
-                                                                        {searchRaw ? `Tidak ada hasil untuk "${searchRaw}"` : 'Tidak ada siswa aktif'}
-                                                                    </p>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    )
-                                                    : filteredStudents.map((s, idx) => (
-                                                        <StudentRow
-                                                            key={s.id}
-                                                            student={s} idx={idx}
-                                                            days={dataMap[s.id] || {}}
-                                                            tahun={tahun} bulan={bulan}
-                                                            daysInMonth={daysInMonth}
-                                                            todayDate={todayDate}
-                                                            onCellMouseDown={(sid, day) => {
-                                                                setFocusedCell({ rowIdx: idx, day })
-                                                                handleCellMouseDown(sid, day)
+                                                    {/* Day number headers */}
+                                                    {dayMeta.filter(dm => !(hideWeekend && dm.weekend) && !dm.invalid).map(({ d, weekend, dow }) => (
+                                                        <th key={d}
+                                                            ref={d === todayDate ? todayColRef : undefined}
+                                                            onClick={!loadingData && studentList.length > 0
+                                                                ? (e) => {
+                                                                    const rect = e.currentTarget.getBoundingClientRect()
+                                                                    setColFillTarget({ d, dow, x: rect.left, y: rect.bottom })
+                                                                }
+                                                                : undefined
+                                                            }
+                                                            style={{
+                                                                width: 32, minWidth: 32,
+                                                                padding: '6px 0',
+                                                                textAlign: 'center',
+                                                                borderBottom: '2px solid var(--color-border)',
+                                                                borderLeft: d === todayDate ? '1px solid #6366f180' : '1px solid var(--color-border)',
+                                                                backgroundColor: d === todayDate ? '#6366f108' : 'var(--color-surface-alt)',
+                                                                cursor: 'pointer',
                                                             }}
-                                                            onCellMouseEnter={handleCellMouseEnter}
-                                                            onRowFill={(e) => {
-                                                                const rect = e.currentTarget.getBoundingClientRect()
-                                                                setRowFillTarget({ student: s, x: rect.right, y: rect.bottom })
-                                                            }}
-                                                            onNoteClick={(e) => {
-                                                                const rect = e.currentTarget.getBoundingClientRect()
-                                                                setNoteTarget({ student: s, x: rect.left, y: rect.bottom })
-                                                            }}
-                                                            note={notesMap[s.id]}
-                                                            hideWeekend={hideWeekend}
-                                                            visibleDays={visibleDays}
-                                                            focusedDay={focusedCell?.rowIdx === idx ? focusedCell.day : null}
-                                                            alpaThreshold={alertThreshold.alpa}
-                                                            hadirThreshold={alertThreshold.hadirPct}
-                                                        />
-                                                    ))
-                                            }
-                                        </tbody>
-
-                                        {/* Footer total per kolom */}
-                                        {!loadingData && studentList.length > 0 && (
-                                            <tfoot>
-                                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-                                                    <td
-                                                        style={{ position: 'sticky', left: 0, zIndex: 4, width: W_NO, minWidth: W_NO, backgroundColor: 'var(--color-surface-alt)', borderTop: '2px solid var(--color-border)', borderRight: '1px solid var(--color-border)', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}
-                                                    />
-                                                    <td
-                                                        style={{ position: 'sticky', left: W_NO, zIndex: 4, width: W_NAMA, minWidth: W_NAMA, backgroundColor: 'var(--color-surface-alt)', borderTop: '2px solid var(--color-border)', borderRight: '2px solid var(--color-border)', padding: '6px 12px', boxShadow: '4px 0 8px -4px rgba(0,0,0,0.08)' }}
-                                                    >
-                                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Total / Hari</span>
-                                                    </td>
-                                                    {dayMeta.filter(dm => !(hideWeekend && dm.weekend) && !dm.invalid).map(({ d, weekend }) => {
-                                                        const { h, x } = colSummary[d] || { h: 0, x: 0 }
-                                                        return (
-                                                            <td key={d}
-                                                                style={{
-                                                                    width: 32, minWidth: 32, padding: '4px 0', textAlign: 'center',
-                                                                    borderTop: '2px solid var(--color-border)',
-                                                                    borderLeft: '1px solid var(--color-border)',
-                                                                    background: 'var(--color-surface-alt)',
-                                                                    opacity: weekend ? 0.35 : 1,
-                                                                }}
-                                                            >
-                                                                {h > 0 && <span style={{ display: 'block', fontSize: 8, fontWeight: 900, color: '#059669', lineHeight: '1.2' }}>{h}</span>}
-                                                                {x > 0 && <span style={{ display: 'block', fontSize: 8, fontWeight: 900, color: '#dc2626', lineHeight: '1.2' }}>{x}</span>}
-                                                            </td>
-                                                        )
-                                                    })}
-                                                    {STATUS_LIST.map((s, i) => {
-                                                        const total = studentList.reduce((acc, st) =>
-                                                            acc + Object.values(dataMap[st.id] || {}).filter(v => v === s).length, 0)
-                                                        return (
-                                                            <td key={s} style={{
-                                                                width: 28, minWidth: 28, textAlign: 'center',
-                                                                borderTop: '2px solid var(--color-border)',
+                                                            title={`Klik untuk isi semua siswa — tgl ${d}`}
+                                                            className="hover:brightness-95"
+                                                        >
+                                                            <span style={{
+                                                                fontSize: 10, fontWeight: 900,
+                                                                color: d === todayDate ? '#6366f1' : weekend ? '#f87171' : 'var(--color-text-muted)',
+                                                            }}>
+                                                                {d}
+                                                            </span>
+                                                        </th>
+                                                    ))}
+                                                    {/* Summary headers — rowSpan 2, merge vertikal */}
+                                                    {STATUS_LIST.map((s, i) => (
+                                                        <th key={s}
+                                                            rowSpan={2}
+                                                            style={{
+                                                                width: 28, minWidth: 28,
+                                                                padding: '6px 2px', textAlign: 'center',
+                                                                borderBottom: '2px solid var(--color-border)',
                                                                 borderLeft: i === 0 ? '2px solid var(--color-border)' : '1px solid var(--color-border)',
                                                                 background: 'var(--color-surface-alt)',
-                                                            }}>
-                                                                <span className={`text-[10px] font-black ${STATUS_META[s].color} ${total === 0 ? 'opacity-20' : ''}`}>{total}</span>
-                                                            </td>
-                                                        )
-                                                    })}
-                                                    <td style={{ width: 40, minWidth: 40, borderTop: '2px solid var(--color-border)', borderLeft: '2px solid var(--color-border)', background: 'var(--color-surface-alt)' }} />
+                                                                verticalAlign: 'middle',
+                                                            }}
+                                                        >
+                                                            <span className={`text-[9px] font-black ${STATUS_META[s].color}`}>{s}</span>
+                                                        </th>
+                                                    ))}
+                                                    <th rowSpan={2} style={{
+                                                        width: 40, minWidth: 40,
+                                                        padding: '6px 2px', textAlign: 'center',
+                                                        borderBottom: '2px solid var(--color-border)',
+                                                        borderLeft: '2px solid var(--color-border)',
+                                                        background: 'var(--color-surface-alt)',
+                                                        verticalAlign: 'middle',
+                                                    }}>
+                                                        <span className="text-[9px] font-black text-[var(--color-text-muted)]">%</span>
+                                                    </th>
                                                 </tr>
-                                            </tfoot>
-                                        )}
-                                    </table>
-                                </div>
+
+                                                {/* Row 2: nama hari */}
+                                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                                    {/* # dan Nama sudah di-rowSpan dari Row 1, tidak perlu placeholder */}
+                                                    {dayMeta.filter(dm => !(hideWeekend && dm.weekend) && !dm.invalid).map(({ d, weekend, dow }) => (
+                                                        <th key={d}
+                                                            style={{
+                                                                width: 32, minWidth: 32, padding: '2px 0', textAlign: 'center',
+                                                                borderBottom: '1px solid var(--color-border)',
+                                                                borderLeft: '1px solid var(--color-border)',
+                                                                background: 'var(--color-surface-alt)',
+                                                            }}
+                                                        >
+                                                            <span style={{ fontSize: 8, fontWeight: 700, color: weekend ? '#fca5a5' : 'var(--color-text-muted)', opacity: weekend ? 0.8 : 0.4 }}>
+                                                                {DOW_SHORT[dow]}
+                                                            </span>
+                                                        </th>
+                                                    ))}
+                                                    {/* H/S/I/A/P dan % sudah di-rowSpan dari Row 1, tidak perlu placeholder */}
+                                                </tr>
+                                            </thead>
+
+                                            <tbody>
+                                                {loadingData
+                                                    ? Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} colCount={visibleDays.length} />)
+                                                    : filteredStudents.length === 0
+                                                        ? (
+                                                            <tr>
+                                                                <td colSpan={38} className="py-16 text-center border border-[var(--color-border)]">
+                                                                    <div className="flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
+                                                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-2xl opacity-20" />
+                                                                        <p className="text-[12px] font-bold">
+                                                                            {searchRaw ? `Tidak ada hasil untuk "${searchRaw}"` : 'Tidak ada siswa aktif'}
+                                                                        </p>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                        : filteredStudents.map((s, idx) => (
+                                                            <StudentRow
+                                                                key={s.id}
+                                                                student={s} idx={idx}
+                                                                days={dataMap[s.id] || {}}
+                                                                tahun={tahun} bulan={bulan}
+                                                                daysInMonth={daysInMonth}
+                                                                todayDate={todayDate}
+                                                                onCellMouseDown={(sid, day) => {
+                                                                    setFocusedCell({ rowIdx: idx, day })
+                                                                    handleCellMouseDown(sid, day)
+                                                                }}
+                                                                onCellMouseEnter={handleCellMouseEnter}
+                                                                onRowFill={(e) => {
+                                                                    const rect = e.currentTarget.getBoundingClientRect()
+                                                                    setRowFillTarget({ student: s, x: rect.right, y: rect.bottom })
+                                                                }}
+                                                                onNoteClick={(e) => {
+                                                                    const rect = e.currentTarget.getBoundingClientRect()
+                                                                    setNoteTarget({ student: s, x: rect.left, y: rect.bottom })
+                                                                }}
+                                                                note={notesMap[s.id]}
+                                                                hideWeekend={hideWeekend}
+                                                                visibleDays={visibleDays}
+                                                                focusedDay={focusedCell?.rowIdx === idx ? focusedCell.day : null}
+                                                                alpaThreshold={alertThreshold.alpa}
+                                                                hadirThreshold={alertThreshold.hadirPct}
+                                                            />
+                                                        ))
+                                                }
+                                            </tbody>
+
+                                            {/* Footer total per kolom */}
+                                            {!loadingData && studentList.length > 0 && (
+                                                <tfoot>
+                                                    <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                                        <td
+                                                            style={{ position: 'sticky', left: 0, zIndex: 4, width: W_NO, minWidth: W_NO, backgroundColor: 'var(--color-surface-alt)', borderTop: '2px solid var(--color-border)', borderRight: '1px solid var(--color-border)', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}
+                                                        />
+                                                        <td
+                                                            style={{ position: 'sticky', left: W_NO, zIndex: 4, width: W_NAMA, minWidth: W_NAMA, backgroundColor: 'var(--color-surface-alt)', borderTop: '2px solid var(--color-border)', borderRight: '2px solid var(--color-border)', padding: '6px 12px', boxShadow: '4px 0 8px -4px rgba(0,0,0,0.08)' }}
+                                                        >
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Total / Hari</span>
+                                                        </td>
+                                                        {dayMeta.filter(dm => !(hideWeekend && dm.weekend) && !dm.invalid).map(({ d, weekend }) => {
+                                                            const { h, x } = colSummary[d] || { h: 0, x: 0 }
+                                                            return (
+                                                                <td key={d}
+                                                                    style={{
+                                                                        width: 32, minWidth: 32, padding: '4px 0', textAlign: 'center',
+                                                                        borderTop: '2px solid var(--color-border)',
+                                                                        borderLeft: '1px solid var(--color-border)',
+                                                                        background: 'var(--color-surface-alt)',
+                                                                        opacity: weekend ? 0.35 : 1,
+                                                                    }}
+                                                                >
+                                                                    {h > 0 && <span style={{ display: 'block', fontSize: 8, fontWeight: 900, color: '#059669', lineHeight: '1.2' }}>{h}</span>}
+                                                                    {x > 0 && <span style={{ display: 'block', fontSize: 8, fontWeight: 900, color: '#dc2626', lineHeight: '1.2' }}>{x}</span>}
+                                                                </td>
+                                                            )
+                                                        })}
+                                                        {STATUS_LIST.map((s, i) => {
+                                                            const total = studentList.reduce((acc, st) =>
+                                                                acc + Object.values(dataMap[st.id] || {}).filter(v => v === s).length, 0)
+                                                            return (
+                                                                <td key={s} style={{
+                                                                    width: 28, minWidth: 28, textAlign: 'center',
+                                                                    borderTop: '2px solid var(--color-border)',
+                                                                    borderLeft: i === 0 ? '2px solid var(--color-border)' : '1px solid var(--color-border)',
+                                                                    background: 'var(--color-surface-alt)',
+                                                                }}>
+                                                                    <span className={`text-[10px] font-black ${STATUS_META[s].color} ${total === 0 ? 'opacity-20' : ''}`}>{total}</span>
+                                                                </td>
+                                                            )
+                                                        })}
+                                                        <td style={{ width: 40, minWidth: 40, borderTop: '2px solid var(--color-border)', borderLeft: '2px solid var(--color-border)', background: 'var(--color-surface-alt)' }} />
+                                                    </tr>
+                                                </tfoot>
+                                            )}
+                                        </table>
+                                    </div>
+                                </div>{/* end table wrapper */}
 
                                 {/* Footer bar */}
                                 {studentList.length > 0 && (
@@ -2358,18 +2865,22 @@ export default function AbsensiPage() {
                 </div>
 
                 {/* Floating save bar */}
-                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${isDirty && activeTab === 'input'
+                <div className={`fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 px-4 w-full sm:w-auto ${isDirty && activeTab === 'input'
                     ? 'opacity-100 translate-y-0 pointer-events-auto'
                     : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-                    <div className="flex items-center gap-3 px-5 py-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-2xl">
-                        <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400" />
-                        <span className="text-[12px] text-[var(--color-text-muted)] font-medium">Ada perubahan belum disimpan</span>
+                    <div className="flex items-center gap-2 sm:gap-3 px-4 py-2.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-2xl">
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400 shrink-0" />
+                        <span className="text-[11px] text-[var(--color-text-muted)] font-medium flex-1 sm:flex-none">
+                            <span className="hidden sm:inline">Ada perubahan belum disimpan</span>
+                            <span className="sm:hidden">Belum disimpan</span>
+                        </span>
                         <button onClick={handleReset}
-                            className="h-8 px-3 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-1.5">
-                            <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" /> Reset
+                            className="h-8 px-3 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 shrink-0">
+                            <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
+                            <span className="hidden sm:inline">Reset</span>
                         </button>
                         <button onClick={handleSave} disabled={saving}
-                            className="h-8 px-4 rounded-xl bg-[var(--color-primary)] hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-60">
+                            className="h-8 px-4 rounded-xl bg-[var(--color-primary)] hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-60 shrink-0">
                             {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faSave} />}
                             Simpan
                         </button>
