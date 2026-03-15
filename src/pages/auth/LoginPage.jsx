@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faEnvelope, faLock, faArrowRight, faSpinner, faEye, faEyeSlash, faSun, faMoon, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
@@ -18,6 +18,8 @@ export default function LoginPage() {
     const { addToast } = useToast()
     const { isDark, toggleTheme } = useTheme()
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
+    const sessionReason = searchParams.get('reason')
     const emailInputRef = useRef(null)
 
     const MAX_ATTEMPTS = 5;
@@ -174,6 +176,21 @@ export default function LoginPage() {
                             ))}
                         </div>
                         <p className="text-[9px] text-amber-500/60 text-center font-medium">Klik baris untuk isi otomatis</p>
+                    </div>
+                )}
+
+                {/* Session Expired Banner */}
+                {sessionReason === 'session_expired' && (
+                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+                            <FontAwesomeIcon icon={faTriangleExclamation} />
+                        </div>
+                        <div>
+                            <p className="text-[13px] font-black text-amber-700">Sesi telah berakhir</p>
+                            <p className="text-[11px] text-amber-600/80 mt-0.5 leading-relaxed">
+                                Sesi kamu dicabut oleh administrator. Silakan login kembali.
+                            </p>
+                        </div>
                     </div>
                 )}
 

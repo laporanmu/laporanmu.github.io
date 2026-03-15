@@ -19,6 +19,7 @@ import { supabase } from '../lib/supabase'
 import { useToast } from '../context/ToastContext'
 import { useSchoolSettings } from '../context/SchoolSettingsContext'
 import { useAuth } from '../context/AuthContext'
+import { useFlag } from '../context/FeatureFlagsContext'
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1227,6 +1228,10 @@ export default function RaportPage() {
 
     const ALLOWED_ROLES = ['admin', 'guru', 'developer']
     const isAllowed = profile ? ALLOWED_ROLES.includes(profile.role?.toLowerCase()) : null
+
+    // access.teacher_raport flag — kalau off, guru jadi read-only
+    const { enabled: teacherRaportEnabled } = useFlag('access.teacher_raport')
+    const canEdit = profile?.role === 'guru' ? teacherRaportEnabled : true
 
     // ── Page-level state
     const [classesList, setClassesList] = useState([])
@@ -2921,8 +2926,8 @@ export default function RaportPage() {
                 {/* Salin bulan lalu */}
                 <button onClick={copyFromLastMonth} disabled={copyingLastMonth} className="h-8 px-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-sky-500/20 transition-all disabled:opacity-50 shrink-0"><FontAwesomeIcon icon={copyingLastMonth ? faSpinner : faChevronLeft} className={copyingLastMonth ? 'animate-spin' : ''} /> Salin Bln Lalu</button>
                 {/* Simpan Semua */}
-                <button onClick={saveAll} disabled={savingAll} className="h-8 px-4 rounded-lg bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-md shadow-emerald-500/20 relative disabled:opacity-70 shrink-0">
-                    <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />{savingAll ? 'Menyimpan...' : 'Simpan Semua'}
+                <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-8 px-4 rounded-lg bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-md shadow-emerald-500/20 relative disabled:opacity-70 shrink-0">
+                    <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />{savingAll ? 'Menyimpan...' : !canEdit ? 'Read-only' : 'Simpan Semua'}
                     {!savingAll && hasUnsavedMemo && <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
                 </button>
                 {/* Preview & Cetak — CTA utama selalu terlihat */}
@@ -3258,7 +3263,7 @@ export default function RaportPage() {
                                             {!isSaving && isDirty && <span className="text-[8px] font-black text-amber-500">● belum simpan</span>}
                                         </div>
                                     </div>
-                                    <button onClick={() => saveStudent(student.id)} disabled={isSaving}
+                                    <button onClick={() => saveStudent(student.id)} disabled={isSaving || !canEdit}
                                         className="h-8 px-2.5 rounded-xl text-[10px] font-black flex items-center gap-1 shrink-0 transition-all"
                                         style={{ background: isSaved ? '#10b98115' : isDirty ? '#6366f115' : 'var(--color-surface-alt)', color: isSaved ? '#10b981' : isDirty ? '#6366f1' : 'var(--color-text-muted)', border: `1px solid ${isSaved ? '#10b98130' : isDirty ? '#6366f130' : 'var(--color-border)'}` }}>
                                         <FontAwesomeIcon icon={isSaving ? faSpinner : isSaved ? faCircleCheck : faFloppyDisk} className={isSaving ? 'animate-spin' : ''} />
@@ -3857,6 +3862,14 @@ export default function RaportPage() {
         <DashboardLayout title="Raport Bulanan">
             {/* TAMBAH INI: */}
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
+
+                {/* Read-only Banner — access.teacher_raport flag off */}
+                {!canEdit && (
+                    <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faLock} className="text-rose-500 shrink-0" />
+                        <p className="text-[11px] font-bold text-rose-600 flex-1">Mode Read-only — Edit raport dinonaktifkan oleh administrator.</p>
+                    </div>
+                )}
 
                 {/* ── PAGE HEADER ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

@@ -5,6 +5,7 @@ import {
     faHouse, faClipboardList, faLayerGroup, faUserGear, faCog,
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "../../context/AuthContext"
+import { useFeatureFlags } from "../../context/FeatureFlagsContext"
 import MasterSheet from "./MasterSheet"
 
 // Warna aktif konsisten dengan TopNav (indigo-600)

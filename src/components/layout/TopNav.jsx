@@ -13,6 +13,7 @@ import {
 import { useTheme } from "../../context/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
 import { useNotifications } from "../../hooks/useNotifications"
+import { useFeatureFlags } from "../../context/FeatureFlagsContext"
 
 // ─── Portal container helper ──────────────────────────────────────────────────
 // Singleton di module-level — dibuat SEKALI saat module di-load, tidak pernah
@@ -211,8 +212,25 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
 export default function TopNav({ title, subtitle }) {
     const { isDark, toggleTheme } = useTheme()
     const { profile, signOut } = useAuth()
+    const { flags } = useFeatureFlags()
     const navigate = useNavigate()
     const { notifications, loading, refreshing, dismiss, refresh } = useNotifications()
+
+    // ── Filter nav items by feature flags
+    // nav.X flags control visibility; default true if flag not yet loaded
+    const visibleReportsItems = REPORTS_ITEMS.filter(it => {
+        if (it.to === '/gate') return flags['nav.gate'] !== false
+        if (it.to === '/raport') return flags['nav.raport'] !== false
+        if (it.to === '/absensi') return flags['nav.absensi'] !== false
+        if (it.to === '/poin') return flags['nav.poin'] !== false
+        return true
+    })
+    // Satpam: only show gate
+    const role = profile?.role?.toLowerCase()
+    const isSatpam = role === 'satpam'
+    const filteredReportsItems = isSatpam
+        ? visibleReportsItems.filter(it => it.to === '/gate')
+        : visibleReportsItems
 
     const [masterOpen, setMasterOpen] = useState(false)
     const [reportsOpen, setReportsOpen] = useState(false)
@@ -413,7 +431,7 @@ export default function TopNav({ title, subtitle }) {
                                                     Laporan & Rekap
                                                 </div>
                                                 <div className="p-2">
-                                                    {REPORTS_ITEMS.map(it => (
+                                                    {filteredReportsItems.map(it => (
                                                         <button
                                                             key={it.to}
                                                             onClick={() => { setReportsOpen(false); navigate(it.to) }}
