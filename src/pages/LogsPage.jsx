@@ -297,349 +297,351 @@ export default function LogsPage() {
 
     return (
         <DashboardLayout title="Audit Logs">
+            {/* TAMBAH INI: */}
+            <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
 
-            {/* ── PAGE HEADER ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                    <div className="flex items-center gap-2.5 mb-1">
-                        <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faShieldHalved} className="text-red-500 text-sm" />
-                        </div>
-                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Audit Logs</h1>
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 uppercase tracking-widest">
-                            Admin Only
-                        </span>
-                    </div>
-                    <p className="text-[var(--color-text-muted)] text-[11px] font-medium opacity-70">
-                        Riwayat seluruh aktivitas sistem — raport, poin, dan perubahan data.
-                    </p>
-                </div>
-                <div className="flex gap-2 items-center">
-                    <button onClick={fetchLogs} disabled={loading}
-                        className="h-9 w-9 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] transition-all disabled:opacity-50"
-                        title="Refresh (R)">
-                        <FontAwesomeIcon icon={faRotateRight} className={`text-sm ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button onClick={exportCSV} disabled={!logs.length}
-                        className="h-9 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black flex items-center gap-1.5 hover:text-[var(--color-text)] transition-all disabled:opacity-40">
-                        <FontAwesomeIcon icon={faDownload} className="text-[10px]" /> Export CSV
-                    </button>
-                </div>
-            </div>
-
-            {/* ── STATS ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                {[
-                    { label: 'Total Aktivitas', value: stats.total, icon: faDatabase, color: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10' },
-                    { label: 'Hari Ini', value: stats.today, icon: faBolt, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                    { label: 'Entri Raport', value: stats.raport, icon: faGraduationCap, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                    { label: 'Entri Poin', value: stats.poin, icon: faClipboardList, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                ].map((s, i) => (
-                    <div key={i} className="glass rounded-[1.5rem] p-4 flex items-center gap-3 border border-[var(--color-border)]">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>
-                            <FontAwesomeIcon icon={s.icon} className={`text-sm ${s.color}`} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{s.label}</p>
-                            <p className={`text-xl font-black font-heading ${s.color}`}>{loading ? '—' : s.value.toLocaleString()}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* ── SEARCH + FILTER BAR ── */}
-            <div className="glass rounded-[1.5rem] border border-[var(--color-border)] mb-4 overflow-hidden">
-                <div className="flex items-center gap-2 p-3">
-                    {/* Search */}
-                    <div className="flex-1 relative">
-                        <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm pointer-events-none" />
-                        <input
-                            ref={searchRef}
-                            type="text"
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            placeholder="Cari santri, guru, kelas, aktivitas... (/ untuk fokus)"
-                            className="w-full h-9 pl-9 pr-8 rounded-xl border border-[var(--color-border)] bg-transparent text-xs font-medium text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)] transition-all"
-                        />
-                        {search && (
-                            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                                <FontAwesomeIcon icon={faXmark} className="text-xs" />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Sort direction */}
-                    <button onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
-                        className="h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-1.5 transition-all shrink-0"
-                        title={sortDir === 'desc' ? 'Terbaru dulu' : 'Terlama dulu'}>
-                        <FontAwesomeIcon icon={sortDir === 'desc' ? faChevronLeft : faChevronRight} className="text-[9px] rotate-90" />
-                        {sortDir === 'desc' ? 'Terbaru' : 'Terlama'}
-                    </button>
-
-                    {/* Filter toggle */}
-                    <button onClick={() => setShowFilters(v => !v)}
-                        className={`h-9 px-3 rounded-xl border text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0 relative ${showFilters || activeFilterCount > 0 ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                        <FontAwesomeIcon icon={faFilter} className="text-[9px]" />
-                        Filter
-                        {activeFilterCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center">
-                                {activeFilterCount}
+                {/* ── PAGE HEADER ── */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <div className="flex items-center gap-2.5 mb-1">
+                            <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center">
+                                <FontAwesomeIcon icon={faShieldHalved} className="text-red-500 text-sm" />
+                            </div>
+                            <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Audit Logs</h1>
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 uppercase tracking-widest">
+                                Admin Only
                             </span>
-                        )}
-                    </button>
+                        </div>
+                        <p className="text-[var(--color-text-muted)] text-[11px] font-medium opacity-70">
+                            Riwayat seluruh aktivitas sistem — raport, poin, dan perubahan data.
+                        </p>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <button onClick={fetchLogs} disabled={loading}
+                            className="h-9 w-9 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] transition-all disabled:opacity-50"
+                            title="Refresh (R)">
+                            <FontAwesomeIcon icon={faRotateRight} className={`text-sm ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button onClick={exportCSV} disabled={!logs.length}
+                            className="h-9 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black flex items-center gap-1.5 hover:text-[var(--color-text)] transition-all disabled:opacity-40">
+                            <FontAwesomeIcon icon={faDownload} className="text-[10px]" /> Export CSV
+                        </button>
+                    </div>
                 </div>
 
-                {/* Expanded filters */}
-                {showFilters && (
-                    <div className="border-t border-[var(--color-border)] px-3 py-3 flex flex-wrap gap-2 items-end">
-                        {/* Source filter */}
-                        <div className="space-y-1">
-                            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Sumber</label>
-                            <div className="flex gap-1">
-                                {[{ v: '', l: 'Semua' }, { v: 'raport', l: 'Raport' }, { v: 'poin', l: 'Poin' }].map(opt => (
-                                    <button key={opt.v} onClick={() => setFilterSource(opt.v)}
-                                        className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all border ${filterSource === opt.v ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                        {opt.l}
+                {/* ── STATS ── */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                    {[
+                        { label: 'Total Aktivitas', value: stats.total, icon: faDatabase, color: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10' },
+                        { label: 'Hari Ini', value: stats.today, icon: faBolt, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                        { label: 'Entri Raport', value: stats.raport, icon: faGraduationCap, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                        { label: 'Entri Poin', value: stats.poin, icon: faClipboardList, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                    ].map((s, i) => (
+                        <div key={i} className="glass rounded-[1.5rem] p-4 flex items-center gap-3 border border-[var(--color-border)]">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>
+                                <FontAwesomeIcon icon={s.icon} className={`text-sm ${s.color}`} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{s.label}</p>
+                                <p className={`text-xl font-black font-heading ${s.color}`}>{loading ? '—' : s.value.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── SEARCH + FILTER BAR ── */}
+                <div className="glass rounded-[1.5rem] border border-[var(--color-border)] mb-4 overflow-hidden">
+                    <div className="flex items-center gap-2 p-3">
+                        {/* Search */}
+                        <div className="flex-1 relative">
+                            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm pointer-events-none" />
+                            <input
+                                ref={searchRef}
+                                type="text"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Cari santri, guru, kelas, aktivitas... (/ untuk fokus)"
+                                className="w-full h-9 pl-9 pr-8 rounded-xl border border-[var(--color-border)] bg-transparent text-xs font-medium text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)] transition-all"
+                            />
+                            {search && (
+                                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+                                    <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Sort direction */}
+                        <button onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+                            className="h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-1.5 transition-all shrink-0"
+                            title={sortDir === 'desc' ? 'Terbaru dulu' : 'Terlama dulu'}>
+                            <FontAwesomeIcon icon={sortDir === 'desc' ? faChevronLeft : faChevronRight} className="text-[9px] rotate-90" />
+                            {sortDir === 'desc' ? 'Terbaru' : 'Terlama'}
+                        </button>
+
+                        {/* Filter toggle */}
+                        <button onClick={() => setShowFilters(v => !v)}
+                            className={`h-9 px-3 rounded-xl border text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0 relative ${showFilters || activeFilterCount > 0 ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                            <FontAwesomeIcon icon={faFilter} className="text-[9px]" />
+                            Filter
+                            {activeFilterCount > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Expanded filters */}
+                    {showFilters && (
+                        <div className="border-t border-[var(--color-border)] px-3 py-3 flex flex-wrap gap-2 items-end">
+                            {/* Source filter */}
+                            <div className="space-y-1">
+                                <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Sumber</label>
+                                <div className="flex gap-1">
+                                    {[{ v: '', l: 'Semua' }, { v: 'raport', l: 'Raport' }, { v: 'poin', l: 'Poin' }].map(opt => (
+                                        <button key={opt.v} onClick={() => setFilterSource(opt.v)}
+                                            className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all border ${filterSource === opt.v ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                            {opt.l}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Date range */}
+                            <div className="space-y-1">
+                                <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Dari Tanggal</label>
+                                <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+                                    className="h-7 px-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] transition-all" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Sampai</label>
+                                <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+                                    className="h-7 px-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] transition-all" />
+                            </div>
+
+                            {/* Teacher name */}
+                            <div className="space-y-1">
+                                <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Guru / Musyrif</label>
+                                <input type="text" value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)}
+                                    placeholder="Nama guru..."
+                                    className="h-7 px-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] transition-all w-36" />
+                            </div>
+
+                            {activeFilterCount > 0 && (
+                                <button onClick={() => { setFilterSource(''); setFilterAction(''); setFilterTeacher(''); setFilterDateFrom(''); setFilterDateTo('') }}
+                                    className="h-7 px-2.5 rounded-lg border border-red-500/30 bg-red-500/8 text-red-500 text-[9px] font-black hover:bg-red-500/15 transition-all flex items-center gap-1">
+                                    <FontAwesomeIcon icon={faXmark} className="text-[8px]" /> Reset Filter
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* ── LOG TABLE ── */}
+                <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
+                    {/* Table header */}
+                    <div className="hidden md:grid grid-cols-[140px_1fr_140px_140px_120px_40px] gap-3 px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                        {['Waktu', 'Santri & Aktivitas', 'Kelas', 'Oleh', 'Sumber', ''].map((h, i) => (
+                            <div key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{h}</div>
+                        ))}
+                    </div>
+
+                    {/* Body */}
+                    {loading ? (
+                        <div className="space-y-0 divide-y divide-[var(--color-border)]">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="px-5 py-3.5 flex items-center gap-3 animate-pulse">
+                                    <div className="w-8 h-8 rounded-xl bg-[var(--color-border)] shrink-0" />
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-3 w-1/3 bg-[var(--color-border)] rounded" />
+                                        <div className="h-2.5 w-1/2 bg-[var(--color-border)] rounded opacity-60" />
+                                    </div>
+                                    <div className="h-3 w-20 bg-[var(--color-border)] rounded hidden md:block" />
+                                    <div className="h-3 w-16 bg-[var(--color-border)] rounded hidden md:block" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : logs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-4 text-[var(--color-text-muted)]">
+                            <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center">
+                                <FontAwesomeIcon icon={faDatabase} className="text-2xl opacity-30" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[13px] font-black mb-1">Tidak ada aktivitas</p>
+                                <p className="text-[11px] opacity-60">
+                                    {debouncedSearch || activeFilterCount > 0
+                                        ? 'Coba ubah filter atau kata kunci pencarian.'
+                                        : 'Belum ada data aktivitas yang tercatat.'}
+                                </p>
+                            </div>
+                            {(debouncedSearch || activeFilterCount > 0) && (
+                                <button onClick={() => { setSearch(''); setFilterSource(''); setFilterAction(''); setFilterTeacher(''); setFilterDateFrom(''); setFilterDateTo('') }}
+                                    className="h-8 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black hover:bg-[var(--color-surface-alt)] transition-all">
+                                    Reset Semua Filter
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-[var(--color-border)]">
+                            {logs.map((entry) => {
+                                const evType = EVENT_TYPES[entry._type] || EVENT_TYPES.raport_created
+                                const isExpanded = expandedId === entry._id
+                                const isRaport = entry._source === 'raport'
+
+                                return (
+                                    <div key={entry._id}
+                                        className={`transition-colors ${isExpanded ? 'bg-[var(--color-primary)]/[0.02]' : 'hover:bg-[var(--color-surface-alt)]/50'}`}>
+                                        {/* Main row */}
+                                        <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_140px_140px_120px_40px] gap-3 px-5 py-3.5 items-center cursor-pointer"
+                                            onClick={() => setExpandedId(isExpanded ? null : entry._id)}>
+
+                                            {/* Time */}
+                                            <div className="flex flex-col">
+                                                <span className="text-[11px] font-black text-[var(--color-text)] tabular-nums">
+                                                    {fmtRelative(entry._ts)}
+                                                </span>
+                                                <span className="text-[9px] text-[var(--color-text-muted)] font-medium tabular-nums">
+                                                    {fmtDate(entry._ts)}
+                                                </span>
+                                            </div>
+
+                                            {/* Student + activity */}
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                                                    style={{ background: evType.bg }}>
+                                                    <FontAwesomeIcon icon={evType.icon} style={{ color: evType.color, fontSize: 11 }} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-[12px] font-black text-[var(--color-text)] truncate">{entry._student}</p>
+                                                    <p className="text-[10px] text-[var(--color-text-muted)] truncate">{entry._detail}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Class */}
+                                            <div className="hidden md:block">
+                                                <span className="text-[10px] font-bold text-[var(--color-text-muted)] truncate block">{entry._class || '—'}</span>
+                                            </div>
+
+                                            {/* Actor */}
+                                            <div className="hidden md:block">
+                                                <span className="text-[10px] font-bold text-[var(--color-text)] truncate block">{entry._actor}</span>
+                                            </div>
+
+                                            {/* Source badge */}
+                                            <div className="hidden md:flex items-center gap-1.5">
+                                                <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border ${isRaport ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500'}`}>
+                                                    {isRaport ? 'Raport' : 'Poin'}
+                                                </span>
+                                                {!isRaport && entry._meta?.points !== undefined && (
+                                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${entry._meta.points > 0 ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
+                                                        {entry._meta.points > 0 ? '+' : ''}{entry._meta.points}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Expand icon */}
+                                            <div className="hidden md:flex items-center justify-center">
+                                                <FontAwesomeIcon icon={faEye}
+                                                    className={`text-[10px] transition-colors ${isExpanded ? 'text-[var(--color-primary)]' : 'text-[var(--color-border)] hover:text-[var(--color-text-muted)]'}`} />
+                                            </div>
+                                        </div>
+
+                                        {/* Expanded detail */}
+                                        {isExpanded && (
+                                            <div className="px-5 pb-4 pt-0 border-t border-[var(--color-border)]/50">
+                                                <div className="mt-3 p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] space-y-2">
+                                                    <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Detail Aktivitas</p>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                        {[
+                                                            { label: 'Waktu Tepat', val: fmtDateTime(entry._ts) },
+                                                            { label: 'Santri', val: entry._student },
+                                                            { label: 'Kelas', val: entry._class || '—' },
+                                                            { label: 'Dicatat Oleh', val: entry._actor },
+                                                            { label: 'Sumber Data', val: isRaport ? 'Raport Bulanan' : 'Laporan Poin' },
+                                                            ...(isRaport ? [
+                                                                { label: 'Disimpan Oleh', val: entry._meta?.savedBy || '—' },
+                                                                { label: 'Musyrif / Wali Kelas', val: entry._meta?.musyrif || '—' },
+                                                                { label: 'Periode', val: `${BULAN.find(b => b.id === entry._meta?.bulan)?.id_str ?? entry._meta?.bulan} ${entry._meta?.tahun}` },
+                                                            ] : [
+                                                                { label: 'Poin', val: entry._meta?.points > 0 ? `+${entry._meta?.points}` : String(entry._meta?.points ?? '—') },
+                                                                { label: 'Catatan', val: entry._meta?.notes || '(tidak ada catatan)' },
+                                                            ]),
+                                                        ].map((item, i) => (
+                                                            <div key={i}>
+                                                                <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{item.label}</p>
+                                                                <p className="text-[11px] font-bold text-[var(--color-text)] mt-0.5">{item.val}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+
+                    {/* Pagination */}
+                    {totalRows > 0 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                            <div className="flex items-center gap-4">
+                                <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.08em] tabular-nums">
+                                    Menampilkan <span className="text-[var(--color-text)]">{fromRow}–{toRow}</span>
+                                    <span className="opacity-40 font-medium"> dari </span>
+                                    <span className="text-[var(--color-text)]">{totalRows}</span> log
+                                </p>
+                                <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-[var(--color-border)]">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Baris:</span>
+                                    <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
+                                        className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer">
+                                        {PAGE_SIZE_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                {[
+                                    { icon: faAnglesLeft, action: () => setPage(1), disabled: page === 1 },
+                                    { icon: faChevronLeft, action: () => setPage(p => Math.max(1, p - 1)), disabled: page === 1 },
+                                ].map((b, i) => (
+                                    <button key={i} disabled={b.disabled} onClick={b.action}
+                                        className="w-8 h-8 rounded-lg border border-[var(--color-border)] text-xs disabled:opacity-20 hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
+                                        <FontAwesomeIcon icon={b.icon} className="text-[10px]" />
+                                    </button>
+                                ))}
+                                <div className="flex gap-0.5 mx-1">
+                                    {getPageItems(page, totalPages).map((it, idx) =>
+                                        it === '...'
+                                            ? <span key={idx} className="w-8 h-8 flex items-center justify-center opacity-30 text-xs">···</span>
+                                            : <button key={it} onClick={() => setPage(it)}
+                                                className={`w-8 h-8 rounded-lg font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                                {it}
+                                            </button>
+                                    )}
+                                </div>
+                                {[
+                                    { icon: faChevronRight, action: () => setPage(p => Math.min(totalPages, p + 1)), disabled: page >= totalPages },
+                                    { icon: faAnglesRight, action: () => setPage(totalPages), disabled: page >= totalPages },
+                                ].map((b, i) => (
+                                    <button key={i} disabled={b.disabled} onClick={b.action}
+                                        className="w-8 h-8 rounded-lg border border-[var(--color-border)] text-xs disabled:opacity-20 hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
+                                        <FontAwesomeIcon icon={b.icon} className="text-[10px]" />
                                     </button>
                                 ))}
                             </div>
                         </div>
-
-                        {/* Date range */}
-                        <div className="space-y-1">
-                            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Dari Tanggal</label>
-                            <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
-                                className="h-7 px-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] transition-all" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Sampai</label>
-                            <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
-                                className="h-7 px-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] transition-all" />
-                        </div>
-
-                        {/* Teacher name */}
-                        <div className="space-y-1">
-                            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Guru / Musyrif</label>
-                            <input type="text" value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)}
-                                placeholder="Nama guru..."
-                                className="h-7 px-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] transition-all w-36" />
-                        </div>
-
-                        {activeFilterCount > 0 && (
-                            <button onClick={() => { setFilterSource(''); setFilterAction(''); setFilterTeacher(''); setFilterDateFrom(''); setFilterDateTo('') }}
-                                className="h-7 px-2.5 rounded-lg border border-red-500/30 bg-red-500/8 text-red-500 text-[9px] font-black hover:bg-red-500/15 transition-all flex items-center gap-1">
-                                <FontAwesomeIcon icon={faXmark} className="text-[8px]" /> Reset Filter
-                            </button>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {/* ── LOG TABLE ── */}
-            <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
-                {/* Table header */}
-                <div className="hidden md:grid grid-cols-[140px_1fr_140px_140px_120px_40px] gap-3 px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                    {['Waktu', 'Santri & Aktivitas', 'Kelas', 'Oleh', 'Sumber', ''].map((h, i) => (
-                        <div key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{h}</div>
-                    ))}
+                    )}
                 </div>
 
-                {/* Body */}
-                {loading ? (
-                    <div className="space-y-0 divide-y divide-[var(--color-border)]">
-                        {Array.from({ length: 8 }).map((_, i) => (
-                            <div key={i} className="px-5 py-3.5 flex items-center gap-3 animate-pulse">
-                                <div className="w-8 h-8 rounded-xl bg-[var(--color-border)] shrink-0" />
-                                <div className="flex-1 space-y-2">
-                                    <div className="h-3 w-1/3 bg-[var(--color-border)] rounded" />
-                                    <div className="h-2.5 w-1/2 bg-[var(--color-border)] rounded opacity-60" />
-                                </div>
-                                <div className="h-3 w-20 bg-[var(--color-border)] rounded hidden md:block" />
-                                <div className="h-3 w-16 bg-[var(--color-border)] rounded hidden md:block" />
-                            </div>
-                        ))}
-                    </div>
-                ) : logs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4 text-[var(--color-text-muted)]">
-                        <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center">
-                            <FontAwesomeIcon icon={faDatabase} className="text-2xl opacity-30" />
-                        </div>
-                        <div className="text-center">
-                            <p className="text-[13px] font-black mb-1">Tidak ada aktivitas</p>
-                            <p className="text-[11px] opacity-60">
-                                {debouncedSearch || activeFilterCount > 0
-                                    ? 'Coba ubah filter atau kata kunci pencarian.'
-                                    : 'Belum ada data aktivitas yang tercatat.'}
-                            </p>
-                        </div>
-                        {(debouncedSearch || activeFilterCount > 0) && (
-                            <button onClick={() => { setSearch(''); setFilterSource(''); setFilterAction(''); setFilterTeacher(''); setFilterDateFrom(''); setFilterDateTo('') }}
-                                className="h-8 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black hover:bg-[var(--color-surface-alt)] transition-all">
-                                Reset Semua Filter
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <div className="divide-y divide-[var(--color-border)]">
-                        {logs.map((entry) => {
-                            const evType = EVENT_TYPES[entry._type] || EVENT_TYPES.raport_created
-                            const isExpanded = expandedId === entry._id
-                            const isRaport = entry._source === 'raport'
-
-                            return (
-                                <div key={entry._id}
-                                    className={`transition-colors ${isExpanded ? 'bg-[var(--color-primary)]/[0.02]' : 'hover:bg-[var(--color-surface-alt)]/50'}`}>
-                                    {/* Main row */}
-                                    <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_140px_140px_120px_40px] gap-3 px-5 py-3.5 items-center cursor-pointer"
-                                        onClick={() => setExpandedId(isExpanded ? null : entry._id)}>
-
-                                        {/* Time */}
-                                        <div className="flex flex-col">
-                                            <span className="text-[11px] font-black text-[var(--color-text)] tabular-nums">
-                                                {fmtRelative(entry._ts)}
-                                            </span>
-                                            <span className="text-[9px] text-[var(--color-text-muted)] font-medium tabular-nums">
-                                                {fmtDate(entry._ts)}
-                                            </span>
-                                        </div>
-
-                                        {/* Student + activity */}
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                                                style={{ background: evType.bg }}>
-                                                <FontAwesomeIcon icon={evType.icon} style={{ color: evType.color, fontSize: 11 }} />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-[12px] font-black text-[var(--color-text)] truncate">{entry._student}</p>
-                                                <p className="text-[10px] text-[var(--color-text-muted)] truncate">{entry._detail}</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Class */}
-                                        <div className="hidden md:block">
-                                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] truncate block">{entry._class || '—'}</span>
-                                        </div>
-
-                                        {/* Actor */}
-                                        <div className="hidden md:block">
-                                            <span className="text-[10px] font-bold text-[var(--color-text)] truncate block">{entry._actor}</span>
-                                        </div>
-
-                                        {/* Source badge */}
-                                        <div className="hidden md:flex items-center gap-1.5">
-                                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border ${isRaport ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500'}`}>
-                                                {isRaport ? 'Raport' : 'Poin'}
-                                            </span>
-                                            {!isRaport && entry._meta?.points !== undefined && (
-                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${entry._meta.points > 0 ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
-                                                    {entry._meta.points > 0 ? '+' : ''}{entry._meta.points}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Expand icon */}
-                                        <div className="hidden md:flex items-center justify-center">
-                                            <FontAwesomeIcon icon={faEye}
-                                                className={`text-[10px] transition-colors ${isExpanded ? 'text-[var(--color-primary)]' : 'text-[var(--color-border)] hover:text-[var(--color-text-muted)]'}`} />
-                                        </div>
-                                    </div>
-
-                                    {/* Expanded detail */}
-                                    {isExpanded && (
-                                        <div className="px-5 pb-4 pt-0 border-t border-[var(--color-border)]/50">
-                                            <div className="mt-3 p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] space-y-2">
-                                                <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Detail Aktivitas</p>
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                                    {[
-                                                        { label: 'Waktu Tepat', val: fmtDateTime(entry._ts) },
-                                                        { label: 'Santri', val: entry._student },
-                                                        { label: 'Kelas', val: entry._class || '—' },
-                                                        { label: 'Dicatat Oleh', val: entry._actor },
-                                                        { label: 'Sumber Data', val: isRaport ? 'Raport Bulanan' : 'Laporan Poin' },
-                                                        ...(isRaport ? [
-                                                            { label: 'Disimpan Oleh', val: entry._meta?.savedBy || '—' },
-                                                            { label: 'Musyrif / Wali Kelas', val: entry._meta?.musyrif || '—' },
-                                                            { label: 'Periode', val: `${BULAN.find(b => b.id === entry._meta?.bulan)?.id_str ?? entry._meta?.bulan} ${entry._meta?.tahun}` },
-                                                        ] : [
-                                                            { label: 'Poin', val: entry._meta?.points > 0 ? `+${entry._meta?.points}` : String(entry._meta?.points ?? '—') },
-                                                            { label: 'Catatan', val: entry._meta?.notes || '(tidak ada catatan)' },
-                                                        ]),
-                                                    ].map((item, i) => (
-                                                        <div key={i}>
-                                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{item.label}</p>
-                                                            <p className="text-[11px] font-bold text-[var(--color-text)] mt-0.5">{item.val}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
-
-                {/* Pagination */}
-                {totalRows > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                        <div className="flex items-center gap-4">
-                            <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.08em] tabular-nums">
-                                Menampilkan <span className="text-[var(--color-text)]">{fromRow}–{toRow}</span>
-                                <span className="opacity-40 font-medium"> dari </span>
-                                <span className="text-[var(--color-text)]">{totalRows}</span> log
-                            </p>
-                            <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-[var(--color-border)]">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Baris:</span>
-                                <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                                    className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer">
-                                    {PAGE_SIZE_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            {[
-                                { icon: faAnglesLeft, action: () => setPage(1), disabled: page === 1 },
-                                { icon: faChevronLeft, action: () => setPage(p => Math.max(1, p - 1)), disabled: page === 1 },
-                            ].map((b, i) => (
-                                <button key={i} disabled={b.disabled} onClick={b.action}
-                                    className="w-8 h-8 rounded-lg border border-[var(--color-border)] text-xs disabled:opacity-20 hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
-                                    <FontAwesomeIcon icon={b.icon} className="text-[10px]" />
-                                </button>
-                            ))}
-                            <div className="flex gap-0.5 mx-1">
-                                {getPageItems(page, totalPages).map((it, idx) =>
-                                    it === '...'
-                                        ? <span key={idx} className="w-8 h-8 flex items-center justify-center opacity-30 text-xs">···</span>
-                                        : <button key={it} onClick={() => setPage(it)}
-                                            className={`w-8 h-8 rounded-lg font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
-                                            {it}
-                                        </button>
-                                )}
-                            </div>
-                            {[
-                                { icon: faChevronRight, action: () => setPage(p => Math.min(totalPages, p + 1)), disabled: page >= totalPages },
-                                { icon: faAnglesRight, action: () => setPage(totalPages), disabled: page >= totalPages },
-                            ].map((b, i) => (
-                                <button key={i} disabled={b.disabled} onClick={b.action}
-                                    className="w-8 h-8 rounded-lg border border-[var(--color-border)] text-xs disabled:opacity-20 hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
-                                    <FontAwesomeIcon icon={b.icon} className="text-[10px]" />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                {/* ── INFO NOTE ── */}
+                <div className="mt-4 p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-start gap-2.5">
+                    <FontAwesomeIcon icon={faCircleInfo} className="text-[var(--color-text-muted)] text-xs mt-0.5 shrink-0" />
+                    <p className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
+                        Log ini menampilkan aktivitas dari tabel <code className="font-mono bg-[var(--color-surface)] px-1 py-0.5 rounded text-[9px]">student_monthly_reports</code> dan <code className="font-mono bg-[var(--color-surface)] px-1 py-0.5 rounded text-[9px]">reports</code>.
+                        Untuk audit trail lengkap dengan record create/update/delete terpisah, aktifkan <strong>Supabase Audit Logs</strong> di dashboard database kamu.
+                    </p>
+                </div>
             </div>
-
-            {/* ── INFO NOTE ── */}
-            <div className="mt-4 p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-start gap-2.5">
-                <FontAwesomeIcon icon={faCircleInfo} className="text-[var(--color-text-muted)] text-xs mt-0.5 shrink-0" />
-                <p className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
-                    Log ini menampilkan aktivitas dari tabel <code className="font-mono bg-[var(--color-surface)] px-1 py-0.5 rounded text-[9px]">student_monthly_reports</code> dan <code className="font-mono bg-[var(--color-surface)] px-1 py-0.5 rounded text-[9px]">reports</code>.
-                    Untuk audit trail lengkap dengan record create/update/delete terpisah, aktifkan <strong>Supabase Audit Logs</strong> di dashboard database kamu.
-                </p>
-            </div>
-
         </DashboardLayout>
     )
 }

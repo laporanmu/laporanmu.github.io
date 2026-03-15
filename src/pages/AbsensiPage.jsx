@@ -1280,7 +1280,7 @@ function RowFillPopup({ student, x, y, onFill, onClear, onClose, weekdays }) {
 
 
 
-function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
+function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap, lastSavedAt }) {
     const { addToast } = useToast()
     const { profile } = useAuth()
 
@@ -1321,6 +1321,8 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
                 const m = {}
                 for (const r of (data || [])) m[r.student_id] = r
                 setRaportMap(m)
+                // jika ada data & semua match → tandai syncDone
+                if (data?.length) setSyncDone(true)
             })
         // Feature 9: Load previous month
         const prevBulanVal = bulan === 1 ? 12 : bulan - 1
@@ -1335,7 +1337,7 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
                 }
                 setLastMonthMap(m)
             })
-    }, [classId, tahun, bulan, studentList])
+    }, [classId, tahun, bulan, studentList, lastSavedAt])
 
     const handleSync = async () => {
         if (syncing) return
@@ -2085,6 +2087,7 @@ export default function AbsensiPage() {
     const [isOnline, setIsOnline] = useState(() => typeof navigator !== 'undefined' ? navigator.onLine : true)
     const [draftAvail, setDraftAvail] = useState(false)
     const [showTutorial, setShowTutorial] = useState(false)
+    const [lastSavedAt, setLastSavedAt] = useState(null) // trigger reload raportMap di RekapPanel
 
     // Undo/Redo history
     const historyRef = useRef([])
@@ -2492,6 +2495,23 @@ export default function AbsensiPage() {
             setDraftAvail(false)
             addToast(`Absensi ${BULAN_NAMA[bulan]} ${tahun} tersimpan ✓`, 'success')
             haptic('success')
+            // ── Auto-sync ke Raport — langsung di sini, tidak bergantung tab aktif ──
+            try {
+                const syncUpserts = studentList.map(s => {
+                    const rekap = summarize(dataMap[s.id] || {}, tahun, bulan)
+                    return {
+                        student_id: s.id, month: bulan, year: tahun,
+                        hari_sakit: rekap.S || 0,
+                        hari_izin: rekap.I || 0,
+                        hari_alpa: rekap.A || 0,
+                        hari_pulang: rekap.P || 0,
+                        updated_by: profile?.id ?? null,
+                    }
+                })
+                await supabase.from('student_monthly_reports')
+                    .upsert(syncUpserts, { onConflict: 'student_id,month,year' })
+                setLastSavedAt(Date.now())
+            } catch { /* silent — auto-sync gagal tidak block UX */ }
         }
     }, [saving, isDirty, classId, tahun, bulan, studentList, dataMap, originalMap, profile, isOnline, addToast])
 
@@ -2673,7 +2693,7 @@ export default function AbsensiPage() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <div>
                             <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Absensi Bulanan</h1>
-                            <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium opacity-70">
+                            <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">
                                 <span className="sm:hidden">Input &amp; rekap absensi siswa per bulan.</span>
                                 <span className="hidden sm:inline">Klik sel untuk ganti status · Tahan &amp; geser untuk isi banyak · Klik nama/tanggal untuk isi cepat</span>
                             </p>
@@ -2686,7 +2706,7 @@ export default function AbsensiPage() {
                                 title="Command Palette (Ctrl+K)"
                             >
                                 <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" />
-                                <span>⌘K</span>
+                                <span>⌘ K</span>
                             </button>
                             {/* Tutorial button — amber/kuning */}
                             <button
@@ -2800,95 +2820,95 @@ export default function AbsensiPage() {
                                 <div className="px-3 md:px-4 py-2 border-b border-[var(--color-border)] space-y-1.5">
 
                                     {/* ── Baris 1: Actions utama ── */}
-                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
-                                        {/* Aksi Massal */}
-                                        <MassActionDropdown
-                                            studentList={studentList}
-                                            dataMap={dataMap}
-                                            setDataMap={setDataMap}
-                                            tahun={tahun}
-                                            bulan={bulan}
-                                            daysInMonth={daysInMonth}
-                                            onDirty={markDirty}
-                                            addToast={addToast}
-                                        />
+                                    <div className="flex items-center gap-1.5">
+                                        {/* scrollable area — gear button sengaja di LUAR ini */}
+                                        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 flex-1" style={{ scrollbarWidth: 'none' }}>
+                                            {/* Aksi Massal */}
+                                            <MassActionDropdown
+                                                studentList={studentList}
+                                                dataMap={dataMap}
+                                                setDataMap={setDataMap}
+                                                tahun={tahun}
+                                                bulan={bulan}
+                                                daysInMonth={daysInMonth}
+                                                onDirty={markDirty}
+                                                addToast={addToast}
+                                            />
 
-                                        {/* Copy Bln Lalu */}
-                                        <button
-                                            onClick={handleCopyLastMonth}
-                                            disabled={copyingLastMonth || loadingData}
-                                            className="h-8 px-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-40"
-                                            title="Copy bulan lalu"
-                                        >
-                                            {copyingLastMonth ? <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[9px]" /> : <FontAwesomeIcon icon={faCopy} className="text-[9px]" />}
-                                            <span className="hidden sm:inline">Copy Bln Lalu</span>
-                                            <span className="sm:hidden">Copy</span>
-                                        </button>
-
-                                        {/* Import */}
-                                        <button
-                                            onClick={() => setShowImport(true)}
-                                            className="h-8 px-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
-                                            title="Import Excel/CSV"
-                                        >
-                                            <FontAwesomeIcon icon={faFileImport} className="text-[9px]" />
-                                            <span className="hidden sm:inline">Import</span>
-                                        </button>
-
-                                        {/* Divider */}
-                                        <div className="w-px h-5 bg-[var(--color-border)] mx-0.5 shrink-0" />
-
-                                        {/* Undo / Redo */}
-                                        <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shrink-0">
-                                            <button onClick={applyUndo} disabled={!canUndo} title="Batalkan (Ctrl+Z)"
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                                                <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
-                                            </button>
-                                            <button onClick={applyRedo} disabled={!canRedo} title="Ulangi (Ctrl+Y)"
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                                                <FontAwesomeIcon icon={faRotateRight} className="text-[10px]" />
-                                            </button>
-                                        </div>
-
-                                        {/* Desktop-only: separator + Hide Weekend + Filter */}
-                                        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-                                            <div className="w-px h-5 bg-[var(--color-border)] mx-0.5" />
+                                            {/* Copy Bln Lalu */}
                                             <button
-                                                onClick={() => setHideWeekend(v => !v)}
-                                                className={`h-8 px-2.5 rounded-xl border text-[10px] font-black active:scale-95 transition-all flex items-center gap-1.5 shrink-0 ${hideWeekend
-                                                    ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600'
-                                                    : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                                                onClick={handleCopyLastMonth}
+                                                disabled={copyingLastMonth || loadingData}
+                                                className="h-8 px-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-40"
+                                                title="Copy bulan lalu"
                                             >
-                                                <FontAwesomeIcon icon={hideWeekend ? faEyeSlash : faEye} className="text-[9px]" />
-                                                {hideWeekend ? 'Tampilkan Weekend' : 'Sembunyikan Weekend'}
+                                                {copyingLastMonth ? <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[9px]" /> : <FontAwesomeIcon icon={faCopy} className="text-[9px]" />}
+                                                <span className="hidden sm:inline">Copy Bln Lalu</span>
+                                                <span className="sm:hidden">Copy</span>
                                             </button>
-                                            <select
-                                                value={filterMode}
-                                                onChange={e => setFilterMode(e.target.value)}
-                                                className={`h-8 pl-3 pr-3 rounded-xl border text-[10px] font-black appearance-none cursor-pointer transition-all focus:outline-none focus:border-[var(--color-primary)] ${filterMode !== 'all'
-                                                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
-                                                    : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}
-                                                style={{ backgroundImage: 'none' }}
+
+                                            {/* Import */}
+                                            <button
+                                                onClick={() => setShowImport(true)}
+                                                className="h-8 px-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+                                                title="Import Excel/CSV"
                                             >
-                                                <option value="all">Semua Siswa</option>
-                                                <option value="alpa">Alpa ≥ {alertThreshold.alpa} hari</option>
-                                                <option value="belum">Belum diisi</option>
-                                            </select>
+                                                <FontAwesomeIcon icon={faFileImport} className="text-[9px]" />
+                                                <span className="hidden sm:inline">Import</span>
+                                            </button>
+
+                                            {/* Divider */}
+                                            <div className="w-px h-5 bg-[var(--color-border)] mx-0.5 shrink-0" />
+
+                                            {/* Undo / Redo */}
+                                            <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shrink-0">
+                                                <button onClick={applyUndo} disabled={!canUndo} title="Batalkan (Ctrl+Z)"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
+                                                </button>
+                                                <button onClick={applyRedo} disabled={!canRedo} title="Ulangi (Ctrl+Y)"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                                                    <FontAwesomeIcon icon={faRotateRight} className="text-[10px]" />
+                                                </button>
+                                            </div>
+
+                                            {/* Desktop-only: separator + Hide Weekend + Filter */}
+                                            <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                                                <div className="w-px h-5 bg-[var(--color-border)] mx-0.5" />
+                                                <button
+                                                    onClick={() => setHideWeekend(v => !v)}
+                                                    className={`h-8 px-2.5 rounded-xl border text-[10px] font-black active:scale-95 transition-all flex items-center gap-1.5 shrink-0 ${hideWeekend
+                                                        ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600'
+                                                        : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                                                >
+                                                    <FontAwesomeIcon icon={hideWeekend ? faEyeSlash : faEye} className="text-[9px]" />
+                                                    {hideWeekend ? 'Tampilkan Weekend' : 'Sembunyikan Weekend'}
+                                                </button>
+                                                <select
+                                                    value={filterMode}
+                                                    onChange={e => setFilterMode(e.target.value)}
+                                                    className={`h-8 pl-3 pr-3 rounded-xl border text-[10px] font-black appearance-none cursor-pointer transition-all focus:outline-none focus:border-[var(--color-primary)] ${filterMode !== 'all'
+                                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
+                                                        : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}
+                                                    style={{ backgroundImage: 'none' }}
+                                                >
+                                                    <option value="all">Semua Siswa</option>
+                                                    <option value="alpa">Alpa ≥ {alertThreshold.alpa} hari</option>
+                                                    <option value="belum">Belum diisi</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Legend — xl only */}
+                                            <div className="hidden xl:flex items-center gap-1.5 ml-1 shrink-0">
+                                                {STATUS_LIST.map(s => (
+                                                    <span key={s} className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${STATUS_META[s].cellBg} ${STATUS_META[s].color} ${STATUS_META[s].cellBorder}`}>
+                                                        {s} = {STATUS_META[s].label}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </div>
 
-                                        {/* Legend — xl only, di ujung kanan */}
-                                        <div className="hidden xl:flex items-center gap-1.5 ml-1 shrink-0">
-                                            {STATUS_LIST.map(s => (
-                                                <span key={s} className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${STATUS_META[s].cellBg} ${STATUS_META[s].color} ${STATUS_META[s].cellBorder}`}>
-                                                    {s} = {STATUS_META[s].label}
-                                                </span>
-                                            ))}
-                                        </div>
-
-                                        {/* Spacer */}
-                                        <div className="flex-1" />
-
-                                        {/* More/Settings — mobile only, sticky kanan */}
+                                        {/* More/Settings — mobile only, STICKY kanan, di luar scroll */}
                                         <button
                                             onClick={() => setShowMobileSheet(true)}
                                             className={`sm:hidden h-8 px-2.5 rounded-xl border text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0 ${(hideWeekend || filterMode !== 'all')
@@ -3388,6 +3408,7 @@ export default function AbsensiPage() {
                             <RekapBulananPanel
                                 classId={classId} tahun={tahun} bulan={bulan}
                                 studentList={studentList} dataMap={dataMap}
+                                lastSavedAt={lastSavedAt}
                             />
                         )}
 
