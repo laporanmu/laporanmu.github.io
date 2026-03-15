@@ -1280,7 +1280,7 @@ function RowFillPopup({ student, x, y, onFill, onClear, onClose, weekdays }) {
 
 
 
-function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap, lastSavedAt }) {
+function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
     const { addToast } = useToast()
     const { profile } = useAuth()
 
@@ -1321,8 +1321,6 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap, lastSa
                 const m = {}
                 for (const r of (data || [])) m[r.student_id] = r
                 setRaportMap(m)
-                // jika ada data & semua match → tandai syncDone
-                if (data?.length) setSyncDone(true)
             })
         // Feature 9: Load previous month
         const prevBulanVal = bulan === 1 ? 12 : bulan - 1
@@ -1337,7 +1335,7 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap, lastSa
                 }
                 setLastMonthMap(m)
             })
-    }, [classId, tahun, bulan, studentList, lastSavedAt])
+    }, [classId, tahun, bulan, studentList])
 
     const handleSync = async () => {
         if (syncing) return
@@ -1475,6 +1473,7 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap, lastSa
                                 : 'bg-[var(--color-primary)] hover:opacity-90 text-white shadow-sm shadow-[var(--color-primary)]/20 disabled:opacity-60'}`}>
                             <FontAwesomeIcon icon={syncing ? faSpinner : syncDone ? faCircleCheck : faCloudArrowUp} className={syncing ? 'animate-spin' : ''} />
                             {syncing ? 'Menyinkronkan...' : syncDone ? 'Tersinkronkan' : 'Sync ke Raport'}
+                            <span className={`text-[8px] font-black px-1 py-0.5 rounded ${syncDone ? 'bg-emerald-500/20 text-emerald-600' : 'bg-white/20 text-white'}`}>AUTO</span>
                         </button>
                     </div>
                 </div>
@@ -1493,6 +1492,7 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap, lastSa
                                 : 'bg-[var(--color-primary)] hover:opacity-90 text-white shadow-sm shadow-[var(--color-primary)]/20 disabled:opacity-60'}`}>
                             <FontAwesomeIcon icon={syncing ? faSpinner : syncDone ? faCircleCheck : faCloudArrowUp} className={`text-[10px] ${syncing ? 'animate-spin' : ''}`} />
                             {syncing ? '' : syncDone ? 'Sinkron' : 'Sync'}
+                            <span className={`text-[7px] font-black px-1 py-0.5 rounded ${syncDone ? 'bg-emerald-500/20 text-emerald-600' : 'bg-white/20 text-white'}`}>AUTO</span>
                         </button>
                     </div>
                     {/* Baris 2: View switcher kiri, Export+Cetak kanan */}
@@ -1781,6 +1781,37 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap, lastSa
                         })}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    )
+}
+
+// ─── ConfirmModal ──────────────────────────────────────────────────────────────
+
+function ConfirmModal({ message, confirmLabel = 'Lanjutkan', onConfirm, onCancel }) {
+    return (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
+            <div className="w-full max-w-xs bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl overflow-hidden">
+                <div className="flex items-start gap-3 px-5 pt-5 pb-4">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 text-[13px]" />
+                    </div>
+                    <div>
+                        <p className="text-[13px] font-black text-[var(--color-text)]">Ada perubahan belum disimpan</p>
+                        <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{message}</p>
+                    </div>
+                </div>
+                <div className="flex gap-2 px-5 pb-4">
+                    <button onClick={onCancel}
+                        className="flex-1 h-9 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
+                        Batal
+                    </button>
+                    <button onClick={onConfirm}
+                        className="flex-1 h-9 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black transition-all">
+                        {confirmLabel}
+                    </button>
+                </div>
             </div>
         </div>
     )
@@ -2087,7 +2118,6 @@ export default function AbsensiPage() {
     const [isOnline, setIsOnline] = useState(() => typeof navigator !== 'undefined' ? navigator.onLine : true)
     const [draftAvail, setDraftAvail] = useState(false)
     const [showTutorial, setShowTutorial] = useState(false)
-    const [lastSavedAt, setLastSavedAt] = useState(null) // trigger reload raportMap di RekapPanel
 
     // Undo/Redo history
     const historyRef = useRef([])
@@ -2135,6 +2165,7 @@ export default function AbsensiPage() {
     })
     const [showAlertConfig, setShowAlertConfig] = useState(false)
     const [showMobileSheet, setShowMobileSheet] = useState(false)
+    const [confirmModal, setConfirmModal] = useState(null) // { message, confirmLabel, onConfirm }
     // ── Mobile view mode: 'table' | 'card' | 'list' ──────────────────────────
     const [mobileView, setMobileView] = useState(() => {
         try { return localStorage.getItem('absensi_mobile_view') || 'table' } catch { return 'table' }
@@ -2418,6 +2449,11 @@ export default function AbsensiPage() {
             pushHistory(next)
             return next
         })
+        setDirtyMap(prev => {
+            const next = { ...prev }
+            for (const s of studentList) next[s.id] = { ...(next[s.id] || {}), [day]: true }
+            return next
+        })
         setIsDirty(true)
     }, [studentList, pushHistory])
 
@@ -2445,8 +2481,13 @@ export default function AbsensiPage() {
             pushHistory(updated)
             return updated
         })
+        setDirtyMap(prev => {
+            const days = {}
+            for (let d = 1; d <= daysInMonth; d++) if (!isWeekend(tahun, bulan, d)) days[d] = true
+            return { ...prev, [sid]: days }
+        })
         setIsDirty(true)
-    }, [pushHistory])
+    }, [pushHistory, daysInMonth, tahun, bulan])
 
     const markDirty = useCallback(() => setIsDirty(true), [])
 
@@ -2455,20 +2496,47 @@ export default function AbsensiPage() {
     }, [originalMap])
 
     const handleChangeClass = useCallback((newId) => {
-        if (isDirty && !window.confirm('Ada perubahan belum disimpan. Ganti kelas?')) return
+        if (isDirty) {
+            setConfirmModal({
+                message: 'Perubahan yang belum disimpan akan hilang jika ganti kelas.',
+                confirmLabel: 'Ganti Kelas',
+                onConfirm: () => { setClassId(newId); setIsDirty(false); setConfirmModal(null) },
+            })
+            return
+        }
         setClassId(newId); setIsDirty(false)
     }, [isDirty])
 
     const prevBulan = useCallback(() => {
-        if (isDirty && !window.confirm('Ada perubahan belum disimpan. Pindah bulan?')) return
-        if (bulan === 1) { setTahun(t => t - 1); setBulan(12) } else setBulan(b => b - 1)
-        setIsDirty(false)
+        const doNav = () => {
+            if (bulan === 1) { setTahun(t => t - 1); setBulan(12) } else setBulan(b => b - 1)
+            setIsDirty(false)
+        }
+        if (isDirty) {
+            setConfirmModal({
+                message: 'Perubahan yang belum disimpan akan hilang jika pindah bulan.',
+                confirmLabel: 'Pindah Bulan',
+                onConfirm: () => { setConfirmModal(null); doNav() },
+            })
+            return
+        }
+        doNav()
     }, [bulan, isDirty])
 
     const nextBulan = useCallback(() => {
-        if (isDirty && !window.confirm('Ada perubahan belum disimpan. Pindah bulan?')) return
-        if (bulan === 12) { setTahun(t => t + 1); setBulan(1) } else setBulan(b => b + 1)
-        setIsDirty(false)
+        const doNav = () => {
+            if (bulan === 12) { setTahun(t => t + 1); setBulan(1) } else setBulan(b => b + 1)
+            setIsDirty(false)
+        }
+        if (isDirty) {
+            setConfirmModal({
+                message: 'Perubahan yang belum disimpan akan hilang jika pindah bulan.',
+                confirmLabel: 'Pindah Bulan',
+                onConfirm: () => { setConfirmModal(null); doNav() },
+            })
+            return
+        }
+        doNav()
     }, [bulan, isDirty])
 
     const handleSave = useCallback(async () => {
@@ -2495,23 +2563,6 @@ export default function AbsensiPage() {
             setDraftAvail(false)
             addToast(`Absensi ${BULAN_NAMA[bulan]} ${tahun} tersimpan ✓`, 'success')
             haptic('success')
-            // ── Auto-sync ke Raport — langsung di sini, tidak bergantung tab aktif ──
-            try {
-                const syncUpserts = studentList.map(s => {
-                    const rekap = summarize(dataMap[s.id] || {}, tahun, bulan)
-                    return {
-                        student_id: s.id, month: bulan, year: tahun,
-                        hari_sakit: rekap.S || 0,
-                        hari_izin: rekap.I || 0,
-                        hari_alpa: rekap.A || 0,
-                        hari_pulang: rekap.P || 0,
-                        updated_by: profile?.id ?? null,
-                    }
-                })
-                await supabase.from('student_monthly_reports')
-                    .upsert(syncUpserts, { onConflict: 'student_id,month,year' })
-                setLastSavedAt(Date.now())
-            } catch { /* silent — auto-sync gagal tidak block UX */ }
         }
     }, [saving, isDirty, classId, tahun, bulan, studentList, dataMap, originalMap, profile, isOnline, addToast])
 
@@ -3408,7 +3459,6 @@ export default function AbsensiPage() {
                             <RekapBulananPanel
                                 classId={classId} tahun={tahun} bulan={bulan}
                                 studentList={studentList} dataMap={dataMap}
-                                lastSavedAt={lastSavedAt}
                             />
                         )}
 
@@ -3442,6 +3492,16 @@ export default function AbsensiPage() {
 
                 {/* Tutorial modal */}
                 {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
+
+                {/* Confirm Modal — ganti kelas/bulan saat ada perubahan */}
+                {confirmModal && (
+                    <ConfirmModal
+                        message={confirmModal.message}
+                        confirmLabel={confirmModal.confirmLabel}
+                        onConfirm={confirmModal.onConfirm}
+                        onCancel={() => setConfirmModal(null)}
+                    />
+                )}
 
                 {/* Command Palette */}
                 <CommandPalette

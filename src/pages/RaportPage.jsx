@@ -2687,7 +2687,7 @@ export default function RaportPage() {
                         <FontAwesomeIcon icon={faBolt} className="text-indigo-500 text-xs" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black text-[var(--color-text)]">Lanjut dari tadi?</p>
+                        <p className="text-[10px] font-black text-[var(--color-text)]">Lanjutkan yang tadi?</p>
                         <p className="text-[9px] text-[var(--color-text-muted)] font-medium truncate">
                             {lastSession.className} · {BULAN.find(b => b.id === lastSession.month)?.id_str} {lastSession.year}
                         </p>
