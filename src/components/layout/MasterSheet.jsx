@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
@@ -12,18 +12,21 @@ import {
 import { useAuth } from "../../context/AuthContext"
 
 // ─── Portal container ─────────────────────────────────────────────────────────
-function usePortalContainer(id) {
-    const ref = useRef(null)
-    if (!ref.current) {
+// Singleton di module-level — dibuat SEKALI saat module di-load, tidak pernah
+// dihapus. Mencegah removeChild crash di React 18 Strict Mode / concurrent render
+// yang bisa double-invoke render function sehingga hook-based container jadi orphan.
+const _portalContainers = {}
+function getPortalContainer(id) {
+    if (!_portalContainers[id]) {
         let el = document.getElementById(id)
         if (!el) {
             el = document.createElement('div')
             el.id = id
             document.body.appendChild(el)
         }
-        ref.current = el
+        _portalContainers[id] = el
     }
-    return ref.current
+    return _portalContainers[id]
 }
 
 // ─── Items ────────────────────────────────────────────────────────────────────
@@ -94,7 +97,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
     const navigate = useNavigate()
     const { profile } = useAuth()
 
-    const container = usePortalContainer('portal-sheet')
+    const container = getPortalContainer('portal-sheet')
 
     const role = profile?.role?.toLowerCase()
     const isSatpam = role === 'satpam'
