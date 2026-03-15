@@ -3828,546 +3828,442 @@ export default function RaportPage() {
 
     return (
         <DashboardLayout title="Raport Bulanan">
+            {/* TAMBAH INI: */}
+            <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
 
-            {/* ── PAGE HEADER ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                    <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Raport Bulanan</h1>
-                    <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas.</p>
-                </div>
-                <div className="flex gap-2 items-center">
-                    {step >= 1 && step <= 3 && (
-                        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                            {stepLabels.map((label, i) => (
-                                <div key={i} className="flex items-center gap-1.5">
-                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${step === i + 1 ? 'bg-emerald-500 text-white' : step > i + 1 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'}`}>{step > i + 1 ? <FontAwesomeIcon icon={faCheck} className="text-[7px]" /> : i + 1}</div>
-                                    <span className={`text-[9px] font-bold ${step === i + 1 ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'}`}>{label}</span>
-                                    {i < stepLabels.length - 1 && <div className="w-4 h-px bg-[var(--color-border)]" />}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <button onClick={() => { setTutorialStep(0); setShowTutorialModal(true) }} aria-label="Panduan penggunaan" className="h-8 w-18 gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center justify-center hover:bg-amber-500/15 transition-all" title="Panduan & Tutorial">
-                        <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
-                        Tutorial
-                    </button>
-                    <button onClick={() => { setStep(4); loadArchive() }} className={`h-9 px-3 rounded-lg border text-[9px] font-black flex items-center gap-1.5 transition-all ${step === 4 ? 'bg-amber-500/15 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}><FontAwesomeIcon icon={faTableList} /> Riwayat</button>
-                    {step === 0 && (
-                        <button onClick={() => { setSelectedClassId(''); setStep(1) }} className="btn btn-primary h-9 px-4 lg:px-5 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faPlus} className="text-sm" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Buat Raport</span>
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* ── STATS ── */}
-            {step === 0 && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                    {[
-                        { label: 'Total Kelas', value: stats.totalKelas, icon: faSchool, bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]', border: 'border-t-[var(--color-primary)]' },
-                        { label: 'Total Siswa', value: stats.totalSiswa, icon: faUsers, bg: 'bg-emerald-500/10 text-emerald-500', border: 'border-t-emerald-500' },
-                        { label: 'Total Raport', value: stats.totalRaport, icon: faClipboardList, bg: 'bg-indigo-500/10 text-indigo-500', border: 'border-t-indigo-500' },
-                        { label: 'Bulan Berjalan', value: BULAN[stats.bulanIni - 1]?.id_str || '—', icon: faCalendarAlt, bg: 'bg-amber-500/10 text-amber-500', border: 'border-t-amber-500', isText: true },
-                    ].map(s => (
-                        <div key={s.label} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.border} flex items-center gap-3 hover:border-t-4 transition-all`}>
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${s.bg}`}><FontAwesomeIcon icon={s.icon} /></div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 leading-none mb-1">{s.label}</p>
-                                <h3 className={`font-black font-heading leading-none text-[var(--color-text)] ${s.isText ? 'text-sm' : 'text-xl tabular-nums'}`}>{s.value}</h3>
+                {/* ── PAGE HEADER ── */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Raport Bulanan</h1>
+                        <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas.</p>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        {step >= 1 && step <= 3 && (
+                            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                {stepLabels.map((label, i) => (
+                                    <div key={i} className="flex items-center gap-1.5">
+                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${step === i + 1 ? 'bg-emerald-500 text-white' : step > i + 1 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'}`}>{step > i + 1 ? <FontAwesomeIcon icon={faCheck} className="text-[7px]" /> : i + 1}</div>
+                                        <span className={`text-[9px] font-bold ${step === i + 1 ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'}`}>{label}</span>
+                                        {i < stepLabels.length - 1 && <div className="w-4 h-px bg-[var(--color-border)]" />}
+                                    </div>
+                                ))}
                             </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* ── SEARCH (only at step 0) ── */}
-            {step === 0 && (
-                <div className="glass rounded-[1.5rem] mb-6 border border-[var(--color-border)] overflow-hidden">
-                    <div className="flex items-center gap-2 p-3">
-                        <div className="flex-1 relative">
-                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm"><FontAwesomeIcon icon={faSearch} /></div>
-                            <input ref={searchInputRef} type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari nama kelas... (tekan / untuk fokus)" className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl" />
-                            {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Bersihkan pencarian kelas" className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] transition-all"><FontAwesomeIcon icon={faXmark} className="text-xs" /></button>}
-                        </div>
+                        )}
+                        <button onClick={() => { setTutorialStep(0); setShowTutorialModal(true) }} aria-label="Panduan penggunaan" className="h-8 w-18 gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center justify-center hover:bg-amber-500/15 transition-all" title="Panduan & Tutorial">
+                            <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
+                            Tutorial
+                        </button>
+                        <button onClick={() => { setStep(4); loadArchive() }} className={`h-9 px-3 rounded-lg border text-[9px] font-black flex items-center gap-1.5 transition-all ${step === 4 ? 'bg-amber-500/15 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}><FontAwesomeIcon icon={faTableList} /> Riwayat</button>
+                        {step === 0 && (
+                            <button onClick={() => { setSelectedClassId(''); setStep(1) }} className="btn btn-primary h-9 px-4 lg:px-5 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2">
+                                <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Buat Raport</span>
+                            </button>
+                        )}
                     </div>
                 </div>
-            )}
 
-            {/* ── CONTENT — dengan animasi fade+slide antar step ── */}
-            <div className="glass rounded-[1.5rem] border border-[var(--color-border)] p-4 sm:p-6">
-                {/* FIX 6: Global auto-save indicator */}
-                {step === 2 && globalSaveIndicator && (
-                    <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-xl border shadow-lg text-[10px] font-black transition-all duration-300 ${globalSaveIndicator === 'saving' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
-                        <FontAwesomeIcon icon={globalSaveIndicator === 'saving' ? faSpinner : faCircleCheck} className={globalSaveIndicator === 'saving' ? 'animate-spin text-[9px]' : 'text-[9px]'} />
-                        {globalSaveIndicator === 'saving' ? 'Menyimpan...' : 'Tersimpan ✓'}
+                {/* ── STATS ── */}
+                {step === 0 && (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                        {[
+                            { label: 'Total Kelas', value: stats.totalKelas, icon: faSchool, bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]', border: 'border-t-[var(--color-primary)]' },
+                            { label: 'Total Siswa', value: stats.totalSiswa, icon: faUsers, bg: 'bg-emerald-500/10 text-emerald-500', border: 'border-t-emerald-500' },
+                            { label: 'Total Raport', value: stats.totalRaport, icon: faClipboardList, bg: 'bg-indigo-500/10 text-indigo-500', border: 'border-t-indigo-500' },
+                            { label: 'Bulan Berjalan', value: BULAN[stats.bulanIni - 1]?.id_str || '—', icon: faCalendarAlt, bg: 'bg-amber-500/10 text-amber-500', border: 'border-t-amber-500', isText: true },
+                        ].map(s => (
+                            <div key={s.label} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.border} flex items-center gap-3 hover:border-t-4 transition-all`}>
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${s.bg}`}><FontAwesomeIcon icon={s.icon} /></div>
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 leading-none mb-1">{s.label}</p>
+                                    <h3 className={`font-black font-heading leading-none text-[var(--color-text)] ${s.isText ? 'text-sm' : 'text-xl tabular-nums'}`}>{s.value}</h3>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
-                <div key={step}
-                    style={{
-                        animation: 'stepFadeIn 0.22s cubic-bezier(0.16,1,0.3,1) both',
-                    }}
-                >
-                    {step === 0 && renderStep0()}
-                    {step === 1 && renderStep1()}
-                    {step === 2 && renderStep2()}
-                    {step === 3 && renderStep3()}
-                    {step === 4 && renderStep4()}
+
+                {/* ── SEARCH (only at step 0) ── */}
+                {step === 0 && (
+                    <div className="glass rounded-[1.5rem] mb-6 border border-[var(--color-border)] overflow-hidden">
+                        <div className="flex items-center gap-2 p-3">
+                            <div className="flex-1 relative">
+                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm"><FontAwesomeIcon icon={faSearch} /></div>
+                                <input ref={searchInputRef} type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari nama kelas... (tekan / untuk fokus)" className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl" />
+                                {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Bersihkan pencarian kelas" className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] transition-all"><FontAwesomeIcon icon={faXmark} className="text-xs" /></button>}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── CONTENT — dengan animasi fade+slide antar step ── */}
+                <div className="glass rounded-[1.5rem] border border-[var(--color-border)] p-4 sm:p-6">
+                    {/* FIX 6: Global auto-save indicator */}
+                    {step === 2 && globalSaveIndicator && (
+                        <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-xl border shadow-lg text-[10px] font-black transition-all duration-300 ${globalSaveIndicator === 'saving' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
+                            <FontAwesomeIcon icon={globalSaveIndicator === 'saving' ? faSpinner : faCircleCheck} className={globalSaveIndicator === 'saving' ? 'animate-spin text-[9px]' : 'text-[9px]'} />
+                            {globalSaveIndicator === 'saving' ? 'Menyimpan...' : 'Tersimpan ✓'}
+                        </div>
+                    )}
+                    <div key={step}
+                        style={{
+                            animation: 'stepFadeIn 0.22s cubic-bezier(0.16,1,0.3,1) both',
+                        }}
+                    >
+                        {step === 0 && renderStep0()}
+                        {step === 1 && renderStep1()}
+                        {step === 2 && renderStep2()}
+                        {step === 3 && renderStep3()}
+                        {step === 4 && renderStep4()}
+                    </div>
                 </div>
-            </div>
-            {/* Keyframe untuk animasi step */}
-            <style>{`
+                {/* Keyframe untuk animasi step */}
+                <style>{`
                 @keyframes stepFadeIn {
                     from { opacity: 0; transform: translateY(8px) scale(0.995); }
                     to   { opacity: 1; transform: translateY(0) scale(1); }
                 }
             `}</style>
 
-            {/* ── Hidden print container ── */}
-            {printQueue.length > 0 && (
-                <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
-                    {printStudents.filter(s => printQueue.includes(s.id)).map(s => (
-                        <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} catatanArab={catatanArabMap[s.id]} onRendered={() => setPrintRenderedCount(c => c + 1)} />
-                    ))}
-                </div>
-            )}
-
-            {/* ── KEYBOARD SHORTCUT MODAL ── */}
-            {showShortcutModal && createPortal(
-                <div className="fixed inset-0 z-[202] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setShowShortcutModal(false) }}>
-                    <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-6 w-full max-w-md" role="dialog" aria-modal="true" aria-label="Keyboard Shortcuts">
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-indigo-500/15 flex items-center justify-center"><FontAwesomeIcon icon={faKeyboard} className="text-indigo-500" /></div>
-                                <div>
-                                    <p className="text-[13px] font-black text-[var(--color-text)]">Keyboard Shortcuts</p>
-                                    <p className="text-[10px] text-[var(--color-text-muted)]">Tekan <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-mono"><FontAwesomeIcon icon={faKeyboard} /></kbd> kapan saja untuk membuka ini</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setShowShortcutModal(false)} aria-label="Tutup modal shortcut" className="w-8 h-8 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] transition-all"><FontAwesomeIcon icon={faXmark} /></button>
-                        </div>
-                        <div className="space-y-1">
-                            {[
-                                { keys: ['Tab', 'Enter'], desc: 'Pindah ke cell berikutnya' },
-                                { keys: ['↑', '↓'], desc: 'Naik / turun baris' },
-                                { keys: ['←', '→'], desc: 'Pindah kolom kriteria' },
-                                { keys: ['Ctrl', 'S'], desc: 'Simpan semua nilai' },
-                                { keys: ['Ctrl', 'Z'], desc: 'Undo nilai (Ctrl+Y untuk Redo)' },
-                                { keys: ['?'], desc: 'Buka / tutup panel shortcut ini' },
-                                { keys: ['Esc'], desc: 'Tutup modal / panel' },
-                                { keys: ['0–9'], desc: 'Input nilai langsung di cell aktif' },
-                            ].map((sc, i) => (
-                                <div key={i} className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all">
-                                    <span className="text-[11px] text-[var(--color-text-muted)]">{sc.desc}</span>
-                                    <div className="flex items-center gap-1">
-                                        {sc.keys.map((k, j) => (
-                                            <span key={j}>
-                                                <kbd className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-mono font-black text-[var(--color-text)]">{k}</kbd>
-                                                {j < sc.keys.length - 1 && <span className="text-[9px] text-[var(--color-text-muted)] mx-0.5">+</span>}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="mt-4 p-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
-                            <p className="text-[10px] font-bold text-amber-600 flex items-start gap-1.5"><FontAwesomeIcon icon={faCircleInfo} className="text-amber-500 mt-0.5 shrink-0" /> Tips: Gunakan Tab untuk navigasi cepat, Ctrl+S untuk auto-save semua, dan filter "Belum Lengkap" untuk fokus ke santri yang nilainya masih kosong.</p>
-                        </div>
+                {/* ── Hidden print container ── */}
+                {printQueue.length > 0 && (
+                    <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
+                        {printStudents.filter(s => printQueue.includes(s.id)).map(s => (
+                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} catatanArab={catatanArabMap[s.id]} onRendered={() => setPrintRenderedCount(c => c + 1)} />
+                        ))}
                     </div>
-                </div>,
-                document.body
-            )}
+                )}
 
-            {/* ── TUTORIAL MODAL ── */}
-            {showTutorialModal && createPortal(
-                (() => {
-                    const [t1, t2, t3, t4, t5, t6, t7] = tutorialImgs
-                    const SLIDES = [
-                        {
-                            icon: faClipboardList,
-                            iconColor: 'text-emerald-500',
-                            iconBg: 'bg-emerald-500/15',
-                            title: 'Dua Cara Memulai Input Nilai',
-                            subtitle: 'Pilih jalur yang paling nyaman untukmu',
-                            body: (
-                                <div className="space-y-3 text-[11px] text-[var(--color-text)] leading-relaxed">
-                                    <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                                        <p className="font-black text-[var(--color-text)] mb-1 flex items-center gap-1.5">
-                                            <span className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">1</span>
-                                            Lewat tombol "＋ Buat Raport"
-                                        </p>
-                                        <p className="text-[var(--color-text-muted)] pl-6">Klik tombol di pojok kanan atas → pilih kelas → atur bulan & tahun → isi nama Musyrif → pilih template bahasa → klik <strong>"Mulai Input Nilai"</strong>.</p>
-                                    </div>
-                                    <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                                        <p className="font-black text-[var(--color-text)] mb-1 flex items-center gap-1.5">
-                                            <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">2</span>
-                                            Langsung klik kartu kelas
-                                        </p>
-                                        <p className="text-[var(--color-text-muted)] pl-6">Di halaman utama, klik langsung kartu kelas yang ingin diisi. Kamu akan langsung masuk ke halaman input nilai tanpa perlu mengatur periode.</p>
+                {/* ── KEYBOARD SHORTCUT MODAL ── */}
+                {showShortcutModal && createPortal(
+                    <div className="fixed inset-0 z-[202] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setShowShortcutModal(false) }}>
+                        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-6 w-full max-w-md" role="dialog" aria-modal="true" aria-label="Keyboard Shortcuts">
+                            <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-indigo-500/15 flex items-center justify-center"><FontAwesomeIcon icon={faKeyboard} className="text-indigo-500" /></div>
+                                    <div>
+                                        <p className="text-[13px] font-black text-[var(--color-text)]">Keyboard Shortcuts</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">Tekan <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-mono"><FontAwesomeIcon icon={faKeyboard} /></kbd> kapan saja untuk membuka ini</p>
                                     </div>
                                 </div>
-                            ),
-                            tips: 'Template bahasa otomatis: kelas Boarding → Arab, kelas Reguler → Indonesia. Nama Musyrif terisi otomatis jika sudah diset di data kelas.',
-                            img: t1,
-                        },
-                        {
-                            icon: faTableList,
-                            iconColor: 'text-indigo-500',
-                            iconBg: 'bg-indigo-500/15',
-                            title: 'Mengisi Nilai Santri',
-                            subtitle: 'Input 5 kriteria penilaian karakter',
-                            body: 'Setiap santri memiliki 5 kolom nilai: Akhlak, Ibadah, Kebersihan, Al-Quran, dan Bahasa.Nilai berkisar antara 0–9. Tekan Tab atau Enter untuk berpindah ke cell berikutnya dengan cepat.',
-                            tips: 'Ketik angka 0–9 langsung saat cell aktif. Warna cell berubah otomatis sesuai grade — hijau untuk nilai tinggi, merah untuk nilai rendah.',
-                            img: t2,
-                        },
-                        {
-                            icon: faFloppyDisk,
-                            iconColor: 'text-sky-500',
-                            iconBg: 'bg-sky-500/15',
-                            title: 'Auto-Save & Status Simpan',
-                            subtitle: 'Data tersimpan otomatis ke server',
-                            body: 'Setiap perubahan nilai tersimpan otomatis ke database dalam 1.5 detik. Indikator berwarna hijau (✓) menandakan data sudah tersimpan. Tekan Ctrl+S atau klik "Simpan Semua" untuk menyimpan sekaligus.',
-                            tips: 'Jika koneksi terputus, nilai tetap tersimpan sementara sebagai draft di browser. Saat online kembali, muat draft untuk melanjutkan.',
-                            img: t3,
-                        },
-                        {
-                            icon: faBoxArchive,
-                            iconColor: 'text-violet-500',
-                            iconBg: 'bg-violet-500/15',
-                            title: 'Data Tambahan per Santri',
-                            subtitle: 'Kesehatan, hafalan & catatan',
-                            body: 'Selain nilai karakter, isi juga data tambahan: berat & tinggi badan, jumlah hari sakit / izin / alpa, progress Ziyadah & Murojaah hafalan, serta catatan khusus yang akan tercetak di raport untuk orang tua.',
-                            tips: 'Data tambahan ini opsional — raport tetap bisa dicetak meski tidak diisi. Namun semakin lengkap datanya, semakin informatif raport yang diterima orang tua.',
-                            img: t4,
-                        },
-                        {
-                            icon: faFillDrip,
-                            iconColor: 'text-rose-500',
-                            iconBg: 'bg-rose-500/15',
-                            title: 'Isi Massal & Copy Bulan Lalu',
-                            subtitle: 'Hemat waktu untuk nilai yang sama',
-                            body: 'Gunakan "Isi Massal" untuk mengisi nilai yang sama ke banyak santri sekaligus — centang santri yang ingin diisi, set nilai, klik Terapkan. Gunakan "Copy Bulan Lalu" untuk menyalin nilai dari periode sebelumnya sebagai titik awal.',
-                            tips: 'Undo/Redo tersedia dengan Ctrl+Z dan Ctrl+Y jika ingin membatalkan perubahan nilai yang sudah diisi.',
-                            img: t5,
-                        },
-                        {
-                            icon: faFilePdf,
-                            iconColor: 'text-red-500',
-                            iconBg: 'bg-red-500/15',
-                            title: 'Cetak, ZIP & WA Blast',
-                            subtitle: 'Distribusikan raport ke orang tua',
-                            body: 'Klik ikon Print untuk mencetak raport dari browser. Klik ZIP untuk mengunduh semua raport dalam satu file. Klik ikon WhatsApp di tiap baris santri untuk kirim raport ke orang tua, atau gunakan "WA Blast" untuk kirim ke semua sekaligus.',
-                            tips: 'Hanya santri yang nilainya sudah lengkap (semua 5 kriteria terisi) yang bisa diekspor ke PDF / ZIP / WA.',
-                            img: t6,
-                        },
-                        {
-                            icon: faBoxArchive,
-                            iconColor: 'text-teal-500',
-                            iconBg: 'bg-teal-500/15',
-                            title: 'Arsip & Riwayat',
-                            subtitle: 'Lihat dan edit raport bulan lalu',
-                            body: 'Semua raport yang pernah disimpan tersedia di tab "Riwayat". Kamu bisa melihat raport per kelas per bulan, mengedit nilai yang sudah tersimpan, menghapus arsip, hingga mencetak atau mengirim ulang via WA.',
-                            tips: 'Filter arsip berdasarkan tahun, bulan, atau kelas. Gunakan "Edit Arsip" untuk memperbaiki nilai yang salah input bulan lalu.',
-                            img: t7,
-                        },
-                    ]
-                    const slide = SLIDES[tutorialStep]
-                    const isLast = tutorialStep === SLIDES.length - 1
-                    const isFirst = tutorialStep === 0
-                    return (
-                        <div className="fixed inset-0 z-[203] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-                            onClick={e => { if (e.target === e.currentTarget) setShowTutorialModal(false) }}>
-                            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
-                                role="dialog" aria-modal="true" aria-label="Tutorial Panduan">
-                                {/* Header */}
-                                <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[var(--color-border)]">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${slide.iconBg}`}>
-                                            <FontAwesomeIcon icon={slide.icon} className={`text-base ${slide.iconColor}`} />
-                                        </div>
-                                        <div>
-                                            <p className="text-[13px] font-black text-[var(--color-text)] leading-tight">{slide.title}</p>
-                                            <p className="text-[10px] text-[var(--color-text-muted)]">{slide.subtitle}</p>
+                                <button onClick={() => setShowShortcutModal(false)} aria-label="Tutup modal shortcut" className="w-8 h-8 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] transition-all"><FontAwesomeIcon icon={faXmark} /></button>
+                            </div>
+                            <div className="space-y-1">
+                                {[
+                                    { keys: ['Tab', 'Enter'], desc: 'Pindah ke cell berikutnya' },
+                                    { keys: ['↑', '↓'], desc: 'Naik / turun baris' },
+                                    { keys: ['←', '→'], desc: 'Pindah kolom kriteria' },
+                                    { keys: ['Ctrl', 'S'], desc: 'Simpan semua nilai' },
+                                    { keys: ['Ctrl', 'Z'], desc: 'Undo nilai (Ctrl+Y untuk Redo)' },
+                                    { keys: ['?'], desc: 'Buka / tutup panel shortcut ini' },
+                                    { keys: ['Esc'], desc: 'Tutup modal / panel' },
+                                    { keys: ['0–9'], desc: 'Input nilai langsung di cell aktif' },
+                                ].map((sc, i) => (
+                                    <div key={i} className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all">
+                                        <span className="text-[11px] text-[var(--color-text-muted)]">{sc.desc}</span>
+                                        <div className="flex items-center gap-1">
+                                            {sc.keys.map((k, j) => (
+                                                <span key={j}>
+                                                    <kbd className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-mono font-black text-[var(--color-text)]">{k}</kbd>
+                                                    {j < sc.keys.length - 1 && <span className="text-[9px] text-[var(--color-text-muted)] mx-0.5">+</span>}
+                                                </span>
+                                            ))}
                                         </div>
                                     </div>
-                                    <button onClick={() => setShowTutorialModal(false)} aria-label="Tutup tutorial"
-                                        className="w-8 h-8 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] transition-all shrink-0">
-                                        <FontAwesomeIcon icon={faXmark} />
-                                    </button>
-                                </div>
-
-                                {/* Dot navigator */}
-                                <div className="flex items-center justify-center gap-1.5 pt-4 px-6">
-                                    {SLIDES.map((_, i) => (
-                                        <button key={i} onClick={() => setTutorialStep(i)}
-                                            className={`rounded-full transition-all ${i === tutorialStep ? 'w-5 h-2 bg-amber-500' : 'w-2 h-2 bg-[var(--color-border)] hover:bg-amber-500/40'}`}
-                                            aria-label={`Slide ${i + 1}`} />
-                                    ))}
-                                    <span className="ml-2 text-[9px] text-[var(--color-text-muted)] font-bold">{tutorialStep + 1}/{SLIDES.length}</span>
-                                </div>
-
-                                {/* Body */}
-                                <div className="px-6 pt-4 pb-2 overflow-y-auto flex-1">
-                                    {slide.img ? (
-                                        <div className="relative group mb-4 cursor-zoom-in" onClick={() => setTutorialZoomImg(slide.img)}>
-                                            <img src={slide.img} alt={slide.title}
-                                                className="w-full rounded-xl border border-[var(--color-border)] object-contain max-h-64 transition-all group-hover:brightness-90" />
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                                                <div className="bg-black/60 text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
-                                                    <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[9px]" /> Klik untuk zoom
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : tutorialImgs[0] === null ? (
-                                        /* skeleton while lazy-loading */
-                                        <div className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] mb-4 h-48 animate-pulse" />
-                                    ) : (
-                                        <div className="w-full rounded-xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)] mb-4 flex items-center justify-center h-24">
-                                            <div className="text-center">
-                                                <FontAwesomeIcon icon={slide.icon} className={`text-2xl opacity-20 ${slide.iconColor}`} />
-                                                <p className="text-[9px] text-[var(--color-text-muted)] mt-1 opacity-50">Screenshot akan ditampilkan di sini</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {typeof slide.body === 'string'
-                                        ? <p className="text-[12px] text-[var(--color-text)] leading-relaxed">{slide.body}</p>
-                                        : slide.body
-                                    }
-                                </div>
-
-                                {/* Tips */}
-                                <div className="px-6 pb-2">
-                                    <div className="p-3 rounded-xl bg-amber-500/8 border border-amber-500/20 flex items-start gap-2">
-                                        <FontAwesomeIcon icon={faLightbulb} className="text-amber-500 text-[11px] mt-0.5 shrink-0" />
-                                        <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 leading-snug">{slide.tips}</p>
-                                    </div>
-                                </div>
-
-                                {/* Footer nav */}
-                                <div className="flex items-center gap-3 px-6 py-4">
-                                    <button onClick={() => setTutorialStep(v => Math.max(0, v - 1))} disabled={isFirst}
-                                        className="h-9 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all disabled:opacity-30 flex items-center gap-1.5">
-                                        <FontAwesomeIcon icon={faChevronLeft} className="text-[9px]" /> Sebelumnya
-                                    </button>
-                                    <div className="flex-1" />
-                                    {isLast ? (
-                                        <button onClick={() => setShowTutorialModal(false)}
-                                            className="h-9 px-5 rounded-xl bg-amber-500 text-white text-[10px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/20">
-                                            <FontAwesomeIcon icon={faCheck} className="text-[9px]" /> Selesai
-                                        </button>
-                                    ) : (
-                                        <button onClick={() => setTutorialStep(v => Math.min(SLIDES.length - 1, v + 1))}
-                                            className="h-9 px-5 rounded-xl bg-amber-500 text-white text-[10px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/20">
-                                            Berikutnya <FontAwesomeIcon icon={faChevronRight} className="text-[9px]" />
-                                        </button>
-                                    )}
-                                </div>
+                                ))}
                             </div>
-                        </div>
-                    )
-                })(),
-                document.body
-            )}
-
-            {/* ── TUTORIAL IMAGE LIGHTBOX ── */}
-            {tutorialZoomImg && createPortal(
-                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
-                    onClick={() => setTutorialZoomImg(null)}>
-                    <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
-                        <img src={tutorialZoomImg} alt="Tutorial zoom"
-                            className="w-full rounded-2xl shadow-2xl border border-white/10 object-contain max-h-[85vh]" />
-                        <button onClick={() => setTutorialZoomImg(null)}
-                            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-all backdrop-blur-sm"
-                            aria-label="Tutup zoom">
-                            <FontAwesomeIcon icon={faXmark} />
-                        </button>
-                        <p className="text-center text-white/50 text-[10px] mt-3 font-medium">Klik di luar untuk menutup</p>
-                    </div>
-                </div>,
-                document.body
-            )}
-
-            {/* ── WA BLAST CONFIRM MODAL (FIX #11) ── */}
-            {waBlastConfirm && createPortal(
-                <div className="fixed inset-0 z-[201] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-6 w-full max-w-sm" role="dialog" aria-modal="true">
-                        <div className="flex items-start gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center shrink-0">
-                                <FontAwesomeIcon icon={faWhatsapp} className="text-green-500 text-lg" />
-                            </div>
-                            <div>
-                                <p className="text-[13px] font-black text-[var(--color-text)]">Konfirmasi WA Blast</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-                                    Akan membuka <strong>{waBlastConfirm.queue.length} tab browser</strong> secara berurutan untuk mengirim pesan WA ke wali santri.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="p-3 rounded-xl bg-amber-500/8 border border-amber-500/20 mb-5">
-                            <p className="text-[10px] font-bold text-amber-600 flex items-start gap-1.5">
-                                <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 shrink-0" />
-                                Pastikan popup browser <strong>tidak diblokir</strong> dan jangan tutup halaman ini selama proses berlangsung.
-                            </p>
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={() => setWaBlastConfirm(null)} className="flex-1 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[11px] font-black hover:text-[var(--color-text)] transition-all">Batal</button>
-                            <button onClick={() => runWaBlast(waBlastConfirm.queue)} className="flex-1 h-9 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5">
-                                <FontAwesomeIcon icon={faWhatsapp} /> Ya, Kirim Sekarang
-                            </button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
-
-            {/* ── WA BLAST MODAL ── */}
-            {waBlast && createPortal(
-                <div className="fixed inset-0 z-[201] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-6 w-full max-w-md" role="dialog" aria-modal="true" aria-label="Progress WA Blast">
-                        <div className="flex items-center gap-3 mb-5">
-                            <div className="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center shrink-0">
-                                <FontAwesomeIcon icon={faWhatsapp} className="text-green-500 text-lg" />
-                            </div>
-                            <div>
-                                <p className="text-[13px] font-black text-[var(--color-text)]">WA Blast Raport</p>
-                                <p className="text-[10px] text-[var(--color-text-muted)]">{waBlast.queue.length} wali · Tab WA terbuka otomatis per santri</p>
-                            </div>
-                        </div>
-                        {/* FIX INFO: aria-live="polite" agar screen reader mengumumkan progress */}
-                        <div className="mb-4" aria-live="polite" role="status">
-                            <div className="flex justify-between mb-1.5">
-                                <span className="text-[10px] font-black text-[var(--color-text-muted)]">Progress</span>
-                                <span className="text-[10px] font-black text-[var(--color-text)]">{waBlast.done + waBlast.failed} / {waBlast.queue.length}</span>
-                            </div>
-                            <div className="h-2.5 rounded-full bg-[var(--color-surface-alt)] overflow-hidden border border-[var(--color-border)]"
-                                role="progressbar"
-                                aria-valuenow={waBlast.done + waBlast.failed}
-                                aria-valuemin={0}
-                                aria-valuemax={waBlast.queue.length}
-                            >
-                                <div className="h-full rounded-full bg-green-500 transition-all duration-500"
-                                    style={{ width: `${waBlast.queue.length ? Math.round(((waBlast.done + waBlast.failed) / waBlast.queue.length) * 100) : 0}%` }} />
-                            </div>
-                        </div>
-                        {waBlast.active && waBlast.queue[waBlast.idx] && (
-                            <div className="flex items-center gap-2 p-3 rounded-xl bg-green-500/8 border border-green-500/20 mb-4">
-                                <FontAwesomeIcon icon={faSpinner} className="text-green-500 animate-spin text-sm shrink-0" />
-                                <div>
-                                    <p className="text-[11px] font-black text-[var(--color-text)]">{waBlast.queue[waBlast.idx].name}</p>
-                                    <p className="text-[9px] text-[var(--color-text-muted)]">Membuat PDF & membuka tab WA...</p>
-                                </div>
-                            </div>
-                        )}
-                        <div className="grid grid-cols-3 gap-2 mb-5">
-                            {[
-                                { label: 'Antrian', val: waBlast.queue.length, color: '#6366f1' },
-                                { label: 'Terkirim', val: waBlast.done, color: '#10b981' },
-                                { label: 'Gagal', val: waBlast.failed, color: '#ef4444' },
-                            ].map(s => (
-                                <div key={s.label} className="text-center p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                                    <p className="text-lg font-black" style={{ color: s.color }}>{s.val}</p>
-                                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{s.label}</p>
-                                </div>
-                            ))}
-                        </div>
-                        {!waBlast.active && (
-                            <button onClick={() => setWaBlast(null)} className="w-full h-10 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all">
-                                Selesai
-                            </button>
-                        )}
-                        {waBlast.active && (
-                            <div className="space-y-3">
-                                <p className="text-center text-[9px] text-[var(--color-text-muted)] font-medium">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 mr-1" /> Jangan tutup halaman ini selama proses berlangsung
-                                </p>
-                                <button
-                                    onClick={() => { waBlastAbortRef.current = true }}
-                                    className="w-full h-9 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 text-[11px] font-black hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
-                                    Batalkan Blast
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>,
-                document.body
-            )}
-
-            {confirmPortal}
-
-            {/* ── TREND MODAL ── */}
-            {
-                trendModal && createPortal(
-                    <div className="fixed inset-0 z-[201] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setTrendModal(null)}>
-                        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-6 w-full max-w-sm" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <p className="text-[13px] font-black text-[var(--color-text)]">{trendModal.student.name}</p>
-                                    <p className="text-[10px] text-[var(--color-text-muted)]">Tren nilai {trendModal.trendData.length} bulan terakhir</p>
-                                </div>
-                                <button onClick={() => setTrendModal(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><FontAwesomeIcon icon={faXmark} /></button>
-                            </div>
-                            {/* Sparkline per kriteria */}
-                            <div className="space-y-2 mb-4">
-                                {KRITERIA.map(k => {
-                                    const vals = trendModal.trendData.map(t => t.scores[k.key]).filter(v => v !== null && v !== undefined)
-                                    const last = vals[vals.length - 1]
-                                    const prev = vals[vals.length - 2]
-                                    const delta = (last !== undefined && prev !== undefined) ? Number(last) - Number(prev) : null
-                                    return (
-                                        <div key={k.key} className="flex items-center gap-2 p-2 rounded-lg bg-[var(--color-surface-alt)]">
-                                            <FontAwesomeIcon icon={k.icon} style={{ color: k.color, fontSize: 11, width: 14 }} />
-                                            <span className="text-[10px] font-black text-[var(--color-text-muted)] w-16 shrink-0">{k.id}</span>
-                                            <div className="flex-1">
-                                                <SparklineTrend trendData={trendModal.trendData.map(t => ({ ...t, scores: { [k.key]: t.scores[k.key] } }))} />
-                                            </div>
-                                            <div className="text-right shrink-0">
-                                                <span className="text-[12px] font-black" style={{ color: k.color }}>{last ?? '—'}</span>
-                                                {delta !== null && delta !== 0 && <span className="text-[9px] font-black ml-1" style={{ color: delta > 0 ? '#10b981' : '#ef4444' }}>{delta > 0 ? '▲' : '▼'}{Math.abs(delta)}</span>}
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                            <div className="flex items-center justify-between p-3 rounded-xl border border-[var(--color-border)]">
-                                <span className="text-[10px] font-black text-[var(--color-text-muted)]">Rata-rata bulan ini</span>
-                                {(() => { const last = trendModal.trendData[trendModal.trendData.length - 1]; const avg = calcAvg(last?.scores || {}); return avg ? <span className="text-[14px] font-black px-2 py-0.5 rounded-lg" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).uiColor }}>{avg} — {GRADE(Number(avg)).id}</span> : <span className="text-[var(--color-text-muted)] text-[11px]">—</span> })()}
+                            <div className="mt-4 p-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
+                                <p className="text-[10px] font-bold text-amber-600 flex items-start gap-1.5"><FontAwesomeIcon icon={faCircleInfo} className="text-amber-500 mt-0.5 shrink-0" /> Tips: Gunakan Tab untuk navigasi cepat, Ctrl+S untuk auto-save semua, dan filter "Belum Lengkap" untuk fokus ke santri yang nilainya masih kosong.</p>
                             </div>
                         </div>
                     </div>,
                     document.body
-                )
-            }
+                )}
 
-            {/* ── ZIP BLAST MODAL ── */}
-            {
-                zipBlast && createPortal(
-                    <div className="fixed inset-0 z-[202] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                {/* ── TUTORIAL MODAL ── */}
+                {showTutorialModal && createPortal(
+                    (() => {
+                        const [t1, t2, t3, t4, t5, t6, t7] = tutorialImgs
+                        const SLIDES = [
+                            {
+                                icon: faClipboardList,
+                                iconColor: 'text-emerald-500',
+                                iconBg: 'bg-emerald-500/15',
+                                title: 'Dua Cara Memulai Input Nilai',
+                                subtitle: 'Pilih jalur yang paling nyaman untukmu',
+                                body: (
+                                    <div className="space-y-3 text-[11px] text-[var(--color-text)] leading-relaxed">
+                                        <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                                            <p className="font-black text-[var(--color-text)] mb-1 flex items-center gap-1.5">
+                                                <span className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">1</span>
+                                                Lewat tombol "＋ Buat Raport"
+                                            </p>
+                                            <p className="text-[var(--color-text-muted)] pl-6">Klik tombol di pojok kanan atas → pilih kelas → atur bulan & tahun → isi nama Musyrif → pilih template bahasa → klik <strong>"Mulai Input Nilai"</strong>.</p>
+                                        </div>
+                                        <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                                            <p className="font-black text-[var(--color-text)] mb-1 flex items-center gap-1.5">
+                                                <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">2</span>
+                                                Langsung klik kartu kelas
+                                            </p>
+                                            <p className="text-[var(--color-text-muted)] pl-6">Di halaman utama, klik langsung kartu kelas yang ingin diisi. Kamu akan langsung masuk ke halaman input nilai tanpa perlu mengatur periode.</p>
+                                        </div>
+                                    </div>
+                                ),
+                                tips: 'Template bahasa otomatis: kelas Boarding → Arab, kelas Reguler → Indonesia. Nama Musyrif terisi otomatis jika sudah diset di data kelas.',
+                                img: t1,
+                            },
+                            {
+                                icon: faTableList,
+                                iconColor: 'text-indigo-500',
+                                iconBg: 'bg-indigo-500/15',
+                                title: 'Mengisi Nilai Santri',
+                                subtitle: 'Input 5 kriteria penilaian karakter',
+                                body: 'Setiap santri memiliki 5 kolom nilai: Akhlak, Ibadah, Kebersihan, Al-Quran, dan Bahasa.Nilai berkisar antara 0–9. Tekan Tab atau Enter untuk berpindah ke cell berikutnya dengan cepat.',
+                                tips: 'Ketik angka 0–9 langsung saat cell aktif. Warna cell berubah otomatis sesuai grade — hijau untuk nilai tinggi, merah untuk nilai rendah.',
+                                img: t2,
+                            },
+                            {
+                                icon: faFloppyDisk,
+                                iconColor: 'text-sky-500',
+                                iconBg: 'bg-sky-500/15',
+                                title: 'Auto-Save & Status Simpan',
+                                subtitle: 'Data tersimpan otomatis ke server',
+                                body: 'Setiap perubahan nilai tersimpan otomatis ke database dalam 1.5 detik. Indikator berwarna hijau (✓) menandakan data sudah tersimpan. Tekan Ctrl+S atau klik "Simpan Semua" untuk menyimpan sekaligus.',
+                                tips: 'Jika koneksi terputus, nilai tetap tersimpan sementara sebagai draft di browser. Saat online kembali, muat draft untuk melanjutkan.',
+                                img: t3,
+                            },
+                            {
+                                icon: faBoxArchive,
+                                iconColor: 'text-violet-500',
+                                iconBg: 'bg-violet-500/15',
+                                title: 'Data Tambahan per Santri',
+                                subtitle: 'Kesehatan, hafalan & catatan',
+                                body: 'Selain nilai karakter, isi juga data tambahan: berat & tinggi badan, jumlah hari sakit / izin / alpa, progress Ziyadah & Murojaah hafalan, serta catatan khusus yang akan tercetak di raport untuk orang tua.',
+                                tips: 'Data tambahan ini opsional — raport tetap bisa dicetak meski tidak diisi. Namun semakin lengkap datanya, semakin informatif raport yang diterima orang tua.',
+                                img: t4,
+                            },
+                            {
+                                icon: faFillDrip,
+                                iconColor: 'text-rose-500',
+                                iconBg: 'bg-rose-500/15',
+                                title: 'Isi Massal & Copy Bulan Lalu',
+                                subtitle: 'Hemat waktu untuk nilai yang sama',
+                                body: 'Gunakan "Isi Massal" untuk mengisi nilai yang sama ke banyak santri sekaligus — centang santri yang ingin diisi, set nilai, klik Terapkan. Gunakan "Copy Bulan Lalu" untuk menyalin nilai dari periode sebelumnya sebagai titik awal.',
+                                tips: 'Undo/Redo tersedia dengan Ctrl+Z dan Ctrl+Y jika ingin membatalkan perubahan nilai yang sudah diisi.',
+                                img: t5,
+                            },
+                            {
+                                icon: faFilePdf,
+                                iconColor: 'text-red-500',
+                                iconBg: 'bg-red-500/15',
+                                title: 'Cetak, ZIP & WA Blast',
+                                subtitle: 'Distribusikan raport ke orang tua',
+                                body: 'Klik ikon Print untuk mencetak raport dari browser. Klik ZIP untuk mengunduh semua raport dalam satu file. Klik ikon WhatsApp di tiap baris santri untuk kirim raport ke orang tua, atau gunakan "WA Blast" untuk kirim ke semua sekaligus.',
+                                tips: 'Hanya santri yang nilainya sudah lengkap (semua 5 kriteria terisi) yang bisa diekspor ke PDF / ZIP / WA.',
+                                img: t6,
+                            },
+                            {
+                                icon: faBoxArchive,
+                                iconColor: 'text-teal-500',
+                                iconBg: 'bg-teal-500/15',
+                                title: 'Arsip & Riwayat',
+                                subtitle: 'Lihat dan edit raport bulan lalu',
+                                body: 'Semua raport yang pernah disimpan tersedia di tab "Riwayat". Kamu bisa melihat raport per kelas per bulan, mengedit nilai yang sudah tersimpan, menghapus arsip, hingga mencetak atau mengirim ulang via WA.',
+                                tips: 'Filter arsip berdasarkan tahun, bulan, atau kelas. Gunakan "Edit Arsip" untuk memperbaiki nilai yang salah input bulan lalu.',
+                                img: t7,
+                            },
+                        ]
+                        const slide = SLIDES[tutorialStep]
+                        const isLast = tutorialStep === SLIDES.length - 1
+                        const isFirst = tutorialStep === 0
+                        return (
+                            <div className="fixed inset-0 z-[203] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                                onClick={e => { if (e.target === e.currentTarget) setShowTutorialModal(false) }}>
+                                <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+                                    role="dialog" aria-modal="true" aria-label="Tutorial Panduan">
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[var(--color-border)]">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${slide.iconBg}`}>
+                                                <FontAwesomeIcon icon={slide.icon} className={`text-base ${slide.iconColor}`} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[13px] font-black text-[var(--color-text)] leading-tight">{slide.title}</p>
+                                                <p className="text-[10px] text-[var(--color-text-muted)]">{slide.subtitle}</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setShowTutorialModal(false)} aria-label="Tutup tutorial"
+                                            className="w-8 h-8 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] transition-all shrink-0">
+                                            <FontAwesomeIcon icon={faXmark} />
+                                        </button>
+                                    </div>
+
+                                    {/* Dot navigator */}
+                                    <div className="flex items-center justify-center gap-1.5 pt-4 px-6">
+                                        {SLIDES.map((_, i) => (
+                                            <button key={i} onClick={() => setTutorialStep(i)}
+                                                className={`rounded-full transition-all ${i === tutorialStep ? 'w-5 h-2 bg-amber-500' : 'w-2 h-2 bg-[var(--color-border)] hover:bg-amber-500/40'}`}
+                                                aria-label={`Slide ${i + 1}`} />
+                                        ))}
+                                        <span className="ml-2 text-[9px] text-[var(--color-text-muted)] font-bold">{tutorialStep + 1}/{SLIDES.length}</span>
+                                    </div>
+
+                                    {/* Body */}
+                                    <div className="px-6 pt-4 pb-2 overflow-y-auto flex-1">
+                                        {slide.img ? (
+                                            <div className="relative group mb-4 cursor-zoom-in" onClick={() => setTutorialZoomImg(slide.img)}>
+                                                <img src={slide.img} alt={slide.title}
+                                                    className="w-full rounded-xl border border-[var(--color-border)] object-contain max-h-64 transition-all group-hover:brightness-90" />
+                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                                    <div className="bg-black/60 text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+                                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[9px]" /> Klik untuk zoom
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : tutorialImgs[0] === null ? (
+                                            /* skeleton while lazy-loading */
+                                            <div className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] mb-4 h-48 animate-pulse" />
+                                        ) : (
+                                            <div className="w-full rounded-xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)] mb-4 flex items-center justify-center h-24">
+                                                <div className="text-center">
+                                                    <FontAwesomeIcon icon={slide.icon} className={`text-2xl opacity-20 ${slide.iconColor}`} />
+                                                    <p className="text-[9px] text-[var(--color-text-muted)] mt-1 opacity-50">Screenshot akan ditampilkan di sini</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {typeof slide.body === 'string'
+                                            ? <p className="text-[12px] text-[var(--color-text)] leading-relaxed">{slide.body}</p>
+                                            : slide.body
+                                        }
+                                    </div>
+
+                                    {/* Tips */}
+                                    <div className="px-6 pb-2">
+                                        <div className="p-3 rounded-xl bg-amber-500/8 border border-amber-500/20 flex items-start gap-2">
+                                            <FontAwesomeIcon icon={faLightbulb} className="text-amber-500 text-[11px] mt-0.5 shrink-0" />
+                                            <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 leading-snug">{slide.tips}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer nav */}
+                                    <div className="flex items-center gap-3 px-6 py-4">
+                                        <button onClick={() => setTutorialStep(v => Math.max(0, v - 1))} disabled={isFirst}
+                                            className="h-9 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all disabled:opacity-30 flex items-center gap-1.5">
+                                            <FontAwesomeIcon icon={faChevronLeft} className="text-[9px]" /> Sebelumnya
+                                        </button>
+                                        <div className="flex-1" />
+                                        {isLast ? (
+                                            <button onClick={() => setShowTutorialModal(false)}
+                                                className="h-9 px-5 rounded-xl bg-amber-500 text-white text-[10px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/20">
+                                                <FontAwesomeIcon icon={faCheck} className="text-[9px]" /> Selesai
+                                            </button>
+                                        ) : (
+                                            <button onClick={() => setTutorialStep(v => Math.min(SLIDES.length - 1, v + 1))}
+                                                className="h-9 px-5 rounded-xl bg-amber-500 text-white text-[10px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/20">
+                                                Berikutnya <FontAwesomeIcon icon={faChevronRight} className="text-[9px]" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })(),
+                    document.body
+                )}
+
+                {/* ── TUTORIAL IMAGE LIGHTBOX ── */}
+                {tutorialZoomImg && createPortal(
+                    <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
+                        onClick={() => setTutorialZoomImg(null)}>
+                        <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
+                            <img src={tutorialZoomImg} alt="Tutorial zoom"
+                                className="w-full rounded-2xl shadow-2xl border border-white/10 object-contain max-h-[85vh]" />
+                            <button onClick={() => setTutorialZoomImg(null)}
+                                className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-all backdrop-blur-sm"
+                                aria-label="Tutup zoom">
+                                <FontAwesomeIcon icon={faXmark} />
+                            </button>
+                            <p className="text-center text-white/50 text-[10px] mt-3 font-medium">Klik di luar untuk menutup</p>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
+                {/* ── WA BLAST CONFIRM MODAL (FIX #11) ── */}
+                {waBlastConfirm && createPortal(
+                    <div className="fixed inset-0 z-[201] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                         <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-6 w-full max-w-sm" role="dialog" aria-modal="true">
-                            <div className="flex items-center gap-3 mb-5">
-                                <div className="w-10 h-10 rounded-xl bg-teal-500/15 flex items-center justify-center shrink-0">
-                                    <FontAwesomeIcon icon={faFileZipper} className="text-teal-500 text-lg" />
+                            <div className="flex items-start gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center shrink-0">
+                                    <FontAwesomeIcon icon={faWhatsapp} className="text-green-500 text-lg" />
                                 </div>
                                 <div>
-                                    <p className="text-[13px] font-black text-[var(--color-text)]">Ekspor ZIP PDF</p>
-                                    <p className="text-[10px] text-[var(--color-text-muted)]">Mengompres raport menjadi satu file ZIP...</p>
+                                    <p className="text-[13px] font-black text-[var(--color-text)]">Konfirmasi WA Blast</p>
+                                    <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                                        Akan membuka <strong>{waBlastConfirm.queue.length} tab browser</strong> secara berurutan untuk mengirim pesan WA ke wali santri.
+                                    </p>
                                 </div>
                             </div>
-                            {/* Progress bar */}
-                            <div className="mb-4">
-                                <div className="flex justify-between text-[9px] font-black text-[var(--color-text-muted)] mb-1.5">
-                                    <span>Proses {zipBlast.idx + 1} / {zipBlast.queue.length}</span>
-                                    <span>{zipBlast.queue[zipBlast.idx]?.name?.split(' ')[0] || '...'}</span>
+                            <div className="p-3 rounded-xl bg-amber-500/8 border border-amber-500/20 mb-5">
+                                <p className="text-[10px] font-bold text-amber-600 flex items-start gap-1.5">
+                                    <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 shrink-0" />
+                                    Pastikan popup browser <strong>tidak diblokir</strong> dan jangan tutup halaman ini selama proses berlangsung.
+                                </p>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => setWaBlastConfirm(null)} className="flex-1 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[11px] font-black hover:text-[var(--color-text)] transition-all">Batal</button>
+                                <button onClick={() => runWaBlast(waBlastConfirm.queue)} className="flex-1 h-9 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5">
+                                    <FontAwesomeIcon icon={faWhatsapp} /> Ya, Kirim Sekarang
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
+                {/* ── WA BLAST MODAL ── */}
+                {waBlast && createPortal(
+                    <div className="fixed inset-0 z-[201] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-6 w-full max-w-md" role="dialog" aria-modal="true" aria-label="Progress WA Blast">
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center shrink-0">
+                                    <FontAwesomeIcon icon={faWhatsapp} className="text-green-500 text-lg" />
                                 </div>
-                                <div className="h-2 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden">
-                                    <div className="h-full rounded-full transition-all duration-300 bg-teal-500" style={{ width: `${zipBlast.queue.length ? ((zipBlast.done + zipBlast.failed) / zipBlast.queue.length) * 100 : 0}%` }} />
+                                <div>
+                                    <p className="text-[13px] font-black text-[var(--color-text)]">WA Blast Raport</p>
+                                    <p className="text-[10px] text-[var(--color-text-muted)]">{waBlast.queue.length} wali · Tab WA terbuka otomatis per santri</p>
                                 </div>
                             </div>
+                            {/* FIX INFO: aria-live="polite" agar screen reader mengumumkan progress */}
+                            <div className="mb-4" aria-live="polite" role="status">
+                                <div className="flex justify-between mb-1.5">
+                                    <span className="text-[10px] font-black text-[var(--color-text-muted)]">Progress</span>
+                                    <span className="text-[10px] font-black text-[var(--color-text)]">{waBlast.done + waBlast.failed} / {waBlast.queue.length}</span>
+                                </div>
+                                <div className="h-2.5 rounded-full bg-[var(--color-surface-alt)] overflow-hidden border border-[var(--color-border)]"
+                                    role="progressbar"
+                                    aria-valuenow={waBlast.done + waBlast.failed}
+                                    aria-valuemin={0}
+                                    aria-valuemax={waBlast.queue.length}
+                                >
+                                    <div className="h-full rounded-full bg-green-500 transition-all duration-500"
+                                        style={{ width: `${waBlast.queue.length ? Math.round(((waBlast.done + waBlast.failed) / waBlast.queue.length) * 100) : 0}%` }} />
+                                </div>
+                            </div>
+                            {waBlast.active && waBlast.queue[waBlast.idx] && (
+                                <div className="flex items-center gap-2 p-3 rounded-xl bg-green-500/8 border border-green-500/20 mb-4">
+                                    <FontAwesomeIcon icon={faSpinner} className="text-green-500 animate-spin text-sm shrink-0" />
+                                    <div>
+                                        <p className="text-[11px] font-black text-[var(--color-text)]">{waBlast.queue[waBlast.idx].name}</p>
+                                        <p className="text-[9px] text-[var(--color-text-muted)]">Membuat PDF & membuka tab WA...</p>
+                                    </div>
+                                </div>
+                            )}
                             <div className="grid grid-cols-3 gap-2 mb-5">
                                 {[
-                                    { label: 'Total', val: zipBlast.queue.length, color: '#6366f1' },
-                                    { label: 'Berhasil', val: zipBlast.done, color: '#10b981' },
-                                    { label: 'Gagal', val: zipBlast.failed, color: '#ef4444' },
+                                    { label: 'Antrian', val: waBlast.queue.length, color: '#6366f1' },
+                                    { label: 'Terkirim', val: waBlast.done, color: '#10b981' },
+                                    { label: 'Gagal', val: waBlast.failed, color: '#ef4444' },
                                 ].map(s => (
                                     <div key={s.label} className="text-center p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
                                         <p className="text-lg font-black" style={{ color: s.color }}>{s.val}</p>
@@ -4375,237 +4271,344 @@ export default function RaportPage() {
                                     </div>
                                 ))}
                             </div>
-                            {!zipBlast.active ? (
-                                <button onClick={() => setZipBlast(null)} className="w-full h-10 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all">
+                            {!waBlast.active && (
+                                <button onClick={() => setWaBlast(null)} className="w-full h-10 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all">
                                     Selesai
                                 </button>
-                            ) : (
-                                <p className="text-center text-[9px] text-[var(--color-text-muted)] font-medium">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 mr-1" /> Jangan tutup halaman ini selama proses berlangsung
-                                </p>
+                            )}
+                            {waBlast.active && (
+                                <div className="space-y-3">
+                                    <p className="text-center text-[9px] text-[var(--color-text-muted)] font-medium">
+                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 mr-1" /> Jangan tutup halaman ini selama proses berlangsung
+                                    </p>
+                                    <button
+                                        onClick={() => { waBlastAbortRef.current = true }}
+                                        className="w-full h-9 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 text-[11px] font-black hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                        Batalkan Blast
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>,
                     document.body
-                )
-            }
+                )}
 
-            {/* ── FLOATING UNSAVED BAR ── */}
-            {
-                step === 2 && hasUnsavedMemo && !unsavedBarDismissed && (
-                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border border-amber-500/30 bg-[var(--color-surface)] backdrop-blur-sm animate-bounce-subtle"
-                        style={{ boxShadow: '0 8px 32px rgba(245,158,11,0.18)' }}>
-                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                        <span className="text-[11px] font-black text-[var(--color-text)]">
-                            Ada perubahan yang belum disimpan
-                        </span>
-                        <button onClick={saveAll} disabled={savingAll}
-                            className="h-8 px-4 rounded-xl bg-amber-500 text-white text-[10px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 disabled:opacity-60 shadow-md shadow-amber-500/20">
-                            <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />
-                            {savingAll ? 'Menyimpan...' : 'Simpan Sekarang'}
-                        </button>
-                        {/* FIX MAJOR: tombol × hanya dismiss bar, tidak menyimpan apapun */}
-                        <button
-                            onClick={() => setUnsavedBarDismissed(true)}
-                            aria-label="Tutup pengingat"
-                            title="Tutup pengingat (data belum disimpan)"
-                            className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all"
-                        >
-                            <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
-                        </button>
-                    </div>
-                )
-            }
+                {confirmPortal}
 
-            {/* ── PENDING NAV CONFIRM (unsaved warning) ── */}
-            {
-                pendingNav && createPortal(
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-5 w-full max-w-sm" role="dialog" aria-modal="true">
-                            <div className="flex items-start gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 text-lg" />
-                                </div>
-                                <div>
-                                    <p className="text-[13px] font-black text-[var(--color-text)]">Ada data belum disimpan</p>
-                                    <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Nilai yang sudah diisi tapi belum disimpan akan hilang jika kamu pindah halaman sekarang.</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => setPendingNav(null)} className="flex-1 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[11px] font-black hover:text-[var(--color-text)] transition-all">Batal</button>
-                                <button onClick={async () => { await saveAll(); setPendingNav(null); pendingNav.action() }} className="flex-1 h-9 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5">
-                                    <FontAwesomeIcon icon={faFloppyDisk} className="text-[10px]" /> Simpan & Lanjut
-                                </button>
-                                <button onClick={() => { setPendingNav(null); pendingNav.action() }} className="flex-1 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-600 text-[11px] font-black hover:bg-rose-500/25 transition-all">Buang & Lanjut</button>
-                            </div>
-                        </div>
-                    </div>,
-                    document.body
-                )
-            }
-
-            {/* ── STUDENT DETAIL DRAWER — histori semua raport per santri ── */}
-            {
-                studentDetailDrawer && createPortal(
-                    <div className="fixed inset-0 z-[210] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
-                        onClick={e => { if (e.target === e.currentTarget) setStudentDetailDrawer(null) }}>
-                        <div className="w-full sm:max-w-2xl bg-[var(--color-surface)] sm:rounded-2xl rounded-t-3xl border border-[var(--color-border)] shadow-2xl flex flex-col"
-                            style={{ maxHeight: '92vh' }} role="dialog" aria-modal="true">
-                            {/* Header drawer */}
-                            <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--color-border)] shrink-0">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-500/15 flex items-center justify-center shrink-0">
-                                    <FontAwesomeIcon icon={faArrowTrendUp} className="text-indigo-500" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] font-black text-[var(--color-text)] truncate">{studentDetailDrawer.student.name}</p>
-                                    <p className="text-[10px] text-[var(--color-text-muted)]">Histori semua raport bulanan</p>
-                                </div>
-                                <button onClick={() => setStudentDetailDrawer(null)}
-                                    className="w-8 h-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
-                                    <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
-                                </button>
-                            </div>
-
-                            {/* Body */}
-                            <div className="flex-1 overflow-y-auto px-4 py-4">
-                                {studentDetailLoading ? (
-                                    <div className="space-y-2">
-                                        {Array.from({ length: 5 }).map((_, i) => (
-                                            <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse border border-[var(--color-border)]" />
-                                        ))}
+                {/* ── TREND MODAL ── */}
+                {
+                    trendModal && createPortal(
+                        <div className="fixed inset-0 z-[201] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setTrendModal(null)}>
+                            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-6 w-full max-w-sm" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <p className="text-[13px] font-black text-[var(--color-text)]">{trendModal.student.name}</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">Tren nilai {trendModal.trendData.length} bulan terakhir</p>
                                     </div>
-                                ) : !studentDetailDrawer.history?.length ? (
-                                    <div className="flex flex-col items-center py-12 gap-3 text-[var(--color-text-muted)]">
-                                        <FontAwesomeIcon icon={faBoxArchive} className="text-3xl opacity-20" />
-                                        <p className="text-[12px] font-black">Belum ada raport tersimpan</p>
-                                    </div>
-                                ) : (() => {
-                                    const history = studentDetailDrawer.history
-                                    const allAvgs = history.map(h => calcAvg(h.scores)).filter(Boolean).map(Number)
-                                    const bestAvg = allAvgs.length ? Math.max(...allAvgs) : null
-                                    const worstAvg = allAvgs.length ? Math.min(...allAvgs) : null
-
-                                    return (
-                                        <div className="space-y-3">
-                                            {/* Summary stats */}
-                                            <div className="grid grid-cols-3 gap-2 mb-2">
-                                                {[
-                                                    { label: 'Total Bulan', val: history.length, color: '#6366f1' },
-                                                    { label: 'Terbaik', val: bestAvg?.toFixed(1) ?? '—', color: '#10b981' },
-                                                    { label: 'Terendah', val: worstAvg?.toFixed(1) ?? '—', color: '#ef4444' },
-                                                ].map(s => (
-                                                    <div key={s.label} className="text-center p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                                                        <p className="text-[15px] font-black" style={{ color: s.color }}>{s.val}</p>
-                                                        <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{s.label}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            {/* Sparkline keseluruhan */}
-                                            {history.length >= 2 && (
-                                                <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                                                    <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Tren Rata-rata</p>
-                                                    <SparklineTrend trendData={history.map(h => ({ month: h.month, year: h.year, scores: h.scores }))} />
+                                    <button onClick={() => setTrendModal(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><FontAwesomeIcon icon={faXmark} /></button>
+                                </div>
+                                {/* Sparkline per kriteria */}
+                                <div className="space-y-2 mb-4">
+                                    {KRITERIA.map(k => {
+                                        const vals = trendModal.trendData.map(t => t.scores[k.key]).filter(v => v !== null && v !== undefined)
+                                        const last = vals[vals.length - 1]
+                                        const prev = vals[vals.length - 2]
+                                        const delta = (last !== undefined && prev !== undefined) ? Number(last) - Number(prev) : null
+                                        return (
+                                            <div key={k.key} className="flex items-center gap-2 p-2 rounded-lg bg-[var(--color-surface-alt)]">
+                                                <FontAwesomeIcon icon={k.icon} style={{ color: k.color, fontSize: 11, width: 14 }} />
+                                                <span className="text-[10px] font-black text-[var(--color-text-muted)] w-16 shrink-0">{k.id}</span>
+                                                <div className="flex-1">
+                                                    <SparklineTrend trendData={trendModal.trendData.map(t => ({ ...t, scores: { [k.key]: t.scores[k.key] } }))} />
                                                 </div>
-                                            )}
+                                                <div className="text-right shrink-0">
+                                                    <span className="text-[12px] font-black" style={{ color: k.color }}>{last ?? '—'}</span>
+                                                    {delta !== null && delta !== 0 && <span className="text-[9px] font-black ml-1" style={{ color: delta > 0 ? '#10b981' : '#ef4444' }}>{delta > 0 ? '▲' : '▼'}{Math.abs(delta)}</span>}
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                                <div className="flex items-center justify-between p-3 rounded-xl border border-[var(--color-border)]">
+                                    <span className="text-[10px] font-black text-[var(--color-text-muted)]">Rata-rata bulan ini</span>
+                                    {(() => { const last = trendModal.trendData[trendModal.trendData.length - 1]; const avg = calcAvg(last?.scores || {}); return avg ? <span className="text-[14px] font-black px-2 py-0.5 rounded-lg" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).uiColor }}>{avg} — {GRADE(Number(avg)).id}</span> : <span className="text-[var(--color-text-muted)] text-[11px]">—</span> })()}
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
+                    )
+                }
 
-                                            {/* Timeline per bulan */}
-                                            <div className="space-y-2">
-                                                {[...history].reverse().map((h, idx) => {
-                                                    const avg = calcAvg(h.scores)
-                                                    const avgNum = avg ? Number(avg) : null
-                                                    const g = avgNum ? GRADE(avgNum) : null
-                                                    const bulanLabel = BULAN.find(b => b.id === h.month)?.id_str ?? h.month
-                                                    const hasVariance = bestAvg !== worstAvg
-                                                    const isBest = avgNum !== null && avgNum === bestAvg && hasVariance
-                                                    const isWorst = avgNum !== null && avgNum === worstAvg && history.length > 1 && hasVariance
-                                                    return (
-                                                        <div key={`${h.year}-${h.month}`}
-                                                            className="rounded-xl border p-3 transition-all"
-                                                            style={{ borderColor: isBest ? '#10b98140' : isWorst ? '#ef444430' : 'var(--color-border)', background: isBest ? '#10b98108' : isWorst ? '#ef444408' : 'var(--color-surface)' }}>
-                                                            {/* Row header */}
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: isBest ? '#10b981' : isWorst ? '#ef4444' : 'var(--color-border)' }} />
-                                                                <span className="text-[11px] font-black text-[var(--color-text)]">{bulanLabel} {h.year}</span>
-                                                                {h.musyrif && <span className="text-[8px] text-[var(--color-text-muted)] opacity-70">{h.musyrif}</span>}
-                                                                <div className="flex-1" />
-                                                                {isBest && <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600">⭐ Terbaik</span>}
-                                                                {isWorst && <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-500">⚠ Terendah</span>}
-                                                                {avg && g && (
-                                                                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: g.bg, color: g.uiColor }}>
-                                                                        {avg} — {g.id}
-                                                                    </span>
+                {/* ── ZIP BLAST MODAL ── */}
+                {
+                    zipBlast && createPortal(
+                        <div className="fixed inset-0 z-[202] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-6 w-full max-w-sm" role="dialog" aria-modal="true">
+                                <div className="flex items-center gap-3 mb-5">
+                                    <div className="w-10 h-10 rounded-xl bg-teal-500/15 flex items-center justify-center shrink-0">
+                                        <FontAwesomeIcon icon={faFileZipper} className="text-teal-500 text-lg" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[13px] font-black text-[var(--color-text)]">Ekspor ZIP PDF</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">Mengompres raport menjadi satu file ZIP...</p>
+                                    </div>
+                                </div>
+                                {/* Progress bar */}
+                                <div className="mb-4">
+                                    <div className="flex justify-between text-[9px] font-black text-[var(--color-text-muted)] mb-1.5">
+                                        <span>Proses {zipBlast.idx + 1} / {zipBlast.queue.length}</span>
+                                        <span>{zipBlast.queue[zipBlast.idx]?.name?.split(' ')[0] || '...'}</span>
+                                    </div>
+                                    <div className="h-2 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden">
+                                        <div className="h-full rounded-full transition-all duration-300 bg-teal-500" style={{ width: `${zipBlast.queue.length ? ((zipBlast.done + zipBlast.failed) / zipBlast.queue.length) * 100 : 0}%` }} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 mb-5">
+                                    {[
+                                        { label: 'Total', val: zipBlast.queue.length, color: '#6366f1' },
+                                        { label: 'Berhasil', val: zipBlast.done, color: '#10b981' },
+                                        { label: 'Gagal', val: zipBlast.failed, color: '#ef4444' },
+                                    ].map(s => (
+                                        <div key={s.label} className="text-center p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                                            <p className="text-lg font-black" style={{ color: s.color }}>{s.val}</p>
+                                            <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{s.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                {!zipBlast.active ? (
+                                    <button onClick={() => setZipBlast(null)} className="w-full h-10 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all">
+                                        Selesai
+                                    </button>
+                                ) : (
+                                    <p className="text-center text-[9px] text-[var(--color-text-muted)] font-medium">
+                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 mr-1" /> Jangan tutup halaman ini selama proses berlangsung
+                                    </p>
+                                )}
+                            </div>
+                        </div>,
+                        document.body
+                    )
+                }
+
+                {/* ── FLOATING UNSAVED BAR ── */}
+                {
+                    step === 2 && hasUnsavedMemo && !unsavedBarDismissed && (
+                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border border-amber-500/30 bg-[var(--color-surface)] backdrop-blur-sm animate-bounce-subtle"
+                            style={{ boxShadow: '0 8px 32px rgba(245,158,11,0.18)' }}>
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                            <span className="text-[11px] font-black text-[var(--color-text)]">
+                                Ada perubahan yang belum disimpan
+                            </span>
+                            <button onClick={saveAll} disabled={savingAll}
+                                className="h-8 px-4 rounded-xl bg-amber-500 text-white text-[10px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 disabled:opacity-60 shadow-md shadow-amber-500/20">
+                                <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />
+                                {savingAll ? 'Menyimpan...' : 'Simpan Sekarang'}
+                            </button>
+                            {/* FIX MAJOR: tombol × hanya dismiss bar, tidak menyimpan apapun */}
+                            <button
+                                onClick={() => setUnsavedBarDismissed(true)}
+                                aria-label="Tutup pengingat"
+                                title="Tutup pengingat (data belum disimpan)"
+                                className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all"
+                            >
+                                <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
+                            </button>
+                        </div>
+                    )
+                }
+
+                {/* ── PENDING NAV CONFIRM (unsaved warning) ── */}
+                {
+                    pendingNav && createPortal(
+                        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl p-5 w-full max-w-sm" role="dialog" aria-modal="true">
+                                <div className="flex items-start gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
+                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 text-lg" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[13px] font-black text-[var(--color-text)]">Ada data belum disimpan</p>
+                                        <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Nilai yang sudah diisi tapi belum disimpan akan hilang jika kamu pindah halaman sekarang.</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setPendingNav(null)} className="flex-1 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[11px] font-black hover:text-[var(--color-text)] transition-all">Batal</button>
+                                    <button onClick={async () => { await saveAll(); setPendingNav(null); pendingNav.action() }} className="flex-1 h-9 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5">
+                                        <FontAwesomeIcon icon={faFloppyDisk} className="text-[10px]" /> Simpan & Lanjut
+                                    </button>
+                                    <button onClick={() => { setPendingNav(null); pendingNav.action() }} className="flex-1 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-600 text-[11px] font-black hover:bg-rose-500/25 transition-all">Buang & Lanjut</button>
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
+                    )
+                }
+
+                {/* ── STUDENT DETAIL DRAWER — histori semua raport per santri ── */}
+                {
+                    studentDetailDrawer && createPortal(
+                        <div className="fixed inset-0 z-[210] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+                            onClick={e => { if (e.target === e.currentTarget) setStudentDetailDrawer(null) }}>
+                            <div className="w-full sm:max-w-2xl bg-[var(--color-surface)] sm:rounded-2xl rounded-t-3xl border border-[var(--color-border)] shadow-2xl flex flex-col"
+                                style={{ maxHeight: '92vh' }} role="dialog" aria-modal="true">
+                                {/* Header drawer */}
+                                <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--color-border)] shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/15 flex items-center justify-center shrink-0">
+                                        <FontAwesomeIcon icon={faArrowTrendUp} className="text-indigo-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[13px] font-black text-[var(--color-text)] truncate">{studentDetailDrawer.student.name}</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">Histori semua raport bulanan</p>
+                                    </div>
+                                    <button onClick={() => setStudentDetailDrawer(null)}
+                                        className="w-8 h-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
+                                        <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
+                                    </button>
+                                </div>
+
+                                {/* Body */}
+                                <div className="flex-1 overflow-y-auto px-4 py-4">
+                                    {studentDetailLoading ? (
+                                        <div className="space-y-2">
+                                            {Array.from({ length: 5 }).map((_, i) => (
+                                                <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse border border-[var(--color-border)]" />
+                                            ))}
+                                        </div>
+                                    ) : !studentDetailDrawer.history?.length ? (
+                                        <div className="flex flex-col items-center py-12 gap-3 text-[var(--color-text-muted)]">
+                                            <FontAwesomeIcon icon={faBoxArchive} className="text-3xl opacity-20" />
+                                            <p className="text-[12px] font-black">Belum ada raport tersimpan</p>
+                                        </div>
+                                    ) : (() => {
+                                        const history = studentDetailDrawer.history
+                                        const allAvgs = history.map(h => calcAvg(h.scores)).filter(Boolean).map(Number)
+                                        const bestAvg = allAvgs.length ? Math.max(...allAvgs) : null
+                                        const worstAvg = allAvgs.length ? Math.min(...allAvgs) : null
+
+                                        return (
+                                            <div className="space-y-3">
+                                                {/* Summary stats */}
+                                                <div className="grid grid-cols-3 gap-2 mb-2">
+                                                    {[
+                                                        { label: 'Total Bulan', val: history.length, color: '#6366f1' },
+                                                        { label: 'Terbaik', val: bestAvg?.toFixed(1) ?? '—', color: '#10b981' },
+                                                        { label: 'Terendah', val: worstAvg?.toFixed(1) ?? '—', color: '#ef4444' },
+                                                    ].map(s => (
+                                                        <div key={s.label} className="text-center p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                                                            <p className="text-[15px] font-black" style={{ color: s.color }}>{s.val}</p>
+                                                            <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{s.label}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Sparkline keseluruhan */}
+                                                {history.length >= 2 && (
+                                                    <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                                                        <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Tren Rata-rata</p>
+                                                        <SparklineTrend trendData={history.map(h => ({ month: h.month, year: h.year, scores: h.scores }))} />
+                                                    </div>
+                                                )}
+
+                                                {/* Timeline per bulan */}
+                                                <div className="space-y-2">
+                                                    {[...history].reverse().map((h, idx) => {
+                                                        const avg = calcAvg(h.scores)
+                                                        const avgNum = avg ? Number(avg) : null
+                                                        const g = avgNum ? GRADE(avgNum) : null
+                                                        const bulanLabel = BULAN.find(b => b.id === h.month)?.id_str ?? h.month
+                                                        const hasVariance = bestAvg !== worstAvg
+                                                        const isBest = avgNum !== null && avgNum === bestAvg && hasVariance
+                                                        const isWorst = avgNum !== null && avgNum === worstAvg && history.length > 1 && hasVariance
+                                                        return (
+                                                            <div key={`${h.year}-${h.month}`}
+                                                                className="rounded-xl border p-3 transition-all"
+                                                                style={{ borderColor: isBest ? '#10b98140' : isWorst ? '#ef444430' : 'var(--color-border)', background: isBest ? '#10b98108' : isWorst ? '#ef444408' : 'var(--color-surface)' }}>
+                                                                {/* Row header */}
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: isBest ? '#10b981' : isWorst ? '#ef4444' : 'var(--color-border)' }} />
+                                                                    <span className="text-[11px] font-black text-[var(--color-text)]">{bulanLabel} {h.year}</span>
+                                                                    {h.musyrif && <span className="text-[8px] text-[var(--color-text-muted)] opacity-70">{h.musyrif}</span>}
+                                                                    <div className="flex-1" />
+                                                                    {isBest && <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600">⭐ Terbaik</span>}
+                                                                    {isWorst && <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-500">⚠ Terendah</span>}
+                                                                    {avg && g && (
+                                                                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: g.bg, color: g.uiColor }}>
+                                                                            {avg} — {g.id}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {/* Nilai per kriteria */}
+                                                                <div className="grid grid-cols-5 gap-1.5">
+                                                                    {KRITERIA.map(k => {
+                                                                        const v = h.scores[k.key]
+                                                                        const vNum = v !== null && v !== undefined ? Number(v) : null
+                                                                        const kg = vNum !== null ? GRADE(vNum) : null
+                                                                        return (
+                                                                            <div key={k.key} className="flex flex-col items-center gap-0.5">
+                                                                                <span className="text-[7px] font-black uppercase" style={{ color: k.color }}>{k.id.slice(0, 3)}</span>
+                                                                                <div className="w-full h-8 rounded-lg flex items-center justify-center text-[12px] font-black"
+                                                                                    style={{ background: kg ? kg.bg : 'var(--color-surface-alt)', color: kg ? kg.uiColor : 'var(--color-text-muted)', border: `1.5px solid ${kg ? kg.border : 'var(--color-border)'}` }}>
+                                                                                    {vNum !== null ? vNum : '—'}
+                                                                                </div>
+                                                                            </div>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                                {/* Catatan */}
+                                                                {h.catatan && (
+                                                                    <p className="mt-2 text-[9px] text-[var(--color-text-muted)] italic leading-relaxed pl-1 border-l-2 border-[var(--color-border)]">
+                                                                        {h.catatan}
+                                                                    </p>
                                                                 )}
                                                             </div>
-                                                            {/* Nilai per kriteria */}
-                                                            <div className="grid grid-cols-5 gap-1.5">
-                                                                {KRITERIA.map(k => {
-                                                                    const v = h.scores[k.key]
-                                                                    const vNum = v !== null && v !== undefined ? Number(v) : null
-                                                                    const kg = vNum !== null ? GRADE(vNum) : null
-                                                                    return (
-                                                                        <div key={k.key} className="flex flex-col items-center gap-0.5">
-                                                                            <span className="text-[7px] font-black uppercase" style={{ color: k.color }}>{k.id.slice(0, 3)}</span>
-                                                                            <div className="w-full h-8 rounded-lg flex items-center justify-center text-[12px] font-black"
-                                                                                style={{ background: kg ? kg.bg : 'var(--color-surface-alt)', color: kg ? kg.uiColor : 'var(--color-text-muted)', border: `1.5px solid ${kg ? kg.border : 'var(--color-border)'}` }}>
-                                                                                {vNum !== null ? vNum : '—'}
-                                                                            </div>
-                                                                        </div>
-                                                                    )
-                                                                })}
-                                                            </div>
-                                                            {/* Catatan */}
-                                                            {h.catatan && (
-                                                                <p className="mt-2 text-[9px] text-[var(--color-text-muted)] italic leading-relaxed pl-1 border-l-2 border-[var(--color-border)]">
-                                                                    {h.catatan}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    )
-                                                })}
+                                                        )
+                                                    })}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )
-                                })()}
+                                        )
+                                    })()}
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
+                    )
+                }
+
+                {/* ── IMPROVISASI: Modal konfirmasi Simpan Semua saat ada nilai kosong ── */}
+                {saveAllConfirm && createPortal(
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+                        onClick={() => setSaveAllConfirm(null)}>
+                        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl w-full max-w-sm p-6 space-y-4"
+                            onClick={e => e.stopPropagation()}>
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
+                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500" />
+                                </div>
+                                <div>
+                                    <p className="text-[13px] font-black text-[var(--color-text)] mb-1">Nilai Belum Lengkap</p>
+                                    <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
+                                        <span className="font-black text-amber-600">{saveAllConfirm.incompleteCount} dari {saveAllConfirm.totalCount} santri</span> belum lengkap nilainya. Simpan sekarang?
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                                <button onClick={() => setSaveAllConfirm(null)}
+                                    className="h-9 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                                    Batal
+                                </button>
+                                <button onClick={_doSaveAll}
+                                    className="h-9 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5">
+                                    <FontAwesomeIcon icon={faFloppyDisk} className="text-[10px]" />
+                                    Simpan yang Ada
+                                </button>
                             </div>
                         </div>
                     </div>,
                     document.body
-                )
-            }
-
-            {/* ── IMPROVISASI: Modal konfirmasi Simpan Semua saat ada nilai kosong ── */}
-            {saveAllConfirm && createPortal(
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
-                    onClick={() => setSaveAllConfirm(null)}>
-                    <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl w-full max-w-sm p-6 space-y-4"
-                        onClick={e => e.stopPropagation()}>
-                        <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
-                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500" />
-                            </div>
-                            <div>
-                                <p className="text-[13px] font-black text-[var(--color-text)] mb-1">Nilai Belum Lengkap</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
-                                    <span className="font-black text-amber-600">{saveAllConfirm.incompleteCount} dari {saveAllConfirm.totalCount} santri</span> belum lengkap nilainya. Simpan sekarang?
-                                </p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                            <button onClick={() => setSaveAllConfirm(null)}
-                                className="h-9 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
-                                Batal
-                            </button>
-                            <button onClick={_doSaveAll}
-                                className="h-9 rounded-xl bg-emerald-500 text-white text-[11px] font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5">
-                                <FontAwesomeIcon icon={faFloppyDisk} className="text-[10px]" />
-                                Simpan yang Ada
-                            </button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
+                )}
+            </div>
         </DashboardLayout >
     )
 }

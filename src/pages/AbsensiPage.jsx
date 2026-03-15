@@ -18,6 +18,7 @@ import {
     faPrint, faBell, faStickyNote, faArrowDown, faCrosshairs,
     faArrowTrendUp, faArrowTrendDown, faGear, faUpload,
     faBorderAll, faList, faTableCells,
+    faKeyboard, faMagnifyingGlassPlus, faWandMagicSparkles,
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import { useToast } from '../context/ToastContext'
@@ -996,6 +997,149 @@ function MobileListView({ filteredStudents, dataMap, tahun, bulan, daysInMonth, 
                 document.body
             )}
         </>
+    )
+}
+
+// ─── Haptic feedback helper ───────────────────────────────────────────────────
+
+function haptic(type = 'light') {
+    if (!navigator.vibrate) return
+    const patterns = {
+        light: [8],
+        medium: [15],
+        success: [10, 50, 10],
+        warning: [20, 40, 20],
+        error: [30, 30, 60],
+    }
+    navigator.vibrate(patterns[type] || patterns.light)
+}
+
+// ─── CommandPalette — ⌘K shortcut launcher ───────────────────────────────────
+
+function CommandPalette({ open, onClose, onAction, studentCount, bulan, tahun, completionPct, isDirty, filterMode, hideWeekend, mobileView }) {
+    const [query, setQuery] = useState('')
+    const inputRef = useRef(null)
+    const prevBulan = bulan === 1 ? 12 : bulan - 1
+    const prevTahun = bulan === 1 ? tahun - 1 : tahun
+
+    useEffect(() => {
+        if (open) {
+            setQuery('')
+            setTimeout(() => inputRef.current?.focus(), 50)
+        }
+    }, [open])
+
+    useEffect(() => {
+        const h = (e) => { if (e.key === 'Escape') onClose() }
+        if (open) window.addEventListener('keydown', h)
+        return () => window.removeEventListener('keydown', h)
+    }, [open, onClose])
+
+    const COMMANDS = useMemo(() => [
+        {
+            group: 'Data',
+            items: [
+                { id: 'fill-hadir', label: 'Isi semua: Hadir', desc: 'Set semua hari kerja = H', icon: faUserCheck, color: '#059669', action: () => onAction('fill', 'H') },
+                { id: 'fill-alpa', label: 'Isi semua: Alpa', desc: 'Set semua hari kerja = A', icon: faCircleXmark, color: '#dc2626', action: () => onAction('fill', 'A') },
+                { id: 'copy-last', label: 'Copy bulan lalu', desc: `Salin data ${BULAN_NAMA[prevBulan]} ${prevTahun}`, icon: faCopy, color: '#6366f1', action: () => onAction('copyLastMonth') },
+                { id: 'reset', label: 'Reset semua data', desc: 'Kosongkan seluruh absensi bulan ini', icon: faArrowsRotate, color: '#dc2626', action: () => onAction('reset') },
+                { id: 'save', label: 'Simpan perubahan', desc: isDirty ? 'Ada perubahan belum tersimpan' : 'Sudah tersimpan', icon: faSave, color: '#059669', action: () => onAction('save'), disabled: !isDirty },
+                { id: 'undo', label: 'Batalkan (Undo)', desc: 'Ctrl+Z', icon: faRotateLeft, color: '#888', action: () => onAction('undo') },
+            ]
+        },
+        {
+            group: 'Tampilan',
+            items: [
+                { id: 'hide-weekend', label: hideWeekend ? 'Tampilkan weekend' : 'Sembunyikan weekend', desc: 'Toggle kolom Sabtu & Minggu', icon: hideWeekend ? faEye : faEyeSlash, color: '#6366f1', action: () => onAction('toggleWeekend') },
+                { id: 'filter-alpa', label: 'Filter: siswa alpa', desc: 'Tampilkan hanya yang sering alpa', icon: faFilter, color: '#dc2626', action: () => onAction('filterAlpa') },
+                { id: 'filter-all', label: 'Reset filter', desc: 'Tampilkan semua siswa', icon: faArrowsRotate, color: '#888', action: () => onAction('filterAll'), disabled: filterMode === 'all' },
+                { id: 'today', label: 'Scroll ke hari ini', desc: 'Auto-focus kolom aktif', icon: faCrosshairs, color: '#6366f1', action: () => onAction('scrollToToday') },
+                { id: 'view-card', label: 'View: Card', desc: 'Tampilan dot grid per siswa (mobile)', icon: faBorderAll, color: '#6366f1', action: () => onAction('setMobileView', 'card') },
+                { id: 'view-list', label: 'View: List', desc: 'Tampilan ringkas + expand (mobile)', icon: faList, color: '#6366f1', action: () => onAction('setMobileView', 'list') },
+                { id: 'view-table', label: 'View: Tabel', desc: 'Tampilan tabel klasik', icon: faTableCells, color: '#6366f1', action: () => onAction('setMobileView', 'table') },
+            ]
+        },
+        {
+            group: 'Info',
+            items: [
+                { id: 'info', label: `${studentCount} siswa · ${completionPct}% terisi`, desc: `${BULAN_NAMA[bulan]} ${tahun}`, icon: faChartSimple, color: '#888', action: () => { }, disabled: true },
+            ]
+        },
+    ], [isDirty, filterMode, hideWeekend, mobileView, bulan, tahun, prevBulan, prevTahun, studentCount, completionPct])
+
+    const filtered = useMemo(() => {
+        if (!query.trim()) return COMMANDS
+        const q = query.toLowerCase()
+        return COMMANDS.map(g => ({
+            ...g,
+            items: g.items.filter(i => i.label.toLowerCase().includes(q) || (i.desc || '').toLowerCase().includes(q))
+        })).filter(g => g.items.length > 0)
+    }, [query, COMMANDS])
+
+    if (!open) return null
+    return createPortal(
+        <div className="fixed inset-0 z-[200] flex flex-col items-center pt-[10vh] px-4 pb-4 bg-black/50 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+            <div className="w-full max-w-lg bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
+                {/* Search input */}
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
+                    <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[var(--color-text-muted)] text-[13px] shrink-0" />
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        placeholder="Ketik perintah... (isi hadir, copy, filter alpa, ...)"
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                                const first = filtered[0]?.items[0]
+                                if (first && !first.disabled) { first.action(); onClose(); haptic('light') }
+                            }
+                        }}
+                        className="flex-1 text-[13px] bg-transparent border-none outline-none text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/50"
+                    />
+                    <kbd className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] border border-[var(--color-border)]">ESC</kbd>
+                </div>
+                {/* Results */}
+                <div className="overflow-y-auto flex-1">
+                    {filtered.length === 0 ? (
+                        <div className="py-10 flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
+                            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-xl opacity-20" />
+                            <p className="text-[12px] font-bold">Tidak ada perintah ditemukan</p>
+                        </div>
+                    ) : filtered.map(group => (
+                        <div key={group.group}>
+                            <p className="px-4 pt-3 pb-1 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{group.group}</p>
+                            {group.items.map(item => (
+                                <button key={item.id}
+                                    disabled={item.disabled}
+                                    onClick={() => { if (!item.disabled) { item.action(); onClose(); haptic('light') } }}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[var(--color-surface-alt)] ${item.disabled ? 'opacity-40 cursor-default' : 'cursor-pointer'}`}
+                                >
+                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                                        style={{ background: item.color + '18', border: `1px solid ${item.color}30` }}>
+                                        <FontAwesomeIcon icon={item.icon} style={{ color: item.color, fontSize: 11 }} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[12px] font-bold text-[var(--color-text)] leading-tight">{item.label}</p>
+                                        {item.desc && <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 truncate">{item.desc}</p>}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+                {/* Footer shortcut hint */}
+                <div className="px-4 py-2 border-t border-[var(--color-border)] flex items-center gap-3">
+                    <span className="text-[9px] text-[var(--color-text-muted)]">
+                        <kbd className="px-1 py-0.5 rounded bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black">↵</kbd> pilih
+                        <span className="ml-2"><kbd className="px-1 py-0.5 rounded bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black">↑↓</kbd> navigasi</span>
+                        <span className="ml-2"><kbd className="px-1 py-0.5 rounded bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black">Esc</kbd> tutup</span>
+                    </span>
+                </div>
+            </div>
+        </div>,
+        document.body
     )
 }
 
@@ -1992,6 +2136,8 @@ export default function AbsensiPage() {
     const [mobileView, setMobileView] = useState(() => {
         try { return localStorage.getItem('absensi_mobile_view') || 'table' } catch { return 'table' }
     })
+    // ── Command Palette ───────────────────────────────────────────────────────
+    const [showCommandPalette, setShowCommandPalette] = useState(false)
 
     const daysInMonth = useMemo(() => getDaysInMonth(tahun, bulan), [tahun, bulan])
 
@@ -2120,6 +2266,7 @@ export default function AbsensiPage() {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); handleSaveRef.current?.() }
             if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); applyUndo() }
             if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); applyRedo() }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setShowCommandPalette(v => !v); haptic('light') }
         }
         window.addEventListener('keydown', h)
         return () => window.removeEventListener('keydown', h)
@@ -2188,6 +2335,7 @@ export default function AbsensiPage() {
             return updated
         })
         setIsDirty(true)
+        haptic('light')
     }, [pushHistory])
 
     // Drag-to-fill: mousedown sets status, mouseenter applies instantly via transition
@@ -2338,10 +2486,12 @@ export default function AbsensiPage() {
         if (error) {
             setOriginalMap(prevOriginal); setIsDirty(true)
             addToast('Gagal menyimpan: ' + error.message, 'error')
+            haptic('error')
         } else {
             try { localStorage.removeItem(draftKey(classId, tahun, bulan)) } catch { }
             setDraftAvail(false)
             addToast(`Absensi ${BULAN_NAMA[bulan]} ${tahun} tersimpan ✓`, 'success')
+            haptic('success')
         }
     }, [saving, isDirty, classId, tahun, bulan, studentList, dataMap, originalMap, profile, isOnline, addToast])
 
@@ -2465,34 +2615,87 @@ export default function AbsensiPage() {
         setNoteTarget({ student, x: rect.left, y: rect.bottom })
     }, [])
 
+    // ── Command Palette actions ───────────────────────────────────────────────
+    const handleCommandAction = useCallback((action, payload) => {
+        switch (action) {
+            case 'fill':
+                setDataMap(prev => {
+                    const next = { ...prev }
+                    for (const s of studentList) {
+                        const days = {}
+                        for (let d = 1; d <= daysInMonth; d++) {
+                            if (!isWeekend(tahun, bulan, d)) days[d] = payload
+                        }
+                        next[s.id] = days
+                    }
+                    pushHistory(next)
+                    return next
+                })
+                setIsDirty(true)
+                addToast(`Semua hari kerja diisi: ${STATUS_META[payload].label}`, 'success')
+                haptic('medium')
+                break
+            case 'copyLastMonth': handleCopyLastMonth(); haptic('light'); break
+            case 'reset':
+                setDataMap(prev => {
+                    const next = { ...prev }
+                    for (const s of studentList) next[s.id] = {}
+                    pushHistory(next)
+                    return next
+                })
+                setIsDirty(true)
+                addToast('Semua data direset', 'info')
+                haptic('warning')
+                break
+            case 'save': handleSaveRef.current?.(); haptic('success'); break
+            case 'undo': applyUndo(); haptic('light'); break
+            case 'toggleWeekend': setHideWeekend(v => !v); haptic('light'); break
+            case 'filterAlpa': setFilterMode('alpa'); haptic('light'); break
+            case 'filterAll': setFilterMode('all'); haptic('light'); break
+            case 'scrollToToday': handleScrollToToday(); haptic('light'); break
+            case 'setMobileView':
+                setMobileView(payload)
+                try { localStorage.setItem('absensi_mobile_view', payload) } catch { }
+                haptic('light')
+                break
+            default: break
+        }
+    }, [studentList, daysInMonth, tahun, bulan, pushHistory, addToast,
+        handleCopyLastMonth, applyUndo, handleScrollToToday])
+
     // ─── Render ───────────────────────────────────────────────────────────────
     return (
         <AbsensiErrorBoundary>
             <DashboardLayout>
-                <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
+                <div className="p-4 md:p-6 max-w-[1800px] mx-auto">
 
                     {/* Page header */}
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                            <h1 className="text-[16px] md:text-[18px] font-black text-[var(--color-text)] flex items-center gap-2">
-                                <div className="w-7 h-7 md:w-8 md:h-8 shrink-0 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center">
-                                    <FontAwesomeIcon icon={faCalendarDays} className="text-[var(--color-primary)] text-[12px] md:text-[14px]" />
-                                </div>
-                                Absensi Bulanan
-                            </h1>
-                            <p className="hidden md:block text-[11px] text-[var(--color-text-muted)] mt-0.5 ml-9">
-                                Klik sel untuk ganti status · Tahan &amp; geser untuk isi banyak · Klik nama/tanggal untuk isi cepat
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Absensi Bulanan</h1>
+                            <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium opacity-70">
+                                <span className="sm:hidden">Input &amp; rekap absensi siswa per bulan.</span>
+                                <span className="hidden sm:inline">Klik sel untuk ganti status · Tahan &amp; geser untuk isi banyak · Klik nama/tanggal untuk isi cepat</span>
                             </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
+                            {/* ⌘K Command palette button */}
+                            <button
+                                onClick={() => { setShowCommandPalette(true); haptic('light') }}
+                                className="h-8 px-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black flex items-center gap-1.5 hover:bg-[var(--color-border)] hover:text-[var(--color-text)] active:scale-95 transition-all"
+                                title="Command Palette (Ctrl+K)"
+                            >
+                                <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" />
+                                <span>⌘K</span>
+                            </button>
                             {/* Tutorial button — amber/kuning */}
                             <button
                                 onClick={() => setShowTutorial(true)}
-                                className="h-8 px-2.5 md:px-3 rounded-xl border border-amber-400/40 bg-amber-400/10 text-amber-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-amber-400/20 active:scale-95 transition-all"
+                                className="h-8 px-3 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center gap-1.5 hover:bg-amber-500/15 active:scale-95 transition-all"
                                 title="Panduan & Tutorial"
                             >
                                 <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
-                                <span className="hidden sm:inline">Tutorial</span>
+                                <span>Tutorial</span>
                             </button>
                             {/* Online indicator — hanya tampil kalau offline */}
                             {!isOnline && (
@@ -2505,7 +2708,7 @@ export default function AbsensiPage() {
                     </div>
 
                     {/* Controls bar */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
                         {/* Baris 1 mobile: Kelas + Tabs */}
                         <div className="flex items-center gap-2">
                             {loadingClass ? (
@@ -3013,13 +3216,72 @@ export default function AbsensiPage() {
                                                     : filteredStudents.length === 0
                                                         ? (
                                                             <tr>
-                                                                <td colSpan={38} className="py-16 text-center border border-[var(--color-border)]">
-                                                                    <div className="flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
-                                                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-2xl opacity-20" />
-                                                                        <p className="text-[12px] font-bold">
-                                                                            {searchRaw ? `Tidak ada hasil untuk "${searchRaw}"` : 'Tidak ada siswa aktif'}
-                                                                        </p>
-                                                                    </div>
+                                                                <td colSpan={38} className="py-12 text-center">
+                                                                    {searchRaw ? (
+                                                                        // Empty: search no results
+                                                                        <div className="flex flex-col items-center gap-3">
+                                                                            <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center">
+                                                                                <FontAwesomeIcon icon={faMagnifyingGlass} className="text-xl text-[var(--color-text-muted)] opacity-40" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="text-[13px] font-black text-[var(--color-text)]">Tidak ada hasil</p>
+                                                                                <p className="text-[11px] text-[var(--color-text-muted)] mt-1">Tidak ada siswa yang cocok dengan <span className="font-bold">"{searchRaw}"</span></p>
+                                                                            </div>
+                                                                            <button onClick={() => setSearchRaw('')}
+                                                                                className="h-8 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                                                                                Hapus pencarian
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : filterMode !== 'all' ? (
+                                                                        // Empty: filter active
+                                                                        <div className="flex flex-col items-center gap-3">
+                                                                            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                                                                                <FontAwesomeIcon icon={faFilter} className="text-xl text-amber-500 opacity-70" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="text-[13px] font-black text-[var(--color-text)]">Tidak ada siswa yang cocok</p>
+                                                                                <p className="text-[11px] text-[var(--color-text-muted)] mt-1">Filter aktif tidak menemukan siswa</p>
+                                                                            </div>
+                                                                            <button onClick={() => setFilterMode('all')}
+                                                                                className="h-8 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] font-black text-amber-600 hover:bg-amber-500/20 transition-all flex items-center gap-1.5">
+                                                                                <FontAwesomeIcon icon={faArrowsRotate} className="text-[9px]" /> Reset filter
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : completionPct === 0 && studentList.length > 0 ? (
+                                                                        // Empty: no data yet this month — engaging CTA
+                                                                        <div className="flex flex-col items-center gap-4 max-w-xs mx-auto">
+                                                                            <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
+                                                                                <FontAwesomeIcon icon={faCalendarDays} className="text-2xl text-[var(--color-primary)] opacity-70" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="text-[14px] font-black text-[var(--color-text)]">Belum ada absensi {BULAN_NAMA[bulan]}</p>
+                                                                                <p className="text-[11px] text-[var(--color-text-muted)] mt-1 leading-relaxed">
+                                                                                    Mulai isi sekarang, atau salin dari bulan sebelumnya jika polanya sama.
+                                                                                </p>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2 flex-wrap justify-center">
+                                                                                <button
+                                                                                    onClick={handleCopyLastMonth}
+                                                                                    disabled={copyingLastMonth}
+                                                                                    className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 shadow-sm shadow-[var(--color-primary)]/20">
+                                                                                    {copyingLastMonth ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faCopy} />}
+                                                                                    Copy dari {BULAN_NAMA[bulan === 1 ? 12 : bulan - 1]}
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => { setShowCommandPalette(true); haptic('light') }}
+                                                                                    className="h-9 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-2">
+                                                                                    <FontAwesomeIcon icon={faWandMagicSparkles} className="text-[9px]" />
+                                                                                    Isi cepat ⌘K
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        // Generic empty
+                                                                        <div className="flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
+                                                                            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-2xl opacity-20" />
+                                                                            <p className="text-[12px] font-bold">Tidak ada siswa aktif</p>
+                                                                        </div>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         )
@@ -3159,6 +3421,20 @@ export default function AbsensiPage() {
 
                 {/* Tutorial modal */}
                 {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
+
+                {/* Command Palette */}
+                <CommandPalette
+                    open={showCommandPalette}
+                    onClose={() => setShowCommandPalette(false)}
+                    onAction={handleCommandAction}
+                    studentCount={studentList.length}
+                    bulan={bulan} tahun={tahun}
+                    completionPct={completionPct}
+                    isDirty={isDirty}
+                    filterMode={filterMode}
+                    hideWeekend={hideWeekend}
+                    mobileView={mobileView}
+                />
 
                 {/* Feature 6: Note popup */}
                 {noteTarget && (
