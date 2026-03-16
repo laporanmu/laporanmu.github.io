@@ -11,6 +11,7 @@ import {
 
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
+import Breadcrumb from '../../components/ui/Breadcrumb'
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
@@ -353,6 +354,7 @@ export default function ViolationsPage() {
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
+                        <Breadcrumb badge="Master Data" items={['Master', 'Konfigurasi Poin']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Konfigurasi Poin</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola bobot poin untuk {stats.violations} jenis pelanggaran & {stats.achievements} prestasi.</p>
                     </div>

@@ -21,6 +21,7 @@ import {
     faKeyboard, faMagnifyingGlassPlus, faWandMagicSparkles,
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
+import Breadcrumb from '../components/ui/Breadcrumb'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -2743,10 +2744,14 @@ export default function AbsensiPage() {
                     {/* Page header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <div>
+                            <Breadcrumb badge="Reports" items={['Reports', 'Absensi Bulanan']} className="mb-1" />
                             <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Absensi Bulanan</h1>
                             <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">
                                 <span className="sm:hidden">Input &amp; rekap absensi siswa per bulan.</span>
                                 <span className="hidden sm:inline">Klik sel untuk ganti status · Tahan &amp; geser untuk isi banyak · Klik nama/tanggal untuk isi cepat</span>
+                            </p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                                Mulai dari filter kelas &amp; bulan, lalu gunakan shortcut dan drag untuk mempercepat input harian.
                             </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">

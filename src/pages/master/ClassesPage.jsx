@@ -11,6 +11,7 @@ import {
 
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
+import Breadcrumb from '../../components/ui/Breadcrumb'
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
@@ -236,7 +237,7 @@ export default function ClassesPage() {
         else if (sortBy === 'level') result.sort((a, b) => (a.grade || '').localeCompare(b.grade || '') || a.name.localeCompare(b.name))
         else if (sortBy === 'students') result.sort((a, b) => (b.students || 0) - (a.students || 0))
         return result
-    }, [classes, debouncedSearch, filterLevel, filterProgram, sortBy])
+    }, [classes, debouncedSearch, filterLevel, filterProgram, filterNoTeacher, filterCrowded, sortBy])
 
     const totalRows = filteredClasses.length
     const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
@@ -365,6 +366,14 @@ export default function ClassesPage() {
     const activeFilterCountVal = activeFilterCount
     // remove resetAllFilters from here as it's defined above
 
+    const hasAnyActiveFilter = Boolean(
+        searchQuery ||
+        filterLevel ||
+        filterProgram ||
+        filterNoTeacher ||
+        filterCrowded
+    )
+
     return (
         <DashboardLayout title="Data Kelas" hideHeader={isAnyModalOpen} hideSidebar={isAnyModalOpen}>
             <style>{isAnyModalOpen ? ` .top-nav, .sidebar, .floating-dock { display: none !important; } main { padding-top: 0 !important; } ` : ''}</style>
@@ -391,8 +400,12 @@ export default function ClassesPage() {
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
+                        <Breadcrumb badge="Master Data" items={['Master', 'Kelas']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Data Kelas</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} data kelas aktif dalam sistem laporan.</p>
+                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                            Gunakan import Excel untuk input massal dan filter di atas tabel untuk fokus ke tingkat tertentu.
+                        </p>
                     </div>
                     <div className="flex gap-2 items-center">
                         {/* Sliders dropdown (Opsi) */}
@@ -508,7 +521,7 @@ export default function ClassesPage() {
                 )}
 
                 {/* Filters & Actions */}
-                <div className="bg-[var(--color-surface)] rounded-2xl mb-6 border border-[var(--color-border)] overflow-hidden shadow-sm">
+                <div className="bg-[var(--color-surface)] rounded-2xl mb-6 border border-[var(--color-border)] overflow-hidden shadow-sm" ref={filterRef}>
                     {/* Row 1: Search + Main Actions */}
                     <div className="flex flex-row items-center gap-2 p-3">
                         <div className="flex-1 relative">
@@ -545,6 +558,89 @@ export default function ClassesPage() {
                             </button>
                         </div>
                     </div>
+
+                    {/* Active Filter Chips */}
+                    {hasAnyActiveFilter && (
+                        <div className="px-3 pb-3 -mt-1">
+                            <div className="flex flex-wrap gap-2">
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]"
+                                        title="Hapus pencarian"
+                                    >
+                                        <FontAwesomeIcon icon={faSearch} className="text-[10px] opacity-60" />
+                                        <span className="max-w-[220px] truncate">“{searchQuery}”</span>
+                                        <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterLevel && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterLevel('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[10px] font-black text-[var(--color-primary)]"
+                                        title="Hapus filter tingkat"
+                                    >
+                                        <span className="opacity-70">Kelas</span> {filterLevel}
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] group-hover:opacity-100 opacity-70 transition-opacity">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterProgram && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterProgram('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]"
+                                        title="Hapus filter program"
+                                    >
+                                        {filterProgram}
+                                        <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterNoTeacher && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterNoTeacher(false)}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600"
+                                        title="Hapus filter tanpa wali"
+                                    >
+                                        Tanpa Wali
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-amber-500/20 flex items-center justify-center text-amber-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterCrowded && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterCrowded(false)}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-500/20 bg-blue-500/10 text-[10px] font-black text-blue-600"
+                                        title="Hapus filter kelas padat"
+                                    >
+                                        Kelas Padat
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-blue-500/20 flex items-center justify-center text-blue-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={resetAllFilters}
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600"
+                                    title="Reset semua filter"
+                                >
+                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
+                                    Reset semua
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Row 2: Expandable Filter Panel */}
                     {isFilterOpen && (
@@ -614,7 +710,26 @@ export default function ClassesPage() {
                             <div className="w-16 h-16 mb-4 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] border border-dashed border-[var(--color-border)] opacity-40"><FontAwesomeIcon icon={faSchool} className="text-2xl" /></div>
                             <h3 className="text-base font-black text-[var(--color-text)] mb-2 uppercase tracking-wide">Data Tidak Ditemukan</h3>
                             <p className="text-[10px] text-[var(--color-text-muted)] max-w-xs leading-relaxed font-bold uppercase tracking-widest opacity-60">Tidak ditemukan kelas yang cocok dengan filter atau database masih kosong.</p>
-                            <button onClick={() => { setSearchQuery(''); setFilterLevel(''); setFilterProgram('') }} className="mt-6 h-9 px-5 rounded-xl border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all">Clear Filter</button>
+                            <div className="mt-6 flex flex-col sm:flex-row items-center gap-2">
+                                {hasAnyActiveFilter ? (
+                                    <button
+                                        onClick={resetAllFilters}
+                                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center gap-2"
+                                    >
+                                        <FontAwesomeIcon icon={faRotateLeft} />
+                                        Hapus Semua Filter
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleAdd}
+                                        disabled={!canEdit}
+                                        className="h-10 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <FontAwesomeIcon icon={faPlus} />
+                                        Tambah Kelas Pertama
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <>
@@ -701,6 +816,9 @@ export default function ClassesPage() {
                                             ))}
                                         </select>
                                     </div>
+                                    <div className="hidden sm:flex items-center px-3 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text)]">
+                                        Halaman <span className="text-[var(--color-primary)] mx-1">{page}</span>/<span className="opacity-70">{totalPages}</span>
+                                    </div>
                                     <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
                                     <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
                                     <div className="flex items-center gap-1.5 mx-1">
@@ -710,7 +828,7 @@ export default function ClassesPage() {
                                     </div>
                                     <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[10px]" /></button>
                                     <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" /></button>
-                                    <div className="ml-2 relative flex items-center">
+                                    <div className="ml-2 relative items-center hidden md:flex">
                                         <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/[^\d]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal..." className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[11px] font-black focus:border-[var(--color-primary)] outline-none" />
                                     </div>
                                 </div>

@@ -9,6 +9,7 @@ import {
     faClipboardList, faCalendarWeek, faShieldHalved,
     faUsers, faChalkboardTeacher, faSchool, faExclamationTriangle, faCalendarAlt,
     faPersonWalkingArrowRight, faUserGear, faClockRotateLeft, faScrewdriverWrench,
+    faDatabase, faBoxArchive, faServer, faPalette,
 } from "@fortawesome/free-solid-svg-icons"
 import { useTheme } from "../../context/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
@@ -70,7 +71,11 @@ const REPORTS_ITEMS = [
 const ADMIN_ITEMS = [
     { to: "/admin/logs", label: "Audit Logs", icon: faClockRotateLeft, desc: "Riwayat aktivitas sistem", color: "bg-purple-500/10 text-purple-600" },
     { to: "/admin/users", label: "User Management", icon: faUserGear, desc: "Kelola akun & hak akses", color: "bg-rose-500/10 text-rose-600" },
+    { to: "/admin/database", label: "Database Health", icon: faDatabase, desc: "Monitoring data & integritas", color: "bg-cyan-500/10 text-cyan-600" },
+    { to: "/admin/storage", label: "Storage Manager", icon: faBoxArchive, desc: "Kelola file & bucket storage", color: "bg-amber-500/10 text-amber-600" },
+    { to: "/admin/tasks", label: "Background Tasks", icon: faServer, desc: "Monitor edge functions", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/admin/settings", label: "Pengaturan", icon: faScrewdriverWrench, desc: "Konfigurasi sistem & aplikasi", color: "bg-slate-500/10 text-slate-600" },
+    { to: "/admin/playground", label: "UI Playground", icon: faPalette, desc: "Katalog design system", color: "bg-pink-500/10 text-pink-600" },
 ]
 
 // ── Warna & icon per type notifikasi

@@ -12,6 +12,7 @@ import {
     faKeyboard, faEye, faEyeSlash, faBoxArchive, faRotateLeft,
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
+import Breadcrumb from '../components/ui/Breadcrumb'
 import Modal from '../components/ui/Modal'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
@@ -783,9 +784,13 @@ export default function PoinPage() {
                 {/* ── PAGE HEADER ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
+                        <Breadcrumb badge="Reports" items={['Reports', 'Perilaku']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Laporan Perilaku</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">
                             Rekam dan pantau perkembangan karakter siswa.
+                        </p>
+                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                            Gunakan view Timeline untuk membaca kronologi, dan view Tabel saat butuh export atau filter detail.
                         </p>
                     </div>
                     <div className="flex gap-2 items-center">

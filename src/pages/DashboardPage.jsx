@@ -24,6 +24,7 @@ import {
     Cell,
 } from 'recharts'
 import DashboardLayout from '../components/layout/DashboardLayout'
+import Breadcrumb from '../components/ui/Breadcrumb'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
@@ -397,6 +398,7 @@ export default function DashboardPage() {
                 {/* ── PAGE HEADER ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
+                        <Breadcrumb badge="Dashboard" items={['Overview']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)] flex items-center gap-2">
                             Selamat Datang, {profile?.name?.split(' ')[0] || 'User'}!
                             <span className="text-amber-400">👋</span>
