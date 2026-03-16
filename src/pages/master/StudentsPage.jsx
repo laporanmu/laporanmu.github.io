@@ -73,6 +73,7 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
+import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 import { QRCodeCanvas } from 'qrcode.react'
 import mbsLogo from '../../assets/mbs.png'
@@ -433,6 +434,10 @@ export default function StudentsPage() {
     const searchInputRef = useRef(null)
 
     const { addToast, addUndoToast } = useToast()
+
+    // access.teacher_students — kalau off, guru hanya bisa lihat (read-only)
+    const { enabled: teacherStudentsEnabled } = useFlag('access.teacher_students')
+    const canEdit = teacherStudentsEnabled
 
     // =========================================
     // Pagination + Filter + Sort
@@ -3252,6 +3257,14 @@ export default function StudentsPage() {
                     </div>
                 )}
 
+                {/* Read-only Banner */}
+                {!canEdit && (
+                    <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faEyeSlash} className="text-rose-500 shrink-0 text-xs" />
+                        <p className="text-[11px] font-bold text-rose-600">Mode Read-only — Edit data siswa dinonaktifkan oleh administrator.</p>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
@@ -3435,10 +3448,11 @@ export default function StudentsPage() {
 
                         <button
                             onClick={handleAdd}
-                            className="h-9 px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02]"
+                            disabled={!canEdit}
+                            className="h-9 px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                         >
                             <FontAwesomeIcon icon={faPlus} />
-                            Tambah
+                            {canEdit ? 'Tambah' : 'Read-only'}
                         </button>
                     </div>
                 </div>
@@ -4054,7 +4068,7 @@ export default function StudentsPage() {
                                                 {/* Column 6: Actions */}
                                                 <td className="px-6 py-3 text-right pr-6">
                                                     <div className="flex items-center justify-end gap-1.5">
-                                                        <button onClick={handleInlineSubmit} disabled={submittingInline}
+                                                        <button onClick={handleInlineSubmit} disabled={submittingInline || !canEdit}
                                                             className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center gap-2">
                                                             {submittingInline ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faCheck} /> Simpan</>}
                                                         </button>
@@ -4098,7 +4112,7 @@ export default function StudentsPage() {
                             </div>
 
                             {/* Quick Add trigger */}
-                            {!isInlineAddOpen && (
+                            {!isInlineAddOpen && canEdit && (
                                 <button
                                     onClick={() => setIsInlineAddOpen(true)}
                                     className="w-full py-2.5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all border-t border-[var(--color-border)] border-dashed"

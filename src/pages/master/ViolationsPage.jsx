@@ -12,6 +12,7 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
+import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 import { useDebounce } from '../../hooks/useDebounce'
 import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
@@ -33,9 +34,7 @@ function getPageItems(current, total) {
 
 export default function ViolationsPage() {
     const { addToast } = useToast()
-
-    // Data states
-    const [violations, setViolations] = useState([])
+    const { enabled: canEdit } = useFlag('access.teacher_violations')
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
@@ -342,6 +341,14 @@ export default function ViolationsPage() {
                     </div>
                 )}
 
+                {/* Read-only Banner */}
+                {!canEdit && (
+                    <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faEyeSlash} className="text-rose-500 shrink-0 text-xs" />
+                        <p className="text-[11px] font-bold text-rose-600">Mode Read-only — Edit konfigurasi poin dinonaktifkan oleh administrator.</p>
+                    </div>
+                )}
+
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
@@ -399,8 +406,8 @@ export default function ViolationsPage() {
                                 </div>
                             )}
                         </div>
-                        <button onClick={handleAdd} className="h-9 px-4 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 active:scale-95">
-                            <FontAwesomeIcon icon={faPlus} /> Tambah
+                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-4 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
+                            <FontAwesomeIcon icon={faPlus} /> {canEdit ? 'Tambah' : 'Read-only'}
                         </button>
                     </div>
                 </div>

@@ -12,6 +12,7 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
+import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 
 const LS_COLS = 'academic_years_columns'
@@ -26,9 +27,7 @@ function getPageItems(current, total) {
 
 export default function AcademicYearsPage() {
     const { addToast } = useToast()
-
-    // Data
-    const [years, setYears] = useState([])
+    const { enabled: canEdit } = useFlag('access.teacher_academic')
     const [archivedYears, setArchivedYears] = useState([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
@@ -346,6 +345,14 @@ export default function AcademicYearsPage() {
                     </div>
                 )}
 
+                {/* Read-only Banner */}
+                {!canEdit && (
+                    <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faTrash} className="text-rose-500 shrink-0 text-xs" />
+                        <p className="text-[11px] font-bold text-rose-600">Mode Read-only — Edit tahun pelajaran dinonaktifkan oleh administrator.</p>
+                    </div>
+                )}
+
                 {/* ── Header ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
@@ -409,8 +416,8 @@ export default function AcademicYearsPage() {
                         </div>
 
                         {/* Add button */}
-                        <button onClick={handleAdd} className="h-9 px-5 rounded-xl btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02]">
-                            <FontAwesomeIcon icon={faPlus} />Tambah
+                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-5 rounded-xl btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">
+                            <FontAwesomeIcon icon={faPlus} />{canEdit ? 'Tambah' : 'Read-only'}
                         </button>
                     </div>
                 </div>

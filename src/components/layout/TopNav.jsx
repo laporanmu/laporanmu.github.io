@@ -232,6 +232,16 @@ export default function TopNav({ title, subtitle }) {
         ? visibleReportsItems.filter(it => it.to === '/gate')
         : visibleReportsItems
 
+    // Filter master items by nav flags
+    const filteredMasterItems = MASTER_ITEMS.filter(it => {
+        if (it.to === '/master/students') return flags['nav.students'] !== false
+        if (it.to === '/master/teachers') return flags['nav.teachers'] !== false
+        if (it.to === '/master/classes') return flags['nav.classes'] !== false
+        if (it.to === '/master/violations') return flags['nav.violations'] !== false
+        if (it.to === '/master/academic-years') return flags['nav.academic_years'] !== false
+        return true
+    })
+
     const [masterOpen, setMasterOpen] = useState(false)
     const [reportsOpen, setReportsOpen] = useState(false)
     const [adminOpen, setAdminOpen] = useState(false)
@@ -473,7 +483,7 @@ export default function TopNav({ title, subtitle }) {
                                                     Master Data
                                                 </div>
                                                 <div className="p-2">
-                                                    {MASTER_ITEMS.map(it => (
+                                                    {filteredMasterItems.map(it => (
                                                         <button
                                                             key={it.to}
                                                             onClick={() => { setMasterOpen(false); navigate(it.to) }}
