@@ -193,7 +193,9 @@ function RoleFlagRoute({ children, roles = [], flag, label }) {
         <div>
           <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Akses Ditolak</h2>
           <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">
-            Halaman ini tidak tersedia untuk role <strong>{role || 'kamu'}</strong>.
+            Halaman ini tidak tersedia untuk role <strong>
+              {(role?.charAt(0).toUpperCase() + role?.slice(1)) || 'Kamu'}
+            </strong>.
           </p>
         </div>
         <button onClick={() => navigate(-1)}
