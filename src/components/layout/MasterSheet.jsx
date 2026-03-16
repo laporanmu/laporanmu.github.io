@@ -10,7 +10,6 @@ import {
     faScrewdriverWrench
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "../../context/AuthContext"
-import { useFeatureFlags } from "../../context/FeatureFlagsContext"
 
 // ─── Portal container ─────────────────────────────────────────────────────────
 // Singleton di module-level — dibuat SEKALI saat module di-load, tidak pernah
@@ -97,7 +96,6 @@ function Divider() {
 export default function MasterSheet({ isOpen, onClose, section }) {
     const navigate = useNavigate()
     const { profile } = useAuth()
-    const { flags } = useFeatureFlags()
 
     const container = getPortalContainer('portal-sheet')
 
@@ -105,7 +103,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
     const isSatpam = role === 'satpam'
     const isAdminUp = ['developer', 'admin'].includes(role)
 
-    // Filter nav items by flags
+    // Filter items berdasarkan role + feature flags
     const filteredReports = REPORTS_ITEMS.filter(it => {
         if (it.to === '/gate') return flags['nav.gate'] !== false
         if (it.to === '/raport') return flags['nav.raport'] !== false
@@ -113,12 +111,19 @@ export default function MasterSheet({ isOpen, onClose, section }) {
         if (it.to === '/poin') return flags['nav.poin'] !== false
         return true
     })
-
-    // Filter by role too
     const visibleReports = isSatpam
         ? filteredReports.filter(it => it.to === '/gate')
         : filteredReports
-    const visibleMaster = isSatpam ? [] : MASTER_ITEMS
+
+    const filteredMaster = MASTER_ITEMS.filter(it => {
+        if (it.to === '/master/students') return flags['nav.students'] !== false
+        if (it.to === '/master/teachers') return flags['nav.teachers'] !== false
+        if (it.to === '/master/classes') return flags['nav.classes'] !== false
+        if (it.to === '/master/violations') return flags['nav.violations'] !== false
+        if (it.to === '/master/academic-years') return flags['nav.academic_years'] !== false
+        return true
+    })
+    const visibleMaster = isSatpam ? [] : filteredMaster
 
     // Tentukan section mana yang perlu ditampilkan
     // section prop = spesifik 1 section; null = tampil semua (fallback full-menu)

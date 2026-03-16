@@ -17,6 +17,7 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
+import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 import { TeacherRow, TeacherMobileCard, STATUS_CONFIG } from '../../components/teachers/TeacherRow'
 import TeacherFormModal from '../../components/teachers/TeacherFormModal'
@@ -125,6 +126,10 @@ export default function TeachersPage() {
     const headerMenuRef = useRef(null)
     const shortcutRef = useRef(null)
     const { addToast } = useToast()
+
+    // access.teacher_teachers — kalau off, guru hanya bisa lihat (read-only)
+    const { enabled: teacherTeachersEnabled } = useFlag('access.teacher_teachers')
+    const canEdit = teacherTeachersEnabled
 
     // ── persist ──────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -462,6 +467,14 @@ export default function TeachersPage() {
                     </div>
                 )}
 
+                {/* Read-only Banner */}
+                {!canEdit && (
+                    <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faEyeSlash} className="text-rose-500 shrink-0 text-xs" />
+                        <p className="text-[11px] font-bold text-rose-600">Mode Read-only — Edit data guru dinonaktifkan oleh administrator.</p>
+                    </div>
+                )}
+
                 {/* Bulk Action Bar */}
                 {selectedIds.length > 0 && (
                     <div className="mb-4 px-4 py-3 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-between gap-3 flex-wrap">
@@ -560,8 +573,8 @@ export default function TeachersPage() {
                         </div>
 
                         {/* Add button */}
-                        <button onClick={handleAdd} className="h-9 px-5 rounded-xl btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02]">
-                            <FontAwesomeIcon icon={faPlus} />Tambah
+                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-5 rounded-xl btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">
+                            <FontAwesomeIcon icon={faPlus} />{canEdit ? 'Tambah' : 'Read-only'}
                         </button>
                     </div>
                 </div>
@@ -781,12 +794,12 @@ export default function TeachersPage() {
                                             isPrivacyMode={isPrivacyMode}
                                             disp={disp}
                                             openProfile={openProfile}
-                                            handleEdit={handleEdit}
+                                            handleEdit={canEdit ? handleEdit : null}
                                             handleTogglePin={handleTogglePin}
                                             handleQuickStatus={handleQuickStatus}
                                             setTeacherToAction={setTeacherToAction}
-                                            setIsArchiveModalOpen={setIsArchiveModalOpen}
-                                            setIsDeleteModalOpen={setIsDeleteModalOpen}
+                                            setIsArchiveModalOpen={canEdit ? setIsArchiveModalOpen : null}
+                                            setIsDeleteModalOpen={canEdit ? setIsDeleteModalOpen : null}
                                             quickStatusId={quickStatusId}
                                             setQuickStatusId={setQuickStatusId}
                                             quickStatusRef={quickStatusRef}
@@ -813,10 +826,10 @@ export default function TeachersPage() {
                                     isPrivacyMode={isPrivacyMode}
                                     disp={disp}
                                     openProfile={openProfile}
-                                    handleEdit={handleEdit}
+                                    handleEdit={canEdit ? handleEdit : null}
                                     handleTogglePin={handleTogglePin}
                                     setTeacherToAction={setTeacherToAction}
-                                    setIsArchiveModalOpen={setIsArchiveModalOpen}
+                                    setIsArchiveModalOpen={canEdit ? setIsArchiveModalOpen : null}
                                 />
                             ))}
                         </div>
@@ -885,7 +898,7 @@ export default function TeachersPage() {
                                             <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-black uppercase ${STATUS_CONFIG[profileTeacher.status]?.color}`}>{STATUS_CONFIG[profileTeacher.status]?.label}</span>
                                         </div>
                                     </div>
-                                    <button onClick={() => { setIsProfileOpen(false); handleEdit(profileTeacher) }} className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all shrink-0"><FontAwesomeIcon icon={faEdit} /></button>
+                                    {canEdit && <button onClick={() => { setIsProfileOpen(false); handleEdit(profileTeacher) }} className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all shrink-0"><FontAwesomeIcon icon={faEdit} /></button>}
                                 </div>
                                 <div className="flex gap-0.5 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
                                     {[['info', 'Info'], ['stats', 'Statistik'], ['laporan', 'Laporan']].map(([k, label]) => (

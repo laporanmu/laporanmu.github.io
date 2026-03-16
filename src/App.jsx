@@ -192,7 +192,7 @@ function RoleFlagRoute({ children, roles = [], flag, label }) {
         <div>
           <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Akses Ditolak</h2>
           <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">
-            Halaman ini tidak tersedia untuk role <strong>{role.toUpperCase() || 'Kamu'}</strong>.
+            Halaman ini tidak tersedia untuk role <strong>{role || 'kamu'}</strong>.
           </p>
         </div>
         <button onClick={() => navigate(-1)}
@@ -302,27 +302,27 @@ function AppRoutes() {
 
           {/* Master Data */}
           <Route path="/master/students" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.students" label="Data Siswa">
               <StudentsPage />
             </RoleFlagRoute>
           } />
           <Route path="/master/teachers" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.teachers" label="Data Guru">
               <TeachersPage />
             </RoleFlagRoute>
           } />
           <Route path="/master/classes" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.classes" label="Data Kelas">
               <ClassesPage />
             </RoleFlagRoute>
           } />
           <Route path="/master/violations" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.violations" label="Jenis Pelanggaran">
               <ViolationsTypePage />
             </RoleFlagRoute>
           } />
           <Route path="/master/academic-years" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER}>
+            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.academic_years" label="Tahun Pelajaran">
               <AcademicYearsPage />
             </RoleFlagRoute>
           } />
