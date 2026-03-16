@@ -12,6 +12,7 @@ import {
     faUserShield, faDatabase, faCode, faWifi
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
+import Breadcrumb from '../../components/ui/Breadcrumb'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
@@ -560,7 +561,11 @@ export default function UserManagementPage() {
                 {/* ── Header ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Manajemen User</h1>
+                        <Breadcrumb badge="Admin" items={['Admin', 'User']} className="mb-1" />
+                        <div className="flex items-center gap-2.5 mb-1">
+                            <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Manajemen User</h1>
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 uppercase tracking-widest">Admin Only</span>
+                        </div>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium opacity-70">
                             Kelola akun login guru, karyawan, dan staff sistem.
                         </p>

@@ -15,6 +15,8 @@ export const ClassRow = React.memo(({
     isPrivacyMode
 }) => {
     const isSelected = selectedIds.includes(cls.id)
+    const isNoTeacher = !cls.homeroom_teacher_id || cls.teacherName === '—'
+    const isCrowded = (cls.students || 0) > 35
 
     const maskInfo = (str, visibleLen = 3) => {
         if (!str) return '---'
@@ -29,19 +31,38 @@ export const ClassRow = React.memo(({
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleSelect(cls.id)}
+                    onClick={(e) => e.stopPropagation()}
                     className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
                 />
             </td>
 
             {/* Identity */}
-            <td className="px-6 py-4">
+            <td
+                className={`px-6 py-4 ${handleEdit ? 'cursor-pointer' : ''}`}
+                onClick={handleEdit ? () => handleEdit(cls) : undefined}
+                title={handleEdit ? `Edit ${cls.name}` : undefined}
+            >
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 flex items-center justify-center text-[var(--color-primary)] text-sm font-black shadow-inner shrink-0 border border-[var(--color-primary)]/20">
                         {cls.grade}
                     </div>
                     <div className="flex flex-col min-w-0">
-                        <span className="font-extrabold text-sm text-[var(--color-text)] truncate">{cls.name}</span>
-                        <span className="text-[9px] font-black text-[var(--color-text-muted)] opacity-60 uppercase tracking-widest">{cls.major}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-extrabold text-sm text-[var(--color-text)] truncate">{cls.name}</span>
+                            {isNoTeacher && (
+                                <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-500 text-[8px] font-black uppercase tracking-widest border border-amber-500/20">
+                                    Tanpa Wali
+                                </span>
+                            )}
+                            {isCrowded && (
+                                <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 text-[8px] font-black uppercase tracking-widest border border-rose-500/20">
+                                    Padat
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-[9px] font-black text-[var(--color-text-muted)] opacity-60 uppercase tracking-widest">
+                            LVL {cls.grade} • {cls.major}
+                        </span>
                     </div>
                 </div>
             </td>
@@ -94,7 +115,12 @@ export const ClassRow = React.memo(({
                 <td className="px-6 py-4">
                     <div className="flex flex-col">
                         <span className="font-bold text-xs text-[var(--color-text)] truncate max-w-[150px]">
-                            {isPrivacyMode ? maskInfo(cls.teacherName, 4) : (cls.teacherName || '—')}
+                            {isPrivacyMode ? (
+                                <span className="inline-flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faEyeSlash} className="text-[10px] opacity-50" />
+                                    {maskInfo(cls.teacherName, 4)}
+                                </span>
+                            ) : (cls.teacherName || '—')}
                         </span>
                         <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-50">Wali Kelas</span>
                     </div>
@@ -108,6 +134,11 @@ export const ClassRow = React.memo(({
                         <FontAwesomeIcon icon={faUsers} className="text-[var(--color-primary)] text-[9px]" />
                         {cls.students || 0}
                     </div>
+                    {isCrowded && (
+                        <div className="mt-1 text-[8px] font-black uppercase tracking-widest text-rose-600 opacity-80">
+                            Padat &gt; 35
+                        </div>
+                    )}
                 </td>
             )}
 
@@ -128,6 +159,7 @@ export const ClassRow = React.memo(({
                             onClick={() => handleEdit(cls)}
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm"
                             title="Edit"
+                            aria-label={`Edit kelas ${cls.name}`}
                         >
                             <FontAwesomeIcon icon={faEdit} />
                         </button>
@@ -137,6 +169,7 @@ export const ClassRow = React.memo(({
                             onClick={() => { setItemToDelete(cls); setIsDeleteModalOpen(true) }}
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"
                             title="Hapus"
+                            aria-label={`Hapus kelas ${cls.name}`}
                         >
                             <FontAwesomeIcon icon={faTrash} />
                         </button>
@@ -156,6 +189,8 @@ export const ClassMobileCard = React.memo(({
     setIsDeleteModalOpen
 }) => {
     const isSelected = selectedIds.includes(cls.id)
+    const isNoTeacher = !cls.homeroom_teacher_id || cls.teacherName === '—'
+    const isCrowded = (cls.students || 0) > 35
     return (
         <div className={`p-4 transition-all duration-300 border-l-4 ${isSelected ? 'bg-[var(--color-primary)]/[0.03] border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-transparent active:bg-[var(--color-surface-alt)]/30'}`}>
             <div className="flex items-start gap-3">
@@ -163,6 +198,7 @@ export const ClassMobileCard = React.memo(({
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleSelect(cls.id)}
+                    onClick={(e) => e.stopPropagation()}
                     className="w-4 h-4 mt-1 rounded border-[var(--color-border)] text-[var(--color-primary)] shrink-0"
                 />
 
@@ -186,6 +222,12 @@ export const ClassMobileCard = React.memo(({
                                 ) : cls.major.includes('Putri') ? (
                                     <span className="px-1.5 py-0.5 rounded-md bg-pink-500/10 text-pink-600 text-[8px] font-black uppercase tracking-widest border border-pink-500/10">Putri</span>
                                 ) : null}
+                                {isNoTeacher && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-500 text-[8px] font-black uppercase tracking-widest border border-amber-500/10">Tanpa Wali</span>
+                                )}
+                                {isCrowded && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 text-[8px] font-black uppercase tracking-widest border border-rose-500/10">Padat</span>
+                                )}
                             </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
@@ -205,6 +247,9 @@ export const ClassMobileCard = React.memo(({
                                 <FontAwesomeIcon icon={faUsers} className="text-[var(--color-primary)] mr-1.5 text-[9px]" />
                                 {cls.students || 0}
                             </p>
+                            {isCrowded && (
+                                <p className="text-[8px] font-black uppercase tracking-widest text-rose-600 opacity-80">Padat &gt; 35</p>
+                            )}
                         </div>
                     </div>
 

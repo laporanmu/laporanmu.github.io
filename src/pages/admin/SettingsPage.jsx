@@ -11,6 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
+import Breadcrumb from '../../components/ui/Breadcrumb'
 import { useToast } from '../../context/ToastContext'
 import { supabase } from '../../lib/supabase'
 import { useSchoolSettings, DEFAULT_SETTINGS } from '../../context/SchoolSettingsContext'
@@ -356,6 +357,7 @@ export default function AdminSettingsPage() {
                 {/* ── Header ──────────────────────────────────────────── */}
                 <div className="mb-7 flex items-start justify-between gap-4">
                     <div>
+                        <Breadcrumb badge="Admin" items={['Admin', 'Developer Settings']} className="mb-1" />
                         <div className="flex items-center gap-3 mb-1">
                             <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">
                                 Developer Settings

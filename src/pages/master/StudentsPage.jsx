@@ -1,5 +1,5 @@
 import React from 'react'
-import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react'
+import { useState, useRef, useEffect, useCallback, memo, useMemo, useDeferredValue } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
@@ -71,19 +71,15 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
+import Breadcrumb from '../../components/ui/Breadcrumb'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
-import { QRCodeCanvas } from 'qrcode.react'
 import mbsLogo from '../../assets/mbs.png'
 
-// Library untuk Export dan Import 
-import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import html2canvas from 'html2canvas'
+// NOTE(perf): library import/export di-load on-demand via dynamic import
+// NOTE(perf): jsPDF/html2canvas/qrcode/autotable di-load on-demand via dynamic import
 
 const SortOptions = [
     { value: 'name_asc', label: 'Nama A–Z' },
@@ -139,15 +135,34 @@ const maskInfo = (str, visibleLen = 3) => {
 import StudentFormModal from '../../components/students/StudentFormModal'
 import { StudentRow, StudentMobileCard } from '../../components/students/StudentRow'
 
+const LazyQRCodeCanvas = React.lazy(() =>
+    import('qrcode.react').then((m) => ({ default: m.QRCodeCanvas }))
+)
+
+const LazyStudentPrintModal = React.lazy(() =>
+    import('./students/StudentPrintModal')
+)
+const LazyStudentExportModal = React.lazy(() =>
+    import('./students/StudentExportModal')
+)
+const LazyStudentImportModal = React.lazy(() =>
+    import('./students/StudentImportModal')
+)
+
 // ── BehaviorHeatmap — outside StudentsPage to prevent re-creation on every render ──
 const BehaviorHeatmap = memo(({ history }) => {
     const today = new Date()
-    const startDate = new Date()
-    startDate.setMonth(today.getMonth() - 3)
-    startDate.setDate(1)
-    const days = []
-    let curr = new Date(startDate)
-    while (curr <= today) { days.push(new Date(curr)); curr.setDate(curr.getDate() + 1) }
+    const rangeKey = `${today.getFullYear()}-${today.getMonth()}`
+    const days = useMemo(() => {
+        const end = new Date()
+        const start = new Date(end)
+        start.setMonth(end.getMonth() - 3)
+        start.setDate(1)
+        const out = []
+        let curr = new Date(start)
+        while (curr <= end) { out.push(new Date(curr)); curr.setDate(curr.getDate() + 1) }
+        return out
+    }, [rangeKey])
     const activityMap = useMemo(() => history.reduce((acc, item) => {
         const d = new Date(item.created_at).toDateString()
         acc[d] = (acc[d] || 0) + (item.points || 0)
@@ -198,6 +213,16 @@ export default function StudentsPage() {
     const [behaviorHistory, setBehaviorHistory] = useState([])
     const [loadingHistory, setLoadingHistory] = useState(false)
     const [selectedStudentIds, setSelectedStudentIds] = useState([])
+
+    const selectedIdSet = useMemo(() => new Set(selectedStudentIds), [selectedStudentIds])
+    const selectedStudents = useMemo(() => {
+        if (!selectedStudentIds.length) return []
+        return students.filter((s) => selectedIdSet.has(s.id))
+    }, [students, selectedIdSet, selectedStudentIds.length])
+    const selectedStudentsWithPhone = useMemo(() => selectedStudents.filter((s) => s.phone), [selectedStudents])
+
+    // Mobile bottom-nav overlap guard (floating bulk bar / quick add)
+    const MOBILE_BOTTOM_NAV_PX = 72
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
     const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false)
     const [isBulkWAModalOpen, setIsBulkWAModalOpen] = useState(false)
@@ -446,11 +471,12 @@ export default function StudentsPage() {
     const [pageSize, setPageSize] = useState(10)
     const [jumpPage, setJumpPage] = useState('')
 
+    const deferredSearchQuery = useDeferredValue(searchQuery)
     const [debouncedSearch, setDebouncedSearch] = useState('')
     useEffect(() => {
-        const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350)
+        const t = setTimeout(() => setDebouncedSearch(deferredSearchQuery.trim()), 350)
         return () => clearTimeout(t)
-    }, [searchQuery])
+    }, [deferredSearchQuery])
 
     useEffect(() => {
         try {
@@ -738,6 +764,12 @@ export default function StudentsPage() {
         fetchData()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, pageSize, filterClass, filterClasses, filterGender, filterStatus, filterTag, filterMissing, sortBy, debouncedSearch, filterPointMode, filterPointMin, filterPointMax])
+
+    // Initial load for stats cards (global, not paginated)
+    useEffect(() => {
+        fetchStats()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     // FIX #5: Realtime — auto-refresh jika ada siswa ditambah/diubah/dihapus
     useEffect(() => {
@@ -1522,7 +1554,7 @@ export default function StudentsPage() {
 
         if (exportScope === 'selected' && selectedStudentIds.length > 0) {
             // Ambil dari data yang sudah ada di state (sudah include className)
-            sourceData = students.filter(s => selectedStudentIds.includes(s.id))
+            sourceData = selectedStudents
             // Mapping manual karena struktur berbeda dengan supabase response
             return sourceData.map(s => {
                 const row = {}
@@ -1816,7 +1848,7 @@ export default function StudentsPage() {
 
     // NEW: Bulk WA — kirim notifikasi ke semua wali terpilih
     const handleBulkWA = () => {
-        const targets = students.filter(s => selectedStudentIds.includes(s.id) && s.phone)
+        const targets = selectedStudentsWithPhone
         if (!targets.length) {
             addToast('Tidak ada siswa terpilih yang memiliki nomor WA', 'warning')
             return
@@ -1853,7 +1885,7 @@ export default function StudentsPage() {
     }
 
     const handleBulkPrint = () => {
-        const targets = students.filter(s => selectedStudentIds.includes(s.id))
+        const targets = selectedStudents
         if (!targets.length) { addToast('Pilih siswa terlebih dahulu', 'warning'); return }
         generateStudentPDF(targets)
     }
@@ -1941,6 +1973,7 @@ export default function StudentsPage() {
         setGeneratingPdf(true);
         addToast('Menyiapkan struk thermal...', 'info');
         try {
+            const { QRCodeCanvas } = await import('qrcode.react')
             const qrValue = `${window.location.origin}/check?code=${student.code}&pin=${student.pin}`;
             const qrContainer = document.createElement('div');
             qrContainer.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
@@ -2019,6 +2052,10 @@ export default function StudentsPage() {
         setGeneratingPdf(true);
         addToast('Menyiapkan gambar kartu...', 'info');
         try {
+            const [{ QRCodeCanvas }, { default: html2canvas }] = await Promise.all([
+                import('qrcode.react'),
+                import('html2canvas'),
+            ])
             let photoDataUrl = null;
             if (student.photo_url) photoDataUrl = await getBase64Image(student.photo_url);
 
@@ -2133,6 +2170,10 @@ export default function StudentsPage() {
         setGeneratingPdf(true);
         addToast('Menyiapkan dokumen resmi...', 'info');
         try {
+            const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+                import('jspdf'),
+                import('html2canvas'),
+            ])
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
             // (tidak ada kop surat)
@@ -2737,11 +2778,12 @@ export default function StudentsPage() {
     };
 
     // NEW: Download template import xlsx
-    const handleDownloadTemplate = () => {
+    const handleDownloadTemplate = async () => {
         const templateData = [
             { name: 'Contoh: Ahmad Rizki', gender: 'L', phone: '081234567890', class_name: 'XII IPA 1', nisn: '1234567890', guardian_name: 'Budi Rizki' },
             { name: 'Contoh: Siti Aminah', gender: 'P', phone: '081234567891', class_name: 'XI IPS 2', nisn: '0987654321', guardian_name: 'Aminah' },
         ]
+        const XLSX = await import('xlsx')
         const ws = XLSX.utils.json_to_sheet(templateData)
         ws['!cols'] = [{ wch: 25 }, { wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 15 }, { wch: 20 }]
         const wb = XLSX.utils.book_new()
@@ -2826,6 +2868,7 @@ export default function StudentsPage() {
     }
 
     const parseCSVFile = async (file) => {
+        const Papa = (await import('papaparse')).default
         return new Promise((resolve, reject) => {
             Papa.parse(file, {
                 header: true,
@@ -2837,6 +2880,7 @@ export default function StudentsPage() {
     }
 
     const parseExcelFile = async (file) => {
+        const XLSX = await import('xlsx')
         const buf = await file.arrayBuffer()
         const wb = XLSX.read(buf, { type: 'array' })
         const firstSheet = wb.SheetNames[0]
@@ -3136,6 +3180,7 @@ export default function StudentsPage() {
     const handleExportExcel = async () => {
         setExporting(true)
         try {
+            const XLSX = await import('xlsx')
             const data = await getExportData()
             if (!data.length) return addToast('Tidak ada data untuk diekspor', 'warning')
             const ws = XLSX.utils.json_to_sheet(data)
@@ -3160,6 +3205,11 @@ export default function StudentsPage() {
     const handleExportPDF = async () => {
         setExporting(true)
         try {
+            const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+                import('jspdf'),
+                import('jspdf-autotable'),
+            ])
+            const autoTable = autoTableMod.default || autoTableMod
             const allRows = await getExportData()
             if (!allRows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
             const doc = new jsPDF({ orientation: 'landscape' })
@@ -3268,9 +3318,13 @@ export default function StudentsPage() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
+                        <Breadcrumb badge="Master Data" items={['Master', 'Siswa']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Data Siswa</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">
                             Kelola {globalStats.total} data siswa aktif dalam sistem laporan.
+                        </p>
+                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                            Untuk pengisian awal, gunakan menu import (Excel / GSheets) agar lebih cepat dan minim salah ketik.
                         </p>
                     </div>
 
@@ -3378,6 +3432,7 @@ export default function StudentsPage() {
                                 {isPrivacyMode ? 'Privacy On' : 'Privacy Off'}
                             </span>
                         </button>
+
 
                         {/* Keyboard Shortcuts Button + Cheatsheet */}
                         <div className="relative" ref={shortcutRef}>
@@ -3799,6 +3854,7 @@ export default function StudentsPage() {
                                     <button
                                         onClick={async () => {
                                             try {
+                                                const XLSX = await import('xlsx')
                                                 const rows = await fetchFilteredForExport()
                                                 const ws = XLSX.utils.json_to_sheet(rows)
                                                 const wb = XLSX.utils.book_new()
@@ -3988,7 +4044,7 @@ export default function StudentsPage() {
                                                 key={student.id}
                                                 student={student}
                                                 visibleColumns={visibleColumns}
-                                                selectedIds={selectedStudentIds}
+                                                isSelected={selectedIdSet.has(student.id)}
                                                 lastReportMap={lastReportMap}
                                                 isPrivacyMode={isPrivacyMode}
                                                 onEdit={canEdit ? handleEdit : null}
@@ -4001,7 +4057,7 @@ export default function StudentsPage() {
                                                 onClassBreakdown={handleClassBreakdown}
                                                 onPhotoZoom={setPhotoZoom}
                                                 onToggleSelect={toggleSelectStudent}
-                                                x={handleQuickPoint}
+                                                onQuickPoint={handleQuickPoint}
                                                 onInlineUpdate={canEdit ? handleInlineUpdate : null}
                                                 onTogglePin={handleTogglePin}
                                                 classesList={classesList}
@@ -4085,33 +4141,118 @@ export default function StudentsPage() {
                             </div>
 
                             {/* Mobile View */}
-                            <div className="md:hidden divide-y divide-[var(--color-border)]">
+                            <div
+                                className="md:hidden px-3 pb-6 space-y-3"
+                                style={{
+                                    paddingBottom:
+                                        selectedStudentIds.length > 0
+                                            ? `calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 88px)`
+                                            : `calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 16px)`,
+                                }}
+                            >
                                 {students.length === 0 ? (
-                                    <div className="py-20 flex flex-col items-center text-center gap-3">
+                                    <div className="py-16 flex flex-col items-center text-center gap-3">
                                         <FontAwesomeIcon icon={faTableList} className="text-4xl text-[var(--color-text-muted)] opacity-20" />
                                         <div className="text-sm font-extrabold text-[var(--color-text)]">Tidak ada data ditemukan</div>
                                         <button onClick={resetAllFilters} className="mt-2 h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)]">Reset Filter</button>
                                     </div>
                                 ) : (
-                                    students.map(student => (
-                                        <StudentMobileCard
-                                            key={student.id}
-                                            student={student}
-                                            selectedIds={selectedStudentIds}
-                                            onToggleSelect={toggleSelectStudent}
-                                            onViewProfile={handleViewProfile}
-                                            onEdit={canEdit ? handleEdit : null}
-                                            onConfirmDelete={canEdit ? confirmDelete : null}
-                                            onTogglePin={handleTogglePin}
-                                            onQuickPoint={handleQuickPoint}
-                                            isPrivacyMode={isPrivacyMode}
-                                            RiskThreshold={RiskThreshold}
-                                        />
-                                    ))
+                                    <>
+                                        {isInlineAddOpen && canEdit && (
+                                            <div className="p-3 rounded-2xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/[0.02] shadow-sm">
+                                                <div className="flex items-center justify-between gap-3 mb-2">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Quick Add</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsInlineAddOpen(false)}
+                                                        className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
+                                                        aria-label="Tutup quick add"
+                                                    >
+                                                        <FontAwesomeIcon icon={faXmark} />
+                                                    </button>
+                                                </div>
+
+                                                <form
+                                                    onSubmit={(e) => {
+                                                        e.preventDefault()
+                                                        handleInlineSubmit()
+                                                    }}
+                                                    className="grid grid-cols-1 gap-2.5"
+                                                >
+                                                    <input
+                                                        type="text"
+                                                        value={inlineForm.name}
+                                                        onChange={e => setInlineForm(p => ({ ...p, name: e.target.value }))}
+                                                        placeholder="Nama siswa..."
+                                                        enterKeyHint="done"
+                                                        className="input-field text-sm h-11 px-3 rounded-xl border-[var(--color-border)] focus:border-[var(--color-primary)] bg-[var(--color-surface)] w-full font-bold"
+                                                    />
+
+                                                    <div className="grid grid-cols-[1fr_112px] gap-2">
+                                                        <select
+                                                            value={inlineForm.class_id}
+                                                            onChange={e => setInlineForm(p => ({ ...p, class_id: e.target.value }))}
+                                                            className="select-field text-[11px] h-11 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] font-black outline-none focus:border-[var(--color-primary)]"
+                                                        >
+                                                            <option value="">Pilih kelas</option>
+                                                            {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                        </select>
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            {['L', 'P'].map(g => (
+                                                                <button
+                                                                    key={g}
+                                                                    type="button"
+                                                                    onClick={() => setInlineForm(p => ({ ...p, gender: g }))}
+                                                                    className={`h-11 flex-1 rounded-xl text-[10px] font-black border transition-all ${inlineForm.gender === g
+                                                                        ? (g === 'L' ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/15' : 'bg-pink-500 text-white border-pink-500 shadow-lg shadow-pink-500/15')
+                                                                        : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
+                                                                >
+                                                                    {g}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <input
+                                                        type="tel"
+                                                        inputMode="numeric"
+                                                        value={inlineForm.phone}
+                                                        onChange={e => setInlineForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))}
+                                                        placeholder="No. HP/WA (opsional)"
+                                                        className="input-field text-[11px] h-11 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] w-full font-bold"
+                                                    />
+
+                                                    <button
+                                                        type="submit"
+                                                        disabled={submittingInline || !canEdit}
+                                                        className="h-11 w-full rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                                    >
+                                                        {submittingInline ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faCheck} /> Simpan</>}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        )}
+
+                                        {students.map(student => (
+                                            <StudentMobileCard
+                                                key={student.id}
+                                                student={student}
+                                                isSelected={selectedIdSet.has(student.id)}
+                                                onToggleSelect={toggleSelectStudent}
+                                                onViewProfile={handleViewProfile}
+                                                onEdit={canEdit ? handleEdit : null}
+                                                onConfirmDelete={canEdit ? confirmDelete : null}
+                                                onTogglePin={handleTogglePin}
+                                                onQuickPoint={handleQuickPoint}
+                                                isPrivacyMode={isPrivacyMode}
+                                                RiskThreshold={RiskThreshold}
+                                            />
+                                        ))}
+                                    </>
                                 )}
                             </div>
 
-                            {/* Quick Add trigger */}
+                            {/* Quick Add trigger (mobile will render inline card above) */}
                             {!isInlineAddOpen && canEdit && (
                                 <button
                                     onClick={() => setIsInlineAddOpen(true)}
@@ -4162,613 +4303,56 @@ export default function StudentsPage() {
                     </>
                 )}
 
+                {/* IMPORT MODAL (lazy chunk) */}
                 {/* ===================== */}
-                {/* IMPORT MODAL */}
-                {/* ===================== */}
-                {isImportModalOpen && (
-                    <Modal
-                        isOpen={isImportModalOpen}
-                        onClose={() => {
-                            if (importing) return
-                            setIsImportModalOpen(false)
-                            setImportPreview([])
-                            setImportIssues([])
-                            setImportDuplicates([])
-                            setImportFileName('')
-                            setImportDragOver(false)
-                            setImportStep(1)
-                        }}
-                        title="Import Siswa"
-                        size="md"
-                    >
-                        {/* ── STATUS BAR — hanya muncul setelah file dipilih & di Step 2 ── */}
-                        {importStep === 2 && importPreview.length > 0 && (
-                            <div className="flex items-center gap-2 -mt-1 mb-4 flex-wrap">
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-600 dark:text-indigo-400 truncate max-w-[200px]">
-                                    <FontAwesomeIcon icon={faFileLines} className="text-[10px] shrink-0" />
-                                    {importFileName}
-                                </span>
-                                <span className="px-2.5 py-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)]">
-                                    {importPreview.length} baris
-                                </span>
-                                {importDuplicates.length > 0 && (
-                                    <span className="px-2.5 py-1 rounded-xl bg-violet-500/10 border border-violet-500/20 text-[10px] font-black text-violet-600">
-                                        {importDuplicates.length} duplikat
-                                    </span>
-                                )}
-                                <button
-                                    onClick={() => importFileInputRef.current?.click()}
-                                    className="ml-auto shrink-0 px-2.5 py-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-border)]/50 hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 cursor-pointer"
-                                >
-                                    <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-[8px]" />
-                                    Ganti File
-                                </button>
-                            </div>
-                        )}
+                <React.Suspense fallback={null}>
+                    {isImportModalOpen && (
+                        <LazyStudentImportModal
+                            isOpen={isImportModalOpen}
+                            onClose={() => {
+                                if (importing) return
+                                setIsImportModalOpen(false)
+                                setImportPreview([])
+                                setImportIssues([])
+                                setImportDuplicates([])
+                                setImportFileName('')
+                                setImportDragOver(false)
+                                setImportStep(1)
+                            }}
+                            importing={importing}
+                            importStep={importStep}
+                            setImportStep={setImportStep}
+                            importPreview={importPreview}
+                            importDuplicates={importDuplicates}
+                            importFileName={importFileName}
+                            importFileInputRef={importFileInputRef}
+                            importDragOver={importDragOver}
+                            setImportDragOver={setImportDragOver}
+                            processImportFile={processImportFile}
+                            classesList={classesList}
+                            handleDownloadTemplate={handleDownloadTemplate}
+                            importFileHeaders={importFileHeaders}
+                            SYSTEM_COLS={SYSTEM_COLS}
+                            importColumnMapping={importColumnMapping}
+                            setImportColumnMapping={setImportColumnMapping}
+                            importRawData={importRawData}
+                            importLoading={importLoading}
+                            setImportLoading={setImportLoading}
+                            buildImportPreview={buildImportPreview}
+                            importIssues={importIssues}
+                            importValidationOpen={importValidationOpen}
+                            setImportValidationOpen={setImportValidationOpen}
+                            importProgress={importProgress}
+                            handleCommitImport={handleCommitImport}
+                            hasImportBlockingErrors={hasImportBlockingErrors}
+                            importReadyRows={importReadyRows}
+                        />
+                    )}
+                </React.Suspense>
 
-                        {/* ── STEPPER HEADER ── */}
-                        <div className="flex items-center justify-center gap-4 mb-8">
-                            {[
-                                { step: 1, label: 'Upload', icon: faUpload, desc: 'Pilih File' },
-                                { step: 2, label: 'Mapping', icon: faArrowRightArrowLeft, desc: 'Atur Kolom' },
-                                { step: 3, label: 'Review', icon: faTableList, desc: 'Validasi' },
-                            ].map(s => (
-                                <React.Fragment key={s.step}>
-                                    <div className="flex items-center gap-2.5">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${importStep >= s.step ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]'}`}>
-                                            {importStep > s.step ? <FontAwesomeIcon icon={faCheck} /> : s.step}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${importStep >= s.step ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-50'}`}>{s.label}</span>
-                                            <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-40 uppercase tracking-tighter mt-0.5">{s.desc}</span>
-                                        </div>
-                                    </div>
-                                    {s.step < 3 && <div className={`w-8 h-0.5 rounded-full transition-all ${importStep > s.step ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)] opacity-30'}`} />}
-                                </React.Fragment>
-                            ))}
-                        </div>
+                {/* (old inline Import Modal JSX removed; now lazy-loaded) */}
+                {/* dead-code Import modal block deleted */}
 
-                        {/* ── STEP 1: PANDUAN & UPLOAD ── */}
-                        {importStep === 1 && (
-                            <div className="space-y-2.5">
-                                {/* Drop zone */}
-                                <div
-                                    onDragOver={e => { e.preventDefault(); setImportDragOver(true) }}
-                                    onDragLeave={() => setImportDragOver(false)}
-                                    onDrop={async e => {
-                                        e.preventDefault()
-                                        setImportDragOver(false)
-                                        const file = e.dataTransfer.files?.[0]
-                                        if (file) await processImportFile(file)
-                                    }}
-                                    onClick={() => importFileInputRef.current?.click()}
-                                    className={`w-full h-16 rounded-xl border-2 border-dashed cursor-pointer flex items-center justify-center gap-3 transition-all
-                                    ${importDragOver
-                                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 scale-[1.01]'
-                                            : 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/4 hover:border-[var(--color-primary)]/60 hover:bg-[var(--color-primary)]/8'}`}
-                                >
-                                    <FontAwesomeIcon icon={faUpload} className={`text-base transition-all ${importDragOver ? 'text-[var(--color-primary)] scale-110' : 'text-[var(--color-primary)]/60'}`} />
-                                    <div className="text-left">
-                                        <p className="text-[10px] font-black text-[var(--color-primary)] uppercase tracking-widest leading-none">
-                                            {importDragOver ? 'Lepaskan file di sini' : 'Drag & Drop atau Klik untuk Pilih File'}
-                                        </p>
-                                        <p className="text-[8px] text-[var(--color-text-muted)] font-bold mt-0.5">Mendukung .csv dan .xlsx</p>
-                                    </div>
-                                </div>
-
-                                {/* Info row: kelas valid */}
-                                <div className="flex flex-col gap-3 p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
-                                            <FontAwesomeIcon icon={faTags} className="text-emerald-500/70" /> Daftar Kelas Valid
-                                        </span>
-                                        <button
-                                            onClick={handleDownloadTemplate}
-                                            className="shrink-0 h-7 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:bg-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
-                                        >
-                                            <FontAwesomeIcon icon={faDownload} className="text-[8px]" /> Template
-                                        </button>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5 max-h-[72px] overflow-y-auto pr-1 pb-2 custom-scrollbar">
-                                        {classesList.length > 0 ? classesList.map(c => (
-                                            <span key={c.id} className="px-2 py-1 rounded-md bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] text-[9px] font-bold text-[var(--color-text)] shrink-0 hover:border-emerald-500/30 transition-colors">
-                                                {c.name}
-                                            </span>
-                                        )) : (
-                                            <span className="text-[9px] text-[var(--color-text-muted)] italic">Belum ada kelas yang terdaftar.</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Kolom — compact 2 kolom grid */}
-                                <div className="rounded-xl border border-[var(--color-border)] overflow-hidden">
-                                    <div className="px-3 py-1.5 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kolom yang Dikenali</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 divide-x divide-[var(--color-border)]">
-                                        <div className="divide-y divide-[var(--color-border)]">
-                                            {[
-                                                { col: 'name / nama', req: true, note: 'Nama siswa' },
-                                                { col: 'class_name / kelas', req: true, note: 'Harus cocok dengan kelas di atas' },
-                                                { col: 'gender / jk', req: false, note: 'L / P — default L' },
-                                            ].map((r, i) => (
-                                                <div key={i} className="flex items-center gap-2 px-3 py-1.5">
-                                                    <code className="text-[8px] font-black text-[var(--color-primary)] shrink-0">{r.col}</code>
-                                                    {r.req && <span className="text-[7px] font-black text-red-500 shrink-0">*</span>}
-                                                    <span className="text-[8px] text-[var(--color-text-muted)] font-medium truncate">{r.note}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="divide-y divide-[var(--color-border)]">
-                                            {[
-                                                { col: 'phone / no_hp', req: false, note: '08xx atau +62xx' },
-                                                { col: 'nisn', req: false, note: 'Untuk deteksi duplikat' },
-                                                { col: 'guardian_name', req: false, note: 'Nama wali' },
-                                            ].map((r, i) => (
-                                                <div key={i} className="flex items-center gap-2 px-3 py-1.5">
-                                                    <code className="text-[8px] font-black text-[var(--color-primary)] shrink-0">{r.col}</code>
-                                                    <span className="text-[8px] text-[var(--color-text-muted)] font-medium truncate">{r.note}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ── STEP 2: COLUMN MAPPING ── */}
-                        {importStep === 2 && (
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Cocokkan Kolom File</span>
-                                    <span className="text-[9px] font-bold py-1 px-2 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)]">
-                                        {importFileHeaders.length} kolom ditemukan
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-2.5 max-h-[40vh] overflow-y-auto pr-1 custom-scrollbar">
-                                    {SYSTEM_COLS.map(sys => {
-                                        const mapped = importColumnMapping[sys.key]
-                                        return (
-                                            <div key={sys.key} className={`p-3 rounded-xl border transition-all ${mapped ? 'bg-emerald-500/4 border-emerald-500/20' : 'bg-[var(--color-surface-alt)]/50 border-[var(--color-border)]'}`}>
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-[10px] font-black text-[var(--color-text)] flex items-center gap-1.5">
-                                                            {sys.label}
-                                                            {['name', 'class_name'].includes(sys.key) && <span className="text-red-500">*</span>}
-                                                        </span>
-                                                        <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-60 truncate">Data sistem</span>
-                                                    </div>
-
-                                                    <div className="flex-1 flex items-center gap-2 group">
-                                                        <div className="h-px bg-[var(--color-border)] flex-1 opacity-50" />
-                                                        <FontAwesomeIcon icon={faArrowRight} className={`text-[9px] transition-colors ${mapped ? 'text-emerald-500' : 'text-[var(--color-text-muted)] opacity-30'}`} />
-                                                        <div className="h-px bg-[var(--color-border)] flex-1 opacity-50" />
-                                                    </div>
-
-                                                    <div className="flex flex-col min-w-0 flex-1">
-                                                        <select
-                                                            value={mapped || ''}
-                                                            onChange={(e) => setImportColumnMapping(v => ({ ...v, [sys.key]: e.target.value }))}
-                                                            className={`h-9 px-3 rounded-xl text-[10px] font-black border transition-all outline-none appearance-none cursor-pointer
-                                                            ${mapped
-                                                                    ? 'border-emerald-500/40 bg-[var(--color-surface)] text-emerald-600'
-                                                                    : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/50'}`}
-                                                        >
-                                                            <option value="">-- Lewati Kolom --</option>
-                                                            {importFileHeaders.map(h => (
-                                                                <option key={h} value={h}>{h}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-
-                                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 flex items-start gap-2.5">
-                                    <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 text-amber-500 text-[10px]" />
-                                    <p className="text-[9px] font-bold text-amber-600/80 leading-relaxed">
-                                        Pastikan kolom <span className="font-black">Nama</span> dan <span className="font-black">Kelas</span> telah dipilih agar data bisa diproses.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ── STEP 3: PREVIEW & VALIDASI ── */}
-                        {importStep === 3 && (
-                            <div className="space-y-3">
-                                {/* Loading state during file parsing */}
-                                {importLoading && (
-                                    <div className="flex flex-col items-center justify-center py-10 gap-3">
-                                        <FontAwesomeIcon icon={faSpinner} className="fa-spin text-2xl text-[var(--color-primary)]" />
-                                        <p className="text-[11px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Membaca file & memeriksa duplikat...</p>
-                                    </div>
-                                )}
-                                {/* Summary Cards */}
-                                {!importLoading && <><div className="grid grid-cols-3 gap-2">
-                                    <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                                        <p className="text-[14px] font-black text-emerald-600 leading-none">{importReadyRows.length}</p>
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-emerald-600/70 mt-1">Siap Import</p>
-                                    </div>
-                                    <div className="p-3 rounded-2xl bg-red-500/5 border border-red-500/10">
-                                        <p className="text-[14px] font-black text-red-600 leading-none">{importIssues.filter(x => x.level === 'error').length}</p>
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-red-600/70 mt-1">Error</p>
-                                    </div>
-                                    <div className="p-3 rounded-2xl bg-violet-500/5 border border-violet-500/10">
-                                        <p className="text-[14px] font-black text-violet-600 leading-none">{importDuplicates.length}</p>
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-violet-600/70 mt-1">Duplikat</p>
-                                    </div>
-                                    <div className="col-span-3 flex flex-col justify-between items-start gap-4 mt-2">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-full sm:w-auto">Aksi Massal:</span>
-                                            <select
-                                                onChange={(e) => {
-                                                    if (e.target.value) {
-                                                        handleBulkFix('gender', e.target.value);
-                                                        e.target.value = '';
-                                                    }
-                                                }}
-                                                className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:border-[var(--color-primary)] outline-none cursor-pointer"
-                                            >
-                                                <option value="">Set Semua Gender...</option>
-                                                <option value="L">Semua L (Laki-laki)</option>
-                                                <option value="P">Semua P (Perempuan)</option>
-                                            </select>
-                                            <select
-                                                onChange={(e) => {
-                                                    if (e.target.value) {
-                                                        handleBulkFix('class_id', e.target.value);
-                                                        e.target.value = '';
-                                                    }
-                                                }}
-                                                className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase hover:border-[var(--color-primary)] outline-none cursor-pointer"
-                                            >
-                                                <option value="">Set Semua Kelas...</option>
-                                                {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="flex flex-row items-center justify-between w-full gap-3 bg-[var(--color-surface-alt)] p-2.5 rounded-xl border border-[var(--color-border)]">
-                                            <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-80 uppercase tracking-widest flex items-center gap-1.5">
-                                                <FontAwesomeIcon icon={faCircleInfo} className="text-[var(--color-primary)]" /> Klik sel tabel untuk edit
-                                            </span>
-                                            <button
-                                                onClick={() => {
-                                                    setIsRevalidating(true)
-                                                    validateImportPreview(importPreview)
-                                                    setTimeout(() => setIsRevalidating(false), 800)
-                                                }}
-                                                className="text-[9px] font-black uppercase tracking-widest text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 transition-colors px-3 py-1.5 rounded-lg shrink-0"
-                                            >
-                                                <FontAwesomeIcon icon={faSync} className={`mr-1.5 transition-transform ${isRevalidating ? 'animate-spin' : ''}`} /> Re-validasi
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                    <div className="space-y-3">
-                                        {importDuplicates.length > 0 && (
-                                            <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/15">
-                                                <p className="text-[9px] font-bold text-violet-600 dark:text-violet-400">
-                                                    <span className="font-black">{importDuplicates.length} duplikat</span> — nama/NISN sudah ada di DB atau dalam file
-                                                </p>
-                                                <button
-                                                    onClick={() => setImportSkipDupes(v => !v)}
-                                                    className={`shrink-0 h-7 px-2.5 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all ${importSkipDupes ? 'bg-violet-500 border-violet-500 text-white' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
-                                                >
-                                                    {importSkipDupes ? 'Skip Duplikat ✓' : 'Import Semua'}
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
-                                            <div className="max-h-[28vh] overflow-auto custom-scrollbar">
-                                                <table className="w-full text-[10px] whitespace-nowrap">
-                                                    <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
-                                                        <tr className="text-left shadow-sm">
-                                                            <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest w-8">#</th>
-                                                            <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[180px]">Nama</th>
-                                                            <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[80px]">Gender</th>
-                                                            <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[100px]">No. HP</th>
-                                                            <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[120px]">Kelas</th>
-                                                            <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest min-w-[100px]">NISN</th>
-                                                            <th className="px-3 py-2 font-black text-[var(--color-text-muted)] uppercase tracking-widest px-4">Status</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {importPreview.slice(0, 300).map((r, i) => {
-                                                            const isError = r._hasError
-                                                            const isDupe = r._isDupe
-                                                            const isWarn = r._hasWarn && !isError && !isDupe
-                                                            const rowBg = isError ? 'bg-red-500/5 border-l-2 border-l-red-500'
-                                                                : isDupe ? 'bg-violet-500/5 border-l-2 border-l-violet-500'
-                                                                    : isWarn ? 'bg-amber-500/5 border-l-2 border-l-amber-400' : ''
-                                                            return (
-                                                                <tr key={i} className={`border-t border-[var(--color-border)] group/row ${rowBg}`}>
-                                                                    <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{i + 1}</td>
-
-                                                                    {/* NAMA */}
-                                                                    <td
-                                                                        onClick={() => setImportEditCell({ idx: i, key: 'name' })}
-                                                                        className={`px-3 py-1.5 font-black text-[var(--color-text)] cursor-pointer hover:bg-[var(--color-primary)]/5 group/cell ${importEditCell?.idx === i && importEditCell?.key === 'name' ? 'bg-[var(--color-surface)] ring-1 ring-inset ring-[var(--color-primary)]' : ''}`}
-                                                                    >
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                            {importEditCell?.idx === i && importEditCell?.key === 'name' ? (
-                                                                                <input
-                                                                                    autoFocus
-                                                                                    defaultValue={r.name}
-                                                                                    onBlur={(e) => {
-                                                                                        const val = e.target.value.trim()
-                                                                                        if (val !== r.name) {
-                                                                                            const newPrev = [...importPreview]
-                                                                                            newPrev[i].name = val
-                                                                                            setImportPreview(newPrev)
-                                                                                        }
-                                                                                        setImportEditCell(null)
-                                                                                    }}
-                                                                                    onKeyDown={e => e.key === 'Enter' && e.target.blur()}
-                                                                                    className="w-full bg-transparent border-none outline-none p-0 text-[10px] font-black"
-                                                                                />
-                                                                            ) : (
-                                                                                <>
-                                                                                    <span>{r.name || <span className="text-red-500 italic text-[8px]">kosong</span>}</span>
-                                                                                    <FontAwesomeIcon icon={faEdit} className="text-[8px] text-[var(--color-primary)] opacity-0 group-hover/cell:opacity-40 transition-opacity" />
-                                                                                </>
-                                                                            )}
-                                                                        </div>
-                                                                    </td>
-
-                                                                    {/* GENDER */}
-                                                                    <td
-                                                                        onClick={() => setImportEditCell({ idx: i, key: 'gender' })}
-                                                                        className={`px-3 py-1.5 text-[var(--color-text-muted)] cursor-pointer hover:bg-[var(--color-primary)]/5 group/cell ${importEditCell?.idx === i && importEditCell?.key === 'gender' ? 'bg-[var(--color-surface)] ring-1 ring-inset ring-[var(--color-primary)]' : ''}`}
-                                                                    >
-                                                                        <div className="flex items-center justify-between gap-1">
-                                                                            {importEditCell?.idx === i && importEditCell?.key === 'gender' ? (
-                                                                                <select
-                                                                                    autoFocus
-                                                                                    defaultValue={r.gender}
-                                                                                    onChange={(e) => {
-                                                                                        const newPrev = [...importPreview]
-                                                                                        newPrev[i].gender = e.target.value
-                                                                                        setImportPreview(newPrev)
-                                                                                        setImportEditCell(null)
-                                                                                    }}
-                                                                                    onBlur={() => setImportEditCell(null)}
-                                                                                    className="w-full bg-transparent border-none outline-none p-0 text-[10px] font-bold appearance-none cursor-pointer"
-                                                                                >
-                                                                                    <option value="L">L</option>
-                                                                                    <option value="P">P</option>
-                                                                                </select>
-                                                                            ) : (
-                                                                                <>
-                                                                                    <span>{r.gender || '-'}</span>
-                                                                                    <FontAwesomeIcon icon={faEdit} className="text-[7px] text-[var(--color-primary)] opacity-0 group-hover/cell:opacity-40 transition-opacity" />
-                                                                                </>
-                                                                            )}
-                                                                        </div>
-                                                                    </td>
-
-                                                                    {/* PHONE */}
-                                                                    <td
-                                                                        onClick={() => setImportEditCell({ idx: i, key: 'phone' })}
-                                                                        className={`px-3 py-1.5 font-mono text-[var(--color-text-muted)] cursor-pointer hover:bg-[var(--color-primary)]/5 group/cell ${importEditCell?.idx === i && importEditCell?.key === 'phone' ? 'bg-[var(--color-surface)] ring-1 ring-inset ring-[var(--color-primary)]' : ''}`}
-                                                                    >
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                            {importEditCell?.idx === i && importEditCell?.key === 'phone' ? (
-                                                                                <input
-                                                                                    autoFocus
-                                                                                    defaultValue={r.phone}
-                                                                                    onBlur={(e) => {
-                                                                                        const val = normalizePhone(e.target.value)
-                                                                                        if (val !== r.phone) {
-                                                                                            const newPrev = [...importPreview]
-                                                                                            newPrev[i].phone = val
-                                                                                            setImportPreview(newPrev)
-                                                                                        }
-                                                                                        setImportEditCell(null)
-                                                                                    }}
-                                                                                    onKeyDown={e => e.key === 'Enter' && e.target.blur()}
-                                                                                    className="w-full bg-transparent border-none outline-none p-0 text-[10px] font-mono"
-                                                                                />
-                                                                            ) : (
-                                                                                <>
-                                                                                    <span>{r.phone || '-'}</span>
-                                                                                    <FontAwesomeIcon icon={faEdit} className="text-[8px] text-[var(--color-primary)] opacity-0 group-hover/cell:opacity-40 transition-opacity" />
-                                                                                </>
-                                                                            )}
-                                                                        </div>
-                                                                    </td>
-
-                                                                    {/* KELAS */}
-                                                                    <td
-                                                                        onClick={() => setImportEditCell({ idx: i, key: 'class_name' })}
-                                                                        className={`px-3 py-1.5 font-bold text-[var(--color-text)] cursor-pointer hover:bg-[var(--color-primary)]/5 group/cell ${importEditCell?.idx === i && importEditCell?.key === 'class_name' ? 'bg-[var(--color-surface)] ring-1 ring-inset ring-[var(--color-primary)]' : ''}`}
-                                                                    >
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                            {importEditCell?.idx === i && importEditCell?.key === 'class_name' ? (
-                                                                                <select
-                                                                                    autoFocus
-                                                                                    defaultValue={r.class_id}
-                                                                                    onChange={(e) => {
-                                                                                        const cid = e.target.value
-                                                                                        const cname = classesList.find(x => x.id === cid)?.name
-                                                                                        const newPrev = [...importPreview]
-                                                                                        newPrev[i].class_id = cid
-                                                                                        newPrev[i]._className = cname
-                                                                                        setImportPreview(newPrev)
-                                                                                        setImportEditCell(null)
-                                                                                    }}
-                                                                                    onBlur={() => setImportEditCell(null)}
-                                                                                    className="w-full bg-transparent border-none outline-none p-0 text-[10px] font-bold appearance-none cursor-pointer"
-                                                                                >
-                                                                                    <option value="">-- Pilih --</option>
-                                                                                    {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                                                                </select>
-                                                                            ) : (
-                                                                                <>
-                                                                                    <span>{classesList.find(c => c.id === r.class_id)?.name || <span className="text-red-500 italic text-[9px]">{r._className || '?'}</span>}</span>
-                                                                                    <FontAwesomeIcon icon={faEdit} className="text-[8px] text-[var(--color-primary)] opacity-0 group-hover/cell:opacity-40 transition-opacity" />
-                                                                                </>
-                                                                            )}
-                                                                        </div>
-                                                                    </td>
-
-                                                                    {/* NISN */}
-                                                                    <td
-                                                                        onClick={() => setImportEditCell({ idx: i, key: 'nisn' })}
-                                                                        className={`px-3 py-1.5 font-mono text-[var(--color-text-muted)] cursor-pointer hover:bg-[var(--color-primary)]/5 group/cell ${importEditCell?.idx === i && importEditCell?.key === 'nisn' ? 'bg-[var(--color-surface)] ring-1 ring-inset ring-[var(--color-primary)]' : ''}`}
-                                                                    >
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                            {importEditCell?.idx === i && importEditCell?.key === 'nisn' ? (
-                                                                                <input
-                                                                                    autoFocus
-                                                                                    defaultValue={r.nisn}
-                                                                                    onBlur={(e) => {
-                                                                                        const val = e.target.value.trim()
-                                                                                        if (val !== r.nisn) {
-                                                                                            const newPrev = [...importPreview]
-                                                                                            newPrev[i].nisn = val
-                                                                                            setImportPreview(newPrev)
-                                                                                        }
-                                                                                        setImportEditCell(null)
-                                                                                    }}
-                                                                                    onKeyDown={e => e.key === 'Enter' && e.target.blur()}
-                                                                                    className="w-full bg-transparent border-none outline-none p-0 text-[10px] font-mono"
-                                                                                />
-                                                                            ) : (
-                                                                                <>
-                                                                                    <span>{r.nisn || '-'}</span>
-                                                                                    <FontAwesomeIcon icon={faEdit} className="text-[8px] text-[var(--color-primary)] opacity-0 group-hover/cell:opacity-40 transition-opacity" />
-                                                                                </>
-                                                                            )}
-                                                                        </div>
-                                                                    </td>
-
-                                                                    <td className="px-3 py-1.5">
-                                                                        {isError ? <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 text-[8px] font-black">ERROR</span>
-                                                                            : isDupe ? <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-600 text-[8px] font-black">DUPLIKAT</span>
-                                                                                : isWarn ? <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 text-[8px] font-black">WARN</span>
-                                                                                    : <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 text-[8px] font-black">OK</span>}
-                                                                    </td>
-                                                                </tr>
-                                                            )
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            {importPreview.length > 300 && (
-                                                <div className="px-3 py-2 text-[9px] font-bold text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] border-t border-[var(--color-border)]">
-                                                    Menampilkan 300 dari {importPreview.length} baris.
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Issue List if Any */}
-                                        {importIssues.length > 0 && (
-                                            <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)]/20">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setImportValidationOpen(v => !v)}
-                                                    className="w-full px-3 py-2 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between hover:bg-[var(--color-border)]/30 transition-colors cursor-pointer"
-                                                >
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
-                                                        <FontAwesomeIcon icon={faChevronDown} className={`text-[7px] transition-transform ${importValidationOpen ? '' : '-rotate-90'}`} />
-                                                        Catatan Validasi
-                                                    </span>
-                                                    <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-50">{importIssues.length} isu</span>
-                                                </button>
-                                                {importValidationOpen && <div className="max-h-[140px] overflow-auto divide-y divide-[var(--color-border)]">
-                                                    {importIssues.map((issue, idx) => {
-                                                        const levelStyle = issue.level === 'error'
-                                                            ? { pill: 'bg-red-500/15 text-red-600', row: 'border-l-2 border-l-red-500 bg-red-500/3' }
-                                                            : issue.level === 'dupe'
-                                                                ? { pill: 'bg-violet-500/15 text-violet-600', row: 'border-l-2 border-l-violet-500 bg-violet-500/3' }
-                                                                : { pill: 'bg-amber-500/15 text-amber-600', row: 'border-l-2 border-l-amber-400 bg-amber-500/3' }
-                                                        return (
-                                                            <div key={idx} className={`flex items-start gap-3 px-3 py-2 ${levelStyle.row}`}>
-                                                                <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 rounded text-[8px] font-black ${levelStyle.pill}`}>
-                                                                    {issue.level === 'dupe' ? 'DUPLIKAT' : issue.level.toUpperCase()}
-                                                                </span>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <p className="text-[9px] font-black text-[var(--color-text-muted)] mb-0.5">Baris {issue.row}</p>
-                                                                    {issue.messages.map((msg, mi) => (
-                                                                        <p key={mi} className="text-[10px] font-bold text-[var(--color-text)] leading-snug">{msg}</p>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>}
-                                            </div>
-                                        )}
-                                    </div>
-                                </>}
-                            </div>
-                        )}
-
-                        {/* ── FOOTER ── */}
-                        <div className="flex items-center justify-between gap-3 pt-4 mt-2 border-t border-[var(--color-border)]">
-                            {importStep > 1 && (
-                                <button
-                                    onClick={() => setImportStep(v => v - 1)}
-                                    disabled={importing}
-                                    className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-widest disabled:opacity-50 hover:bg-[var(--color-border)] transition-all flex items-center gap-2"
-                                >
-                                    <FontAwesomeIcon icon={faArrowLeft} />
-                                    Kembali
-                                </button>
-                            )}
-
-                            <div className="flex items-center gap-3">
-                                {importing && (
-                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] flex items-center gap-2">
-                                        <FontAwesomeIcon icon={faSpinner} className="fa-spin text-[var(--color-primary)]" />
-                                        {importProgress.done}/{importProgress.total}
-                                    </span>
-                                )}
-
-                                {importStep === 1 ? (
-                                    <button
-                                        onClick={() => importRawData.length > 0 ? setImportStep(2) : importFileInputRef.current?.click()}
-                                        className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
-                                    >
-                                        {importRawData.length > 0 ? (
-                                            <>Lanjutkan <FontAwesomeIcon icon={faArrowRight} /></>
-                                        ) : (
-                                            <>Pilih File <FontAwesomeIcon icon={faUpload} /></>
-                                        )}
-                                    </button>
-                                ) : importStep === 2 ? (
-                                    <button
-                                        onClick={async () => {
-                                            setImportStep(3)
-                                            setImportLoading(true)
-                                            await buildImportPreview(importRawData, importColumnMapping)
-                                            setImportLoading(false)
-                                        }}
-                                        disabled={!importColumnMapping.name || !importColumnMapping.class_name}
-                                        className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
-                                    >
-                                        Review Data <FontAwesomeIcon icon={faArrowRight} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={handleCommitImport}
-                                        disabled={importing || hasImportBlockingErrors || importReadyRows.length === 0}
-                                        className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
-                                    >
-                                        {importing
-                                            ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengimport...</>
-                                            : <><FontAwesomeIcon icon={faCheck} /> Selesaikan Import</>}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    </Modal>
-                )
-                }
 
                 {/* ===================== */}
                 {/* BULK PHOTO MATCHER MODAL */}
@@ -4897,14 +4481,14 @@ export default function StudentsPage() {
                                 <div className="lg:col-span-8 flex flex-col">
                                     <div className="flex-1 bg-[var(--color-surface-alt)]/30 border border-[var(--color-border)] rounded-2xl overflow-hidden flex flex-col min-h-[400px]">
                                         <div className="p-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/50 flex items-center justify-between">
-                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Antrean Siaran ({students.filter(s => selectedStudentIds.includes(s.id) && s.phone).length} Wali)</h5>
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Antrean Siaran ({selectedStudentsWithPhone.length} Wali)</h5>
                                             {broadcastIndex >= 0 && (
                                                 <div className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[9px] font-black animate-pulse">SIARAN BERJALAN...</div>
                                             )}
                                         </div>
 
                                         <div className="flex-1 overflow-auto p-4 space-y-3 max-h-[350px] scrollbar-none">
-                                            {students.filter(s => selectedStudentIds.includes(s.id) && s.phone).map((s, idx) => (
+                                            {selectedStudentsWithPhone.map((s, idx) => (
                                                 <div key={idx} className={`p-3 rounded-xl border transition-all ${broadcastIndex === idx ? 'bg-[var(--color-primary)]/5 border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-[var(--color-border)] opacity-70'}`}>
                                                     <div className="flex items-start justify-between gap-3 mb-2">
                                                         <div>
@@ -4929,19 +4513,18 @@ export default function StudentsPage() {
                                             <div className="flex-1">
                                                 <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">
                                                     <span>Kemajuan Hub</span>
-                                                    <span>{broadcastIndex + 1} / {students.filter(s => selectedStudentIds.includes(s.id) && s.phone).length}</span>
+                                                    <span>{broadcastIndex + 1} / {selectedStudentsWithPhone.length}</span>
                                                 </div>
                                                 <div className="h-1.5 w-full bg-[var(--color-surface-alt)] rounded-full overflow-hidden">
                                                     <div
                                                         className="h-full bg-[var(--color-primary)] transition-all duration-500"
-                                                        style={{ width: `${((broadcastIndex + 1) / students.filter(s => selectedStudentIds.includes(s.id) && s.phone).length) * 100}%` }}
+                                                        style={{ width: `${selectedStudentsWithPhone.length ? ((broadcastIndex + 1) / selectedStudentsWithPhone.length) * 100 : 0}%` }}
                                                     />
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => {
-                                                    const targets = students.filter(s => selectedStudentIds.includes(s.id) && s.phone);
-                                                    targets.forEach((s, i) => {
+                                                    selectedStudentsWithPhone.forEach((s, i) => {
                                                         setTimeout(() => {
                                                             setBroadcastIndex(i);
                                                             openWAForStudent(s, buildWAMessage(s, broadcastTemplate));
@@ -4962,149 +4545,28 @@ export default function StudentsPage() {
                 }
 
                 {/* ===================== */}
-                {/* EXPORT MODAL */}
+                {/* EXPORT MODAL (lazy chunk) */}
                 {/* ===================== */}
-                {
-                    isExportModalOpen && (
-                        <Modal
+                <React.Suspense fallback={null}>
+                    {isExportModalOpen && (
+                        <LazyStudentExportModal
                             isOpen={isExportModalOpen}
                             onClose={() => { if (exporting) return; setIsExportModalOpen(false) }}
-                            title="Export Data Siswa"
-                            size="lg"
-                        >
-                            <div className="space-y-6">
-
-                                {/* ── Step 1: Scope ─────────────────────────────── */}
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">1 — Siswa yang Diekspor</p>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {[
-                                            { val: 'filtered', label: 'Filter Aktif', desc: `${students.length} siswa`, icon: faSliders },
-                                            { val: 'selected', label: 'Dipilih', desc: `${selectedStudentIds.length} siswa`, icon: faCheckCircle, disabled: selectedStudentIds.length === 0 },
-                                            { val: 'all', label: 'Semua', desc: 'Tanpa filter', icon: faUsers },
-                                        ].map(({ val, label, desc, icon, disabled }) => (
-                                            <button
-                                                key={val}
-                                                onClick={() => !disabled && setExportScope(val)}
-                                                disabled={disabled}
-                                                className={`p-3 rounded-2xl border-2 text-left transition-all
-                                                ${exportScope === val
-                                                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
-                                                        : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40'}
-                                                ${disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
-                                            `}
-                                            >
-                                                <FontAwesomeIcon icon={icon} className={`text-base mb-1 ${exportScope === val ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`} />
-                                                <div className="text-xs font-black text-[var(--color-text)]">{label}</div>
-                                                <div className="text-[10px] font-bold text-[var(--color-text-muted)]">{desc}</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* ── Step 2: Kolom ─────────────────────────────── */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">2 — Kolom yang Disertakan</p>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setExportColumns(prev => Object.fromEntries(Object.keys(prev).map(k => [k, true])))} className="text-[9px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest">Semua</button>
-                                            <span className="text-[var(--color-border)]">·</span>
-                                            <button onClick={() => setExportColumns({ id: false, kode: false, nisn: false, nama: true, gender: false, kelas: false, poin: false, phone: false, status: false, tags: false, kelengkapan: false })} className="text-[9px] font-black text-[var(--color-text-muted)] hover:underline uppercase tracking-widest">Reset</button>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                                        {[
-                                            { key: 'id', label: 'ID' },
-                                            { key: 'kode', label: 'Kode Registrasi' },
-                                            { key: 'nisn', label: 'NISN' },
-                                            { key: 'nama', label: 'Nama' },
-                                            { key: 'gender', label: 'Gender' },
-                                            { key: 'kelas', label: 'Kelas' },
-                                            { key: 'poin', label: 'Poin' },
-                                            { key: 'phone', label: 'Phone/WA' },
-                                            { key: 'status', label: 'Status' },
-                                            { key: 'tags', label: 'Label/Tag' },
-                                            { key: 'kelengkapan', label: 'Kelengkapan Data' },
-                                        ].map(({ key, label }) => (
-                                            <button
-                                                key={key}
-                                                onClick={() => setExportColumns(prev => ({ ...prev, [key]: !prev[key] }))}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all text-xs font-bold
-                                                ${exportColumns[key]
-                                                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)]'
-                                                        : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40'}
-                                            `}
-                                            >
-                                                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-all ${exportColumns[key] ? 'bg-[var(--color-primary)] border-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>
-                                                    {exportColumns[key] && <svg width="8" height="8" viewBox="0 0 8 8" fill="white"><path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" /></svg>}
-                                                </div>
-                                                {label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* ── Step 3: Format ────────────────────────────── */}
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">3 — Pilih Format Export</p>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                        {[
-                                            { label: 'CSV', icon: faFileLines, desc: 'Universal', onClick: handleExportCSV, color: 'bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] border border-[var(--color-border)]', iconColor: 'text-[var(--color-text-muted)]' },
-                                            { label: 'Excel', icon: faTableList, desc: '.xlsx', onClick: handleExportExcel, color: 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20', iconColor: 'text-emerald-500' },
-                                            { label: 'PDF', icon: faFileLines, desc: 'Tabel', onClick: handleExportPDF, color: 'bg-[var(--color-primary)] hover:brightness-110 text-white border border-[var(--color-primary)]', iconColor: 'text-white' },
-                                            {
-                                                label: 'PDF Kartu', icon: faIdCard, desc: 'Dengan foto',
-                                                onClick: async () => {
-                                                    setIsExportModalOpen(false)
-                                                    // Ambil targets sesuai scope
-                                                    let targets = []
-                                                    if (exportScope === 'selected' && selectedStudentIds.length > 0) {
-                                                        targets = students.filter(s => selectedStudentIds.includes(s.id))
-                                                    } else if (exportScope === 'all') {
-                                                        targets = students
-                                                    } else {
-                                                        targets = students // filtered = tampilan saat ini
-                                                    }
-                                                    if (!targets.length) return addToast('Tidak ada siswa untuk dicetak', 'warning')
-                                                    generateStudentPDF(targets)
-                                                },
-                                                color: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 border border-orange-500/20', iconColor: 'text-orange-500'
-                                            },
-                                        ].map(({ label, icon, desc, onClick, color, iconColor }) => (
-                                            <button
-                                                key={label}
-                                                onClick={onClick}
-                                                disabled={exporting || Object.values(exportColumns).every(v => !v)}
-                                                className={`${color} h-20 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all disabled:opacity-40 font-black`}
-                                            >
-                                                <FontAwesomeIcon icon={icon} className={`text-lg ${iconColor}`} />
-                                                <span className="text-[10px] uppercase tracking-widest">{label}</span>
-                                                <span className="text-[9px] font-bold opacity-60">{desc}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Warning jika tidak ada kolom dipilih */}
-                                {Object.values(exportColumns).every(v => !v) && (
-                                    <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-bold">
-                                        <div className="flex items-center gap-2">
-                                            <FontAwesomeIcon icon={faTriangleExclamation} />
-                                            Pilih minimal satu kolom untuk export
-                                        </div>
-                                    </div>
-                                )}
-
-                                {exporting && (
-                                    <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-bold">
-                                        <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
-                                        Menyiapkan file export...
-                                    </div>
-                                )}
-                            </div>
-                        </Modal>
-                    )
-                }
+                            students={students}
+                            selectedStudentIds={selectedStudentIds}
+                            exportScope={exportScope}
+                            setExportScope={setExportScope}
+                            exportColumns={exportColumns}
+                            setExportColumns={setExportColumns}
+                            exporting={exporting}
+                            handleExportCSV={handleExportCSV}
+                            handleExportExcel={handleExportExcel}
+                            handleExportPDF={handleExportPDF}
+                            generateStudentPDF={generateStudentPDF}
+                            addToast={addToast}
+                        />
+                    )}
+                </React.Suspense>
 
 
                 {
@@ -5123,208 +4585,33 @@ export default function StudentsPage() {
                 }
 
 
-                {/* Modal Cetak Kartu & Akses Siswa */}
-                {
-                    isPrintModalOpen && (
-                        <Modal
+                {/* Modal Cetak Kartu & Akses Siswa (lazy-loaded) */}
+                <React.Suspense fallback={null}>
+                    {isPrintModalOpen && (
+                        <LazyStudentPrintModal
                             isOpen={isPrintModalOpen}
                             onClose={() => {
                                 setIsPrintModalOpen(false);
                                 if (newlyCreatedStudent) setNewlyCreatedStudent(null);
                             }}
-                            title={newlyCreatedStudent ? "Registrasi Berhasil!" : "Akses & Kartu"}
-                            size="lg"
-                        >
-                            {selectedStudent && (
-                                <div className="space-y-4 py-1">
-                                    {newlyCreatedStudent && (
-                                        <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3 text-emerald-600">
-                                            <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 text-[10px]">
-                                                <FontAwesomeIcon icon={faCheckCircle} />
-                                            </div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest">Registrasi Berhasil! Data akses & kartu tersedia di bawah.</p>
-                                        </div>
-                                    )}
-
-                                    {/* Card Previews - Compact size */}
-                                    <div
-                                        id="card-capture-target"
-                                        ref={cardCaptureRef}
-                                        className="flex flex-col sm:flex-row gap-2.5 justify-center items-center"
-                                        style={{ background: 'transparent' }}
-                                    >
-                                        {/* Front Card */}
-                                        <div className="w-[300px] h-[188px] bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-xl text-white relative shadow-xl overflow-hidden shadow-indigo-500/20 shrink-0 scale-95 sm:scale-100 origin-center transition-transform">
-                                            <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/5 rounded-full blur-2xl" />
-                                            <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-                                                <div className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
-                                                    <span className="font-black text-[9px]">L</span>
-                                                </div>
-                                                <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-80 text-white">Laporanmu</span>
-                                            </div>
-                                            <div className="absolute top-9 left-4 right-4 bottom-7 flex gap-3 z-10">
-                                                <div className="w-[62px] h-[78px] rounded-lg bg-white/10 border border-white/20 p-1.5 shrink-0 shadow-lg overflow-hidden">
-                                                    {selectedStudent.photo_url ? (
-                                                        <img src={selectedStudent.photo_url} alt="" className="w-full h-full object-cover rounded-md" />
-                                                    ) : (
-                                                        <div className="w-full h-full rounded-md bg-white/5 flex items-center justify-center border border-white/10">
-                                                            <span className="text-2xl font-black opacity-30">{isPrivacyMode ? '*' : selectedStudent.name.charAt(0)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">
-                                                    <div>
-                                                        <h3 className="text-[11px] font-black leading-[1.2] uppercase mb-0.5 drop-shadow-sm line-clamp-2">
-                                                            {isPrivacyMode ? maskInfo(selectedStudent.name, 4) : selectedStudent.name}
-                                                        </h3>
-                                                        <div className="space-y-0.5">
-                                                            <p className="text-[8px] font-black text-white/90 uppercase tracking-tight leading-tight">{selectedStudent.className}</p>
-                                                            <p className="text-[6px] font-bold text-white/40 uppercase tracking-widest leading-none">MUHAMMADIYAH BOARDING SCHOOL TANGGUL</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="pt-1.5 border-t border-white/10">
-                                                        <p className="text-[5px] font-bold opacity-30 uppercase tracking-widest mb-0.5 leading-none">NOMOR REGISTRASI</p>
-                                                        <p className="text-[9px] font-mono font-bold tracking-wider text-indigo-100 leading-tight">
-                                                            {isPrivacyMode ? maskInfo(selectedStudent.code, 3) : selectedStudent.code}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="absolute bottom-2.5 left-4 right-4 flex items-center justify-between opacity-20">
-                                                <div className="flex items-center gap-1 text-white">
-                                                    <FontAwesomeIcon icon={faGraduationCap} className="text-[7px]" />
-                                                    <span className="text-[6px] font-black uppercase tracking-[0.3em]">KARTU PELAJAR</span>
-                                                </div>
-                                                <span className="text-[5px] font-black uppercase tracking-[0.2em] text-white">2026/2027</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Back Card */}
-                                        <div className="w-[300px] h-[188px] bg-white dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-800 relative shadow-lg flex flex-col items-center justify-center text-center shrink-0 p-4 scale-95 sm:scale-100 origin-center transition-transform">
-                                            <div className={`p-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm mb-2 ${isPrivacyMode ? 'blur-md grayscale opacity-50' : ''}`}>
-                                                <QRCodeCanvas
-                                                    value={`${window.location.origin}/check?code=${selectedStudent.code}&pin=${selectedStudent.pin}`}
-                                                    size={65}
-                                                    level="M"
-                                                />
-                                            </div>
-                                            <h4 className="text-[8px] font-black text-gray-900 dark:text-white uppercase tracking-[0.15em] mb-1 leading-tight">AKSES PORTAL ORANG TUA</h4>
-                                            <p className="text-[6px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed max-w-[180px]">
-                                                Silakan scan kode di atas untuk<br />mengecek perkembangan siswa
-                                            </p>
-                                            <div className="absolute bottom-3 w-full left-0 px-5 flex justify-between items-center opacity-20">
-                                                <span className="text-[5px] font-black uppercase tracking-[0.25em]">TAHUN 2026/2027</span>
-                                                <span className="text-[5px] font-black uppercase tracking-[0.25em]">MBS TANGGUL</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Access Info & Actions Bar */}
-                                    <div className="bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl p-3 space-y-3 no-print">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            {/* Info Info */}
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                                                    <label className="block text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">ID REG</label>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[12px] font-black text-[var(--color-primary)] font-mono">
-                                                            {isPrivacyMode ? maskInfo(selectedStudent.code, 2) : selectedStudent.code}
-                                                        </span>
-                                                        <button onClick={() => {
-                                                            if (isPrivacyMode) return addToast('Mode Privasi aktif', 'warning')
-                                                            navigator.clipboard.writeText(selectedStudent.code);
-                                                            addToast('Kode dicopy', 'success')
-                                                        }} className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"><FontAwesomeIcon icon={faLink} /></button>
-                                                    </div>
-                                                </div>
-                                                <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                                                    <label className="block text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">PIN</label>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[12px] font-black text-emerald-500 font-mono tracking-wider">
-                                                            {isPrivacyMode ? '****' : selectedStudent.pin}
-                                                        </span>
-                                                        <button onClick={() => {
-                                                            if (isPrivacyMode) return addToast('Mode Privasi aktif', 'warning')
-                                                            navigator.clipboard.writeText(selectedStudent.pin);
-                                                            addToast('PIN dicopy', 'success')
-                                                        }} className="text-[10px] text-[var(--color-text-muted)] hover:text-emerald-500"><FontAwesomeIcon icon={faLink} /></button>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Main WA Action */}
-                                            <button
-                                                onClick={() => openWAForStudent(selectedStudent, buildWAMessage(selectedStudent, waTemplate))}
-                                                className="h-10 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 px-4 w-full"
-                                            >
-                                                <FontAwesomeIcon icon={faWhatsapp} className="text-sm" />
-                                                BAGIKAN KE WALI MURID
-                                            </button>
-                                        </div>
-
-                                        {/* Tools Bar */}
-                                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--color-border)]/50">
-                                            <button
-                                                onClick={() => {
-                                                    if (isPrivacyMode) return addToast('Mode Privasi aktif', 'warning');
-                                                    handleResetPin(selectedStudent);
-                                                }}
-                                                disabled={resettingPin}
-                                                className="h-9 px-3 rounded-lg border border-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5"
-                                            >
-                                                <FontAwesomeIcon icon={resettingPin ? faSpinner : faRotateLeft} className={resettingPin ? 'fa-spin' : ''} />
-                                                Reset PIN Akses
-                                            </button>
-
-                                            <div className="flex gap-2 items-center">
-                                                {/* Satu tombol dropdown: PDF / PNG / Thermal */}
-                                                <div className="relative">
-                                                    <button
-                                                        onClick={() => setShowExportMenu(v => !v)}
-                                                        disabled={generatingPdf}
-                                                        className="h-9 px-3 rounded-lg bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-                                                    >
-                                                        {generatingPdf
-                                                            ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Menyiapkan...</>
-                                                            : <><FontAwesomeIcon icon={faDownload} /> Ekspor <FontAwesomeIcon icon={faChevronDown} className="text-[8px] opacity-70" /></>
-                                                        }
-                                                    </button>
-                                                    {showExportMenu && (
-                                                        <>
-                                                            {/* Backdrop klik-luar tutup menu */}
-                                                            <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
-                                                            <div className="absolute bottom-full mb-1.5 right-0 z-20 w-44 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
-                                                                <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 pt-2.5 pb-1">Pilih Format</p>
-                                                                <button
-                                                                    onClick={() => { handlePrintSingle(selectedStudent); setShowExportMenu(false); }}
-                                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-bold text-[var(--color-text)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors text-left"
-                                                                >
-                                                                    <FontAwesomeIcon icon={faFileLines} className="w-5 text-center text-[11px] text-[var(--color-primary)]" /> Surat Akses PDF
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => { handleSavePNG(selectedStudent); setShowExportMenu(false); }}
-                                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-bold text-[var(--color-text)] hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors text-left"
-                                                                >
-                                                                    <FontAwesomeIcon icon={faImage} className="w-5 text-center text-[11px] text-emerald-500" /> Simpan PNG
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => { handlePrintThermal(selectedStudent); setShowExportMenu(false); }}
-                                                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-bold text-[var(--color-text)] hover:bg-orange-500/10 hover:text-orange-600 transition-colors text-left mb-1"
-                                                                >
-                                                                    <FontAwesomeIcon icon={faPrint} className="w-5 text-center text-[11px] text-orange-500" /> Struk Thermal 58mm
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </Modal>
-                    )
-                }
+                            selectedStudent={selectedStudent}
+                            newlyCreatedStudent={newlyCreatedStudent}
+                            isPrivacyMode={isPrivacyMode}
+                            maskInfo={maskInfo}
+                            addToast={addToast}
+                            cardCaptureRef={cardCaptureRef}
+                            waTemplate={waTemplate}
+                            buildWAMessage={buildWAMessage}
+                            openWAForStudent={openWAForStudent}
+                            handleResetPin={handleResetPin}
+                            resettingPin={resettingPin}
+                            generatingPdf={generatingPdf}
+                            handlePrintSingle={handlePrintSingle}
+                            handleSavePNG={handleSavePNG}
+                            handlePrintThermal={handlePrintThermal}
+                        />
+                    )}
+                </React.Suspense>
                 {/* Modal Detail Profil Siswa - Premium Mini Dashboard */}
                 {
                     isProfileModalOpen && (
@@ -5336,6 +4623,9 @@ export default function StudentsPage() {
                         >
                             {selectedStudent && (
                                 <div className="space-y-4 -mt-2">
+                                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold opacity-70">
+                                        Ringkasan data, statistik, laporan, dan raport
+                                    </p>
                                     {/* Compact Slim Header */}
                                     <div className="relative overflow-hidden rounded-2xl border border-white/10 shadow-xl">
                                         <div className="absolute inset-0 bg-gradient-to-r from-indigo-700 via-violet-600 to-purple-800"></div>
@@ -5974,7 +5264,7 @@ export default function StudentsPage() {
                                     </button>
                                 </div>
                             </div>
-                        </Modal >
+                        </Modal>
                     )
                 }
 
@@ -6012,7 +5302,7 @@ export default function StudentsPage() {
                                     </button>
                                 </div>
                             </div>
-                        </Modal >
+                        </Modal>
                     )
                 }
                 {
@@ -6024,8 +5314,8 @@ export default function StudentsPage() {
                             size="md"
                         >
                             {(() => {
-                                const targets = students.filter(s => selectedStudentIds.includes(s.id))
-                                const withPhone = targets.filter(s => s.phone)
+                                const targets = selectedStudents
+                                const withPhone = selectedStudentsWithPhone
                                 const noPhone = targets.filter(s => !s.phone)
                                 return (
                                     <div className="space-y-4">
@@ -6429,7 +5719,11 @@ export default function StudentsPage() {
                             title={`Kelola Label — ${studentForTags?.name || ''}`}
                             size="sm"
                         >
-                            {studentForTags && (
+                            <div className="space-y-4">
+                                <p className="text-[10px] text-[var(--color-text-muted)] font-bold opacity-70">
+                                    Atur label siswa untuk segmentasi & filter
+                                </p>
+                                {studentForTags && (
                                 <div className="space-y-6">
                                     {/* Input Section */}
                                     <div className="space-y-2">
@@ -6545,17 +5839,17 @@ export default function StudentsPage() {
                                             * Gunakan ikon <FontAwesomeIcon icon={faEdit} className="text-blue-500 mx-0.5" /> dan <FontAwesomeIcon icon={faTrash} className="text-red-500 mx-0.5" /> untuk merubah nama atau menghapus label dari SEMUA siswa sekaligus.
                                         </p>
                                     </div>
-
-                                    <div className="flex justify-end pt-2">
-                                        <button
-                                            onClick={() => setIsTagModalOpen(false)}
-                                            className="h-10 px-6 bg-gray-900 dark:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-95"
-                                        >
-                                            Selesai
-                                        </button>
-                                    </div>
                                 </div>
-                            )}
+                                )}
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        onClick={() => setIsTagModalOpen(false)}
+                                        className="h-10 px-6 bg-gray-900 dark:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-95"
+                                    >
+                                        Selesai
+                                    </button>
+                                </div>
+                            </div>
                         </Modal>
                     )
                 }
@@ -6760,7 +6054,10 @@ export default function StudentsPage() {
                 {/* ===================== */}
                 {
                     selectedStudentIds.length > 0 && (
-                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] w-[95%] max-w-3xl animate-in fade-in slide-in-from-bottom-5 duration-500">
+                        <div
+                            className="fixed left-1/2 -translate-x-1/2 z-[60] w-[95%] max-w-3xl animate-in fade-in slide-in-from-bottom-5 duration-500"
+                            style={{ bottom: `calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 12px)` }}
+                        >
                             <div className="glass-morphism bg-gray-900/90 dark:bg-gray-800/90 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-2xl p-3 flex items-center justify-between gap-4 text-white">
                                 <div className="flex items-center gap-3 pl-2">
                                     <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center font-black text-sm shadow-lg shadow-indigo-500/30">

@@ -29,6 +29,10 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const UserPage = lazy(() => import('./pages/admin/UserPage'))
 const LogsPage = lazy(() => import('./pages/admin/LogsPage'))
 const AdminSettingsPage = lazy(() => import('./pages/admin/SettingsPage'))
+const DatabasePage = lazy(() => import('./pages/admin/DatabasePage'))
+const StoragePage = lazy(() => import('./pages/admin/StoragePage'))
+const TasksPage = lazy(() => import('./pages/admin/TasksPage'))
+const PlaygroundPage = lazy(() => import('./pages/admin/PlaygroundPage'))
 
 // Master Data
 const StudentsPage = lazy(() => import('./pages/master/StudentsPage'))
@@ -63,6 +67,9 @@ const ROUTE_ALIASES = [
   { from: '/admin/log', to: '/admin/logs' },
   { from: '/admin/user', to: '/admin/users' },
   { from: '/admin/setting', to: '/admin/settings' },
+  { from: '/admin/db', to: '/admin/database' },
+  { from: '/admin/task', to: '/admin/tasks' },
+  { from: '/playground', to: '/admin/playground' },
 ]
 
 // ─── Loading Spinner ──────────────────────────────────────────────────────────
@@ -392,6 +399,26 @@ function AppRoutes() {
             <Route path="/admin/settings" element={
               <RoleFlagRoute roles={DEV_ADMIN}>
                 <AdminSettingsPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/database" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <DatabasePage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/storage" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <StoragePage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/tasks" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <TasksPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/playground" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <PlaygroundPage />
               </RoleFlagRoute>
             } />
 

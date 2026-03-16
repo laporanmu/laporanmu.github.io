@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react'
-import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faPlus,
     faCamera,
-    faXmark,
     faSpinner,
     faTriangleExclamation,
     faChevronDown,
@@ -13,12 +11,19 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { supabase } from '../../lib/supabase'
+import Modal from '../ui/Modal'
 
 const StudentFormModal = memo(function StudentFormModal({
     isOpen, onClose, selectedStudent, classesList,
     onSubmit, submitting, onPhotoUpload, uploadingPhoto,
 }) {
     const INIT = { name: '', gender: 'L', class_id: '', phone: '', photo_url: '', nisn: '', guardian_name: '', guardian_relation: 'Ayah', status: 'aktif', tags: [] }
+
+    const STATUS_OPTIONS = [
+        { key: 'aktif', label: 'Aktif', activeCls: 'bg-emerald-500 text-white border-transparent shadow shadow-emerald-500/20', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]' },
+        { key: 'lulus', label: 'Lulus', activeCls: 'bg-blue-500 text-white border-transparent shadow shadow-blue-500/20', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]' },
+        { key: 'keluar', label: 'Keluar', activeCls: 'bg-[var(--color-text)] text-[var(--color-surface)] border-transparent shadow', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]' },
+    ]
 
     const [form, setForm] = useState(INIT)
     const [metadataFields, setMetadataFields] = useState([]) // [{key, value}]
@@ -102,48 +107,40 @@ const StudentFormModal = memo(function StudentFormModal({
 
     if (!isOpen) return null
 
-    const node = (
-        <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/5"
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={selectedStudent ? 'Edit Data Siswa' : 'Tambah Siswa Baru'}
+            size="lg"
         >
-            <div
-                className="fixed inset-0 bg-black/40 backdrop-blur-[8px] transition-all animate-in fade-in duration-500"
-                onClick={onClose}
-            />
-            <div className="relative z-10 w-full max-w-lg bg-[var(--color-surface)] rounded-[2rem] shadow-2xl border border-white/20 dark:border-white/5 overflow-hidden animate-in zoom-in-95 fade-in duration-300">
-                {/* Header Section - Compact */}
-                <div className="relative px-6 pt-6 pb-4 border-b border-[var(--color-border)] bg-gradient-to-b from-[var(--color-surface-alt)]/50 to-transparent">
-                    <div className="flex items-center justify-between mb-0.5">
-                        <h2 className="font-black text-xl text-[var(--color-text)] tracking-tight">
-                            {selectedStudent ? 'Edit Profil' : 'Registrasi Baru'}
-                        </h2>
-                        <button
-                            onClick={onClose}
-                            className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95 group"
-                        >
-                            <FontAwesomeIcon icon={faXmark} className="text-lg group-hover:rotate-90 transition-transform" />
-                        </button>
-                    </div>
-                    <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] opacity-60">
-                        {selectedStudent ? 'Pembaruan data personal' : 'Input data siswa baru unit'}
+            <form
+                id="student-form-modal"
+                onSubmit={handleSubmit}
+                className="flex flex-col max-h-[75vh]"
+            >
+                {/* Sub header */}
+                <div className="mb-3">
+                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold opacity-70">
+                        {selectedStudent ? 'Perbarui data siswa dengan form yang tetap ringan.' : 'Form singkat untuk registrasi siswa baru.'}
                     </p>
                 </div>
 
-                {/* Form Body - Compact */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto scrollbar-none">
+                {/* Scrollable content */}
+                <div className="flex-1 overflow-y-auto pr-1 space-y-5">
                     {/* Top Section: Photo + Essential Info */}
                     <div className="flex gap-6 items-start">
                         {/* Interactive Photo Upload - Smaller */}
                         <div className="shrink-0 flex flex-col items-center gap-2">
                             <div className="relative group">
                                 <div
-                                    className="w-20 h-20 rounded-2xl bg-[var(--color-surface-alt)] border-2 border-dashed border-[var(--color-border)] flex items-center justify-center text-[var(--color-primary)] overflow-hidden transition-all group-hover:border-[var(--color-primary)] group-hover:bg-[var(--color-primary)]/5 cursor-pointer shadow-inner"
+                                    className="w-20 h-20 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-primary)] overflow-hidden transition-all group-hover:border-[var(--color-primary)] group-hover:bg-[var(--color-primary)]/5 cursor-pointer shadow-inner"
                                     onClick={() => photoRef.current?.click()}
                                 >
                                     {form.photo_url ? (
                                         <img src={form.photo_url} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="flex flex-col items-center gap-1 opacity-30 group-hover:opacity-70 transition-all transform group-hover:scale-105">
+                                        <div className="flex flex-col items-center gap-1 opacity-40 group-hover:opacity-80 transition-all transform group-hover:scale-105">
                                             <FontAwesomeIcon icon={faCamera} className="text-2xl" />
                                             <span className="text-[7px] font-black uppercase tracking-widest">Foto</span>
                                         </div>
@@ -227,7 +224,7 @@ const StudentFormModal = memo(function StudentFormModal({
                     </div>
 
                     {/* Contact & Status Row - Compact */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="relative">
                             <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">WhatsApp Wali</label>
                             <div className="relative">
@@ -244,16 +241,14 @@ const StudentFormModal = memo(function StudentFormModal({
                         <div>
                             <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Status</label>
                             <div className="flex flex-wrap gap-1">
-                                {[['aktif', 'emerald'], ['lulus', 'blue'], ['keluar', 'gray']].map(([s, color]) => (
+                                {STATUS_OPTIONS.map((opt) => (
                                     <button
-                                        key={s}
+                                        key={opt.key}
                                         type="button"
-                                        onClick={() => setField('status', s)}
-                                        className={`px-2 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all ${form.status === s
-                                            ? `bg-${color}-500 text-white border-transparent shadow shadow-${color}-500/20`
-                                            : 'bg-transparent border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                                        onClick={() => setField('status', opt.key)}
+                                        className={`px-2 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all ${form.status === opt.key ? opt.activeCls : opt.idleCls}`}
                                     >
-                                        {s}
+                                        {opt.label}
                                     </button>
                                 ))}
                             </div>
@@ -336,24 +331,24 @@ const StudentFormModal = memo(function StudentFormModal({
                         </div>
                     </div>
 
-                    {/* Fitur Advance Section: Dynamic Metadata - Profiling */}
-                    <div className="border border-violet-500/20 rounded-2xl overflow-hidden bg-violet-500/[0.03] dark:bg-violet-500/[0.01]">
+                    {/* Advanced Section: Dynamic Metadata */}
+                    <div className="border border-[var(--color-border)] rounded-2xl overflow-hidden bg-[var(--color-surface-alt)]/30">
                         <button
                             type="button"
                             onClick={() => setShowMetadata(v => !v)}
-                            className={`w-full flex items-center justify-between px-4 py-3 transition-all duration-300 hover:bg-violet-500/5 ${showMetadata ? 'bg-violet-500/10 border-b border-violet-500/10' : ''}`}
+                            className={`w-full flex items-center justify-between px-4 py-2.5 transition-all duration-300 hover:bg-white/40 dark:hover:bg-black/10 ${showMetadata ? 'bg-white/50 dark:bg-black/20' : ''}`}
                         >
-                            <span className="flex items-center gap-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400">
-                                <div className="w-5 h-5 rounded-lg bg-violet-500 text-white flex items-center justify-center text-[8px] shadow-lg shadow-violet-500/20">
-                                    <FontAwesomeIcon icon={faPlus} />
-                                </div>
-                                Profil Karakter & Info Luar-KBM
+                            <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                                <FontAwesomeIcon icon={faPlus} className={showMetadata ? 'text-[var(--color-primary)]' : ''} />
+                                Profil Karakter & Info Tambahan
                             </span>
                             <div className="flex items-center gap-3">
                                 {metadataFields.length > 0 && (
-                                    <span className="text-[8px] font-black bg-violet-500 text-white px-1.5 py-0.5 rounded-full">{metadataFields.length}</span>
+                                    <span className="text-[8px] font-black bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-1.5 py-0.5 rounded-full">
+                                        {metadataFields.length}
+                                    </span>
                                 )}
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all bg-violet-500/5 ${showMetadata ? 'rotate-180 bg-violet-500/20' : ''}`}>
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all bg-black/5 ${showMetadata ? 'rotate-180 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : ''}`}>
                                     <FontAwesomeIcon icon={faChevronDown} className="text-[9px]" />
                                 </div>
                             </div>
@@ -361,9 +356,9 @@ const StudentFormModal = memo(function StudentFormModal({
 
                         <div className={`grid transition-all duration-300 ease-out ${showMetadata ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                             <div className="overflow-hidden">
-                                <div className="p-4 space-y-3">
-                                    <p className="text-[9px] text-[var(--color-text-muted)] opacity-60 italic mb-2 leading-relaxed">
-                                        Tambahkan data khusus seperti Alergi, Hobi, Riwayat Penyakit, atau pendekatan psikologis spesifik.
+                                <div className="p-4 pt-3 border-t border-[var(--color-border)] space-y-3">
+                                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 leading-relaxed font-medium">
+                                        Tambahkan info opsional seperti alergi, hobi, catatan kesehatan, atau kebutuhan khusus.
                                     </p>
 
                                     <div className="space-y-2.5">
@@ -371,8 +366,8 @@ const StudentFormModal = memo(function StudentFormModal({
                                             <div key={idx} className="flex gap-2 items-start animate-in slide-in-from-left-2 duration-300">
                                                 <div className="w-1/3 group relative">
                                                     <input
-                                                        placeholder="JUDUL (e.g: Hobi)"
-                                                        className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-white/50 dark:bg-black/20 text-[9px] font-black uppercase tracking-widest outline-none focus:border-violet-500 transition-all placeholder:opacity-30"
+                                                        placeholder="Judul (mis: Hobi)"
+                                                        className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold outline-none focus:border-[var(--color-primary)] transition-all placeholder:opacity-40"
                                                         value={m.key}
                                                         onChange={(e) => handleUpdateMeta(idx, e.target.value, m.value)}
                                                     />
@@ -380,7 +375,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                                 <div className="flex-1 group relative">
                                                     <input
                                                         placeholder="Isi informasi..."
-                                                        className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-white/50 dark:bg-black/20 text-xs font-bold outline-none focus:border-violet-500 transition-all placeholder:opacity-30"
+                                                        className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold outline-none focus:border-[var(--color-primary)] transition-all placeholder:opacity-40"
                                                         value={m.value}
                                                         onChange={(e) => handleUpdateMeta(idx, m.key, e.target.value)}
                                                     />
@@ -399,44 +394,49 @@ const StudentFormModal = memo(function StudentFormModal({
                                     <button
                                         type="button"
                                         onClick={handleAddMeta}
-                                        className="w-full py-2.5 rounded-xl border-2 border-dashed border-violet-500/20 text-violet-500 hover:bg-violet-500/5 hover:border-violet-500/40 transition-all text-[9px] font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 mt-2"
+                                        className="w-full py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 mt-2 text-[var(--color-text)]"
                                     >
                                         <FontAwesomeIcon icon={faPlus} />
-                                        Tambah Field Khusus
+                                        Tambah Info
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Navigation Actions - Shorter */}
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text)] transition-all active:scale-95"
-                        >
-                            Batal
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={submitting}
-                            className="h-10 px-8 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-indigo-700 text-white shadow-lg shadow-[var(--color-primary)]/30 hover:brightness-110 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
-                        >
-                            {submitting ? (
-                                <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
-                            ) : (
-                                <FontAwesomeIcon icon={selectedStudent ? faCheckCircle : faPlus} className="opacity-60" />
-                            )}
-                            {selectedStudent ? 'SIMPAN' : 'DAFTARKAN'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    )
+                    {/* Danger notes spot if needed */}
+                </div>
 
-    return createPortal(node, document.body)
+                {/* Footer */}
+                <div className="pt-4 mt-4 border-t border-[var(--color-border)] flex items-center justify-between gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)] transition-all"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={submitting || !form.name.trim() || !form.class_id}
+                        className="h-10 px-8 rounded-xl bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30 hover:brightness-110 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
+                    >
+                        {submitting ? (
+                            <>
+                                <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                                Menyimpan...
+                            </>
+                        ) : (
+                            <>
+                                <FontAwesomeIcon icon={selectedStudent ? faCheckCircle : faPlus} className="opacity-70" />
+                                {selectedStudent ? 'Simpan' : 'Daftarkan'}
+                            </>
+                        )}
+                    </button>
+                </div>
+            </form>
+        </Modal>
+    )
 })
 
 export default StudentFormModal

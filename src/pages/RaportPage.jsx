@@ -15,6 +15,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
+import Breadcrumb from '../components/ui/Breadcrumb'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../context/ToastContext'
 import { useSchoolSettings } from '../context/SchoolSettingsContext'
@@ -3874,8 +3875,12 @@ export default function RaportPage() {
                 {/* ── PAGE HEADER ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
+                        <Breadcrumb badge="Reports" items={['Reports', 'Raport Bulanan']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Raport Bulanan</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas.</p>
+                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                            Ikuti langkah di atas (1–3) dari pilih kelas sampai review sebelum cetak atau kirim ke orang tua.
+                        </p>
                     </div>
                     <div className="flex gap-2 items-center">
                         {step >= 1 && step <= 3 && (

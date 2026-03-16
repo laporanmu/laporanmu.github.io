@@ -155,7 +155,7 @@ const InlineEditPoin = ({ value, onSave, onCancel }) => {
 // ─── Main Component ──────────────────────────────────────────────────────────
 const StudentRow = memo(({
     student,
-    selectedIds,
+    isSelected = false,
     lastReportMap,
     onEdit,
     onViewProfile,
@@ -185,7 +185,6 @@ const StudentRow = memo(({
     }
 
     const isRisk = (student.total_points || 0) <= RiskThreshold
-    const isSelected = selectedIds.includes(student.id)
     const p = student.total_points || 0
     const completeness = calculateCompleteness(student)
     const [showQuickAction, setShowQuickAction] = useState(false)
@@ -505,7 +504,7 @@ StudentRow.displayName = 'StudentRow'
 // ─── Mobile Card ─────────────────────────────────────────────────────────────
 const StudentMobileCard = memo(({
     student,
-    selectedIds,
+    isSelected = false,
     onToggleSelect,
     onViewProfile,
     onEdit,
@@ -515,7 +514,6 @@ const StudentMobileCard = memo(({
     isPrivacyMode,
     RiskThreshold
 }) => {
-    const isSelected = selectedIds.includes(student.id)
     const isRisk = (student.total_points || 0) <= RiskThreshold
     const p = student.total_points || 0
     const [showQuickAction, setShowQuickAction] = useState(false)
@@ -534,9 +532,9 @@ const StudentMobileCard = memo(({
     }
 
     return (
-        <div className={`p-4 border-b border-[var(--color-border)] transition-colors relative
-            ${isSelected ? 'bg-[var(--color-primary)]/5' : ''}
-            ${student.is_pinned ? 'bg-amber-500/[0.04]' : ''}
+        <div className={`p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm transition-colors relative
+            ${isSelected ? 'ring-2 ring-[var(--color-primary)]/30 bg-[var(--color-primary)]/[0.03]' : ''}
+            ${student.is_pinned ? 'border-amber-500/25' : ''}
         `}>
             {student.is_pinned && <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />}
 
@@ -579,17 +577,17 @@ const StudentMobileCard = memo(({
                                 </span>
                             </div>
                         </div>
-                        <div className="flex gap-1 shrink-0">
+                        <div className="flex gap-1.5 shrink-0">
                             <button
                                 onClick={() => onTogglePin(student)}
-                                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${student.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${student.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
                             >
                                 <FontAwesomeIcon icon={faThumbtack} className={`text-xs ${student.is_pinned ? 'rotate-0' : 'rotate-45 opacity-40'}`} />
                             </button>
                             {onEdit && (
                                 <button
                                     onClick={() => onEdit(student)}
-                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]"
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]"
                                 >
                                     <FontAwesomeIcon icon={faEdit} className="text-xs" />
                                 </button>

@@ -8,6 +8,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
+import Breadcrumb from '../components/ui/Breadcrumb'
 import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
@@ -418,6 +419,7 @@ export default function SettingsPage() {
             <div className="p-4 md:p-6 space-y-5 max-w-[1800px] mx-auto">
 
                 <div className="mb-6">
+                    <Breadcrumb badge="Pengaturan" items={['Settings']} className="mb-1" />
                     <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Pengaturan</h1>
                     <p className="text-[11px] text-[var(--color-text-muted)] mt-1 font-medium">
                         Kelola profil, tampilan, dan keamanan akun kamu.
