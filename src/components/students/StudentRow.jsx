@@ -471,9 +471,11 @@ const StudentRow = memo(({
                         <button onClick={() => onViewProfile(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-emerald-500/10 transition-all text-sm" title="Profil">
                             <FontAwesomeIcon icon={faUserTie} />
                         </button>
-                        <button onClick={() => onEdit(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all text-sm" title="Edit">
-                            <FontAwesomeIcon icon={faEdit} />
-                        </button>
+                        {onEdit && (
+                            <button onClick={() => onEdit(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all text-sm" title="Edit">
+                                <FontAwesomeIcon icon={faEdit} />
+                            </button>
+                        )}
                         <button onClick={() => onViewPrint(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 transition-all text-sm" title="ID Card">
                             <FontAwesomeIcon icon={faIdCard} />
                         </button>
@@ -483,9 +485,11 @@ const StudentRow = memo(({
                         <button onClick={() => onViewClassHistory(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-purple-500 hover:bg-purple-500/10 transition-all text-sm" title="Riwayat">
                             <FontAwesomeIcon icon={faClockRotateLeft} />
                         </button>
-                        <button onClick={() => onConfirmDelete(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Hapus">
-                            <FontAwesomeIcon icon={faBoxArchive} />
-                        </button>
+                        {onConfirmDelete && (
+                            <button onClick={() => onConfirmDelete(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Hapus">
+                                <FontAwesomeIcon icon={faBoxArchive} />
+                            </button>
+                        )}
                     </div>
                 </td>
             )}
@@ -582,12 +586,14 @@ const StudentMobileCard = memo(({
                             >
                                 <FontAwesomeIcon icon={faThumbtack} className={`text-xs ${student.is_pinned ? 'rotate-0' : 'rotate-45 opacity-40'}`} />
                             </button>
-                            <button
-                                onClick={() => onEdit(student)}
-                                className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]"
-                            >
-                                <FontAwesomeIcon icon={faEdit} className="text-xs" />
-                            </button>
+                            {onEdit && (
+                                <button
+                                    onClick={() => onEdit(student)}
+                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]"
+                                >
+                                    <FontAwesomeIcon icon={faEdit} className="text-xs" />
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -631,12 +637,14 @@ const StudentMobileCard = memo(({
                                 )}
                             </div>
 
-                            <button
-                                onClick={() => onConfirmDelete(student)}
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/10"
-                            >
-                                <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
-                            </button>
+                            {onConfirmDelete && (
+                                <button
+                                    onClick={() => onConfirmDelete(student)}
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/10"
+                                >
+                                    <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -5,9 +5,10 @@ import { ToastProvider } from './context/ToastContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { SidebarProvider } from './context/SidebarContext'
 import { FeatureFlagsProvider, useFeatureFlags } from './context/FeatureFlagsContext'
+import { useTheme } from './context/ThemeContext'
 import DashboardLayout from './components/layout/DashboardLayout'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLock, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { faLock, faSpinner, faTools, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 
 
 // ─── Lazy-loaded Pages ────────────────────────────────────────────────────────
@@ -226,6 +227,97 @@ function RoleFlagRoute({ children, roles = [], flag, label }) {
 
   return children
 }
+// ─── Maintenance Page ─────────────────────────────────────────────────────────
+function MaintenancePage() {
+  const { profile, signOut } = useAuth()
+  const navigate = useNavigate()
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-app-bg)] px-4 relative overflow-hidden">
+      {/* Ambient glows */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-[520px] h-[520px] bg-amber-500/5 rounded-full blur-[120px]" />
+        <div className="absolute -bottom-24 -left-24 w-[520px] h-[520px] bg-orange-500/5 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 text-center max-w-md w-full">
+        {/* Icon */}
+        <div className="flex items-center justify-center mb-6">
+          <div className="w-24 h-24 rounded-3xl bg-amber-500/10 border-2 border-amber-500/20 flex items-center justify-center shadow-xl shadow-amber-500/10">
+            <FontAwesomeIcon icon={faTools} className="text-4xl text-amber-500" />
+          </div>
+        </div>
+
+        {/* Text */}
+        <h1 className="text-3xl font-black font-heading tracking-tight text-[var(--color-text)] mb-3">
+          Sedang Maintenance
+        </h1>
+        <p className="text-[var(--color-text-muted)] text-sm leading-relaxed mb-2">
+          Sistem sedang dalam pemeliharaan oleh administrator.
+        </p>
+        <p className="text-[var(--color-text-muted)] text-sm leading-relaxed mb-8">
+          Silakan kembali beberapa saat lagi.
+        </p>
+
+        {/* Info card */}
+        <div className="glass rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 mb-8 text-left">
+          <div className="flex items-start gap-3">
+            <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[12px] font-black text-amber-700 mb-1">Informasi</p>
+              <p className="text-[11px] text-amber-600/80 leading-relaxed">
+                Seluruh data kamu aman. Maintenance ini bersifat sementara dan tidak menghapus data apapun.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Login as different account or logout */}
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-[11px] text-[var(--color-text-muted)]">
+            Login sebagai: <span className="font-black text-[var(--color-text)]">{profile?.name}</span>
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] text-[10px] font-black uppercase border border-[var(--color-border)]">{profile?.role}</span>
+          </p>
+          <button
+            onClick={async () => { await signOut(); navigate('/login') }}
+            className="h-9 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all"
+          >
+            Ganti Akun
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Maintenance guard — wrap di dalam ProtectedRoute.
+ * Kalau system.maintenance = true dan user bukan developer → tampilkan MaintenancePage.
+ * Developer tetap bisa akses semua halaman normal.
+ */
+function MaintenanceGuard({ children }) {
+  const { profile } = useAuth()
+  const { flags, loading } = useFeatureFlags()
+
+  // Tunggu flags load dulu
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface)]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-[3px] border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+        <p className="text-[var(--color-text-muted)] text-sm font-medium">Memuat...</p>
+      </div>
+    </div>
+  )
+
+  // Developer selalu bypass maintenance
+  const isDeveloper = profile?.role?.toLowerCase() === 'developer'
+  if (!isDeveloper && flags['system.maintenance'] === true) {
+    return <MaintenancePage />
+  }
+
+  return children
+}
+
 function NotFoundPage() {
   const navigate = useNavigate()
   return (
@@ -270,67 +362,69 @@ function AppRoutes() {
 
         {/* ── Protected ── */}
         <Route element={<ProtectedRoute />}>
+          <Route element={<MaintenanceGuard><Outlet /></MaintenanceGuard>}>
 
-          {/* Core — module flag guarded */}
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Bulanan"><RaportPage /></FlagRoute>} />
-          <Route path="/poin" element={<FlagRoute flag="module.poin" label="Poin Siswa"><PoinPage /></FlagRoute>} />
-          <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AbsensiPage /></FlagRoute>} />
-          <Route path="/settings" element={<SettingsPage />} />
+            {/* Core — module flag guarded */}
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Bulanan"><RaportPage /></FlagRoute>} />
+            <Route path="/poin" element={<FlagRoute flag="module.poin" label="Poin Siswa"><PoinPage /></FlagRoute>} />
+            <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AbsensiPage /></FlagRoute>} />
+            <Route path="/settings" element={<SettingsPage />} />
 
-          {/* Role + flag guarded */}
-          <Route path="/gate" element={
-            <RoleFlagRoute roles={DEV_ADMIN_GATE} flag="module.gate" label="Portal Keluar Masuk">
-              <GatePage />
-            </RoleFlagRoute>
-          } />
-          <Route path="/admin/logs" element={
-            <RoleFlagRoute roles={DEV_ADMIN}>
-              <LogsPage />
-            </RoleFlagRoute>
-          } />
-          <Route path="/admin/users" element={
-            <RoleFlagRoute roles={DEV_ADMIN}>
-              <UserPage />
-            </RoleFlagRoute>
-          } />
-          <Route path="/admin/settings" element={
-            <RoleFlagRoute roles={DEV_ADMIN}>
-              <AdminSettingsPage />
-            </RoleFlagRoute>
-          } />
+            {/* Role + flag guarded */}
+            <Route path="/gate" element={
+              <RoleFlagRoute roles={DEV_ADMIN_GATE} flag="module.gate" label="Portal Keluar Masuk">
+                <GatePage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/logs" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <LogsPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/users" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <UserPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/settings" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <AdminSettingsPage />
+              </RoleFlagRoute>
+            } />
 
-          {/* Master Data */}
-          <Route path="/master/students" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.students" label="Data Siswa">
-              <StudentsPage />
-            </RoleFlagRoute>
-          } />
-          <Route path="/master/teachers" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.teachers" label="Data Guru">
-              <TeachersPage />
-            </RoleFlagRoute>
-          } />
-          <Route path="/master/classes" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.classes" label="Data Kelas">
-              <ClassesPage />
-            </RoleFlagRoute>
-          } />
-          <Route path="/master/violations" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.violations" label="Jenis Pelanggaran">
-              <ViolationsTypePage />
-            </RoleFlagRoute>
-          } />
-          <Route path="/master/academic-years" element={
-            <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.academic_years" label="Tahun Pelajaran">
-              <AcademicYearsPage />
-            </RoleFlagRoute>
-          } />
+            {/* Master Data */}
+            <Route path="/master/students" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.students" label="Data Siswa">
+                <StudentsPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/master/teachers" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.teachers" label="Data Guru">
+                <TeachersPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/master/classes" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.classes" label="Data Kelas">
+                <ClassesPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/master/violations" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.violations" label="Jenis Pelanggaran">
+                <ViolationsTypePage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/master/academic-years" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.academic_years" label="Tahun Pelajaran">
+                <AcademicYearsPage />
+              </RoleFlagRoute>
+            } />
 
-          {/* Route Aliases */}
-          {ROUTE_ALIASES.map(({ from, to }) => (
-            <Route key={from} path={from} element={<Navigate to={to} replace />} />
-          ))}
+            {/* Route Aliases */}
+            {ROUTE_ALIASES.map(({ from, to }) => (
+              <Route key={from} path={from} element={<Navigate to={to} replace />} />
+            ))}
+          </Route>
         </Route>
 
         {/* ── 404 ── */}

@@ -198,7 +198,36 @@ export default function TeachersPage() {
             if (debouncedSearch) { const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_'); q = q.or(`name.ilike.%${s}%,nbm.ilike.%${s}%,email.ilike.%${s}%,subject.ilike.%${s}%`) }
             const { data, error, count } = await q
             if (error) throw error
-            setTeachers([...(data || [])].sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)))
+
+            // ── Inject avatar_url dari profiles via email ────────────────────
+            // Butuh view `profiles_with_email` di Supabase (lihat komentar di bawah).
+            // Jika view belum ada, bagian ini di-skip secara graceful.
+            let teachersWithAvatar = data || []
+            const emails = teachersWithAvatar.map(t => t.email).filter(Boolean)
+            if (emails.length > 0) {
+                try {
+                    const { data: profilesData } = await supabase
+                        .from('profiles_with_email')   // view: SELECT p.*, u.email FROM profiles p JOIN auth.users u ON u.id = p.id
+                        .select('avatar_url, email')
+                        .not('avatar_url', 'is', null)
+                        .in('email', emails)
+
+                    if (profilesData?.length) {
+                        const avatarByEmail = Object.fromEntries(
+                            profilesData.map(p => [p.email, p.avatar_url])
+                        )
+                        teachersWithAvatar = teachersWithAvatar.map(t =>
+                            t.email && avatarByEmail[t.email]
+                                ? { ...t, avatar_url: avatarByEmail[t.email] }
+                                : t
+                        )
+                    }
+                } catch {
+                    // View belum dibuat — skip, avatar tidak tampil tapi app tetap jalan
+                }
+            }
+
+            setTeachers([...teachersWithAvatar].sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)))
             setTotalRows(count ?? 0)
             const { data: allSubj } = await supabase.from('teachers').select('subject').is('deleted_at', null).not('subject', 'is', null)
             if (allSubj) setSubjectsList([...new Set(allSubj.map(r => r.subject).filter(Boolean))].sort())
@@ -890,7 +919,12 @@ export default function TeachersPage() {
                         {profileTeacher && (
                             <div className="space-y-4">
                                 <div className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-2xl font-black shrink-0">{profileTeacher.name.charAt(0)}</div>
+                                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-2xl font-black shrink-0">
+                                        {profileTeacher.avatar_url
+                                            ? <img src={profileTeacher.avatar_url} alt={profileTeacher.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
+                                            : profileTeacher.name.charAt(0)
+                                        }
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                         <h3 className="text-base font-black text-[var(--color-text)] truncate">{profileTeacher.name}</h3>
                                         <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -1159,7 +1193,12 @@ export default function TeachersPage() {
                         <div className="max-h-56 overflow-y-auto space-y-2">
                             {bulkWATeachers.map((t, i) => (
                                 <div key={t.id} className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all ${i === bulkWAIndex ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : bulkWAResults[t.id] === 'sent' ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-[var(--color-border)]'}`}>
-                                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-xs font-black shrink-0">{t.name.charAt(0)}</div>
+                                    <div className="w-8 h-8 rounded-xl overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-xs font-black shrink-0">
+                                        {t.avatar_url
+                                            ? <img src={t.avatar_url} alt={t.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
+                                            : t.name.charAt(0)
+                                        }
+                                    </div>
                                     <div className="flex-1 min-w-0"><p className="text-xs font-bold truncate">{t.name}</p><p className="text-[10px] text-[var(--color-text-muted)]">{t.phone}</p></div>
                                     {bulkWAResults[t.id] === 'sent' && <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-500 shrink-0" />}
                                     {i === bulkWAIndex && <span className="text-[9px] font-black text-[var(--color-primary)] uppercase">Berikutnya</span>}
@@ -1192,7 +1231,12 @@ export default function TeachersPage() {
                             <div className="divide-y divide-[var(--color-border)]">
                                 {archivedTeachers.map(t => (
                                     <div key={t.id} className="flex items-center gap-3 py-3">
-                                        <div className="w-9 h-9 rounded-xl bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] text-sm font-black shrink-0">{t.name.charAt(0)}</div>
+                                        <div className="w-9 h-9 rounded-xl overflow-hidden bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] text-sm font-black shrink-0">
+                                            {t.avatar_url
+                                                ? <img src={t.avatar_url} alt={t.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
+                                                : t.name.charAt(0)
+                                            }
+                                        </div>
                                         <div className="flex-1 min-w-0"><p className="text-sm font-bold truncate">{t.name}</p><p className="text-[10px] text-[var(--color-text-muted)]">{t.subject || '—'} · {new Date(t.deleted_at).toLocaleDateString('id-ID')}</p></div>
                                         <button onClick={() => handleRestore(t)} className="shrink-0 h-8 px-3 rounded-xl bg-emerald-500/10 text-emerald-600 text-[10px] font-black hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faRotateLeft} />Pulihkan</button>
                                     </div>

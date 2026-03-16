@@ -328,7 +328,7 @@ export default function AdminSettingsPage() {
             setFlags(prev => prev.map(f => f.key === flag.key ? { ...f, enabled: !newVal } : f))
             addToast('Gagal: ' + error.message, 'error')
         } else if (flag.key === 'system.maintenance') {
-            addToast(newVal ? '⚠️ Maintenance mode AKTIF' : 'Maintenance mode dinonaktifkan', newVal ? 'warning' : 'success')
+            addToast(newVal ? 'Maintenance mode AKTIF' : 'Maintenance mode dinonaktifkan', newVal ? 'warning' : 'success')
         }
     }
 

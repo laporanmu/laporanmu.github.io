@@ -3991,18 +3991,18 @@ export default function StudentsPage() {
                                                 selectedIds={selectedStudentIds}
                                                 lastReportMap={lastReportMap}
                                                 isPrivacyMode={isPrivacyMode}
-                                                onEdit={handleEdit}
+                                                onEdit={canEdit ? handleEdit : null}
                                                 onViewProfile={handleViewProfile}
                                                 onViewQR={handleViewQR}
                                                 onViewPrint={handleViewPrint}
                                                 onViewTags={(s) => { setStudentForTags(s); setIsTagModalOpen(true) }}
                                                 onViewClassHistory={handleViewClassHistory}
-                                                onConfirmDelete={confirmDelete}
+                                                onConfirmDelete={canEdit ? confirmDelete : null}
                                                 onClassBreakdown={handleClassBreakdown}
                                                 onPhotoZoom={setPhotoZoom}
                                                 onToggleSelect={toggleSelectStudent}
                                                 x={handleQuickPoint}
-                                                onInlineUpdate={handleInlineUpdate}
+                                                onInlineUpdate={canEdit ? handleInlineUpdate : null}
                                                 onTogglePin={handleTogglePin}
                                                 classesList={classesList}
                                                 formatRelativeDate={formatRelativeDate}
@@ -4100,8 +4100,8 @@ export default function StudentsPage() {
                                             selectedIds={selectedStudentIds}
                                             onToggleSelect={toggleSelectStudent}
                                             onViewProfile={handleViewProfile}
-                                            onEdit={handleEdit}
-                                            onConfirmDelete={confirmDelete}
+                                            onEdit={canEdit ? handleEdit : null}
+                                            onConfirmDelete={canEdit ? confirmDelete : null}
                                             onTogglePin={handleTogglePin}
                                             onQuickPoint={handleQuickPoint}
                                             isPrivacyMode={isPrivacyMode}
@@ -5436,8 +5436,8 @@ export default function StudentsPage() {
                                                 {alerts.map(a => (
                                                     <span
                                                         key={a.id}
-                                                        onClick={a.action ? () => { setIsProfileModalOpen(false); handleEdit(selectedStudent) } : undefined}
-                                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[9px] font-bold ${colorMap[a.color]} ${a.action ? 'cursor-pointer hover:brightness-110' : ''}`}
+                                                        onClick={a.action && canEdit ? () => { setIsProfileModalOpen(false); handleEdit(selectedStudent) } : undefined}
+                                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[9px] font-bold ${colorMap[a.color]} ${a.action && canEdit ? 'cursor-pointer hover:brightness-110' : ''}`}
                                                     >
                                                         <FontAwesomeIcon icon={a.icon} className="text-[8px]" />
                                                         {a.text}
@@ -5889,24 +5889,28 @@ export default function StudentsPage() {
 
                                     {/* Footer Actions */}
                                     <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-[var(--color-border)]">
-                                        <button
-                                            onClick={() => {
-                                                setStudentForTags(selectedStudent)
-                                                setIsTagModalOpen(true)
-                                            }}
-                                            className="h-8 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"
-                                        >
-                                            <FontAwesomeIcon icon={faTags} /> Label
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setIsProfileModalOpen(false)
-                                                handleEdit(selectedStudent)
-                                            }}
-                                            className="h-8 px-3 rounded-lg border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"
-                                        >
-                                            <FontAwesomeIcon icon={faEdit} /> Edit
-                                        </button>
+                                        {canEdit && (
+                                            <button
+                                                onClick={() => {
+                                                    setStudentForTags(selectedStudent)
+                                                    setIsTagModalOpen(true)
+                                                }}
+                                                className="h-8 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"
+                                            >
+                                                <FontAwesomeIcon icon={faTags} /> Label
+                                            </button>
+                                        )}
+                                        {canEdit && (
+                                            <button
+                                                onClick={() => {
+                                                    setIsProfileModalOpen(false)
+                                                    handleEdit(selectedStudent)
+                                                }}
+                                                className="h-8 px-3 rounded-lg border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"
+                                            >
+                                                <FontAwesomeIcon icon={faEdit} /> Edit
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => setIsProfileModalOpen(false)}
                                             className="h-8 px-4 rounded-lg bg-gray-900 text-white text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all"

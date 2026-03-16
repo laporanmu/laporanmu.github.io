@@ -671,14 +671,14 @@ export default function ClassesPage() {
                                     </thead>
                                     <tbody>
                                         {pagedClasses.map(cls => (
-                                            <ClassRow key={cls.id} cls={cls} selectedIds={selectedIds} toggleSelect={toggleSelect} visibleCols={visibleCols} handleEdit={handleEdit} setItemToDelete={setItemToDelete} setIsDeleteModalOpen={setIsDeleteModalOpen} isPrivacyMode={isPrivacyMode} />
+                                            <ClassRow key={cls.id} cls={cls} selectedIds={selectedIds} toggleSelect={toggleSelect} visibleCols={visibleCols} handleEdit={canEdit ? handleEdit : null} setItemToDelete={canEdit ? setItemToDelete : null} setIsDeleteModalOpen={canEdit ? setIsDeleteModalOpen : null} isPrivacyMode={isPrivacyMode} />
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
                             <div className="md:hidden divide-y divide-[var(--color-border)]">
                                 {pagedClasses.map(cls => (
-                                    <ClassMobileCard key={cls.id} cls={cls} selectedIds={selectedIds} toggleSelect={toggleSelect} handleEdit={handleEdit} setItemToDelete={setItemToDelete} setIsDeleteModalOpen={setIsDeleteModalOpen} />
+                                    <ClassMobileCard key={cls.id} cls={cls} selectedIds={selectedIds} toggleSelect={toggleSelect} handleEdit={canEdit ? handleEdit : null} setItemToDelete={canEdit ? setItemToDelete : null} setIsDeleteModalOpen={canEdit ? setIsDeleteModalOpen : null} />
                                 ))}
                             </div>
                             {/* Compact Pagination */}
