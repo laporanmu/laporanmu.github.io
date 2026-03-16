@@ -35,6 +35,7 @@ function getPageItems(current, total) {
 export default function ViolationsPage() {
     const { addToast } = useToast()
     const { enabled: canEdit } = useFlag('access.teacher_violations')
+    const [violations, setViolations] = useState([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
@@ -604,20 +605,24 @@ export default function ViolationsPage() {
                                                 </td>}
                                                 <td className="px-6 py-4 text-center whitespace-nowrap">
                                                     <div className="flex items-center justify-center gap-1">
-                                                        <button
-                                                            onClick={() => handleEdit(violation)}
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm"
-                                                            title="Edit"
-                                                        >
-                                                            <FontAwesomeIcon icon={faEdit} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => { setItemToDelete(violation); setIsDeleteModalOpen(true) }}
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"
-                                                            title="Hapus"
-                                                        >
-                                                            <FontAwesomeIcon icon={faTrash} />
-                                                        </button>
+                                                        {canEdit && (
+                                                            <button
+                                                                onClick={() => handleEdit(violation)}
+                                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm"
+                                                                title="Edit"
+                                                            >
+                                                                <FontAwesomeIcon icon={faEdit} />
+                                                            </button>
+                                                        )}
+                                                        {canEdit && (
+                                                            <button
+                                                                onClick={() => { setItemToDelete(violation); setIsDeleteModalOpen(true) }}
+                                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"
+                                                                title="Hapus"
+                                                            >
+                                                                <FontAwesomeIcon icon={faTrash} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -641,8 +646,8 @@ export default function ViolationsPage() {
                                             <div className={`px-2.5 py-1.5 rounded-lg text-white text-[10px] font-black shadow-lg ${getPointStyle(v.points)}`}>{isPrivacyMode ? '***' : `${v.points > 0 ? '+' : ''}${v.points}`}</div>
                                         </div>
                                         <div className="flex items-center gap-2 mt-4">
-                                            <button onClick={() => handleEdit(v)} className="flex-1 h-9 rounded-xl bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest">Edit</button>
-                                            <button onClick={() => { setItemToDelete(v); setIsDeleteModalOpen(true) }} className="flex-1 h-9 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-widest">Hapus</button>
+                                            {canEdit && <button onClick={() => handleEdit(v)} className="flex-1 h-9 rounded-xl bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest">Edit</button>}
+                                            {canEdit && <button onClick={() => { setItemToDelete(v); setIsDeleteModalOpen(true) }} className="flex-1 h-9 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-widest">Hapus</button>}
                                         </div>
                                     </div>
                                 ))}

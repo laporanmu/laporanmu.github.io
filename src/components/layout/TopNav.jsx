@@ -15,6 +15,25 @@ import { useAuth } from "../../context/AuthContext"
 import { useNotifications } from "../../hooks/useNotifications"
 import { useFeatureFlags } from "../../context/FeatureFlagsContext"
 
+// ─── Avatar component — handles image error state properly ────────────────────
+// Gradient hanya muncul saat tidak ada foto. Kalau foto gagal load,
+// otomatis fallback ke inisial tanpa gradient bocor.
+function Avatar({ url, name, size = "w-10 h-10", textSize = "text-base", rounded = "rounded-2xl" }) {
+    const [imgError, setImgError] = useState(false)
+    const letter = name?.charAt(0)?.toUpperCase() || 'U'
+    const showImg = url && !imgError
+
+    return (
+        <div className={`${size} ${rounded} overflow-hidden shrink-0 flex items-center justify-center font-black text-white
+            ${showImg ? 'bg-[var(--color-surface-alt)]' : 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]'}`}>
+            {showImg
+                ? <img src={url} alt={name} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+                : <span className={textSize}>{letter}</span>
+            }
+        </div>
+    )
+}
+
 // ─── Portal container helper ──────────────────────────────────────────────────
 // Singleton di module-level — dibuat SEKALI saat module di-load, tidak pernah
 // dihapus. Mencegah removeChild crash di React 18 Strict Mode / concurrent render.
@@ -36,12 +55,12 @@ const MASTER_ITEMS = [
     { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Kelola data santri aktif" },
     { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Daftar musyrif & pengajar" },
     { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Manajemen kelas & kamar" },
-    { to: "/master/violations", label: "Jenis Pelanggaran", icon: faExclamationTriangle, desc: "Kategori & bobot pelanggaran" },
+    { to: "/master/violations", label: "Jenis Pelanggaran", icon: faExclamationTriangle, desc: "Kelola pelanggaran" },
     { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Periode tahun ajaran aktif" },
 ]
 
 const REPORTS_ITEMS = [
-    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Izin keluar guru & kunjungan tamu", color: "bg-red-500/10 text-red-500" },
+    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Kelola izin keluar masuk", color: "bg-red-500/10 text-red-500" },
     { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekap kehadiran per bulan", color: "bg-emerald-500/10 text-emerald-600" },
     { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa", color: "bg-orange-500/10 text-orange-500" },
@@ -364,9 +383,7 @@ export default function TopNav({ title, subtitle }) {
                                         className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-2xl hover:bg-[var(--color-surface-alt)] transition border border-transparent hover:border-[var(--color-border)]"
                                         type="button"
                                     >
-                                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white font-black">
-                                            {avatarLetter}
-                                        </div>
+                                        <Avatar url={profile?.avatar_url} name={profile?.name} />
                                         <FontAwesomeIcon
                                             icon={faChevronDown}
                                             className={`text-xs text-[var(--color-text-muted)] transition-transform ${profileOpen ? "rotate-180" : ""}`}
@@ -569,9 +586,7 @@ export default function TopNav({ title, subtitle }) {
                                         className="flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-2xl hover:bg-[var(--color-surface-alt)] transition border border-transparent hover:border-[var(--color-border)]"
                                         type="button"
                                     >
-                                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white font-black">
-                                            {avatarLetter}
-                                        </div>
+                                        <Avatar url={profile?.avatar_url} name={profile?.name} />
                                         <div className="hidden sm:flex flex-col items-start leading-tight">
                                             <span className="text-sm font-extrabold text-[var(--color-text)]">{profile?.name || "User"}</span>
                                             <span className="text-[10px] font-bold tracking-widest uppercase text-[var(--color-text-muted)]">{profile?.role || "Staff"}</span>

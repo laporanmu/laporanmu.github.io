@@ -10,6 +10,7 @@ import {
     faScrewdriverWrench
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "../../context/AuthContext"
+import { useFeatureFlags } from "../../context/FeatureFlagsContext"
 
 // ─── Portal container ─────────────────────────────────────────────────────────
 // Singleton di module-level — dibuat SEKALI saat module di-load, tidak pernah
@@ -96,6 +97,7 @@ function Divider() {
 export default function MasterSheet({ isOpen, onClose, section }) {
     const navigate = useNavigate()
     const { profile } = useAuth()
+    const { flags } = useFeatureFlags()
 
     const container = getPortalContainer('portal-sheet')
 

@@ -28,6 +28,8 @@ function getPageItems(current, total) {
 export default function AcademicYearsPage() {
     const { addToast } = useToast()
     const { enabled: canEdit } = useFlag('access.teacher_academic')
+
+    const [years, setYears] = useState([])
     const [archivedYears, setArchivedYears] = useState([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
@@ -611,7 +613,7 @@ export default function AcademicYearsPage() {
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-1">
                                                         {/* Toggle aktif/nonaktif */}
-                                                        {year.is_active ? (
+                                                        {canEdit && (year.is_active ? (
                                                             <button onClick={() => handleDeactivate(year)} title="Nonaktifkan" disabled={submitting} className="h-8 px-2.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all whitespace-nowrap disabled:opacity-50">
                                                                 Nonaktifkan
                                                             </button>
@@ -619,15 +621,19 @@ export default function AcademicYearsPage() {
                                                             <button onClick={() => handleSetActive(year)} title="Aktifkan" disabled={submitting} className="h-8 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-50">
                                                                 Aktifkan
                                                             </button>
-                                                        )}
+                                                        ))}
                                                         {/* Duplicate */}
-                                                        <button onClick={() => handleDuplicate(year)} title="Duplikasi" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all">
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                                                        </button>
-                                                        <button onClick={() => handleEdit(year)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
-                                                            <FontAwesomeIcon icon={faEdit} className="text-xs" />
-                                                        </button>
-                                                        {!year.is_active && (
+                                                        {canEdit && (
+                                                            <button onClick={() => handleDuplicate(year)} title="Duplikasi" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all">
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                                                            </button>
+                                                        )}
+                                                        {canEdit && (
+                                                            <button onClick={() => handleEdit(year)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
+                                                                <FontAwesomeIcon icon={faEdit} className="text-xs" />
+                                                            </button>
+                                                        )}
+                                                        {canEdit && !year.is_active && (
                                                             <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} title="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all">
                                                                 <FontAwesomeIcon icon={faTrash} className="text-xs" />
                                                             </button>
@@ -656,12 +662,14 @@ export default function AcademicYearsPage() {
                                         <div className="flex items-center gap-1 shrink-0">
                                             {year.is_active ? (
                                                 <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">Aktif</span>
-                                            ) : (
+                                            ) : canEdit ? (
                                                 <button onClick={() => handleSetActive(year)} className="text-[9px] font-black text-[var(--color-primary)] uppercase tracking-widest px-2 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">Aktifkan</button>
+                                            ) : null}
+                                            {canEdit && (
+                                                <button onClick={() => handleEdit(year)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
+                                                    <FontAwesomeIcon icon={faEdit} className="text-xs" />
+                                                </button>
                                             )}
-                                            <button onClick={() => handleEdit(year)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
-                                                <FontAwesomeIcon icon={faEdit} className="text-xs" />
-                                            </button>
                                         </div>
                                     </div>
                                 ))}

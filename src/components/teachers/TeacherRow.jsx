@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import React, { memo, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faEdit, faTrash, faMars, faVenus, faBoxArchive,
@@ -10,6 +10,22 @@ const STATUS_CONFIG = {
     active: { label: 'Aktif', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', dot: 'bg-emerald-500' },
     inactive: { label: 'Nonaktif', color: 'bg-red-500/10 text-red-600 border-red-500/20', dot: 'bg-red-500' },
     cuti: { label: 'Cuti', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20', dot: 'bg-amber-500' },
+}
+
+// ─── Avatar — handles error state, no gradient bleed ──────────────────────────
+function Avatar({ url, name, size = 'w-9 h-9', textSize = 'text-xs', rounded = 'rounded-xl' }) {
+    const [imgError, setImgError] = useState(false)
+    const letter = name?.charAt(0)?.toUpperCase() || '?'
+    const showImg = url && !imgError
+    return (
+        <div className={`${size} ${rounded} overflow-hidden shrink-0 flex items-center justify-center font-black text-white
+            ${showImg ? 'bg-[var(--color-surface-alt)]' : 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]'}`}>
+            {showImg
+                ? <img src={url} alt={name} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+                : <span className={textSize}>{letter}</span>
+            }
+        </div>
+    )
 }
 
 // ─── Desktop Row ─────────────────────────────────────────────────────────────
@@ -41,7 +57,7 @@ const TeacherRow = memo(({
             <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
                     <div className="relative shrink-0">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-xs font-black">{teacher.name.charAt(0)}</div>
+                        <Avatar url={teacher.avatar_url} name={teacher.name} />
                         {teacher.is_pinned && <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center"><FontAwesomeIcon icon={faThumbtack} className="text-white text-[7px]" /></div>}
                     </div>
                     <div>
@@ -90,9 +106,9 @@ const TeacherRow = memo(({
                 <div className="flex items-center justify-end gap-1">
                     <button onClick={() => handleTogglePin(teacher)} title={teacher.is_pinned ? 'Lepas Sematkan' : 'Sematkan'} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all text-xs ${teacher.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10'}`}><FontAwesomeIcon icon={faThumbtack} /></button>
                     <button onClick={() => openProfile(teacher)} title="Profil" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-xs"><FontAwesomeIcon icon={faEye} /></button>
-                    <button onClick={() => handleEdit(teacher)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-xs"><FontAwesomeIcon icon={faEdit} /></button>
-                    <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} title="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 transition-all text-xs"><FontAwesomeIcon icon={faBoxArchive} /></button>
-                    <button onClick={() => { setTeacherToAction(teacher); setIsDeleteModalOpen(true) }} title="Hapus" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-xs"><FontAwesomeIcon icon={faTrash} /></button>
+                    {handleEdit && <button onClick={() => handleEdit(teacher)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-xs"><FontAwesomeIcon icon={faEdit} /></button>}
+                    {setIsArchiveModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} title="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 transition-all text-xs"><FontAwesomeIcon icon={faBoxArchive} /></button>}
+                    {setIsDeleteModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsDeleteModalOpen(true) }} title="Hapus" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-xs"><FontAwesomeIcon icon={faTrash} /></button>}
                 </div>
             </td>
         </tr>
@@ -119,7 +135,7 @@ const TeacherMobileCard = memo(({
             <div className="flex items-start gap-3">
                 <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(teacher.id)} className="accent-[var(--color-primary)] w-4 h-4 mt-1 cursor-pointer shrink-0" />
                 <div className="relative shrink-0">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-sm font-black">{teacher.name.charAt(0)}</div>
+                    <Avatar url={teacher.avatar_url} name={teacher.name} size="w-11 h-11" textSize="text-sm" />
                     {teacher.is_pinned && <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center"><FontAwesomeIcon icon={faThumbtack} className="text-white text-[7px]" /></div>}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -136,8 +152,8 @@ const TeacherMobileCard = memo(({
                         </div>
                         <div className="flex gap-1 shrink-0">
                             <button onClick={() => handleTogglePin(teacher)} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all ${teacher.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:text-amber-500'}`}><FontAwesomeIcon icon={faThumbtack} /></button>
-                            <button onClick={() => handleEdit(teacher)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 text-xs transition-all"><FontAwesomeIcon icon={faEdit} /></button>
-                            <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 text-xs transition-all"><FontAwesomeIcon icon={faBoxArchive} /></button>
+                            {handleEdit && <button onClick={() => handleEdit(teacher)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 text-xs transition-all"><FontAwesomeIcon icon={faEdit} /></button>}
+                            {setIsArchiveModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 text-xs transition-all"><FontAwesomeIcon icon={faBoxArchive} /></button>}
                         </div>
                     </div>
                     <div className="mt-2 space-y-1 text-xs text-[var(--color-text-muted)]">

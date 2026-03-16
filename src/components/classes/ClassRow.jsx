@@ -123,20 +123,24 @@ export const ClassRow = React.memo(({
             {/* Actions */}
             <td className="px-6 py-4 text-center">
                 <div className="flex items-center justify-center gap-1 transition-opacity">
-                    <button
-                        onClick={() => handleEdit(cls)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm"
-                        title="Edit"
-                    >
-                        <FontAwesomeIcon icon={faEdit} />
-                    </button>
-                    <button
-                        onClick={() => { setItemToDelete(cls); setIsDeleteModalOpen(true) }}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"
-                        title="Hapus"
-                    >
-                        <FontAwesomeIcon icon={faTrash} />
-                    </button>
+                    {handleEdit && (
+                        <button
+                            onClick={() => handleEdit(cls)}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm"
+                            title="Edit"
+                        >
+                            <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                    )}
+                    {setItemToDelete && setIsDeleteModalOpen && (
+                        <button
+                            onClick={() => { setItemToDelete(cls); setIsDeleteModalOpen(true) }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"
+                            title="Hapus"
+                        >
+                            <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                    )}
                 </div>
             </td>
         </tr>
@@ -185,8 +189,8 @@ export const ClassMobileCard = React.memo(({
                             </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
-                            <button onClick={() => handleEdit(cls)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] bg-[var(--color-surface-alt)]/50 text-xs transition-all"><FontAwesomeIcon icon={faEdit} /></button>
-                            <button onClick={() => { setItemToDelete(cls); setIsDeleteModalOpen(true) }} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 bg-[var(--color-surface-alt)]/50 text-xs transition-all"><FontAwesomeIcon icon={faTrash} /></button>
+                            {handleEdit && <button onClick={() => handleEdit(cls)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] bg-[var(--color-surface-alt)]/50 text-xs transition-all"><FontAwesomeIcon icon={faEdit} /></button>}
+                            {setItemToDelete && setIsDeleteModalOpen && <button onClick={() => { setItemToDelete(cls); setIsDeleteModalOpen(true) }} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 bg-[var(--color-surface-alt)]/50 text-xs transition-all"><FontAwesomeIcon icon={faTrash} /></button>}
                         </div>
                     </div>
 

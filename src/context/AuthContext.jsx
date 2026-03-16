@@ -63,6 +63,22 @@ export function AuthProvider({ children }) {
         setLoading(false)
     }
 
+    /** Patch profile state langsung tanpa fetch ulang — untuk update instan di UI (navbar, dll) */
+    function updateProfile(patch) {
+        setProfile(prev => prev ? { ...prev, ...patch } : prev)
+    }
+
+    /** Fetch ulang profile dari Supabase — untuk hard sync setelah perubahan */
+    async function refreshProfile() {
+        if (!user?.id || isDemoMode) return
+        const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single()
+        if (data) setProfile(data)
+    }
+
     async function signIn(email, password, rememberMe = false) {
         if (isDemoMode) {
             // Demo login
@@ -116,6 +132,10 @@ export function AuthProvider({ children }) {
         signIn,
         signOut,
         isDemoMode,
+
+        // Profile helpers
+        updateProfile,
+        refreshProfile,
 
         // Permission helpers
         hasRole,
