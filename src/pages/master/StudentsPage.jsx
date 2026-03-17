@@ -1,6 +1,8 @@
 import React from 'react'
 import { useState, useRef, useEffect, useCallback, memo, useMemo, useDeferredValue } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { createRoot } from 'react-dom/client'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faThumbtack } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
@@ -78,8 +80,6 @@ import { StatusBanners } from './students/components/StatusBanners'
 
 // ── BehaviorHeatmap — outside StudentsPage to prevent re-creation on every render ──
 const BehaviorHeatmap = memo(({ history }) => {
-    const today = new Date()
-    const rangeKey = `${today.getFullYear()}-${today.getMonth()}`
     const days = useMemo(() => {
         const end = new Date()
         const start = new Date(end)
@@ -89,7 +89,7 @@ const BehaviorHeatmap = memo(({ history }) => {
         let curr = new Date(start)
         while (curr <= end) { out.push(new Date(curr)); curr.setDate(curr.getDate() + 1) }
         return out
-    }, [rangeKey])
+    }, [])
     const activityMap = useMemo(() => history.reduce((acc, item) => {
         const d = new Date(item.created_at).toDateString()
         acc[d] = (acc[d] || 0) + (item.points || 0)
@@ -157,6 +157,7 @@ export default function StudentsPage() {
     const [globalStats, setGlobalStats] = useState({ total: 0, boys: 0, girls: 0, avgPoints: 0, risk: 0, worstClass: null, topPerformer: null, incompleteCount: 0, noPhoneCount: 0, avgPointsLastWeek: null })
     const [totalRows, setTotalRows] = useState(0)
     const [lastReportMap, setLastReportMap] = useState({})
+    // eslint-disable-next-line no-unused-vars
     const [pendingArchive, setPendingArchive] = useState(null)
     // formData ref: diisi oleh StudentFormModal via onFormChange agar handleSubmit bisa akses
     const formDataRef = useRef({ name: '', gender: 'L', class_id: '', phone: '', photo_url: '', nisn: '', guardian_name: '', guardian_relation: 'Ayah' })
@@ -192,16 +193,12 @@ export default function StudentsPage() {
     const [importFileHeaders, setImportFileHeaders] = useState([]) // headers from file
     const [importColumnMapping, setImportColumnMapping] = useState({}) // { sys_key: user_header }
     const [importDuplicates, setImportDuplicates] = useState([]) // row indices flagged as duplicate
-    const [importSkipDupes, setImportSkipDupes] = useState(true) // skip duplicates on commit
+    const importSkipDupes = true // skip duplicates on commit
     const [importDragOver, setImportDragOver] = useState(false) // drag-drop highlight
     const [importValidationOpen, setImportValidationOpen] = useState(false) // collapsible validation notes
     const [importLoading, setImportLoading] = useState(false) // loading state during file parsing
-    const [isRevalidating, setIsRevalidating] = useState(false) // spinning icon state for Re-validasi button
-    const [importEditCell, setImportEditCell] = useState(null) // { idx, key }
     const [importCachedDBStudents, setImportCachedDBStudents] = useState({ names: new Set(), nisns: new Set() })
     const [exporting, setExporting] = useState(false)
-    // Raport Bulanan → navigate ke /raport
-    const navigate = useNavigate()
 
     const importReadyRows = useMemo(() => {
         if (!importPreview.length) return []
@@ -221,13 +218,13 @@ export default function StudentsPage() {
             // The validateImportPreview itself sets state, so we must be CAREFUL.
             // A better way is to only call this on Cell Blur.
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [importSkipDupes])
 
     // Rentang Poin Filter
     const [filterPointMode, setFilterPointMode] = useState('')
     const [filterPointMin, setFilterPointMin] = useState('')
     const [filterPointMax, setFilterPointMax] = useState('')
-    const [filterCompleteness, setFilterCompleteness] = useState('') // 'missing_photo', 'missing_phone', ''
     const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
 
     // NEW: Soft Delete / Arsip
@@ -270,7 +267,6 @@ export default function StudentsPage() {
     // PDF Card Capture
     const cardCaptureRef = useRef(null)
     const [generatingPdf, setGeneratingPdf] = useState(false)
-    const [showExportMenu, setShowExportMenu] = useState(false)
 
     // Duplicate Detection state ada di StudentFormModal
 
@@ -302,7 +298,6 @@ export default function StudentsPage() {
     const [isBulkPointModalOpen, setIsBulkPointModalOpen] = useState(false)
     const [bulkPointValue, setBulkPointValue] = useState(0)
     const [bulkPointLabel, setBulkPointLabel] = useState('')
-    const [bulkPointMode, setBulkPointMode] = useState('individual') // 'individual' or 'group'
 
     // =====================
     // COLUMN VISIBILITY
@@ -336,12 +331,9 @@ export default function StudentsPage() {
     const [filterClasses, setFilterClasses] = useState([]) // array of class ids
 
     // NEW: Audit Trail (Fitur 10)
-    const [isAuditLogOpen, setIsAuditLogOpen] = useState(false)
-    const [auditStudentId, setAuditStudentId] = useState(null)
 
     // NEW: Bulk Photo Matcher (Sultan Fitur 2)
     const [isBulkPhotoModalOpen, setIsBulkPhotoModalOpen] = useState(false)
-    const [bulkPhotoFiles, setBulkPhotoFiles] = useState([])
     const [bulkPhotoMatches, setBulkPhotoMatches] = useState([])
     const [matchingPhotos, setMatchingPhotos] = useState(false)
     const [uploadingBulkPhotos, setUploadingBulkPhotos] = useState(false)
@@ -350,12 +342,8 @@ export default function StudentsPage() {
     const [broadcastTemplate, setBroadcastTemplate] = useState('summary') // 'summary', 'points', 'security', 'custom'
     const [customWaMsg, setCustomWaMsg] = useState('')
     const [broadcastIndex, setBroadcastIndex] = useState(-1)
-    const [broadcastResults, setBroadcastResults] = useState({}) // { studentId: 'sent'|'pending' }
-    const [auditLogs, setAuditLogs] = useState([])
-    const [loadingAudit, setLoadingAudit] = useState(false)
 
     // NEW: Template WA Customizable (Fitur 11)
-    const [waTemplate, setWaTemplate] = useState(`Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu wali dari ananda {nama}. Kami sampaikan informasi terkini dari sistem *Laporanmu* — MBS Tanggul.\n\n*Data Akademik Ananda:*\n• Kelas : {kelas}\n• ID Reg : {kode}\n• Poin Perilaku : {poin} poin\n\n*Akses Portal Orang Tua:*\nPortal  : [URL]\nPIN     : {pin}\n\nGunakan ID Reg & PIN untuk memantau perkembangan putera/puteri Bapak/Ibu secara real-time.\n\nWassalamu'alaikum Wr. Wb.\n_MBS Tanggul · Sistem Laporanmu_`)
 
     // NEW: Import Google Sheets (Fitur 12)
     const [gSheetsUrl, setGSheetsUrl] = useState('')
@@ -382,7 +370,6 @@ export default function StudentsPage() {
 
     // FIX: ref import dan ref foto dipisah (sebelumnya bentrok)
     const importFileInputRef = useRef(null)
-    const photoInputRef = useRef(null)
     const searchInputRef = useRef(null)
 
     const { addToast, addUndoToast } = useToast()
@@ -396,7 +383,6 @@ export default function StudentsPage() {
     // =========================================
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
-    const [jumpPage, setJumpPage] = useState('')
 
     const deferredSearchQuery = useDeferredValue(searchQuery)
     const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -433,6 +419,7 @@ export default function StudentsPage() {
     // =========================================
     const fetchData = useCallback(async () => {
         setLoading(true)
+        console.log('[fetchData] Triggered with filters:', { page, pageSize, filterClass, searchQuery })
         try {
             // Fetch classes list for the form
             const { data: classesData, error: classesError } = await supabase
@@ -685,12 +672,11 @@ export default function StudentsPage() {
         } catch { setRaportHistory([]) }
         finally { setLoadingRaport(false) }
     }, [])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         fetchData()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, pageSize, filterClass, filterClasses, filterGender, filterStatus, filterTag, filterMissing, sortBy, debouncedSearch, filterPointMode, filterPointMin, filterPointMax])
+    }, [fetchData])
 
     // Initial load for stats cards (global, not paginated)
     useEffect(() => {
@@ -778,13 +764,14 @@ export default function StudentsPage() {
 
             if (e.key === 'n') { e.preventDefault(); handleAdd(); return }
             if (e.key === 'p') { e.preventDefault(); setIsPrivacyMode(v => !v); return }
-            if (e.key === 'r') { e.preventDefault(); fetchData(); fetchStats(); return }
+            if (e.key === 'r') { e.preventDefault(); fetchDataRef.current(); fetchStatsRef.current(); return }
             if (e.key === 'x') { e.preventDefault(); resetAllFilters(); return }
             if (e.key === '?') { e.preventDefault(); setIsShortcutOpen(v => !v); return }
         }
 
         window.addEventListener('keydown', handleKey)
         return () => window.removeEventListener('keydown', handleKey)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery, isModalOpen, isArchivedModalOpen, isClassHistoryModalOpen, isBulkModalOpen,
         isBulkDeleteModalOpen, isResetPointsModalOpen, isTagModalOpen, isGSheetsModalOpen,
         isImportModalOpen, isExportModalOpen, isPrintModalOpen, isProfileModalOpen,
@@ -863,11 +850,11 @@ export default function StudentsPage() {
                     .update({ deleted_at: new Date().toISOString() })
                     .eq('id', student.id)
                 if (error) throw error
-                fetchData()
-                fetchStats()
+                fetchDataRef.current()
+                fetchStatsRef.current()
             } catch {
                 addToast('Gagal mengarsipkan siswa', 'error')
-                fetchData() // restore
+                fetchDataRef.current() // restore
             } finally {
                 setPendingArchive(null)
             }
@@ -885,7 +872,7 @@ export default function StudentsPage() {
                     onClick: () => {
                         clearTimeout(timerId)
                         setPendingArchive(null)
-                        fetchData()
+                        fetchDataRef.current()
                         addToast(`${student.name} dibatalkan`, 'success')
                     }
                 }
@@ -914,6 +901,7 @@ export default function StudentsPage() {
             guardian_relation: formData.guardian_relation || null,
             status: formData.status || 'aktif',
             tags: formData.tags || [],
+            metadata: formData.metadata || {},
         }
 
         try {
@@ -929,6 +917,7 @@ export default function StudentsPage() {
                     guardian_relation: formData.guardian_relation || null,
                     status: formData.status || 'aktif',
                     tags: formData.tags || [],
+                    metadata: formData.metadata || {},
                 }
                 const { error } = await supabase
                     .from('students')
@@ -951,7 +940,12 @@ export default function StudentsPage() {
                 }
                 addToast('Data siswa berhasil diperbarui', 'success')
             } else {
-                const { error } = await supabase.from('students').insert([newStudentData])
+                const { error } = await supabase
+                    .from('students')
+                    .insert([newStudentData])
+
+                if (error) throw error
+
                 const studentToView = {
                     ...newStudentData,
                     code: newStudentData.registration_code,
@@ -963,15 +957,15 @@ export default function StudentsPage() {
                 addToast('Siswa berhasil didaftarkan', 'success')
             }
             setIsModalOpen(false)
-            fetchData()
-            fetchStats()
+            fetchDataRef.current()
+            fetchStatsRef.current()
         } catch (err) {
             console.error('Submit error:', err)
             addToast('Gagal menyimpan data', 'error')
         } finally {
             setSubmitting(false)
         }
-    }, [selectedStudent, fetchData, fetchStats, addToast, generateCode])
+    }, [selectedStudent, addToast, classesList])
 
 
 
@@ -1019,8 +1013,8 @@ export default function StudentsPage() {
                     await Promise.all(idsToMove.map(id =>
                         supabase.from('students').update({ class_id: prevClassMap[id] }).eq('id', id)
                     ))
-                    fetchData()
-                    fetchStats()
+                    fetchDataRef.current()
+                    fetchStatsRef.current()
                     addToast(`Pemindahan ${count} siswa dibatalkan`, 'success')
                 }
             )
@@ -1050,8 +1044,8 @@ export default function StudentsPage() {
                 `${count} siswa diarsipkan`,
                 async () => {
                     await supabase.from('students').update({ deleted_at: null }).in('id', idsToDelete)
-                    fetchData()
-                    fetchStats()
+                    fetchDataRef.current()
+                    fetchStatsRef.current()
                     addToast(`${count} siswa berhasil dipulihkan`, 'success')
                 }
             )
@@ -1090,7 +1084,7 @@ export default function StudentsPage() {
             if (error) throw error
             addToast(`${student.name} berhasil dipulihkan`, 'success')
             fetchArchivedStudents()
-            fetchData()
+            fetchDataRef.current()
             fetchStats()
         } catch {
             addToast('Gagal memulihkan siswa', 'error')
@@ -1155,7 +1149,7 @@ export default function StudentsPage() {
                 const topStudents = sorted.slice(0, 3)
                 setClassBreakdownData({ className, total: data.length, boys, girls, avgPoints, riskCount, topStudents, allStudents: sorted })
             }
-        } catch { } finally {
+        } catch { /* ignore */ } finally {
             setLoadingBreakdown(false)
         }
     }
@@ -1170,7 +1164,7 @@ export default function StudentsPage() {
             if (error) throw error
             addToast(resetPointsClassId ? 'Poin kelas berhasil direset' : 'Semua poin berhasil direset', 'success')
             setIsResetPointsModalOpen(false)
-            fetchData()
+            fetchDataRef.current()
             fetchStats()
         } catch {
             addToast('Gagal reset poin', 'error')
@@ -1194,7 +1188,7 @@ export default function StudentsPage() {
                 const msg = `PIN baru Laporanmu untuk ${student.name}: *${newPin}*. Kode: ${student.code}`
                 window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
             }
-            fetchData()
+            fetchDataRef.current()
             fetchStats()
             if (selectedStudent?.id === student.id) setSelectedStudent({ ...selectedStudent, pin: newPin })
         } catch {
@@ -1204,24 +1198,7 @@ export default function StudentsPage() {
         }
     }
 
-    // NEW: Fitur 6 - Duplicate Detection
-    const checkDuplicate = async (name, classId) => {
-        if (!name || name.trim().length < 3 || !classId) { setDuplicateWarning(null); return }
-        setCheckingDuplicate(true)
-        try {
-            const { data } = await supabase
-                .from('students')
-                .select('id, name, registration_code')
-                .ilike('name', `%${name.trim()}%`)
-                .eq('class_id', classId)
-                .is('deleted_at', null)
-                .neq('id', selectedStudent?.id || 0)
-                .limit(3)
-            setDuplicateWarning(data?.length ? data : null)
-        } catch { } finally {
-            setCheckingDuplicate(false)
-        }
-    }
+    // (checkDuplicate method previously removed)
 
     // NEW: Fitur 7 - Tag management
     const fetchUsedTags = async () => {
@@ -1239,7 +1216,7 @@ export default function StudentsPage() {
                 setAllUsedTags(uniqueTagsArr.sort())
                 setTagStats(stats)
             }
-        } catch { }
+        } catch { /* ignore */ }
     }
 
     const handleBulkTagApply = async (tag) => {
@@ -1264,7 +1241,7 @@ export default function StudentsPage() {
                     return supabase.from('students').update({ tags: next }).eq('id', s.id)
                 })
                 await Promise.all(updates)
-                fetchData()
+                fetchDataRef.current()
                 fetchUsedTags()
                 setIsBulkTagModalOpen(false)
                 setSelectedStudentIds([])
@@ -1274,7 +1251,7 @@ export default function StudentsPage() {
                         await Promise.all(idsToTag.map(id =>
                             supabase.from('students').update({ tags: prevTagMap[id] }).eq('id', id)
                         ))
-                        fetchData()
+                        fetchDataRef.current()
                         fetchUsedTags()
                         addToast(`Perubahan label ${count} siswa dibatalkan`, 'success')
                     }
@@ -1315,7 +1292,7 @@ export default function StudentsPage() {
             })
 
             await Promise.all(updates)
-            fetchData()
+            fetchDataRef.current()
             setIsBulkPointModalOpen(false)
             setBulkPointValue(0)
             setBulkPointLabel('')
@@ -1326,7 +1303,7 @@ export default function StudentsPage() {
                     await Promise.all(idsToUpdate.map(id =>
                         supabase.from('students').update({ total_points: prevPointMap[id] }).eq('id', id)
                     ))
-                    fetchData()
+                    fetchDataRef.current()
                     fetchStats()
                     addToast(`Perubahan poin ${count} siswa dibatalkan`, 'success')
                 }
@@ -1347,7 +1324,7 @@ export default function StudentsPage() {
             if (error) throw error
             setStudentForTags({ ...student, tags: newTags })
             addToast(`Label '${tag}' diperbarui`, 'success')
-            fetchData()
+            fetchDataRef.current()
             fetchUsedTags()
         } catch {
             addToast('Gagal update label', 'error')
@@ -1375,7 +1352,7 @@ export default function StudentsPage() {
                 )
                 await Promise.all(updates)
                 addToast(`Label '${oldTag}' dihapus dari ${data.length} siswa`, 'success')
-                fetchData()
+                fetchDataRef.current()
                 fetchUsedTags()
             }
         } catch {
@@ -1396,7 +1373,7 @@ export default function StudentsPage() {
                 )
                 await Promise.all(updates)
                 addToast(`Label '${oldTag}' diubah menjadi '${newTag}'`, 'success')
-                fetchData()
+                fetchDataRef.current()
                 fetchUsedTags()
                 setTagToEdit(null)
             }
@@ -1550,25 +1527,6 @@ export default function StudentsPage() {
         })
     }
 
-    // NEW: Audit Log
-    const fetchAuditLog = async (studentId) => {
-        setLoadingAudit(true)
-        try {
-            const { data } = await supabase
-                .from('student_audit_log')
-                .select('*')
-                .eq('student_id', studentId)
-                .order('created_at', { ascending: false })
-                .limit(50)
-            setAuditLogs(data || [])
-        } catch (err) {
-            console.error('fetchAuditLog catch (table mungkin belum ada):', err)
-            setAuditLogs([])
-        } finally {
-            setLoadingAudit(false)
-        }
-    }
-
     // NEW: Fitur 12 - Import Google Sheets
     const handleFetchGSheets = async () => {
         if (!gSheetsUrl.trim()) { addToast('Masukkan URL Google Sheets terlebih dahulu', 'warning'); return }
@@ -1586,7 +1544,7 @@ export default function StudentsPage() {
             const rows = await parseCSVFile(new Blob([text], { type: 'text/csv' }))
             if (!rows.length) throw new Error('Sheet kosong')
             await buildImportPreview(rows)
-            setImportTab('preview')
+            setImportStep(3)
             setIsGSheetsModalOpen(false)
             setIsImportModalOpen(true)
             addToast(`${rows.length} baris berhasil dibaca dari Google Sheets`, 'success')
@@ -1653,8 +1611,8 @@ export default function StudentsPage() {
             if (error) throw error
 
             addToast(toastMsg, 'success')
-            fetchData()
-            fetchStats()
+            fetchDataRef.current()
+            fetchStatsRef.current()
         } catch {
             addToast('Gagal menyimpan perubahan', 'error')
         }
@@ -1756,7 +1714,7 @@ export default function StudentsPage() {
             if (error) throw error
             addToast(`${inlineForm.name} berhasil ditambahkan`, 'success')
             setInlineForm({ name: '', gender: 'L', class_id: inlineForm.class_id, phone: '' })
-            fetchData()
+            fetchDataRef.current()
             fetchStats()
         } catch {
             addToast('Gagal menambahkan siswa', 'error')
@@ -1794,13 +1752,11 @@ export default function StudentsPage() {
             addToast('Tidak ada siswa terpilih yang memiliki nomor WA', 'warning')
             return
         }
-        setBroadcastResults({})
-        setBroadcastIndex(-1)
         setIsBulkWAModalOpen(true)
     }
 
     const buildWAMessage = (student, templateId) => {
-        let template = waTemplate; // Default bit string from line 268
+        let template = `Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu wali dari ananda {nama}. Kami sampaikan informasi terkini dari sistem *Laporanmu* — MBS Tanggul.\n\n*Data Akademik Ananda:*\n• Kelas : {kelas}\n• ID Reg : {kode}\n• Poin Perilaku : {poin} poin\n\n*Akses Portal Orang Tua:*\nPortal  : [URL]\nPIN     : {pin}\n\nGunakan ID Reg & PIN untuk memantau perkembangan putera/puteri Bapak/Ibu secara real-time.\n\nWassalamu'alaikum Wr. Wb.\n_MBS Tanggul · Sistem Laporanmu_`
 
         if (templateId === 'points') {
             template = `*Laporan Poin Perilaku Ananda {nama}*\n\nSaat ini Ananda memiliki total *{poin} poin* di sistem Laporanmu.\n\n_Terus semangatkan kedisiplinan dan prestasi ananda._\n\nWassalam.`
@@ -1906,7 +1862,7 @@ export default function StudentsPage() {
         setIsBulkPhotoModalOpen(false)
         setBulkPhotoMatches([])
         setUploadingBulkPhotos(false)
-        fetchStudents()
+        fetchDataRef.current()
     }
 
     const handlePrintThermal = async (student) => {
@@ -2107,7 +2063,7 @@ export default function StudentsPage() {
      * @param {Array}  targets     - array siswa yang akan dicetak
      * @param {Object} captureRef  - React ref ke elemen #card-capture-target di modal
      */
-    const generateStudentPDF = async (targets, captureRef = null) => {
+    const generateStudentPDF = async (targets) => {
         setGeneratingPdf(true);
         addToast('Menyiapkan dokumen resmi...', 'info');
         try {
@@ -2149,8 +2105,6 @@ export default function StudentsPage() {
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(accentR, accentG, accentB);
                 // Rotasi 45° dari tengah halaman
-                const wmCX = pageWidth / 2;
-                const wmCY = 148; // tengah A4
                 for (let wy = 60; wy < 260; wy += 55) {
                     for (let wx = 30; wx < 200; wx += 80) {
                         doc.text('RESMI', wx, wy, { angle: 45 });
@@ -2162,7 +2116,6 @@ export default function StudentsPage() {
                 // 1. JUDUL & TEKS PENGANTAR
                 // ════════════════════════════════════════════
                 const kopCenterX = pageWidth / 2;
-                const garisBawahY = 0;
                 const judulY = 16;
 
                 doc.setTextColor(0, 0, 0);
@@ -2624,7 +2577,7 @@ export default function StudentsPage() {
             try {
                 const sPhoto = await getBase64Image(s.photo_url);
                 if (sPhoto) doc.addImage(sPhoto, 'JPEG', startX + 6, cardY + 11, 16, 20);
-            } catch (_) { }
+            } catch { /* ignore */ }
         } else {
             // Placeholder inisial
             doc.setTextColor(255, 255, 255);
@@ -2698,7 +2651,7 @@ export default function StudentsPage() {
                 doc.roundedRect(backX + cardW / 2 - 14, cardY + 7, 28, 28, 1.5, 1.5, 'FD');
                 doc.addImage(qrImg, 'PNG', backX + cardW / 2 - 13, cardY + 8, 26, 26);
             }
-        } catch (_) { }
+        } catch { /* ignore */ }
 
         doc.setTextColor(55, 48, 163);
         doc.setFontSize(7);
@@ -2995,19 +2948,6 @@ export default function StudentsPage() {
         }
     }
 
-    const handleBulkFix = (sysKey, value) => {
-        const newPrev = importPreview.map(r => {
-            const updated = { ...r, [sysKey]: value }
-            if (sysKey === 'class_id') {
-                updated._className = classesList.find(x => x.id === value)?.name || ''
-            }
-            return updated
-        })
-        setImportPreview(newPrev)
-        validateImportPreview(newPrev)
-        addToast(`Selesai memperbarui ${newPrev.length} baris`, 'success')
-    }
-
     const handleImportClick = () => {
         // Open the import modal on the Panduan tab first.
         // The actual file picker is triggered from inside the modal.
@@ -3018,13 +2958,6 @@ export default function StudentsPage() {
             // Already open (e.g. "Ganti File" button inside modal) — open picker directly
             importFileInputRef.current?.click()
         }
-    }
-
-    const handleFileChange = async (e) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-        await processImportFile(file)
-        e.target.value = ''
     }
 
     const hasImportBlockingErrors = importIssues.some(x => x.level === 'error')
@@ -3202,15 +3135,6 @@ export default function StudentsPage() {
             : timelineFilter === 'neg' ? behaviorHistory.filter(i => (i.points ?? 0) < 0)
                 : behaviorHistory
         , [behaviorHistory, timelineFilter])
-
-    const timelineGroups = useMemo(() =>
-        timelineFiltered.reduce((acc, item) => {
-            const key = new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-            if (!acc[key]) acc[key] = []
-            acc[key].push(item)
-            return acc
-        }, {})
-        , [timelineFiltered])
 
     const timelineStats = useMemo(() => {
         const pos = behaviorHistory.filter(i => (i.points ?? 0) > 0)
@@ -3487,7 +3411,7 @@ export default function StudentsPage() {
                     isPrivacyMode={isPrivacyMode}
                     maskInfo={maskInfo}
                     cardCaptureRef={cardCaptureRef}
-                    waTemplate={waTemplate}
+                    waTemplate={`Assalamu'alaikum Wr. Wb.\n\nYth. Bapak/Ibu wali dari ananda {nama}. Kami sampaikan informasi terkini dari sistem *Laporanmu* — MBS Tanggul.\n\n*Data Akademik Ananda:*\n• Kelas : {kelas}\n• ID Reg : {kode}\n• Poin Perilaku : {poin} poin\n\n*Akses Portal Orang Tua:*\nPortal  : [URL]\nPIN     : {pin}\n\nGunakan ID Reg & PIN untuk memantau perkembangan putera/puteri Bapak/Ibu secara real-time.\n\nWassalamu'alaikum Wr. Wb.\n_MBS Tanggul · Sistem Laporanmu_`}
                     handleResetPin={handleResetPin}
                     resettingPin={resettingPin}
                     generatingPdf={generatingPdf}
@@ -3590,4 +3514,4 @@ export default function StudentsPage() {
             </div>
         </DashboardLayout >
     )
-}
+}
