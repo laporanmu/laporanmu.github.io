@@ -7,34 +7,135 @@ import {
     faTriangleExclamation,
     faChevronDown,
     faCheckCircle,
-    faTrash
+    faTrash,
+    faUserGraduate,
+    faClipboardList
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { supabase } from '../../lib/supabase'
 import Modal from '../ui/Modal'
 
+// ============ Constants (extracted outside component) ============
+const INIT_FORM = {
+    name: '', gender: 'L', class_id: '', phone: '', photo_url: '',
+    nisn: '', guardian_name: '', guardian_relation: 'Ayah',
+    status: 'aktif', tags: []
+}
+
+const STATUS_OPTIONS = [
+    { key: 'aktif', label: 'Aktif', activeCls: 'bg-emerald-500 text-white', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)]' },
+    { key: 'lulus', label: 'Lulus', activeCls: 'bg-blue-500 text-white', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)]' },
+    { key: 'keluar', label: 'Keluar', activeCls: 'bg-[var(--color-text)] text-[var(--color-surface)]', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)]' },
+]
+
+const GUARDIAN_RELATIONS = ['Ayah', 'Ibu', 'Kakek', 'Nenek', 'Wali']
+const GENDER_OPTIONS = [
+    { value: 'L', label: 'Putra' },
+    { value: 'P', label: 'Putri' }
+]
+
+// ============ Reusable Sub-components ============
+const FieldLabel = memo(function FieldLabel({ children }) {
+    return (
+        <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">
+            {children}
+        </label>
+    )
+})
+
+const CompactInput = memo(function CompactInput({ className = '', ...props }) {
+    return (
+        <input
+            className={`w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:ring-4 focus:ring-[var(--color-primary)]/10 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold placeholder:opacity-30 ${className}`}
+            {...props}
+        />
+    )
+})
+
+const GenderToggle = memo(function GenderToggle({ value, onChange }) {
+    return (
+        <div className="flex p-0.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl">
+            {GENDER_OPTIONS.map(({ value: v, label }) => (
+                <button
+                    key={v}
+                    type="button"
+                    onClick={() => onChange(v)}
+                    className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${value === v
+                        ? 'bg-white dark:bg-[var(--color-surface)] shadow text-[var(--color-primary)]'
+                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                >
+                    {label}
+                </button>
+            ))}
+        </div>
+    )
+})
+
+const StatusButtons = memo(function StatusButtons({ value, onChange }) {
+    return (
+        <div className="flex flex-wrap gap-1">
+            {STATUS_OPTIONS.map((opt) => (
+                <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => onChange(opt.key)}
+                    className={`px-2 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all ${value === opt.key ? opt.activeCls : opt.idleCls}`}
+                >
+                    {opt.label}
+                </button>
+            ))}
+        </div>
+    )
+})
+
+const ExpandableSection = memo(function ExpandableSection({ title, icon, isOpen, onToggle, count, children }) {
+    return (
+        <div className="border border-[var(--color-border)] rounded-2xl overflow-hidden bg-[var(--color-surface-alt)]/30">
+            <button
+                type="button"
+                onClick={onToggle}
+                className={`w-full flex items-center justify-between px-4 py-2.5 transition-all duration-300 hover:bg-white/40 dark:hover:bg-black/10 ${isOpen ? 'bg-white/50 dark:bg-black/20' : ''}`}
+            >
+                <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                    <FontAwesomeIcon icon={icon} className={isOpen ? 'text-[var(--color-primary)]' : ''} />
+                    {title}
+                </span>
+                <div className="flex items-center gap-3">
+                    {count > 0 && (
+                        <span className="text-[8px] font-black bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-1.5 py-0.5 rounded-full">
+                            {count}
+                        </span>
+                    )}
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all bg-black/5 ${isOpen ? 'rotate-180 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : ''}`}>
+                        <FontAwesomeIcon icon={faChevronDown} className="text-[9px]" />
+                    </div>
+                </div>
+            </button>
+            <div className={`grid transition-all duration-300 ease-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="overflow-hidden">
+                    <div className="p-4 pt-2 border-t border-[var(--color-border)]">
+                        {children}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+})
+
+// ============ Main Component ============
 const StudentFormModal = memo(function StudentFormModal({
     isOpen, onClose, selectedStudent, classesList,
     onSubmit, submitting, onPhotoUpload, uploadingPhoto,
 }) {
-    const INIT = { name: '', gender: 'L', class_id: '', phone: '', photo_url: '', nisn: '', guardian_name: '', guardian_relation: 'Ayah', status: 'aktif', tags: [] }
-
-    const STATUS_OPTIONS = [
-        { key: 'aktif', label: 'Aktif', activeCls: 'bg-emerald-500 text-white border-transparent shadow shadow-emerald-500/20', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]' },
-        { key: 'lulus', label: 'Lulus', activeCls: 'bg-blue-500 text-white border-transparent shadow shadow-blue-500/20', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]' },
-        { key: 'keluar', label: 'Keluar', activeCls: 'bg-[var(--color-text)] text-[var(--color-surface)] border-transparent shadow', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]' },
-    ]
-
-    const [form, setForm] = useState(INIT)
-    const [metadataFields, setMetadataFields] = useState([]) // [{key, value}]
+    const [form, setForm] = useState(INIT_FORM)
+    const [metadataFields, setMetadataFields] = useState([])
     const [nisnTouched, setNisnTouched] = useState(false)
     const [duplicateWarning, setDuplicateWarning] = useState(null)
     const [showOptional, setShowOptional] = useState(false)
-    const [showMetadata, setShowMetadata] = useState(false)
     const dupTimerRef = useRef(null)
     const photoRef = useRef(null)
 
-    // Reset / populate form setiap kali modal dibuka
+    // Reset form when modal opens
     useEffect(() => {
         if (!isOpen) return
         if (selectedStudent) {
@@ -50,17 +151,13 @@ const StudentFormModal = memo(function StudentFormModal({
                 status: selectedStudent.status || 'aktif',
                 tags: selectedStudent.tags || [],
             })
-            // Handle Metadata
             const meta = selectedStudent.metadata || {}
-            const metaArray = Object.entries(meta).map(([k, v]) => ({ key: k, value: v }))
-            setMetadataFields(metaArray)
-            setShowMetadata(metaArray.length > 0)
+            setMetadataFields(Object.entries(meta).map(([k, v]) => ({ key: k, value: v })))
             setShowOptional(!!(selectedStudent.nisn || selectedStudent.guardian_name || (selectedStudent.tags || []).length > 0))
         } else {
-            setForm(INIT)
+            setForm(INIT_FORM)
             setMetadataFields([])
             setShowOptional(false)
-            setShowMetadata(false)
         }
         setNisnTouched(false)
         setDuplicateWarning(null)
@@ -119,18 +216,16 @@ const StudentFormModal = memo(function StudentFormModal({
                 onSubmit={handleSubmit}
                 className="flex flex-col max-h-[75vh]"
             >
-                {/* Sub header */}
                 <div className="mb-3">
                     <p className="text-[10px] text-[var(--color-text-muted)] font-bold opacity-70">
                         {selectedStudent ? 'Perbarui data siswa dengan form yang tetap ringan.' : 'Form singkat untuk registrasi siswa baru.'}
                     </p>
                 </div>
 
-                {/* Scrollable content */}
-                <div className="flex-1 overflow-y-auto pr-1 space-y-5">
-                    {/* Top Section: Photo + Essential Info */}
+                <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+                    {/* Photo + Primary Fields */}
                     <div className="flex gap-6 items-start">
-                        {/* Interactive Photo Upload - Smaller */}
+                        {/* Photo Upload */}
                         <div className="shrink-0 flex flex-col items-center gap-2">
                             <div className="relative group">
                                 <div
@@ -165,12 +260,11 @@ const StudentFormModal = memo(function StudentFormModal({
                             </div>
                         </div>
 
-                        {/* Primary Fields Grid - Compact */}
-                        <div className="flex-1 space-y-4">
-                            {/* Nama Siswa */}
+                        {/* Primary Fields */}
+                        <div className="flex-1 space-y-3">
                             <div className="relative">
-                                <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Nama Lengkap Siswa</label>
-                                <input
+                                <FieldLabel>Nama Lengkap Siswa</FieldLabel>
+                                <CompactInput
                                     type="text"
                                     value={form.name}
                                     onChange={(e) => {
@@ -178,7 +272,6 @@ const StudentFormModal = memo(function StudentFormModal({
                                         handleDupCheck(e.target.value, form.class_id)
                                     }}
                                     placeholder="e.g. Muhammad Al Fatih"
-                                    className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:ring-4 focus:ring-[var(--color-primary)]/10 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold placeholder:opacity-30"
                                     autoFocus
                                 />
                                 {form.name && form.name.trim().length < 3 && (
@@ -188,27 +281,13 @@ const StudentFormModal = memo(function StudentFormModal({
                                 )}
                             </div>
 
-                            {/* Row 2: Gender & Class */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Gender</label>
-                                    <div className="flex p-0.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl">
-                                        {[['L', 'Putra'], ['P', 'Putri']].map(([val, label]) => (
-                                            <button
-                                                key={val}
-                                                type="button"
-                                                onClick={() => setField('gender', val)}
-                                                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${form.gender === val
-                                                    ? 'bg-white dark:bg-[var(--color-surface)] shadow text-[var(--color-primary)]'
-                                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                            >
-                                                {label}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <FieldLabel>Gender</FieldLabel>
+                                    <GenderToggle value={form.gender} onChange={(v) => setField('gender', v)} />
                                 </div>
                                 <div className="relative">
-                                    <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Kelas</label>
+                                    <FieldLabel>Kelas</FieldLabel>
                                     <select
                                         value={form.class_id}
                                         onChange={(e) => { setField('class_id', e.target.value); handleDupCheck(form.name, e.target.value) }}
@@ -223,10 +302,10 @@ const StudentFormModal = memo(function StudentFormModal({
                         </div>
                     </div>
 
-                    {/* Contact & Status Row - Compact */}
+                    {/* Contact & Status */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="relative">
-                            <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">WhatsApp Wali</label>
+                            <FieldLabel>WhatsApp Wali</FieldLabel>
                             <div className="relative">
                                 <input
                                     type="tel"
@@ -239,23 +318,12 @@ const StudentFormModal = memo(function StudentFormModal({
                             </div>
                         </div>
                         <div>
-                            <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Status</label>
-                            <div className="flex flex-wrap gap-1">
-                                {STATUS_OPTIONS.map((opt) => (
-                                    <button
-                                        key={opt.key}
-                                        type="button"
-                                        onClick={() => setField('status', opt.key)}
-                                        className={`px-2 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all ${form.status === opt.key ? opt.activeCls : opt.idleCls}`}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
-                            </div>
+                            <FieldLabel>Status</FieldLabel>
+                            <StatusButtons value={form.status} onChange={(v) => setField('status', v)} />
                         </div>
                     </div>
 
-                    {/* Duplicate Warning Prompt - Smaller */}
+                    {/* Duplicate Warning */}
                     {duplicateWarning && (
                         <div className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-400 animate-in slide-in-from-top-2 duration-300 flex gap-3">
                             <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
@@ -274,141 +342,100 @@ const StudentFormModal = memo(function StudentFormModal({
                         </div>
                     )}
 
-                    {/* Expandable Section: Additional Details - Compact */}
-                    <div className="border border-[var(--color-border)] rounded-2xl overflow-hidden bg-[var(--color-surface-alt)]/30">
-                        <button
-                            type="button"
-                            onClick={() => setShowOptional(v => !v)}
-                            className={`w-full flex items-center justify-between px-4 py-2.5 transition-all duration-300 hover:bg-white/40 dark:hover:bg-black/10 ${showOptional ? 'bg-white/50 dark:bg-black/20' : ''}`}
-                        >
-                            <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
-                                <FontAwesomeIcon icon={faPlus} className={showOptional ? 'text-[var(--color-primary)]' : ''} />
-                                Info Wali & Akademik
-                            </span>
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all bg-black/5 ${showOptional ? 'rotate-180 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : ''}`}>
-                                <FontAwesomeIcon icon={faChevronDown} className="text-[9px]" />
-                            </div>
-                        </button>
-
-                        <div className={`grid transition-all duration-300 ease-out ${showOptional ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-                            <div className="overflow-hidden">
-                                <div className="p-4 pt-2 border-t border-[var(--color-border)] space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="col-span-1">
-                                            <label className="block text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 ml-1 opacity-60">NISN</label>
-                                            <input
-                                                type="text"
-                                                value={form.nisn}
-                                                onChange={(e) => setField('nisn', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                                onBlur={() => setNisnTouched(true)}
-                                                placeholder="00xxxxxxxx"
-                                                className={`w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-surface focus:border-[var(--color-primary)] outline-none transition-all text-sm font-mono tracking-widest ${nisnTouched && form.nisn && form.nisn.length !== 10 ? 'border-amber-500 ring-2 ring-amber-500/10' : ''}`}
-                                            />
-                                        </div>
-                                        <div className="col-span-1">
-                                            <label className="block text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 ml-1 opacity-60">Hubungan</label>
-                                            <select
-                                                value={form.guardian_relation}
-                                                onChange={(e) => setField('guardian_relation', e.target.value)}
-                                                className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-surface focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold appearance-none cursor-pointer"
-                                            >
-                                                {['Ayah', 'Ibu', 'Kakek', 'Nenek', 'Wali'].map(r => <option key={r} value={r}>{r}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 ml-1 opacity-60">Nama Wali</label>
-                                        <input
-                                            type="text"
-                                            value={form.guardian_name}
-                                            onChange={(e) => setField('guardian_name', e.target.value)}
-                                            placeholder="Nama lengkap wali"
-                                            className="w-full px-4 py-2 rounded-xl border border-[var(--color-border)] bg-surface focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold"
-                                        />
-                                    </div>
+                    {/* Single Expandable Section: All Additional Info */}
+                    <ExpandableSection
+                        title="Info Wali, Akademik & Karakter"
+                        icon={faPlus}
+                        isOpen={showOptional}
+                        onToggle={() => setShowOptional(v => !v)}
+                        count={metadataFields.length}
+                    >
+                        <div className="space-y-3">
+                            {/* NISN & Guardian Relation Row */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <FieldLabel>NISN</FieldLabel>
+                                    <input
+                                        type="text"
+                                        value={form.nisn}
+                                        onChange={(e) => setField('nisn', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                        onBlur={() => setNisnTouched(true)}
+                                        placeholder="00xxxxxxxx"
+                                        className={`w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-surface focus:border-[var(--color-primary)] outline-none transition-all text-sm font-mono tracking-widest ${nisnTouched && form.nisn && form.nisn.length !== 10 ? 'border-amber-500 ring-2 ring-amber-500/10' : ''}`}
+                                    />
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Advanced Section: Dynamic Metadata */}
-                    <div className="border border-[var(--color-border)] rounded-2xl overflow-hidden bg-[var(--color-surface-alt)]/30">
-                        <button
-                            type="button"
-                            onClick={() => setShowMetadata(v => !v)}
-                            className={`w-full flex items-center justify-between px-4 py-2.5 transition-all duration-300 hover:bg-white/40 dark:hover:bg-black/10 ${showMetadata ? 'bg-white/50 dark:bg-black/20' : ''}`}
-                        >
-                            <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
-                                <FontAwesomeIcon icon={faPlus} className={showMetadata ? 'text-[var(--color-primary)]' : ''} />
-                                Profil Karakter & Info Tambahan
-                            </span>
-                            <div className="flex items-center gap-3">
-                                {metadataFields.length > 0 && (
-                                    <span className="text-[8px] font-black bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] px-1.5 py-0.5 rounded-full">
-                                        {metadataFields.length}
-                                    </span>
-                                )}
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all bg-black/5 ${showMetadata ? 'rotate-180 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : ''}`}>
-                                    <FontAwesomeIcon icon={faChevronDown} className="text-[9px]" />
-                                </div>
-                            </div>
-                        </button>
-
-                        <div className={`grid transition-all duration-300 ease-out ${showMetadata ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-                            <div className="overflow-hidden">
-                                <div className="p-4 pt-3 border-t border-[var(--color-border)] space-y-3">
-                                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 leading-relaxed font-medium">
-                                        Tambahkan info opsional seperti alergi, hobi, catatan kesehatan, atau kebutuhan khusus.
-                                    </p>
-
-                                    <div className="space-y-2.5">
-                                        {metadataFields.map((m, idx) => (
-                                            <div key={idx} className="flex gap-2 items-start animate-in slide-in-from-left-2 duration-300">
-                                                <div className="w-1/3 group relative">
-                                                    <input
-                                                        placeholder="Judul (mis: Hobi)"
-                                                        className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold outline-none focus:border-[var(--color-primary)] transition-all placeholder:opacity-40"
-                                                        value={m.key}
-                                                        onChange={(e) => handleUpdateMeta(idx, e.target.value, m.value)}
-                                                    />
-                                                </div>
-                                                <div className="flex-1 group relative">
-                                                    <input
-                                                        placeholder="Isi informasi..."
-                                                        className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold outline-none focus:border-[var(--color-primary)] transition-all placeholder:opacity-40"
-                                                        value={m.value}
-                                                        onChange={(e) => handleUpdateMeta(idx, m.key, e.target.value)}
-                                                    />
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveMeta(idx)}
-                                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-90 shrink-0"
-                                                >
-                                                    <FontAwesomeIcon icon={faTrash} className="text-xs" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={handleAddMeta}
-                                        className="w-full py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 mt-2 text-[var(--color-text)]"
+                                <div>
+                                    <FieldLabel>Hubungan</FieldLabel>
+                                    <select
+                                        value={form.guardian_relation}
+                                        onChange={(e) => setField('guardian_relation', e.target.value)}
+                                        className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-surface focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold appearance-none cursor-pointer"
                                     >
-                                        <FontAwesomeIcon icon={faPlus} />
-                                        Tambah Info
-                                    </button>
+                                        {GUARDIAN_RELATIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                                    </select>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Danger notes spot if needed */}
+                            {/* Guardian Name */}
+                            <div>
+                                <FieldLabel>Nama Wali</FieldLabel>
+                                <input
+                                    type="text"
+                                    value={form.guardian_name}
+                                    onChange={(e) => setField('guardian_name', e.target.value)}
+                                    placeholder="Nama lengkap wali"
+                                    className="w-full px-4 py-2 rounded-xl border border-[var(--color-border)] bg-surface focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold"
+                                />
+                            </div>
+
+                            {/* Metadata Section Header */}
+                            <div className="pt-2 border-t border-[var(--color-border)]/50">
+                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 leading-relaxed font-medium mb-2">
+                                    <FontAwesomeIcon icon={faClipboardList} className="mr-1" />
+                                    Info tambahan: alergi, hobi, catatan kesehatan, dll.
+                                </p>
+
+                                <div className="space-y-2">
+                                    {metadataFields.map((m, idx) => (
+                                        <div key={idx} className="flex gap-2 items-start animate-in slide-in-from-left-2 duration-300">
+                                            <input
+                                                placeholder="Judul"
+                                                className="w-1/3 px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold outline-none focus:border-[var(--color-primary)] transition-all placeholder:opacity-40"
+                                                value={m.key}
+                                                onChange={(e) => handleUpdateMeta(idx, e.target.value, m.value)}
+                                            />
+                                            <input
+                                                placeholder="Isi..."
+                                                className="flex-1 px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold outline-none focus:border-[var(--color-primary)] transition-all placeholder:opacity-40"
+                                                value={m.value}
+                                                onChange={(e) => handleUpdateMeta(idx, m.key, e.target.value)}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveMeta(idx)}
+                                                className="w-8 h-8 rounded-xl flex items-center justify-center text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-90 shrink-0"
+                                            >
+                                                <FontAwesomeIcon icon={faTrash} className="text-xs" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleAddMeta}
+                                    className="w-full py-2 mt-2 rounded-xl border border-dashed border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 text-[var(--color-text-muted)]"
+                                >
+                                    <FontAwesomeIcon icon={faPlus} />
+                                    Tambah Info
+                                </button>
+                            </div>
+                        </div>
+                    </ExpandableSection>
                 </div>
 
                 {/* Footer */}
-                <div className="pt-4 mt-4 border-t border-[var(--color-border)] flex items-center justify-between gap-3">
+                <div className="pt-4 mt-3 border-t border-[var(--color-border)] flex items-center justify-between gap-3">
                     <button
                         type="button"
                         onClick={onClose}

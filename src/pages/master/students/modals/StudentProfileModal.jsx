@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faIdCard, faMars, faVenus, faBolt, faTrophy, faArrowTrendUp, faHistory, faTableList, faClockRotateLeft, faTriangleExclamation, faCircleExclamation, faTags, faEdit
+    faIdCard, faMars, faVenus, faChevronDown, faBolt, faTrophy, faArrowTrendUp, faHistory, faTableList, faClockRotateLeft, faTriangleExclamation, faCircleExclamation, faTags, faEdit
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../../../../components/ui/Modal'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
