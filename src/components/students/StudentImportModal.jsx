@@ -13,7 +13,7 @@ import {
     faTags,
     faUpload,
 } from '@fortawesome/free-solid-svg-icons'
-import Modal from '../../../components/ui/Modal'
+import Modal from '../ui/Modal'
 
 export default function StudentImportModal(props) {
     const {
