@@ -1,0 +1,741 @@
+import { useState, useMemo, useEffect } from 'react'
+import { supabase } from '../../lib/supabase'
+import { RiskThreshold, calculateCompleteness } from '../../utils/students/studentsConstants'
+
+export const SYSTEM_COLS = [
+    { key: 'name', label: 'Nama', synonyms: ['nama', 'name', 'nama lengkap', 'full name', 'student name', 'siswa'] },
+    { key: 'class_name', label: 'Kelas', synonyms: ['kelas', 'class', 'class_name', 'rombel'] },
+    { key: 'gender', label: 'Gender', synonyms: ['gender', 'jk', 'jenis kelamin', 'kelamin', 'sex'] },
+    { key: 'nisn', label: 'NISN', synonyms: ['nisn', 'nomor induk siswa nasional'] },
+    { key: 'phone', label: 'No. HP / WA', synonyms: ['phone', 'no_hp', 'hp', 'whatsapp', 'wa', 'telp', 'telepon', 'phone number', 'wali_phone'] },
+    { key: 'guardian_name', label: 'Nama Wali', synonyms: ['guardian_name', 'nama_wali', 'wali', 'parent name', 'nama orang tua'] },
+]
+
+export function useStudentsImportExport({
+    students,
+    classesList,
+    fetchData,
+    fetchStats,
+    addToast,
+    closeModal,
+    importFileInputRef,
+    generateCode,
+    
+    // Filter & sort dependencies for export
+    filterClasses,
+    filterClass,
+    filterGender,
+    filterStatus,
+    filterTag,
+    filterMissing,
+    debouncedSearch,
+    filterPointMode,
+    filterPointMin,
+    filterPointMax,
+    sortBy,
+    
+    // Additional features state
+    selectedStudentIds,
+    selectedStudents,
+    gSheetsUrl,
+    setFetchingGSheets,
+    fetchingGSheets
+}) {
+    // ---- STATE ----
+    // =========================================
+    // Advanced Import and Export System
+    // =========================================
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+    // Export Wizard state
+    const [exportScope, setExportScope] = useState('filtered')   // 'filtered' | 'selected' | 'all'
+    const [exportColumns, setExportColumns] = useState({
+        id: false,
+        kode: true,
+        nisn: false,
+        nama: true,
+        gender: true,
+        kelas: true,
+        poin: true,
+        phone: true,
+        status: false,
+        tags: true,
+        kelengkapan: false,
+    })
+
+    const [importTab, setImportTab] = useState('guideline')
+    const [importFileName, setImportFileName] = useState('')
+    const [importPreview, setImportPreview] = useState([])
+    const [importIssues, setImportIssues] = useState([])
+    const [importing, setImporting] = useState(false)
+    const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
+    const [importStep, setImportStep] = useState(1) // 1: Upload, 2: Mapping, 3: Review
+    const [importRawData, setImportRawData] = useState([]) // original rows from file
+    const [importFileHeaders, setImportFileHeaders] = useState([]) // headers from file
+    const [importColumnMapping, setImportColumnMapping] = useState({}) // { sys_key: user_header }
+    const [importDuplicates, setImportDuplicates] = useState([]) // row indices flagged as duplicate
+    const [importSkipDupes, setImportSkipDupes] = useState(true) // skip duplicates on commit
+    const [importDragOver, setImportDragOver] = useState(false) // drag-drop highlight
+    const [importValidationOpen, setImportValidationOpen] = useState(false) // collapsible validation notes
+    const [importLoading, setImportLoading] = useState(false) // loading state during file parsing
+    const [isRevalidating, setIsRevalidating] = useState(false) // spinning icon state for Re-validasi button
+    const [importEditCell, setImportEditCell] = useState(null) // { idx, key }
+    const [importCachedDBStudents, setImportCachedDBStudents] = useState({ names: new Set(), nisns: new Set() })
+    const [exporting, setExporting] = useState(false)
+
+    // ---- COMPUTED & EFFECTS ----
+    const importReadyRows = useMemo(() => {
+        if (!importPreview.length) return []
+        const errorSet = new Set(importIssues.filter(x => x.level === 'error').map(x => x.row - 2))
+        const dupeSet = new Set(importDuplicates)
+        return importPreview.filter((_, i) => {
+            if (errorSet.has(i)) return false
+            if (importSkipDupes && dupeSet.has(i)) return false
+            return true
+        })
+    }, [importPreview, importIssues, importDuplicates, importSkipDupes])
+
+    // Effect to re-validate on manual preview edits (Inline Editing)
+    useEffect(() => {
+        if (isImportModalOpen && importStep === 3 && importPreview.length > 0) {
+            // Note: we only trigger if validPreview changes, but we must avoid infinite loops
+            // The validateImportPreview itself sets state, so we must be CAREFUL.
+            // A better way is to only call this on Cell Blur.
+        }
+    }, [importSkipDupes])
+
+    // Rentang Poin Filter
+
+    // ---- EXPORT LOGIC ----
+    // NEW: Fitur 9 - Export hasil filter aktif
+    const fetchFilteredForExport = async () => {
+        let q = supabase.from('students').select(`*, classes (name)`).is('deleted_at', null)
+
+        // Sync with primary filters
+        if (filterClasses.length > 0) q = q.in('class_id', filterClasses)
+        else if (filterClass) q = q.eq('class_id', filterClass)
+        if (filterGender) q = q.eq('gender', filterGender)
+        if (filterStatus) q = q.eq('status', filterStatus)
+        if (filterTag) q = q.contains('tags', [filterTag])
+
+        // filterMissing logic
+        if (filterMissing === 'photo') {
+            q = q.or('photo_url.is.null,photo_url.eq.""')
+        } else if (filterMissing === 'wa') {
+            q = q.or('phone.is.null,phone.eq.""')
+        }
+
+        if (debouncedSearch) {
+            const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
+            q = q.or(`name.ilike.%${s}%,registration_code.ilike.%${s}%,nisn.ilike.%${s}%`)
+        }
+
+        // Points filters
+        if (filterPointMode === 'risk') q = q.lt('total_points', RiskThreshold)
+        else if (filterPointMode === 'positive') q = q.gt('total_points', 0)
+        else if (filterPointMode === 'custom') {
+            if (filterPointMin !== '') q = q.gte('total_points', Number(filterPointMin))
+            if (filterPointMax !== '') q = q.lte('total_points', Number(filterPointMax))
+        }
+
+        // Sorting (Important for 'New Student' or 'Top Performer' presets)
+        if (sortBy === 'total_points_desc') q = q.order('total_points', { ascending: false })
+        else if (sortBy === 'created_at') q = q.order('created_at', { ascending: false })
+        else q = q.order('name', { ascending: true })
+
+        const { data, error } = await q
+        if (error) throw error
+
+        return (data || []).map(s => ({
+            ID: s.id,
+            'Kode Registrasi': s.registration_code || '',
+            NISN: s.nisn || '',
+            Nama: s.name || '',
+            Gender: s.gender === 'L' ? 'Putra' : 'Putri',
+            Kelas: s.classes?.name || '',
+            Poin: s.total_points ?? 0,
+            Phone: s.phone || '',
+            Status: s.status || 'aktif',
+            Tags: (s.tags || []).join(', '),
+            'Data Lengkap': `${calculateCompleteness(s)}%`
+        }))
+    }
+
+    // â”€â”€ Export Wizard: ambil data sesuai scope & kolom yang dipilih â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const ALL_EXPORT_COLUMNS = [
+        { key: 'id', label: 'ID', fn: s => s.id },
+        { key: 'kode', label: 'Kode Registrasi', fn: s => s.registration_code || '' },
+        { key: 'nisn', label: 'NISN', fn: s => s.nisn || '' },
+        { key: 'nama', label: 'Nama', fn: s => s.name || '' },
+        { key: 'gender', label: 'Gender', fn: s => s.gender === 'L' ? 'Putra' : 'Putri' },
+        { key: 'kelas', label: 'Kelas', fn: s => s.classes?.name || '' },
+        { key: 'poin', label: 'Poin', fn: s => s.total_points ?? 0 },
+        { key: 'phone', label: 'Phone/WA', fn: s => s.phone || '' },
+        { key: 'status', label: 'Status', fn: s => s.status || 'aktif' },
+        { key: 'tags', label: 'Label', fn: s => (s.tags || []).join(', ') },
+        { key: 'kelengkapan', label: 'Kelengkapan Data', fn: s => `${calculateCompleteness(s)}%` },
+    ]
+
+    const getExportData = async () => {
+        let sourceData = []
+
+        if (exportScope === 'selected' && selectedStudentIds.length > 0) {
+            // Ambil dari data yang sudah ada di state (sudah include className)
+            sourceData = selectedStudents
+            // Mapping manual karena struktur berbeda dengan supabase response
+            return sourceData.map(s => {
+                const row = {}
+                ALL_EXPORT_COLUMNS.forEach(col => {
+                    if (exportColumns[col.key]) {
+                        // Untuk kelas, gunakan className dari state
+                        if (col.key === 'kelas') row[col.label] = s.className || ''
+                        else row[col.label] = col.fn(s)
+                    }
+                })
+                return row
+            })
+        }
+
+        // Untuk 'filtered' dan 'all', fetch dari Supabase
+        let q = supabase.from('students').select('*, classes (name)').is('deleted_at', null)
+
+        if (exportScope === 'filtered') {
+            if (filterClasses.length > 0) q = q.in('class_id', filterClasses)
+            else if (filterClass) q = q.eq('class_id', filterClass)
+            if (filterGender) q = q.eq('gender', filterGender)
+            if (filterStatus) q = q.eq('status', filterStatus)
+            if (filterTag) q = q.contains('tags', [filterTag])
+            if (filterMissing === 'photo') q = q.or('photo_url.is.null,photo_url.eq.""')
+            else if (filterMissing === 'wa') q = q.or('phone.is.null,phone.eq.""')
+            if (debouncedSearch) {
+                const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
+                q = q.or(`name.ilike.%${s}%,registration_code.ilike.%${s}%,nisn.ilike.%${s}%`)
+            }
+            if (filterPointMode === 'risk') q = q.lt('total_points', RiskThreshold)
+            else if (filterPointMode === 'positive') q = q.gt('total_points', 0)
+            else if (filterPointMode === 'custom') {
+                if (filterPointMin !== '') q = q.gte('total_points', Number(filterPointMin))
+                if (filterPointMax !== '') q = q.lte('total_points', Number(filterPointMax))
+            }
+        }
+        // exportScope === 'all': no extra filters
+
+        if (sortBy === 'total_points_desc') q = q.order('total_points', { ascending: false })
+        else if (sortBy === 'created_at') q = q.order('created_at', { ascending: false })
+        else q = q.order('name', { ascending: true })
+
+        const { data, error } = await q
+        if (error) throw error
+
+        return (data || []).map(s => {
+            const row = {}
+            ALL_EXPORT_COLUMNS.forEach(col => {
+                if (exportColumns[col.key]) row[col.label] = col.fn(s)
+            })
+            return row
+        })
+    }
+
+    // ---- GOOGLE SHEETS ----
+    // NEW: Fitur 12 - Import Google Sheets
+    const handleFetchGSheets = async () => {
+        if (!gSheetsUrl.trim()) { addToast('Masukkan URL Google Sheets terlebih dahulu', 'warning'); return }
+        setFetchingGSheets(true)
+        try {
+            // Extract spreadsheet ID
+            const match = gSheetsUrl.match(/\/d\/([a-zA-Z0-9-_]+)/)
+            if (!match) throw new Error('URL tidak valid')
+            const sheetId = match[1]
+            // Fetch as CSV (requires public sheet)
+            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`
+            const res = await fetch(csvUrl)
+            if (!res.ok) throw new Error('Gagal fetch sheet â€” pastikan sheet bersifat publik')
+            const text = await res.text()
+            const rows = await parseCSVFile(new Blob([text], { type: 'text/csv' }))
+            if (!rows.length) throw new Error('Sheet kosong')
+            await buildImportPreview(rows)
+            setImportTab('preview')
+            closeModal()
+            setIsImportModalOpen(true)
+            addToast(`${rows.length} baris berhasil dibaca dari Google Sheets`, 'success')
+        } catch (err) {
+            addToast(err.message || 'Gagal mengambil data dari Google Sheets', 'error')
+        } finally {
+            setFetchingGSheets(false)
+        }
+    }
+
+    const handleDownloadTemplate = async () => {
+        const templateData = [
+            { name: 'Contoh: Ahmad Rizki', gender: 'L', phone: '081234567890', class_name: 'XII IPA 1', nisn: '1234567890', guardian_name: 'Budi Rizki' },
+            { name: 'Contoh: Siti Aminah', gender: 'P', phone: '081234567891', class_name: 'XI IPS 2', nisn: '0987654321', guardian_name: 'Aminah' },
+        ]
+        const XLSX = await import('xlsx')
+        const ws = XLSX.utils.json_to_sheet(templateData)
+        ws['!cols'] = [{ wch: 25 }, { wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 15 }, { wch: 20 }]
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Template')
+        const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        const link = document.createElement('a')
+        const blobUrl = URL.createObjectURL(blob)
+        link.href = blobUrl
+        link.download = 'TemplateImportSiswa.xlsx'
+        link.click()
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+        addToast('Template berhasil didownload', 'success')
+    }
+
+    // ---- HELPERS & IMPORT PROCESS ----
+    const sanitizeText = (s) => String(s ?? '').replace(/[<>]/g, '').trim()
+
+    const normalizePhone = (raw) => {
+        const v = String(raw ?? '').trim()
+        if (!v) return ''
+        const cleaned = v.replace(/[\s-]/g, '')
+        const keepPlus = cleaned.startsWith('+') ? '+' : ''
+        const digits = cleaned.replace(/[^\d]/g, '')
+        return keepPlus ? `+${digits}` : digits
+    }
+
+    const isValidPhone = (phone) => {
+        if (!phone) return true
+        return /^(\+?62|08)\d{8,11}$/.test(phone)
+    }
+
+
+    const pick = (obj, keys) => {
+        // Now 'keys' can be a specific header from user mapping
+        for (const k of keys) {
+            const v = obj?.[k]
+            if (v !== undefined && v !== null && String(v).trim() !== '') return v
+        }
+        return ''
+    }
+
+    const parseCSVFile = async (file) => {
+        const Papa = (await import('papaparse')).default
+        return new Promise((resolve, reject) => {
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => resolve(results.data || []),
+                error: (err) => reject(err)
+            })
+        })
+    }
+
+    const parseExcelFile = async (file) => {
+        const XLSX = await import('xlsx')
+        const buf = await file.arrayBuffer()
+        const wb = XLSX.read(buf, { type: 'array' })
+        const firstSheet = wb.SheetNames[0]
+        const ws = wb.Sheets[firstSheet]
+        const json = XLSX.utils.sheet_to_json(ws, { defval: '' })
+        return json
+    }
+
+    const buildImportPreview = async (rows, mapping) => {
+        // 1. Initial Mapping & Pre-processing
+        const preview = rows.map((r) => {
+            const getVal = (row, sysKey) => {
+                if (mapping && mapping[sysKey]) return sanitizeText(row[mapping[sysKey]])
+                const colDef = SYSTEM_COLS.find(c => c.key === sysKey)
+                return sanitizeText(pick(row, colDef ? colDef.synonyms : [sysKey]))
+            }
+
+            const name = getVal(r, 'name')
+            const className = getVal(r, 'class_name')
+            const genderRaw = getVal(r, 'gender')
+            const nisn = getVal(r, 'nisn')
+            const phone = normalizePhone(getVal(r, 'phone'))
+            const guardianName = getVal(r, 'guardian_name')
+
+            let gender = genderRaw
+            if (genderRaw) {
+                const l = genderRaw.toLowerCase()
+                if (l.startsWith('l') || l === 'pria' || l === 'cowok' || l === 'laki') gender = 'L'
+                else if (l.startsWith('p') || l === 'wanita' || l === 'cewek' || l === 'perempuan') gender = 'P'
+                else gender = 'L'
+            } else {
+                gender = 'L'
+            }
+
+            const classObj = classesList.find(c => c.name.toLowerCase() === (className || '').toLowerCase())
+
+            return {
+                name,
+                gender,
+                phone,
+                nisn,
+                class_id: classObj?.id || '',
+                guardian_name: guardianName || null,
+                photo_url: null,
+                _className: className || '',
+                _isDupe: false,
+                _hasError: false,
+                _hasWarn: false,
+            }
+        })
+
+        // 2. Initial Fetch of DB Students (Cache)
+        let existingNames = new Set()
+        let existingNisn = new Set()
+        try {
+            const { data: allStudents } = await supabase
+                .from('students')
+                .select('name, nisn')
+                .is('deleted_at', null)
+            if (allStudents) {
+                existingNames = new Set(allStudents.map(s => (s.name || '').toLowerCase().trim()))
+                existingNisn = new Set(allStudents.filter(s => s.nisn).map(s => String(s.nisn).trim()))
+            }
+        } catch (err) { console.error(err) }
+
+        setImportCachedDBStudents({ names: existingNames, nisns: existingNisn })
+        setImportPreview(preview)
+        validateImportPreview(preview, existingNames, existingNisn)
+    }
+
+    const validateImportPreview = (preview, dbNames = null, dbNisns = null) => {
+        const issues = []
+        const dupeIndices = []
+
+        const names = dbNames || importCachedDBStudents.names
+        const nisns = dbNisns || importCachedDBStudents.nisns
+
+        const seenNamesInFile = new Map()
+        const seenNisnInFile = new Map()
+
+        const validated = preview.map((r, idx) => {
+            const rowIssues = []
+
+            // Required checks
+            if (!r.name) rowIssues.push({ level: 'error', message: 'Nama tidak boleh kosong' })
+            if (!r.class_id) rowIssues.push({ level: 'error', message: 'Kelas tidak valid atau tidak ditemukan' })
+            if (r.phone && !isValidPhone(r.phone)) rowIssues.push({ level: 'warn', message: 'Format No. HP mungkin salah (cek lagi jika ragu)' })
+
+            // Dupe check
+            let isDupe = false
+            const lowerName = (r.name || '').toLowerCase().trim()
+            const cleanNisn = String(r.nisn || '').trim()
+
+            if (lowerName && names.has(lowerName)) isDupe = true
+            if (cleanNisn && nisns.has(cleanNisn)) isDupe = true
+
+            // Within file dupe
+            if (lowerName) {
+                if (seenNamesInFile.has(lowerName)) {
+                    isDupe = true
+                    rowIssues.push({ level: 'dupe', message: `Nama sama dengan baris ${seenNamesInFile.get(lowerName) + 1}` })
+                } else seenNamesInFile.set(lowerName, idx)
+            }
+            if (cleanNisn) {
+                if (seenNisnInFile.has(cleanNisn)) {
+                    isDupe = true
+                    rowIssues.push({ level: 'dupe', message: `NISN sama dengan baris ${seenNisnInFile.get(cleanNisn) + 1}` })
+                } else seenNisnInFile.set(cleanNisn, idx)
+            }
+
+            if (isDupe) dupeIndices.push(idx)
+            if (rowIssues.length) {
+                issues.push({ row: idx + 2, level: rowIssues.some(x => x.level === 'error') ? 'error' : rowIssues.some(x => x.level === 'dupe') ? 'dupe' : 'warn', messages: rowIssues.map(x => x.message) })
+            }
+
+            return {
+                ...r,
+                _isDupe: isDupe,
+                _hasError: rowIssues.some(x => x.level === 'error'),
+                _hasWarn: rowIssues.some(x => x.level === 'warn'),
+            }
+        })
+
+        setImportPreview(validated)
+        setImportIssues(issues)
+        setImportDuplicates(dupeIndices)
+        setImportValidationOpen(issues.length > 0)
+    }
+
+    const processImportFile = async (file) => {
+        const ext = file.name.toLowerCase()
+        if (!ext.endsWith('.csv') && !ext.endsWith('.xlsx')) {
+            addToast('Format tidak didukung. Gunakan .csv atau .xlsx', 'error')
+            return
+        }
+        setImportFileName(file.name)
+        setImportPreview([])
+        setImportIssues([])
+        setImportDuplicates([])
+        setImportLoading(true)
+        try {
+            const isXlsx = ext.endsWith('.xlsx') || (file.type || '').includes('sheet')
+            const rows = isXlsx ? await parseExcelFile(file) : await parseCSVFile(file)
+            if (!rows.length) { addToast('File kosong atau tidak terbaca', 'error'); return }
+
+            setImportRawData(rows)
+
+            // Extract headers for mapping
+            const headers = Object.keys(rows[0])
+            setImportFileHeaders(headers)
+
+            // Auto-mapping
+            const mapping = {}
+            SYSTEM_COLS.forEach(sys => {
+                // Find matching header by synonym
+                const found = headers.find(h => {
+                    const l = h.toLowerCase().trim()
+                    return sys.synonyms.includes(l) || l === sys.key
+                })
+                if (found) mapping[sys.key] = found
+            })
+            setImportColumnMapping(mapping)
+
+            // Go to step 2: Mapping
+            setImportStep(2)
+        } catch (err) {
+            console.error(err)
+            addToast('Gagal membaca file import', 'error')
+        } finally {
+            setImportLoading(false)
+        }
+    }
+
+    const handleBulkFix = (sysKey, value) => {
+        const newPrev = importPreview.map(r => {
+            const updated = { ...r, [sysKey]: value }
+            if (sysKey === 'class_id') {
+                updated._className = classesList.find(x => x.id === value)?.name || ''
+            }
+            return updated
+        })
+        setImportPreview(newPrev)
+        validateImportPreview(newPrev)
+        addToast(`Selesai memperbarui ${newPrev.length} baris`, 'success')
+    }
+
+    const handleImportClick = () => {
+        // Open the import modal on the Panduan tab first.
+        // The actual file picker is triggered from inside the modal.
+        if (!isImportModalOpen) {
+            setImportStep(1)
+            setIsImportModalOpen(true)
+        } else {
+            // Already open (e.g. "Ganti File" button inside modal) â€” open picker directly
+            importFileInputRef.current?.click()
+        }
+    }
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        await processImportFile(file)
+        e.target.value = ''
+    }
+
+    const hasImportBlockingErrors = importIssues.some(x => x.level === 'error')
+
+    const handleCommitImport = async () => {
+        if (!importPreview.length) {
+            addToast('Tidak ada data untuk diimport', 'error')
+            return
+        }
+        if (hasImportBlockingErrors) {
+            addToast('Masih ada ERROR. Perbaiki file dulu ya.', 'error')
+            return
+        }
+
+        if (importReadyRows.length === 0) {
+            addToast('Tidak ada data baru yang valid untuk diimport (semua duplikat atau error)', 'warning')
+            return
+        }
+
+        setImporting(true)
+        setImportProgress({ done: 0, total: importReadyRows.length })
+
+        // FIX: batch insert (chunk 50) jauh lebih cepat dari sequential
+        const CHUNK = 50
+        try {
+            for (let i = 0; i < importReadyRows.length; i += CHUNK) {
+                const chunk = importReadyRows.slice(i, i + CHUNK).map(r => {
+                    const { _className, _isDupe, _hasError, _hasWarn, ...cleanRow } = r
+                    return {
+                        ...cleanRow,
+                        registration_code: generateCode(),
+                        pin: String(Math.floor(1000 + Math.random() * 9000)),
+                        total_points: 0
+                    }
+                })
+                const { error } = await supabase.from('students').insert(chunk)
+                if (error) throw error
+                setImportProgress({ done: Math.min(i + CHUNK, importReadyRows.length), total: importReadyRows.length })
+            }
+
+            if (importReadyRows.length > 0) {
+                addToast(`Berhasil import ${importReadyRows.length} siswa`, 'success')
+            } else {
+                addToast('Tidak ada siswa yang diimport', 'info')
+            }
+            setIsImportModalOpen(false)
+            setImportPreview([])
+            setImportIssues([])
+            setImportDuplicates([])
+            setImportFileName('')
+            setImportStep(1)
+            await fetchData();
+            fetchStats()
+        } catch (err) {
+            console.error(err)
+            addToast('Gagal import (cek constraint DB / duplikat / koneksi)', 'error')
+        } finally {
+            setImporting(false)
+        }
+    }
+
+    const downloadBlob = (blob, filename) => {
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = filename
+        link.click()
+    }
+
+    const handleExportCSV = async () => {
+        setExporting(true)
+        try {
+            const rows = await getExportData()
+            if (!rows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+            const headers = Object.keys(rows[0])
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(r => headers.map(h => {
+                    const v = String(r[h] ?? '').replace(/"/g, '""')
+                    return `"${v}"`
+                }).join(','))
+            ].join('\n')
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            downloadBlob(blob, `data_siswa_${new Date().toISOString().slice(0, 10)}.csv`)
+            addToast(`Export CSV berhasil (${rows.length} siswa)`, 'success')
+        } catch (e) {
+            console.error(e)
+            addToast('Gagal export CSV', 'error')
+        } finally {
+            setExporting(false)
+            setIsExportModalOpen(false)
+        }
+    }
+
+    const handleExportExcel = async () => {
+        setExporting(true)
+        try {
+            const XLSX = await import('xlsx')
+            const data = await getExportData()
+            if (!data.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+            const ws = XLSX.utils.json_to_sheet(data)
+            // Auto column width
+            const cols = Object.keys(data[0]).map(k => ({ wch: Math.max(k.length, 14) }))
+            ws['!cols'] = cols
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'Data Siswa')
+            const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+            const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            downloadBlob(blob, `data_siswa_${new Date().toISOString().slice(0, 10)}.xlsx`)
+            addToast(`Export Excel berhasil (${data.length} siswa)`, 'success')
+        } catch (e) {
+            console.error(e)
+            addToast('Gagal export Excel', 'error')
+        } finally {
+            setExporting(false)
+            setIsExportModalOpen(false)
+        }
+    }
+
+    const handleExportPDF = async () => {
+        setExporting(true)
+        try {
+            const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+                import('jspdf'),
+                import('jspdf-autotable'),
+            ])
+            const autoTable = autoTableMod.default || autoTableMod
+            const allRows = await getExportData()
+            if (!allRows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+            const doc = new jsPDF({ orientation: 'landscape' })
+            doc.setFontSize(13)
+            doc.text('Laporan Data Siswa', 14, 12)
+            doc.setFontSize(8)
+            doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}  |  Total: ${allRows.length} siswa  |  Scope: ${exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'}`, 14, 18)
+            const filterInfo = []
+            if (filterGender) filterInfo.push(`Gender: ${filterGender}`)
+            if (filterStatus) filterInfo.push(`Status: ${filterStatus}`)
+            if (filterTag) filterInfo.push(`Label: ${filterTag}`)
+            if (debouncedSearch) filterInfo.push(`Cari: "${debouncedSearch}"`)
+            if (filterInfo.length > 0) doc.text(`Filter: ${filterInfo.join(' | ')}`, 14, 24)
+
+            const headers = Object.keys(allRows[0])
+            const rows = allRows.map(r => headers.map(h => String(r[h] ?? '')))
+            autoTable(doc, {
+                head: [headers],
+                body: rows,
+                startY: filterInfo.length ? 28 : 22,
+                styles: { fontSize: 7.5 },
+                headStyles: { fillColor: [79, 70, 229] },
+                alternateRowStyles: { fillColor: [245, 245, 255] },
+            })
+            doc.save(`laporan_siswa_${new Date().toISOString().slice(0, 10)}.pdf`)
+            addToast(`Export PDF berhasil (${allRows.length} siswa)`, 'success')
+        } catch (e) {
+            console.error(e)
+            addToast('Gagal export PDF', 'error')
+        } finally {
+            setExporting(false)
+            setIsExportModalOpen(false)
+        }
+    }
+
+    return {
+        // State
+        isImportModalOpen, setIsImportModalOpen,
+        isExportModalOpen, setIsExportModalOpen,
+        exportScope, setExportScope,
+        exportColumns, setExportColumns,
+        importFileName, setImportFileName,
+        importPreview, setImportPreview,
+        importIssues, setImportIssues,
+        importing, setImporting,
+        importProgress, setImportProgress,
+        importStep, setImportStep,
+        importRawData, setImportRawData,
+        importFileHeaders, setImportFileHeaders,
+        importColumnMapping, setImportColumnMapping,
+        importDuplicates, setImportDuplicates,
+        importSkipDupes, setImportSkipDupes,
+        importDragOver, setImportDragOver,
+        importValidationOpen, setImportValidationOpen,
+        importLoading, setImportLoading,
+        isRevalidating, setIsRevalidating,
+        importEditCell, setImportEditCell,
+        importCachedDBStudents, setImportCachedDBStudents,
+        exporting, setExporting,
+        importTab, setImportTab,
+        
+        // Computed
+        importReadyRows,
+        hasImportBlockingErrors,
+        ALL_EXPORT_COLUMNS,
+        SYSTEM_COLS,
+        
+        // Actions
+        processImportFile,
+        handleImportClick,
+        handleFileChange,
+        handleCommitImport,
+        handleBulkFix,
+        validateImportPreview,
+        handleDownloadTemplate,
+        handleExportCSV,
+        handleExportExcel,
+        handleExportPDF,
+        handleFetchGSheets,
+        fetchFilteredForExport,
+        getExportData
+    }
+}

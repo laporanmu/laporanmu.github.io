@@ -20,9 +20,9 @@ const StudentFormModal = memo(function StudentFormModal({
     const INIT = { name: '', gender: 'L', class_id: '', phone: '', photo_url: '', nisn: '', guardian_name: '', guardian_relation: 'Ayah', status: 'aktif', tags: [] }
 
     const STATUS_OPTIONS = [
-        { key: 'aktif', label: 'Aktif', activeCls: 'bg-emerald-500 text-white border-transparent shadow shadow-emerald-500/20', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]' },
-        { key: 'lulus', label: 'Lulus', activeCls: 'bg-blue-500 text-white border-transparent shadow shadow-blue-500/20', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]' },
-        { key: 'keluar', label: 'Keluar', activeCls: 'bg-[var(--color-text)] text-[var(--color-surface)] border-transparent shadow', idleCls: 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]' },
+        { key: 'aktif', label: 'Aktif', activeCls: 'bg-emerald-500 shadow-emerald-500/20' },
+        { key: 'lulus', label: 'Lulus', activeCls: 'bg-blue-500 shadow-blue-500/20' },
+        { key: 'keluar', label: 'Keluar', activeCls: 'bg-slate-700 shadow-slate-700/20' },
     ]
 
     const [form, setForm] = useState(INIT)
@@ -128,8 +128,8 @@ const StudentFormModal = memo(function StudentFormModal({
 
                 {/* Scrollable content */}
                 <div className="flex-1 overflow-y-auto pr-1 space-y-5">
-                    {/* Top Section: Photo + Essential Info */}
-                    <div className="flex gap-6 items-start">
+                    {/* Top Section: Photo + Essential Info - Responsive */}
+                    <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                         {/* Interactive Photo Upload - Smaller */}
                         <div className="shrink-0 flex flex-col items-center gap-2">
                             <div className="relative group">
@@ -165,11 +165,13 @@ const StudentFormModal = memo(function StudentFormModal({
                             </div>
                         </div>
 
-                        {/* Primary Fields Grid - Compact */}
-                        <div className="flex-1 space-y-4">
-                            {/* Nama Siswa */}
-                            <div className="relative">
-                                <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Nama Lengkap Siswa</label>
+                        {/* Primary Fields Grid - Responsive & Slick */}
+                        <div className="flex-1 w-full grid grid-cols-12 gap-x-4 gap-y-4 md:gap-y-3">
+                            {/* Row 1: Nama (12 mobile, 8 desktop) + WhatsApp (12 mobile, 4 desktop) */}
+                            <div className="col-span-12 md:col-span-8 relative">
+                                <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">
+                                    Nama Lengkap Siswa <span className="text-red-500 font-bold">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     value={form.name}
@@ -178,79 +180,80 @@ const StudentFormModal = memo(function StudentFormModal({
                                         handleDupCheck(e.target.value, form.class_id)
                                     }}
                                     placeholder="e.g. Muhammad Al Fatih"
-                                    className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:ring-4 focus:ring-[var(--color-primary)]/10 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold placeholder:opacity-30"
+                                    className="w-full px-4 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:ring-4 focus:ring-[var(--color-primary)]/10 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold placeholder:opacity-30"
                                     autoFocus
                                 />
                                 {form.name && form.name.trim().length < 3 && (
-                                    <div className="absolute -bottom-4 right-1 flex items-center gap-1 text-[7px] font-black text-red-500 uppercase tracking-widest animate-pulse">
+                                    <div className="absolute top-1 right-2 flex items-center gap-1 text-[7px] font-black text-red-500 uppercase tracking-widest animate-pulse">
                                         <FontAwesomeIcon icon={faTriangleExclamation} /> Pendek
                                     </div>
                                 )}
                             </div>
 
-                            {/* Row 2: Gender & Class */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Gender</label>
-                                    <div className="flex p-0.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl">
-                                        {[['L', 'Putra'], ['P', 'Putri']].map(([val, label]) => (
-                                            <button
-                                                key={val}
-                                                type="button"
-                                                onClick={() => setField('gender', val)}
-                                                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${form.gender === val
-                                                    ? 'bg-white dark:bg-[var(--color-surface)] shadow text-[var(--color-primary)]'
-                                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                            >
-                                                {label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                            <div className="col-span-12 md:col-span-4 relative">
+                                <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">WhatsApp Wali</label>
                                 <div className="relative">
-                                    <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Kelas</label>
-                                    <select
-                                        value={form.class_id}
-                                        onChange={(e) => { setField('class_id', e.target.value); handleDupCheck(form.name, e.target.value) }}
-                                        className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold appearance-none cursor-pointer pr-8"
-                                    >
-                                        <option value="">Pilih</option>
-                                        {classesList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                    <FontAwesomeIcon icon={faChevronDown} className="absolute right-3 top-[70%] -translate-y-1/2 text-[9px] opacity-30 pointer-events-none" />
+                                    <input
+                                        type="tel"
+                                        value={form.phone}
+                                        onChange={(e) => setField('phone', e.target.value.replace(/\D/g, ''))}
+                                        placeholder="08xxxxxxxxxx"
+                                        className="w-full pl-9 pr-3 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold font-mono tracking-widest placeholder:text-[10px] placeholder:font-normal placeholder:opacity-40"
+                                    />
+                                    <FontAwesomeIcon icon={faWhatsapp} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 opacity-60 text-base" />
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Contact & Status Row - Compact */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="relative">
-                            <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">WhatsApp Wali</label>
-                            <div className="relative">
-                                <input
-                                    type="tel"
-                                    value={form.phone}
-                                    onChange={(e) => setField('phone', e.target.value.replace(/\D/g, ''))}
-                                    placeholder="08xxxxxxxxxx"
-                                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold font-mono tracking-widest"
-                                />
-                                <FontAwesomeIcon icon={faWhatsapp} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 opacity-60 text-base" />
+                            {/* Row 2: Gender, Kelas, Status */}
+                            <div className="col-span-6 md:col-span-3">
+                                <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Gender</label>
+                                <div className="flex p-0.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-9">
+                                    {[['L', 'Putra', 'bg-blue-500 shadow-blue-500/20'], ['P', 'Putri', 'bg-rose-500 shadow-rose-500/20']].map(([val, label, activeCls]) => (
+                                        <button
+                                            key={val}
+                                            type="button"
+                                            onClick={() => setField('gender', val)}
+                                            className={`flex-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all duration-300 ${form.gender === val
+                                                ? `${activeCls} text-white shadow`
+                                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Status</label>
-                            <div className="flex flex-wrap gap-1">
-                                {STATUS_OPTIONS.map((opt) => (
-                                    <button
-                                        key={opt.key}
-                                        type="button"
-                                        onClick={() => setField('status', opt.key)}
-                                        className={`px-2 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all ${form.status === opt.key ? opt.activeCls : opt.idleCls}`}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
+
+                            <div className="col-span-6 md:col-span-3 relative">
+                                <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">
+                                    Kelas <span className="text-red-500 font-bold">*</span>
+                                </label>
+                                <select
+                                    value={form.class_id}
+                                    onChange={(e) => { setField('class_id', e.target.value); handleDupCheck(form.name, e.target.value) }}
+                                    className="w-full px-3 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold appearance-none cursor-pointer pr-8"
+                                >
+                                    <option value="">Pilih</option>
+                                    {classesList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                                <FontAwesomeIcon icon={faChevronDown} className="absolute right-3 top-[68%] -translate-y-1/2 text-[9px] opacity-30 pointer-events-none" />
+                            </div>
+
+                            <div className="col-span-12 md:col-span-6">
+                                <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">Status</label>
+                                <div className="flex p-0.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-9">
+                                    {STATUS_OPTIONS.map((opt) => (
+                                        <button
+                                            key={opt.key}
+                                            type="button"
+                                            onClick={() => setField('status', opt.key)}
+                                            className={`flex-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all duration-300 ${form.status === opt.key
+                                                ? `${opt.activeCls} text-white shadow`
+                                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>

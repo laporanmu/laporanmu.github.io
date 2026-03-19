@@ -3,6 +3,21 @@ import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
+// Singleton portal manager to prevent 'removeChild' errors in concurrent mode or Android/Chrome Translate
+const _portalContainers = {}
+function getPortalContainer(id) {
+    if (!_portalContainers[id]) {
+        let el = document.getElementById(id)
+        if (!el) {
+            el = document.createElement('div')
+            el.id = id
+            document.body.appendChild(el)
+        }
+        _portalContainers[id] = el
+    }
+    return _portalContainers[id]
+}
+
 export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     useEffect(() => {
         if (isOpen) {
@@ -10,9 +25,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         } else {
             document.body.style.overflow = ''
         }
-        return () => {
-            document.body.style.overflow = ''
-        }
+        return () => { document.body.style.overflow = '' }
     }, [isOpen])
 
     useEffect(() => {
@@ -34,6 +47,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         xxl: 'max-w-5xl',
         full: 'max-w-[95vw]',
     }
+
+    const container = getPortalContainer('portal-modals-system')
 
     const node = (
         <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-sm p-4 md:p-8 flex justify-center items-start" onClick={onClose} role="dialog" aria-modal="true">
@@ -58,5 +73,5 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         </div>
     )
 
-    return createPortal(node, document.body)
-}
+    return createPortal(node, container)
+}

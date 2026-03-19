@@ -340,18 +340,31 @@ tr:hover td {
 
 @layer base {
 
-  /* Smooth theme transitions */
+  /* Smooth theme transitions (Optimized) */
   :root {
     --theme-transition: 200ms;
     --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+    color-scheme: light;
   }
 
-  *,
-  *::before,
-  *::after {
-    transition-property: background-color, border-color, color, fill, stroke;
-    transition-duration: var(--theme-transition);
-    transition-timing-function: var(--transition-timing);
+  .dark {
+    color-scheme: dark;
+  }
+
+  /* Note: Removed universal selector transition (*, *::before, *::after) 
+     because animating thousands of DOM nodes during a theme swap 
+     causes severe UI lag, especially on mobile devices. 
+     We now use the native browser View Transitions API in ThemeContext.jsx, 
+     which handles theme change cross-fades via the GPU smoothly. */
+
+  /* Customize the native View Transition API behavior */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--theme-transition);
+  }
+ 
+  body {
+    /* No transitions needed here! Let View Transitions API do the magic */
   }
 
   /* Respect reduced motion preference */
