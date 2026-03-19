@@ -25,18 +25,15 @@ import * as XLSX from 'xlsx'
 // Components
 import { ClassRow, ClassMobileCard } from '../../components/classes/ClassRow'
 import ClassFormModal from '../../components/classes/ClassFormModal'
+import Pagination from '../../components/ui/Pagination'
+
 
 const LEVELS = ['7', '8', '9', '10', '11', '12']
 const PROGRAMS = ['Boarding', 'Reguler']
 const LS_COLS = 'classes_columns'
 const LS_PAGE_SIZE = 'classes_page_size'
 
-function getPageItems(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-    if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
-    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
-    return [1, '...', current - 1, current, current + 1, '...', total]
-}
+
 
 export default function ClassesPage() {
     const { addToast } = useToast()
@@ -240,9 +237,7 @@ export default function ClassesPage() {
     }, [classes, debouncedSearch, filterLevel, filterProgram, filterNoTeacher, filterCrowded, sortBy])
 
     const totalRows = filteredClasses.length
-    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
-    const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1
-    const toRow = Math.min(page * pageSize, totalRows)
+
     const pagedClasses = filteredClasses.slice((page - 1) * pageSize, page * pageSize)
 
     useEffect(() => { setPage(1) }, [debouncedSearch, filterLevel, filterProgram, sortBy, filterNoTeacher, filterCrowded])
@@ -796,43 +791,17 @@ export default function ClassesPage() {
                                     <ClassMobileCard key={cls.id} cls={cls} selectedIds={selectedIds} toggleSelect={toggleSelect} handleEdit={canEdit ? handleEdit : null} setItemToDelete={canEdit ? setItemToDelete : null} setIsDeleteModalOpen={canEdit ? setIsDeleteModalOpen : null} />
                                 ))}
                             </div>
-                            {/* Compact Pagination */}
-                            <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} kelas</p>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-2 mr-2 pr-3 border-r border-[var(--color-border)]">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">Baris:</span>
-                                        <select
-                                            value={pageSize}
-                                            onChange={e => {
-                                                const val = Number(e.target.value)
-                                                setPageSize(val)
-                                                setPage(1)
-                                            }}
-                                            className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer hover:text-[var(--color-primary)] transition-all"
-                                        >
-                                            {[10, 25, 50, 100].map(v => (
-                                                <option key={v} value={v} className="bg-[var(--color-surface)] text-[var(--color-text)]">{v}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="hidden sm:flex items-center px-3 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text)]">
-                                        Halaman <span className="text-[var(--color-primary)] mx-1">{page}</span>/<span className="opacity-70">{totalPages}</span>
-                                    </div>
-                                    <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
-                                    <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
-                                    <div className="flex items-center gap-1.5 mx-1">
-                                        {getPageItems(page, totalPages).map((it, idx) => it === '...' ? <span key={`s${idx}`} className="w-8 flex items-center justify-center text-[var(--color-text-muted)] font-bold opacity-30">···</span> : (
-                                            <button key={it} onClick={() => setPage(it)} className={`h-9 min-w-[36px] px-2.5 rounded-xl font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/25' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}>{it}</button>
-                                        ))}
-                                    </div>
-                                    <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[10px]" /></button>
-                                    <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" /></button>
-                                    <div className="ml-2 relative items-center hidden md:flex">
-                                        <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/[^\d]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal..." className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[11px] font-black focus:border-[var(--color-primary)] outline-none" />
-                                    </div>
-                                </div>
-                            </div>
+                            <Pagination
+                                totalRows={totalRows}
+                                page={page}
+                                pageSize={pageSize}
+                                setPage={setPage}
+                                setPageSize={setPageSize}
+                                label="kelas"
+                                jumpPage={jumpPage}
+                                setJumpPage={setJumpPage}
+                            />
+
                         </>
                     )}
                 </div>

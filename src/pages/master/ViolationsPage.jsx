@@ -12,6 +12,8 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import Breadcrumb from '../../components/ui/Breadcrumb'
+import Pagination from '../../components/ui/Pagination'
+
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
@@ -26,12 +28,7 @@ const CATEGORIES = ['Kedisiplinan', 'Akademik', 'Tata Tertib', 'Sikap', 'Prestas
 const LS_COLS = 'violations_columns'
 const LS_PAGE_SIZE = 'violations_page_size'
 
-function getPageItems(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-    if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
-    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
-    return [1, '...', current - 1, current, current + 1, '...', total]
-}
+
 
 export default function ViolationsPage() {
     const { addToast } = useToast()
@@ -194,9 +191,7 @@ export default function ViolationsPage() {
     }, [violations, debouncedSearch, filterCategory, filterType, filterStatus, filterExtreme, sortBy])
 
     const totalRows = filteredViolations.length
-    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
-    const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1
-    const toRow = Math.min(page * pageSize, totalRows)
+
     const pagedViolations = filteredViolations.slice((page - 1) * pageSize, page * pageSize)
 
     useEffect(() => { setPage(1) }, [debouncedSearch, filterCategory, filterType, filterStatus, filterExtreme])
@@ -485,6 +480,65 @@ export default function ViolationsPage() {
                         </div>
                     </div>
 
+                    {/* Active Filter Chips */}
+                    {(searchQuery || filterCategory || filterType || filterStatus !== 'active' || filterExtreme) && (
+                        <div className="px-3 pb-3 -mt-1">
+                            <div className="flex flex-wrap gap-2">
+                                {searchQuery && (
+                                    <button type="button" onClick={() => setSearchQuery('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus pencarian">
+                                        <FontAwesomeIcon icon={faSearch} className="text-[10px] opacity-60" />
+                                        <span className="max-w-[220px] truncate">"{searchQuery}"</span>
+                                        <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterCategory && (
+                                    <button type="button" onClick={() => setFilterCategory('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[10px] font-black text-[var(--color-primary)]" title="Hapus filter kategori">
+                                        <span className="opacity-70">Kategori</span> {filterCategory}
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterType && (
+                                    <button type="button" onClick={() => setFilterType('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus filter tipe">
+                                        {filterType === 'violation' ? 'Pelanggaran' : 'Prestasi'}
+                                        <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterStatus !== 'active' && (
+                                    <button type="button" onClick={() => setFilterStatus('active')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600" title="Hapus filter status">
+                                        Status: {filterStatus === 'inactive' ? 'Nonaktif' : filterStatus}
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-amber-500/20 flex items-center justify-center text-amber-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterExtreme && (
+                                    <button type="button" onClick={() => setFilterExtreme(false)}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/10 text-[10px] font-black text-red-600" title="Hapus filter poin ekstrim">
+                                        Poin Ekstrim
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-red-500/20 flex items-center justify-center text-red-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                <button type="button" onClick={resetAllFilters}
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title="Reset semua filter">
+                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
+                                    Reset semua
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {isFilterOpen && (
                         <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 animate-in slide-in-from-top-2 duration-300">
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -655,40 +709,16 @@ export default function ViolationsPage() {
                                 ))}
                             </div>
 
-                            {/* Pagination */}
-                            <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} poin</p>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-2 mr-2 pr-3 border-r border-[var(--color-border)]">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">Baris:</span>
-                                        <select
-                                            value={pageSize}
-                                            onChange={e => {
-                                                const val = Number(e.target.value)
-                                                setPageSize(val)
-                                                setPage(1)
-                                            }}
-                                            className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer hover:text-[var(--color-primary)] transition-all"
-                                        >
-                                            {[10, 25, 50, 100].map(v => (
-                                                <option key={v} value={v} className="bg-[var(--color-surface)] text-[var(--color-text)]">{v}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
-                                    <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
-                                    <div className="flex items-center gap-1.5 mx-1">
-                                        {getPageItems(page, totalPages).map((it, idx) => it === '...' ? <span key={`s${idx}`} className="w-8 flex items-center justify-center text-[var(--color-text-muted)] font-bold opacity-30">···</span> : (
-                                            <button key={it} onClick={() => setPage(it)} className={`h-9 min-w-[36px] px-2.5 rounded-xl font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/25' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}>{it}</button>
-                                        ))}
-                                    </div>
-                                    <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[10px]" /></button>
-                                    <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" /></button>
-                                    <div className="ml-2 relative flex items-center">
-                                        <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/[^\d]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal..." className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[11px] font-black focus:border-[var(--color-primary)] outline-none" />
-                                    </div>
-                                </div>
-                            </div>
+                            <Pagination
+                                totalRows={totalRows}
+                                page={page}
+                                pageSize={pageSize}
+                                setPage={setPage}
+                                setPageSize={setPageSize}
+                                label="poin"
+                                jumpPage={jumpPage}
+                                setJumpPage={setJumpPage}
+                            />
                         </>
                     )}
                 </div>

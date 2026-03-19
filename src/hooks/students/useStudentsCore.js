@@ -1,0 +1,958 @@
+import { useState, useMemo, useEffect, useCallback, useRef, useDeferredValue } from 'react'
+import { supabase } from '../../lib/supabase'
+import { useNavigate } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faThumbtack } from '@fortawesome/free-solid-svg-icons'
+import { RiskThreshold, calculateCompleteness } from '../../utils/students/studentsConstants'
+import { generateStudentPDF as _generateStudentPDF, handlePrintThermal as _handlePrintThermal, handleSavePNG as _handleSavePNG } from '../../utils/students/studentPdfUtils'
+
+export function useStudentsCore({ addToast, addUndoToast }) {
+    const navigate = useNavigate()
+
+    // ---- STATE: CORE DATA ----
+    const [students, setStudents] = useState([])
+    const [classesList, setClassesList] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [globalStats, setGlobalStats] = useState({ 
+        total: 0, boys: 0, girls: 0, avgPoints: 0, risk: 0, 
+        worstClass: null, topPerformer: null, incompleteCount: 0, 
+        noPhoneCount: 0, avgPointsLastWeek: null 
+    })
+    const [totalRows, setTotalRows] = useState(0)
+
+    // ---- STATE: FILTERING & SEARCH ----
+    const [searchQuery, setSearchQuery] = useState('')
+    const [filterClass, setFilterClass] = useState('')
+    const [filterClasses, setFilterClasses] = useState([])
+    const [filterGender, setFilterGender] = useState('')
+    const [filterStatus, setFilterStatus] = useState('')
+    const [filterTag, setFilterTag] = useState('')
+    const [filterMissing, setFilterMissing] = useState('')
+    const [sortBy, setSortBy] = useState('name_asc')
+    const [filterPointMode, setFilterPointMode] = useState('')
+    const [filterPointMin, setFilterPointMin] = useState('')
+    const [filterPointMax, setFilterPointMax] = useState('')
+    const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
+    const [debouncedSearch, setDebouncedSearch] = useState('')
+
+    // ---- STATE: MODALS & UI ----
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
+    const [activeModal, setActiveModal] = useState(null)
+    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
+    const [isShortcutOpen, setIsShortcutOpen] = useState(false)
+    const [photoZoom, setPhotoZoom] = useState(null)
+    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
+    
+    // ---- STATE: ACTION CONTEXT ----
+    const [selectedStudent, setSelectedStudent] = useState(null)
+    const [studentToDelete, setStudentToDelete] = useState(null)
+    const [selectedStudentIds, setSelectedStudentIds] = useState([])
+    const [submitting, setSubmitting] = useState(false)
+    const [newlyCreatedStudent, setNewlyCreatedStudent] = useState(null)
+    
+    // ---- STATE: BULK ACTIONS ----
+    const [bulkClassId, setBulkClassId] = useState('')
+    const [bulkTagAction, setBulkTagAction] = useState('add')
+    const [bulkPointValue, setBulkPointValue] = useState(0)
+    const [bulkPointLabel, setBulkPointLabel] = useState('')
+    
+    // ---- STATE: PROFILE / DETAIL ----
+    const [behaviorHistory, setBehaviorHistory] = useState([])
+    const [raportHistory, setRaportHistory] = useState([])
+    const [profileTab, setProfileTab] = useState('info')
+    const [timelineFilter, setTimelineFilter] = useState('all')
+    const [timelineVisible, setTimelineVisible] = useState(8)
+    const [auditLogs, setAuditLogs] = useState([])
+    const [loadingAudit, setLoadingAudit] = useState(false)
+    const [loadingHistory, setLoadingHistory] = useState(false)
+    
+    // ---- STATE: ARCHIVE & HISTORY ----
+    const [archivedStudents, setArchivedStudents] = useState([])
+    const [loadingArchived, setLoadingArchived] = useState(false)
+    const [classHistory, setClassHistory] = useState([])
+    const [loadingClassHistory, setLoadingClassHistory] = useState(false)
+    
+    // ---- STATE: OTHERS ----
+    const [isInlineAddOpen, setIsInlineAddOpen] = useState(false)
+    const [inlineForm, setInlineForm] = useState({ name: '', gender: 'L', class_id: '', phone: '' })
+    const [submittingInline, setSubmittingInline] = useState(false)
+    const [uploadingPhoto, setUploadingPhoto] = useState(false)
+    const [classBreakdownData, setClassBreakdownData] = useState(null)
+    const [loadingBreakdown, setLoadingBreakdown] = useState(false)
+    const [resetPointsClassId, setResetPointsClassId] = useState('')
+    const [resettingPoints, setResettingPoints] = useState(false)
+    const [resettingPin, setResettingPin] = useState(false)
+    const [bulkPhotoFiles, setBulkPhotoFiles] = useState([])
+    const [bulkPhotoMatches, setBulkPhotoMatches] = useState([])
+    const [matchingPhotos, setMatchingPhotos] = useState(false)
+    const [uploadingBulkPhotos, setUploadingBulkPhotos] = useState(false)
+    const [broadcastTemplate, setBroadcastTemplate] = useState('summary')
+    const [customWaMsg, setCustomWaMsg] = useState('')
+    const [broadcastIndex, setBroadcastIndex] = useState(-1)
+    const [broadcastResults, setBroadcastResults] = useState({})
+    const [allUsedTags, setAllUsedTags] = useState([])
+    const [tagStats, setTagStats] = useState({})
+    const [lastReportMap, setLastReportMap] = useState({})
+    const [pendingArchive, setPendingArchive] = useState(null)
+    const [gSheetsUrl, setGSheetsUrl] = useState('')
+    const [fetchingGSheets, setFetchingGSheets] = useState(false)
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
+    const [jumpPage, setJumpPage] = useState('')
+    const [generatingPdf, setGeneratingPdf] = useState(false)
+    const [duplicateWarning, setDuplicateWarning] = useState(null)
+    const [checkingDuplicate, setCheckingDuplicate] = useState(false)
+    const [newTagInput, setNewTagInput] = useState('')
+    const [tagToEdit, setTagToEdit] = useState(null)
+    const [studentForTags, setStudentForTags] = useState(null)
+    const [renameInput, setRenameInput] = useState('')
+    const [archivePage, setArchivePage] = useState(1)
+    const [archivePageSize, setArchivePageSize] = useState(15)
+    const [loadingRaport, setLoadingRaport] = useState(false)
+
+    // ---- REFS ----
+    const formDataRef = useRef({ 
+        name: '', gender: 'L', class_id: '', phone: '', photo_url: '', 
+        nisn: '', guardian_name: '', guardian_relation: 'Ayah', 
+        status: 'aktif', tags: [] 
+    })
+    const importFileInputRef = useRef(null)
+    const photoInputRef = useRef(null)
+    const searchInputRef = useRef(null)
+    const headerMenuRef = useRef(null)
+    const shortcutRef = useRef(null)
+    const cardCaptureRef = useRef(null)
+
+    // ---- COMPUTED ----
+    const selectedIdSet = useMemo(() => new Set(selectedStudentIds), [selectedStudentIds])
+    const selectedStudents = useMemo(() => {
+        if (!selectedStudentIds.length) return []
+        return students.filter((s) => selectedIdSet.has(s.id))
+    }, [students, selectedIdSet, selectedStudentIds.length])
+    const selectedStudentsWithPhone = useMemo(() => selectedStudents.filter((s) => s.phone), [selectedStudents])
+    
+    const activeFilterCount = useMemo(() => 
+        [filterClass, filterClasses.length > 0 ? 'multi' : '', filterGender, filterStatus, filterTag, filterPointMode, filterMissing, debouncedSearch].filter(Boolean).length
+    , [filterClass, filterClasses.length, filterGender, filterStatus, filterTag, filterPointMode, filterMissing, debouncedSearch])
+
+    const isAnyModalOpen = useMemo(() => 
+        !!(isModalOpen || !!activeModal || isPrintModalOpen || photoZoom)
+    , [isModalOpen, activeModal, isPrintModalOpen, photoZoom])
+
+    const allSelected = students.length > 0 && selectedStudentIds.length === students.length
+    const someSelected = selectedStudentIds.length > 0 && selectedStudentIds.length < students.length
+
+    // ---- EFFECTS ----
+    const deferredSearchQuery = useDeferredValue(searchQuery)
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(deferredSearchQuery.trim()), 350)
+        return () => clearTimeout(t)
+    }, [deferredSearchQuery])
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('students_filters')
+            if (saved) {
+                const f = JSON.parse(saved)
+                if (f.filterGender) setFilterGender(f.filterGender)
+                if (f.filterStatus) setFilterStatus(f.filterStatus)
+                if (f.filterTag) setFilterTag(f.filterTag)
+                if (f.sortBy) setSortBy(f.sortBy)
+                if (f.pageSize) setPageSize(f.pageSize)
+            }
+        } catch { /* ignore */ }
+    }, [])
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('students_filters', JSON.stringify({
+                filterGender, filterStatus, filterTag, sortBy, pageSize,
+            }))
+        } catch { /* ignore */ }
+    }, [filterGender, filterStatus, filterTag, sortBy, pageSize])
+
+    // ---- FUNCTIONS: LOAD DATA ----
+    const fetchStats = useCallback(async () => {
+        try {
+            const { data: statsData } = await supabase
+                .from('students')
+                .select('id, name, gender, total_points, class_id, photo_url, phone, nisn, metadata, classes(name)')
+                .is('deleted_at', null)
+            if (!statsData) return
+            const total = statsData.length
+            const boys = statsData.filter(s => s.gender === 'L').length
+            const girls = statsData.filter(s => s.gender === 'P').length
+            const risk = statsData.filter(s => (s.total_points || 0) < RiskThreshold).length
+            const avgPoints = total > 0
+                ? Math.round(statsData.reduce((acc, s) => acc + (s.total_points || 0), 0) / total)
+                : 0
+            const incompleteCount = statsData.filter(s => calculateCompleteness(s) < 80).length
+            const noPhoneCount = statsData.filter(s => !s.phone).length
+            
+            const sorted = [...statsData].sort((a, b) => (b.total_points || 0) - (a.total_points || 0))
+            const topPerformer = sorted[0] && (sorted[0].total_points || 0) > 0
+                ? { name: sorted[0].name, points: sorted[0].total_points, className: sorted[0].classes?.name || '' }
+                : null
+
+            const classBuckets = {}
+            statsData.forEach(s => {
+                const cn = s.classes?.name || 'Tanpa Kelas'
+                if (!classBuckets[cn]) classBuckets[cn] = []
+                classBuckets[cn].push(s.total_points || 0)
+            })
+            let worstClass = null, worstAvg = 0
+            Object.entries(classBuckets).forEach(([name, pts]) => {
+                const avg = pts.reduce((a, b) => a + b, 0) / pts.length
+                if (avg < worstAvg) { worstAvg = avg; worstClass = { name, avg: Math.round(avg), count: pts.length } }
+            })
+
+            let avgPointsLastWeek = null
+            try {
+                const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+                const { data: recentReports } = await supabase
+                    .from('reports')
+                    .select('points, created_at')
+                    .gte('created_at', oneWeekAgo)
+                if (recentReports && recentReports.length > 0) {
+                    const weeklyDelta = recentReports.reduce((acc, r) => acc + (r.points || 0), 0)
+                    avgPointsLastWeek = Math.round(weeklyDelta / (total || 1))
+                }
+            } catch { /* ignore */ }
+
+            setGlobalStats({ total, boys, girls, avgPoints, risk, worstClass, topPerformer, incompleteCount, noPhoneCount, avgPointsLastWeek })
+        } catch (err) {
+            console.error('Fetch stats error:', err)
+        }
+    }, [])
+
+    const fetchData = useCallback(async () => {
+        setLoading(true)
+        try {
+            const { data: classesData } = await supabase.from('classes').select('*').order('name', { ascending: true })
+            if (classesData) setClassesList(classesData)
+
+            let q = supabase.from('students').select(`*, classes (name)`, { count: 'exact' }).is('deleted_at', null)
+            if (filterClasses.length > 0) q = q.in('class_id', filterClasses)
+            else if (filterClass) q = q.eq('class_id', filterClass)
+            if (filterGender) q = q.eq('gender', filterGender)
+            if (filterStatus) q = q.eq('status', filterStatus)
+            if (filterTag) q = q.contains('tags', [filterTag])
+            if (filterMissing === 'photo') q = q.or('photo_url.is.null,photo_url.eq.""')
+            else if (filterMissing === 'wa') q = q.or('phone.is.null,phone.eq.""')
+
+            if (debouncedSearch) {
+                const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
+                q = q.or(`name.ilike.%${s}%,registration_code.ilike.%${s}%,nisn.ilike.%${s}%`)
+            }
+
+            if (filterPointMode === 'risk') q = q.lt('total_points', RiskThreshold)
+            else if (filterPointMode === 'positive') q = q.gt('total_points', 0)
+            else if (filterPointMode === 'custom') {
+                if (filterPointMin !== '') q = q.gte('total_points', Number(filterPointMin))
+                if (filterPointMax !== '') q = q.lte('total_points', Number(filterPointMax))
+            }
+
+            if (sortBy === 'total_points_desc') q = q.order('total_points', { ascending: false })
+            else if (sortBy === 'created_at') q = q.order('created_at', { ascending: false })
+            else q = q.order('name', { ascending: true })
+
+            const from = (page - 1) * pageSize
+            const to = from + pageSize - 1
+            q = q.range(from, to)
+
+            const { data: studentsData, count } = await q
+            setTotalRows(count || 0)
+
+            let rankings = []
+            try {
+                const { data, error: rpcErr } = await supabase.rpc('get_student_rankings')
+                if (!rpcErr && data) rankings = data
+            } catch { }
+            const globalRankMap = Object.fromEntries((rankings || []).map((r, i) => [r.id, r.student_rank || (i + 1)]))
+
+            const ids = (studentsData || []).map(s => s.id)
+            const trendMap = {}
+            if (ids.length > 0) {
+                const { data: reportsData } = await supabase
+                    .from('reports')
+                    .select('student_id, created_at, points')
+                    .in('student_id', ids)
+                    .order('created_at', { ascending: false })
+
+                const map = {}
+                ;(reportsData || []).forEach(r => {
+                    if (!map[r.student_id]) {
+                        map[r.student_id] = r.created_at
+                        trendMap[r.student_id] = r.points > 0 ? 'up' : r.points < 0 ? 'down' : 'neutral'
+                    }
+                })
+                setLastReportMap(map)
+            } else {
+                setLastReportMap({})
+            }
+
+            const transformed = (studentsData || []).map(s => {
+                const pts = s.total_points ?? 0
+                return {
+                    ...s,
+                    className: s.classes?.name || '-',
+                    code: s.registration_code,
+                    points: pts,
+                    trend: trendMap[s.id] || 'neutral',
+                    _rank: globalRankMap[s.id] || '-',
+                    is_pinned: s.is_pinned || false,
+                }
+            })
+
+            transformed.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+            setStudents(transformed)
+        } catch (err) {
+            console.error('Fetch error:', err)
+            addToast('Gagal memuat data dari database', 'error')
+        } finally {
+            setLoading(false)
+        }
+    }, [page, pageSize, sortBy, filterGender, filterStatus, filterTag, filterMissing, debouncedSearch, filterClasses, filterClass, filterPointMode, filterPointMin, filterPointMax, addToast])
+
+
+    // ---- FUNCTIONS: BASIC CRUD ----
+    const generateCode = useCallback(() => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+        const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+        const part2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+        return `REG-${part1}-${part2}`
+    }, [])
+
+    const closeModal = useCallback(() => setActiveModal(null), [])
+
+    const handleAdd = useCallback(() => {
+        setSelectedStudent(null)
+        formDataRef.current = { 
+            name: '', gender: 'L', class_id: '', phone: '', photo_url: '', 
+            nisn: '', guardian_name: '', guardian_relation: 'Ayah', 
+            status: 'aktif', tags: [] 
+        }
+        setIsModalOpen(true)
+    }, [])
+
+    const handleEdit = useCallback((student) => {
+        setSelectedStudent(student)
+        formDataRef.current = {
+            name: student.name,
+            gender: student.gender || 'L',
+            class_id: student.class_id || '',
+            phone: student.phone || '',
+            photo_url: student.photo_url || '',
+            nisn: student.nisn || '',
+            guardian_name: student.guardian_name || '',
+            guardian_relation: student.guardian_relation || 'Ayah',
+            status: student.status || 'aktif',
+            tags: student.tags || [],
+        }
+        setIsModalOpen(true)
+    }, [])
+
+    const confirmDelete = (student) => {
+        setStudentToDelete(student)
+        setActiveModal('delete')
+    }
+
+    const executeDelete = useCallback(async () => {
+        if (!studentToDelete) return
+        closeModal()
+        const student = studentToDelete
+        setStudentToDelete(null)
+
+        setStudents(prev => prev.filter(s => s.id !== student.id))
+
+        const timerId = setTimeout(async () => {
+            try {
+                const { error } = await supabase
+                    .from('students')
+                    .update({ deleted_at: new Date().toISOString() })
+                    .eq('id', student.id)
+                if (error) throw error
+                fetchData()
+                fetchStats()
+            } catch {
+                addToast('Gagal mengarsipkan siswa', 'error')
+                fetchData()
+            } finally {
+                setPendingArchive(null)
+            }
+        }, 4000)
+
+        setPendingArchive({ student, timerId })
+
+        addUndoToast(
+            `${student.name} diarsipkan`,
+            () => {
+                clearTimeout(timerId)
+                setPendingArchive(null)
+                fetchData()
+                addToast(`${student.name} dibatalkan`, 'success')
+            }
+        )
+    }, [studentToDelete, fetchData, fetchStats, addToast, addUndoToast])
+
+    const handleSubmit = useCallback(async (formData) => {
+        if (!formData.name || formData.name.trim().length < 3 || !formData.class_id) {
+            addToast('Nama (min 3 karakter) dan kelas wajib diisi', 'warning')
+            return
+        }
+
+        setSubmitting(true)
+        try {
+            if (selectedStudent && selectedStudent.id) {
+                const { error } = await supabase
+                    .from('students')
+                    .update({
+                        name: formData.name,
+                        gender: formData.gender,
+                        class_id: formData.class_id,
+                        phone: formData.phone,
+                        photo_url: formData.photo_url,
+                        nisn: formData.nisn || null,
+                        guardian_name: formData.guardian_name || null,
+                        guardian_relation: formData.guardian_relation || null,
+                        status: formData.status || 'aktif',
+                        tags: formData.tags || [],
+                    })
+                    .eq('id', selectedStudent.id)
+                if (error) throw error
+
+                if (formData.class_id !== selectedStudent.class_id) {
+                    await supabase.from('student_class_history').insert([{
+                        student_id: selectedStudent.id,
+                        from_class_id: selectedStudent.class_id,
+                        to_class_id: formData.class_id,
+                        changed_at: new Date().toISOString(),
+                        note: 'Diubah manual'
+                    }])
+                }
+                addToast('Data siswa berhasil diperbarui', 'success')
+            } else {
+                const newCode = generateCode()
+                const newPin = String(Math.floor(1000 + Math.random() * 9000))
+                const newStudentData = {
+                    registration_code: newCode,
+                    pin: newPin,
+                    total_points: 0,
+                    name: formData.name,
+                    gender: formData.gender,
+                    class_id: formData.class_id,
+                    phone: formData.phone,
+                    photo_url: formData.photo_url,
+                    nisn: formData.nisn || null,
+                    guardian_name: formData.guardian_name || null,
+                    guardian_relation: formData.guardian_relation || null,
+                    status: formData.status || 'aktif',
+                    tags: formData.tags || [],
+                }
+                const { error } = await supabase.from('students').insert([newStudentData])
+                if (error) throw error
+                
+                const studentToView = {
+                    ...newStudentData,
+                    code: newCode,
+                    className: classesList.find(c => c.id === formData.class_id)?.name || '-'
+                }
+                setNewlyCreatedStudent(studentToView)
+                setSelectedStudent(studentToView)
+                setIsPrintModalOpen(true)
+                addToast('Siswa berhasil didaftarkan', 'success')
+            }
+            setIsModalOpen(false)
+            fetchData()
+            fetchStats()
+        } catch (err) {
+            console.error('Submit error:', err)
+            addToast('Gagal menyimpan data', 'error')
+        } finally {
+            setSubmitting(false)
+        }
+    }, [selectedStudent, fetchData, fetchStats, addToast, generateCode, classesList])
+
+    // ---- FUNCTIONS: BULK ACTIONS ----
+    const toggleSelectAll = useCallback(() => {
+        setSelectedStudentIds(prev => prev.length === students.length ? [] : students.map(s => s.id))
+    }, [students])
+
+    const toggleSelectStudent = useCallback((id) => {
+        setSelectedStudentIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+    }, [])
+
+    const handleBulkPromote = async () => {
+        if (!bulkClassId) return addToast('Pilih kelas tujuan terlebih dahulu', 'warning')
+        setSubmitting(true)
+        const idsToMove = [...selectedStudentIds]
+        const count = idsToMove.length
+        try {
+            const { data: prevData } = await supabase.from('students').select('id, class_id').in('id', idsToMove)
+            const prevClassMap = Object.fromEntries((prevData || []).map(s => [s.id, s.class_id]))
+            const { error } = await supabase.from('students').update({ class_id: bulkClassId }).in('id', idsToMove)
+            if (error) throw error
+            closeModal()
+            setSelectedStudentIds([])
+            fetchData()
+            fetchStats()
+            addUndoToast(`${count} siswa dipindahkan`, async () => {
+                await Promise.all(idsToMove.map(id => supabase.from('students').update({ class_id: prevClassMap[id] }).eq('id', id)))
+                fetchData()
+                addToast('Dibatalkan', 'success')
+            })
+        } catch { addToast('Gagal', 'error') } finally { setSubmitting(false) }
+    }
+
+    const handleBulkDelete = async () => {
+        if (!selectedStudentIds.length) return
+        setSubmitting(true)
+        const idsToDelete = [...selectedStudentIds]
+        try {
+            const { error } = await supabase.from('students').update({ deleted_at: new Date().toISOString() }).in('id', idsToDelete)
+            if (error) throw error
+            closeModal()
+            setSelectedStudentIds([])
+            fetchData()
+            addUndoToast(`${idsToDelete.length} siswa diarsipkan`, async () => {
+                await supabase.from('students').update({ deleted_at: null }).in('id', idsToDelete)
+                fetchData()
+            })
+        } catch { addToast('Gagal', 'error') } finally { setSubmitting(false) }
+    }
+
+    const handleBulkPointUpdate = async () => {
+        if (!bulkPointValue || selectedStudentIds.length === 0) return
+        setSubmitting(true)
+        const idsToUpdate = [...selectedStudentIds]
+        const count = idsToUpdate.length
+        const pointDelta = bulkPointValue
+        try {
+            const { data: prevData } = await supabase.from('students').select('id, total_points').in('id', idsToUpdate)
+            const prevPointMap = Object.fromEntries((prevData || []).map(s => [s.id, s.total_points || 0]))
+            
+            const updates = idsToUpdate.map(async (sid) => {
+                const oldPoints = prevPointMap[sid] ?? 0
+                const newPoints = oldPoints + pointDelta
+                await supabase.from('students').update({ total_points: newPoints }).eq('id', sid)
+                return supabase.from('point_history').insert([{
+                    student_id: sid,
+                    points: pointDelta,
+                    label: bulkPointLabel || 'Aksi Massal',
+                    created_at: new Date().toISOString()
+                }])
+            })
+
+            await Promise.all(updates)
+            fetchData()
+            closeModal()
+            setBulkPointValue(0)
+            setBulkPointLabel('')
+            setSelectedStudentIds([])
+            addUndoToast(`${count} siswa: poin ${pointDelta > 0 ? '+' : ''}${pointDelta}`, async () => {
+                await Promise.all(idsToUpdate.map(id => supabase.from('students').update({ total_points: prevPointMap[id] }).eq('id', id)))
+                fetchData()
+                fetchStats()
+            })
+        } catch { addToast('Gagal', 'error') } finally { setSubmitting(false) }
+    }
+
+    // ---- FUNCTIONS: ARCHIVE ----
+    const fetchArchivedStudents = async () => {
+        setLoadingArchived(true)
+        try {
+            const { data, error } = await supabase.from('students').select(`*, classes(name)`).not('deleted_at', 'is', null).order('deleted_at', { ascending: false })
+            if (error) throw error
+            setArchivedStudents((data || []).map(s => ({ ...s, className: s.classes?.name || '-' })))
+        } catch { addToast('Gagal memuat arsip', 'error') } finally { setLoadingArchived(false) }
+    }
+
+    const handleRestoreStudent = async (student) => {
+        try {
+            const { error } = await supabase.from('students').update({ deleted_at: null }).eq('id', student.id)
+            if (error) throw error
+            addToast(`${student.name} berhasil dipulihkan`, 'success')
+            fetchArchivedStudents(); fetchData(); fetchStats()
+        } catch { addToast('Gagal memulihkan', 'error') }
+    }
+
+    const handlePermanentDelete = async (student) => {
+        if (!window.confirm(`Hapus permanen "${student.name}"?`)) return
+        try {
+            const { error } = await supabase.from('students').delete().eq('id', student.id)
+            if (error) throw error
+            addToast(`${student.name} dihapus permanen`, 'success')
+            fetchArchivedStudents()
+        } catch { addToast('Gagal hapus', 'error') }
+    }
+
+    // ---- FUNCTIONS: TAGS ----
+    const fetchUsedTags = useCallback(async () => {
+        try {
+            const { data } = await supabase.from('students').select('tags').is('deleted_at', null)
+            if (data) {
+                const stats = {}, unique = []
+                data.forEach(s => (s.tags || []).forEach(t => {
+                    stats[t] = (stats[t] || 0) + 1
+                    if (!unique.includes(t)) unique.push(t)
+                }))
+                setAllUsedTags(unique.sort())
+                setTagStats(stats)
+            }
+        } catch { }
+    }, [])
+
+    const handleToggleTag = async (student, tag) => {
+        if (!tag || !student) return
+        const current = student.tags || []
+        const next = current.includes(tag) ? current.filter(t => t !== tag) : [...current, tag]
+        try {
+            const { error } = await supabase.from('students').update({ tags: next }).eq('id', student.id)
+            if (error) throw error
+            setStudentForTags({ ...student, tags: next })
+            addToast(`Label diperbarui`, 'success')
+            fetchData(); fetchUsedTags()
+        } catch { addToast('Gagal', 'error') }
+    }
+
+    const handleBulkTagApply = async (tag) => {
+        if (!tag || selectedStudentIds.length === 0) return
+        setSubmitting(true)
+        try {
+            const { data } = await supabase.from('students').select('id, tags').in('id', selectedStudentIds).is('deleted_at', null)
+            const prevTagMap = Object.fromEntries((data || []).map(s => [s.id, s.tags || []]))
+            if (data) {
+                const updates = data.map(s => {
+                    const current = s.tags || []
+                    const next = bulkTagAction === 'add' ? Array.from(new Set([...current, tag])) : current.filter(t => t !== tag)
+                    return supabase.from('students').update({ tags: next }).eq('id', s.id)
+                })
+                await Promise.all(updates)
+                fetchData(); fetchUsedTags(); closeModal(); setSelectedStudentIds([])
+                addUndoToast(`${selectedStudentIds.length} siswa diperbarui`, async () => {
+                    await Promise.all(Object.keys(prevTagMap).map(id => supabase.from('students').update({ tags: prevTagMap[id] }).eq('id', id)))
+                    fetchData(); fetchUsedTags()
+                })
+            }
+        } catch { addToast('Gagal', 'error') } finally { setSubmitting(false) }
+    }
+
+    // ---- FUNCTIONS: PROFILE ACCESS ----
+    const fetchBehaviorHistory = useCallback(async (studentId) => {
+        setLoadingHistory(true)
+        try {
+            const { data } = await supabase.from('reports').select('*').eq('student_id', studentId).order('created_at', { ascending: false })
+            setBehaviorHistory(data || [])
+        } catch { setBehaviorHistory([]) } finally { setLoadingHistory(false) }
+    }, [])
+
+    const fetchRaportHistory = useCallback(async (studentId) => {
+        try {
+            const { data } = await supabase.from('raports').select('*').eq('student_id', studentId).order('created_at', { ascending: false })
+            setRaportHistory(data || [])
+        } catch { setRaportHistory([]) }
+    }, [])
+
+    const handleViewProfile = (student) => {
+        setSelectedStudent(student); setBehaviorHistory([]); setRaportHistory([])
+        setTimelineFilter('all'); setTimelineVisible(8); setProfileTab('info')
+        setActiveModal('profile')
+        fetchBehaviorHistory(student.id); fetchRaportHistory(student.id)
+    }
+
+    const resetAllFilters = useCallback(() => {
+        setSearchQuery(''); setFilterClass(''); setFilterClasses([])
+        setFilterGender(''); setFilterStatus(''); setFilterTag('')
+        setFilterMissing(''); setSortBy('name_asc'); setFilterPointMode('')
+        setFilterPointMin(''); setFilterPointMax(''); setSelectedStudentIds([])
+        localStorage.removeItem('students_filters')
+    }, [])
+
+    // ---- FUNCTIONS: WA BROADCAST ----
+    const waTemplate = `*Laporan Perkembangan Ananda {nama}*
+
+Saat ini, Ananda tercatat memiliki total *{poin} poin* perilaku.
+Tetap semangat dalam meningkatkan kedisiplinan dan prestasi!
+
+Salam,
+Laporanmu System`
+
+    const buildWAMessage = (student, templateId) => {
+        let template = waTemplate
+        if (templateId === 'points') template = `*Laporan Poin Perilaku Ananda {nama}*\n\nSaat ini Ananda memiliki total *{poin} poin* di sistem Laporanmu.\n\n_Terus semangatkan kedisiplinan dan prestasi ananda._\n\nWassalam.`
+        else if (templateId === 'security') template = `*PEMBERITAHUAN KEAMANAN*\n\nInformasi akses Portal Orang Tua untuk ananda {nama}:\nID Reg : {kode}\nPIN    : {pin}\nPortal : [URL]\n\n_Mohon jaga kerahasiaan PIN anda._`
+        else if (templateId === 'custom') template = customWaMsg || 'Halo Bapak/Ibu wali dari {nama}.'
+
+        return template
+            .replace(/{nama}/g, student.name)
+            .replace(/{kelas}/g, classesList.find(c => c.id === student.class_id)?.name || '-')
+            .replace(/{poin}/g, String(student.points ?? student.total_points ?? 0))
+            .replace(/{kode}/g, student.registration_code || student.code || '-')
+            .replace(/{pin}/g, student.pin || '-')
+            .replace(/\[URL\]/g, window.location.origin + '/check')
+    }
+
+    const openWAForStudent = (student, msg) => {
+        const phone = (student.phone || '').replace(/\D/g, '').replace(/^0/, '62')
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+    }
+
+    // ---- FUNCTIONS: MISC ACTIONS ----
+    const handleQuickPoint = async (student, amount, reason) => {
+        try {
+            const next = (student.total_points || 0) + amount
+            await supabase.from('students').update({ total_points: next }).eq('id', student.id)
+            addToast(`${amount > 0 ? '+' : ''}${amount} poin untuk ${student.name}`, 'success')
+            fetchData(); fetchStats()
+        } catch { addToast('Gagal', 'error') }
+    }
+
+    const handleTogglePin = async (student) => {
+        const next = !student.is_pinned
+        setStudents(prev => prev.map(s => s.id === student.id ? { ...s, is_pinned: next } : s).sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)))
+        try {
+            await supabase.from('students').update({ is_pinned: next }).eq('id', student.id)
+            addToast(next ? `"${student.name}" disematkan` : `Semat dilepas`, 'success')
+        } catch { fetchData(); addToast('Gagal', 'error') }
+    }
+
+    const handlePhotoUpload = async (file) => {
+        if (!file) return null
+        setUploadingPhoto(true)
+        try {
+            const fileName = `student_${Date.now()}.${file.name.split('.').pop()}`
+            await supabase.storage.from('student-photo').upload(fileName, file)
+            const { data } = supabase.storage.from('student-photo').getPublicUrl(fileName)
+            return data.publicUrl
+        } catch { return null } finally { setUploadingPhoto(false) }
+    }
+
+    const handleViewQR = (student) => {
+        setSelectedStudent(student)
+        setActiveModal('qr')
+    }
+
+    const handleViewPrint = (student) => {
+        setSelectedStudent(student)
+        setActiveModal('print')
+    }
+
+    const pdfCallbacks = { addToast, setGeneratingPdf }
+    const generateStudentPDF = useCallback((targets, captureRef = null) => _generateStudentPDF(targets, captureRef, pdfCallbacks), [addToast])
+    const handlePrintSingle = (student) => student && generateStudentPDF([student], cardCaptureRef)
+    const handlePrintThermal = useCallback((student) => _handlePrintThermal(student, pdfCallbacks), [addToast])
+    const handleSavePNG = useCallback((student) => _handleSavePNG(student, pdfCallbacks), [addToast])
+
+    const handleBulkPrint = () => {
+        setIsPrintModalOpen(true)
+    }
+
+    const handleBulkPhotoMatch = async (files) => {
+        setMatchingPhotos(true)
+        const matches = Array.from(files).map(file => {
+            const clean = file.name.split('.')[0].trim().toLowerCase()
+            const s = students.find(s => (s.nisn && s.nisn.toLowerCase() === clean) || (s.name && s.name.toLowerCase() === clean) || (s.id && s.id.toLowerCase() === clean))
+            return { file, studentId: s?.id || null, studentName: s?.name || '?', preview: URL.createObjectURL(file), status: s ? 'matched' : 'unmatched' }
+        })
+        setBulkPhotoMatches(matches); setMatchingPhotos(false)
+    }
+
+    const handleBulkPhotoUpload = async () => {
+        const matched = bulkPhotoMatches.filter(m => m.status === 'matched')
+        if (matched.length === 0) return
+        setUploadingBulkPhotos(true)
+        for (const item of matched) {
+            try {
+                const name = `${item.studentId}_${Date.now()}.${item.file.name.split('.').pop()}`
+                await supabase.storage.from('photos').upload(name, item.file)
+                const { data } = supabase.storage.from('photos').getPublicUrl(name)
+                await supabase.from('students').update({ photo_url: data.publicUrl }).eq('id', item.studentId)
+            } catch { }
+        }
+        addToast(`Selesai`, 'success'); closeModal(); setBulkPhotoMatches([]); setUploadingBulkPhotos(false); fetchData()
+    }
+
+    const handleClassBreakdown = async (classId, className) => {
+        setLoadingBreakdown(true); setActiveModal('classBreakdown')
+        try {
+            const { data } = await supabase.from('students').select('*').eq('class_id', classId).is('deleted_at', null)
+            if (data) {
+                const boys = data.filter(s => s.gender === 'L').length, girls = data.filter(s => s.gender === 'P').length
+                const avg = data.length ? Math.round(data.reduce((a, s) => a + (s.total_points || 0), 0) / data.length) : 0
+                const top = [...data].sort((a, b) => b.total_points - a.total_points).slice(0, 3)
+                setClassBreakdownData({ className, total: data.length, boys, girls, avgPoints: avg, riskCount: data.filter(s => s.total_points <= RiskThreshold).length, topStudents: top, allStudents: data })
+            }
+        } catch { } finally { setLoadingBreakdown(false) }
+    }
+
+
+    const handleAddCustomTag = (e) => {
+        if (e.key === 'Enter' && newTagInput.trim()) {
+            if (studentForTags) {
+                handleToggleTag(studentForTags, newTagInput.trim())
+                setNewTagInput('')
+            }
+        }
+    }
+
+    const handleBatchResetPoints = async () => {
+        setResettingPoints(true)
+        try {
+            let q = supabase.from('students').update({ total_points: 0 }).is('deleted_at', null)
+            if (resetPointsClassId) q = q.eq('class_id', resetPointsClassId)
+            await q
+            addToast('Poin direset', 'success'); closeModal(); fetchData(); fetchStats()
+        } catch { addToast('Gagal', 'error') } finally { setResettingPoints(false) }
+    }
+
+    const handleResetPin = async (student) => {
+        if (!window.confirm(`Reset PIN?`)) return
+        setResettingPin(true)
+        try {
+            const pin = String(Math.floor(1000 + Math.random() * 9000))
+            await supabase.from('students').update({ pin }).eq('id', student.id)
+            addToast(`PIN: ${pin}`, 'success')
+            fetchData()
+        } catch { addToast('Gagal', 'error') } finally { setResettingPin(false) }
+    }
+
+    const checkDuplicate = async (name, classId) => {
+        if (!name || name.trim().length < 3 || !classId) { setDuplicateWarning(null); return }
+        setCheckingDuplicate(true)
+        try {
+            const { data } = await supabase.from('students').select('id, name').ilike('name', `%${name.trim()}%`).eq('class_id', classId).is('deleted_at', null).neq('id', selectedStudent?.id || 0).limit(3)
+            setDuplicateWarning(data?.length ? data : null)
+        } catch { } finally { setCheckingDuplicate(false) }
+    }
+
+    const fetchAuditLog = async (id) => {
+        setLoadingAudit(true)
+        try {
+            const { data } = await supabase.from('student_audit_log').select('*').eq('student_id', id).order('created_at', { ascending: false }).limit(50)
+            setAuditLogs(data || [])
+        } catch { setAuditLogs([]) } finally { setLoadingAudit(false) }
+    }
+
+    const fetchClassHistory = async (id) => {
+        setLoadingClassHistory(true)
+        try {
+            const { data } = await supabase.from('student_class_history').select('*, from_class:from_class_id(name), to_class:to_class_id(name)').eq('student_id', id).order('changed_at', { ascending: false })
+            setClassHistory(data || [])
+        } catch { setClassHistory([]) } finally { setLoadingClassHistory(false) }
+    }
+
+    const handleViewClassHistory = (s) => { setSelectedStudent(s); fetchClassHistory(s.id); setActiveModal('classHistory') }
+
+    const handleInlineUpdate = async (id, field, value, data) => {
+        let payload = {}, msg = ''
+        if (field === 'name') { payload = { name: value }; msg = 'Nama updated' }
+        else if (field === 'gender') { payload = { gender: value }; msg = 'Gender updated' }
+        else if (field === 'kelas') { 
+            payload = { class_id: value }; msg = 'Kelas updated'
+            if (value !== data.class_id) await supabase.from('student_class_history').insert([{ student_id: id, from_class_id: data.class_id, to_class_id: value, changed_at: new Date().toISOString() }])
+        }
+        else if (field === 'poin') { payload = { total_points: value }; msg = 'Poin updated' }
+        try {
+            await supabase.from('students').update(payload).eq('id', id)
+            addToast(msg, 'success'); fetchData(); fetchStats()
+        } catch { addToast('Gagal', 'error') }
+    }
+
+    const handleInlineSubmit = async () => {
+        if (!inlineForm.name || !inlineForm.class_id) return
+        setSubmittingInline(true)
+        try {
+            await supabase.from('students').insert([{ ...inlineForm, registration_code: generateCode(), pin: String(Math.floor(1000 + Math.random() * 9000)), total_points: 0 }])
+            addToast('Berhasil', 'success'); setInlineForm({ name: '', gender: 'L', class_id: inlineForm.class_id, phone: '' }); fetchData(); fetchStats()
+        } catch { addToast('Gagal', 'error') } finally { setSubmittingInline(false) }
+    }
+
+    const handleBulkWA = () => {
+        if (!selectedStudentsWithPhone.length) return addToast('Pilih siswa dengan nomor WA', 'warning')
+        setBroadcastResults({}); setBroadcastIndex(-1); setActiveModal('bulkWA')
+    }
+
+    const handleGlobalDeleteTag = async (tag) => {
+        if (!window.confirm(`Hapus label?`)) return
+        setSubmitting(true)
+        try {
+            const { data } = await supabase.from('students').select('id, tags').contains('tags', [tag]).is('deleted_at', null)
+            if (data) {
+                await Promise.all(data.map(s => supabase.from('students').update({ tags: (s.tags || []).filter(t => t !== tag) }).eq('id', s.id)))
+                fetchData(); fetchUsedTags()
+            }
+        } catch { } finally { setSubmitting(false) }
+    }
+
+    const handleGlobalRenameTag = async (oldTag, newTag) => {
+        if (!newTag || oldTag === newTag) { setTagToEdit(null); return }
+        setSubmitting(true)
+        try {
+            const { data } = await supabase.from('students').select('id, tags').contains('tags', [oldTag]).is('deleted_at', null)
+            if (data) {
+                await Promise.all(data.map(s => supabase.from('students').update({ tags: (s.tags || []).map(t => t === oldTag ? newTag : t) }).eq('id', s.id)))
+                fetchData(); fetchUsedTags(); setTagToEdit(null)
+            }
+        } catch { } finally { setSubmitting(false) }
+    }
+
+    // ---- AUTO LOAD DATA ----
+    useEffect(() => { fetchData() }, [fetchData])
+    useEffect(() => { fetchStats() }, [fetchStats])
+    useEffect(() => { fetchUsedTags() }, [fetchUsedTags])
+
+    return {
+        // Core data
+        students, classesList, loading, globalStats, totalRows, fetchData, fetchStats,
+        // Filtering
+        searchQuery, setSearchQuery, filterClass, setFilterClass, filterClasses, setFilterClasses,
+        filterGender, setFilterGender, filterStatus, setFilterStatus, filterTag, setFilterTag,
+        filterMissing, setFilterMissing, sortBy, setSortBy, filterPointMode, setFilterPointMode,
+        filterPointMin, setFilterPointMin, filterPointMax, setFilterPointMax,
+        showAdvancedFilter, setShowAdvancedFilter, debouncedSearch, activeFilterCount, resetAllFilters,
+        // Modals & UI
+        isModalOpen, setIsModalOpen, isPrintModalOpen, setIsPrintModalOpen,
+        activeModal, setActiveModal, isHeaderMenuOpen, setIsHeaderMenuOpen,
+        isShortcutOpen, setIsShortcutOpen, photoZoom, setPhotoZoom,
+        isPrivacyMode, setIsPrivacyMode, isAnyModalOpen,
+        // Action Context
+        selectedStudent, setSelectedStudent, studentToDelete, setStudentToDelete,
+        selectedStudentIds, setSelectedStudentIds, submitting, setSubmitting,
+        newlyCreatedStudent, setNewlyCreatedStudent,
+        // Bulk
+        bulkClassId, setBulkClassId, bulkTagAction, setBulkTagAction,
+        bulkPointValue, setBulkPointValue, bulkPointLabel, setBulkPointLabel,
+        // Profile / Details
+        behaviorHistory, setBehaviorHistory, raportHistory, setRaportHistory,
+        profileTab, setProfileTab, timelineFilter, setTimelineFilter,
+        timelineVisible, setTimelineVisible, auditLogs, setAuditLogs, loadingAudit, setLoadingAudit,
+        loadingHistory,
+        // Functional
+        handleSubmit, handleAdd, handleEdit, confirmDelete, executeDelete, closeModal,
+        toggleSelectAll, toggleSelectStudent, handleBulkPromote, handleBulkDelete,
+        handleBulkPointUpdate, handleBulkTagApply,
+        fetchArchivedStudents, handleRestoreStudent, handlePermanentDelete,
+        fetchUsedTags, handleToggleTag, handleGlobalDeleteTag, handleGlobalRenameTag,
+        fetchBehaviorHistory, fetchRaportHistory, handleViewProfile,
+        handleResetPin, checkDuplicate, fetchAuditLog, fetchClassHistory, handleViewClassHistory,
+        handleQuickPoint, handleInlineUpdate, handleTogglePin, handlePhotoUpload, uploadingPhoto,
+        handleInlineSubmit, handleViewQR, handleViewPrint, handleBulkWA, buildWAMessage, openWAForStudent,
+        generateStudentPDF, handlePrintSingle, handlePrintThermal, handleSavePNG, handleBulkPrint,
+        handleBulkPhotoMatch, handleBulkPhotoUpload, handleClassBreakdown, handleBatchResetPoints,
+        // State Helpers
+        setNewTagInput, newTagInput, tagToEdit, setTagToEdit, tagStats, duplicateWarning, 
+        checkingDuplicate, gSheetsUrl, setGSheetsUrl, fetchingGSheets, setFetchingGSheets,
+        page, setPage, pageSize, setPageSize, jumpPage, setJumpPage, generatingPdf,
+        studentForTags, setStudentForTags, renameInput, setRenameInput, 
+        archivePage, setArchivePage, archivePageSize, setArchivePageSize, loadingRaport,
+        allSelected, someSelected, lastReportMap,
+        allUsedTags, archivedStudents, loadingArchived, classHistory, loadingClassHistory,
+        // Refs
+        formDataRef, importFileInputRef, photoInputRef, searchInputRef, headerMenuRef, shortcutRef, cardCaptureRef,
+        // Computed
+        selectedStudents, selectedStudentsWithPhone, selectedIdSet, generateCode, handleAddCustomTag,
+        // Inline Add State
+        isInlineAddOpen, setIsInlineAddOpen, inlineForm, setInlineForm, submittingInline, setSubmittingInline
+    }
+}

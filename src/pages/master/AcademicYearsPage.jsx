@@ -15,16 +15,14 @@ import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 import Breadcrumb from '../../components/ui/Breadcrumb'
+import Pagination from '../../components/ui/Pagination'
+import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
+
 
 const LS_COLS = 'academic_years_columns'
 const LS_PAGE_SIZE = 'academic_years_page_size'
 
-function getPageItems(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-    if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
-    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
-    return [1, '...', current - 1, current, current + 1, '...', total]
-}
+
 
 export default function AcademicYearsPage() {
     const { addToast } = useToast()
@@ -63,7 +61,7 @@ export default function AcademicYearsPage() {
     const colMenuRef = useRef(null)
 
     // UI
-    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
+    // Privacy mode not needed — academic year data is public info
     const [isShortcutOpen, setIsShortcutOpen] = useState(false)
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
     const shortcutRef = useRef(null)
@@ -310,15 +308,27 @@ export default function AcademicYearsPage() {
     })
 
     const totalRows = filtered.length
-    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
-    const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
-    const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1
-    const toRow = Math.min(page * pageSize, totalRows)
 
+    // PAGINATION - define paged variable
+    const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
+
+    // Selection logic
     const allSelected = paged.length > 0 && paged.every(y => selectedIds.includes(y.id))
     const someSelected = selectedIds.length > 0 && !allSelected
-    const toggleSelectAll = () => allSelected ? setSelectedIds(ids => ids.filter(id => !paged.map(y => y.id).includes(id))) : setSelectedIds(ids => [...new Set([...ids, ...paged.map(y => y.id)])])
-    const toggleSelect = (id) => setSelectedIds(ids => ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id])
+
+    const toggleSelectAll = () => {
+        if (allSelected) {
+            // Uncheck all visible rows
+            setSelectedIds(ids => ids.filter(id => !paged.map(y => y.id).includes(id)))
+        } else {
+            // Check all visible rows (combine with existing selections)
+            setSelectedIds(ids => [...new Set([...ids, ...paged.map(y => y.id)])])
+        }
+    }
+
+    const toggleSelect = (id) => {
+        setSelectedIds(ids => ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id])
+    }
 
     const getDuration = (start, end) => {
         if (!start || !end) return '—'
@@ -491,9 +501,9 @@ export default function AcademicYearsPage() {
                 {/* ── Main Card ── */}
                 <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden">
                     {loading ? (
-                        <div className="p-8 flex flex-col items-center gap-3 text-[var(--color-text-muted)]">
-                            <FontAwesomeIcon icon={faSpinner} className="fa-spin text-2xl" />
-                            <p className="text-xs font-bold uppercase tracking-widest">Memuat data...</p>
+                        <div className="p-6 space-y-4">
+                            <div className="hidden md:block"><TableSkeleton rows={6} cols={5} /></div>
+                            <div className="md:hidden"><CardSkeleton count={4} /></div>
                         </div>
                     ) : totalRows === 0 ? (
                         <div className="py-16 flex flex-col items-center justify-center text-center px-6">
@@ -677,42 +687,17 @@ export default function AcademicYearsPage() {
                                 ))}
                             </div>
 
-                            {/* Pagination */}
-                            {totalRows > 0 && (
-                                <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} data</p>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-2 mr-2 pr-3 border-r border-[var(--color-border)]">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">Baris:</span>
-                                            <select
-                                                value={pageSize}
-                                                onChange={e => {
-                                                    const val = Number(e.target.value)
-                                                    setPageSize(val)
-                                                    setPage(1)
-                                                }}
-                                                className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer hover:text-[var(--color-primary)] transition-all"
-                                            >
-                                                {[10, 25, 50, 100].map(v => (
-                                                    <option key={v} value={v} className="bg-[var(--color-surface)] text-[var(--color-text)]">{v}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
-                                        <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
-                                        <div className="flex items-center gap-1.5 mx-1">
-                                            {getPageItems(page, totalPages).map((it, idx) => it === '...' ? <span key={`s${idx}`} className="w-8 flex items-center justify-center text-[var(--color-text-muted)] font-bold opacity-30">···</span> : (
-                                                <button key={it} onClick={() => setPage(it)} className={`h-9 min-w-[36px] px-2.5 rounded-xl font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/25' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}>{it}</button>
-                                            ))}
-                                        </div>
-                                        <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[10px]" /></button>
-                                        <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" /></button>
-                                        <div className="ml-2 relative flex items-center">
-                                            <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/[^\d]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal..." className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[11px] font-black focus:border-[var(--color-primary)] outline-none" />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            <Pagination
+                                totalRows={totalRows}
+                                page={page}
+                                pageSize={pageSize}
+                                setPage={setPage}
+                                setPageSize={setPageSize}
+                                label="data"
+                                jumpPage={jumpPage}
+                                setJumpPage={setJumpPage}
+                            />
+
                         </>
                     )}
                 </div>

@@ -382,6 +382,14 @@ export default function TopNav({ title, subtitle }) {
                             <div className="flex items-center gap-1.5">
                                 <BellButton />
 
+                                <button
+                                    onClick={toggleTheme}
+                                    className="p-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition"
+                                    type="button"
+                                >
+                                    <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
+                                </button>
+
                                 <div className="relative flex-shrink-0" ref={mobileProfileRef}>
                                     <button
                                         onClick={() => setProfileOpen(v => !v)}
