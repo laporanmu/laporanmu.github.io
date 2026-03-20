@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { flushSync } from 'react-dom'
 
 const ThemeContext = createContext({})
 
@@ -19,7 +20,20 @@ export function ThemeProvider({ children }) {
         localStorage.setItem('laporanmu_theme', isDark ? 'dark' : 'light')
     }, [isDark])
 
-    const toggleTheme = () => setIsDark(prev => !prev)
+    const toggleTheme = () => {
+        // Fallback untuk browser lawas yang belum support View Transitions (contoh: Firefox lama)
+        if (!document.startViewTransition) {
+            setIsDark(prev => !prev)
+            return
+        }
+
+        // Browser modern: Snapshot UI dan lakukan transisi native di level GPU
+        document.startViewTransition(() => {
+            flushSync(() => {
+                setIsDark(prev => !prev)
+            })
+        })
+    }
 
     return (
         <ThemeContext.Provider value={{ isDark, toggleTheme }}>

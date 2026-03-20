@@ -3,14 +3,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faCheckCircle,
     faFileLines,
-    faIdCard,
     faSliders,
     faSpinner,
     faTableList,
     faTriangleExclamation,
     faUsers,
 } from '@fortawesome/free-solid-svg-icons'
-import Modal from '../../../components/ui/Modal'
+import Modal from '../ui/Modal'
 
 export default function StudentExportModal({
     isOpen,
