@@ -15,6 +15,7 @@ import Breadcrumb from '../../components/ui/Breadcrumb'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import Pagination from '../../components/ui/Pagination'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -79,12 +80,6 @@ const fmtRelative = (d) => {
     if (hours < 24) return `${hours} jam lalu`
     if (days < 7) return `${days} hari lalu`
     return fmtDate(d)
-}
-function getPageItems(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-    if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
-    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
-    return [1, '...', current - 1, current, current + 1, '...', total]
 }
 
 // ─── SQL Setup Banner ─────────────────────────────────────────────────────────
@@ -244,6 +239,7 @@ export default function LogsPage() {
     const [sortDir, setSortDir] = useState('desc')
     const [showFilters, setShowFilters] = useState(false)
     const [page, setPage] = useState(1)
+    const [jumpPage, setJumpPage] = useState('')
     const [pageSize, setPageSize] = useState(20)
 
     // Activity filters
@@ -719,55 +715,16 @@ export default function LogsPage() {
                         </div>
                     )}
 
-                    {/* Pagination */}
-                    {totalRows > 0 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                            <div className="flex items-center gap-4">
-                                <p className="text-[10px] font-black text-[var(--color-text-muted)] tabular-nums">
-                                    <span className="text-[var(--color-text)]">{fromRow}–{toRow}</span>
-                                    <span className="opacity-40"> dari </span>
-                                    <span className="text-[var(--color-text)]">{totalRows}</span> log
-                                </p>
-                                <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-[var(--color-border)]">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Baris:</span>
-                                    <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                                        className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer">
-                                        {PAGE_SIZE_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {[
-                                    { icon: faAnglesLeft, action: () => setPage(1), disabled: page === 1 },
-                                    { icon: faChevronLeft, action: () => setPage(p => Math.max(1, p - 1)), disabled: page === 1 },
-                                ].map((b, i) => (
-                                    <button key={i} disabled={b.disabled} onClick={b.action}
-                                        className="w-8 h-8 rounded-lg border border-[var(--color-border)] disabled:opacity-20 hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
-                                        <FontAwesomeIcon icon={b.icon} className="text-[10px]" />
-                                    </button>
-                                ))}
-                                <div className="flex gap-0.5 mx-1">
-                                    {getPageItems(page, totalPages).map((it, idx) =>
-                                        it === '...'
-                                            ? <span key={idx} className="w-8 h-8 flex items-center justify-center opacity-30 text-xs">···</span>
-                                            : <button key={it} onClick={() => setPage(it)}
-                                                className={`w-8 h-8 rounded-lg font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
-                                                {it}
-                                            </button>
-                                    )}
-                                </div>
-                                {[
-                                    { icon: faChevronRight, action: () => setPage(p => Math.min(totalPages, p + 1)), disabled: page >= totalPages },
-                                    { icon: faAnglesRight, action: () => setPage(totalPages), disabled: page >= totalPages },
-                                ].map((b, i) => (
-                                    <button key={i} disabled={b.disabled} onClick={b.action}
-                                        className="w-8 h-8 rounded-lg border border-[var(--color-border)] disabled:opacity-20 hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
-                                        <FontAwesomeIcon icon={b.icon} className="text-[10px]" />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <Pagination
+                        totalRows={totalRows}
+                        page={page}
+                        pageSize={pageSize}
+                        setPage={setPage}
+                        setPageSize={setPageSize}
+                        label="log"
+                        jumpPage={jumpPage}
+                        setJumpPage={setJumpPage}
+                    />
                 </div>
 
                 {/* Info note */}

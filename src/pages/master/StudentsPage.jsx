@@ -114,7 +114,7 @@ const LazyStudentImportModal = React.lazy(() =>
     import('../../components/students/StudentImportModal')
 )
 
-// â”€â”€ BehaviorHeatmap â€” outside StudentsPage to prevent re-creation on every render â”€â”€
+// â”€â”€ BehaviorHeatmap —” outside StudentsPage to prevent re-creation on every render â”€â”€
 // â”€â”€ helper for pagination â”€â”€
 import Pagination from '../../components/ui/Pagination'
 
@@ -233,6 +233,80 @@ export default function StudentsPage() {
         formDataRef, importFileInputRef, photoInputRef, searchInputRef, headerMenuRef, shortcutRef, cardCaptureRef,
         selectedStudents, selectedStudentsWithPhone, selectedIdSet, generateCode, handleAddCustomTag
     } = core
+
+    // --- Pull-to-Refresh Logic ---
+    const [pullDistance, setPullDistance] = useState(0)
+    const [isRefreshing, setIsRefreshing] = useState(false)
+    const touchStartRef = useRef(0)
+    const pullThreshold = 80 // px
+
+    // --- Recent Searches Logic ---
+    const [recentSearches, setRecentSearches] = useState(() => {
+        const saved = localStorage.getItem('recent_searches_students')
+        return saved ? JSON.parse(saved) : []
+    })
+    const [isSearchFocused, setIsSearchFocused] = useState(false)
+
+    useEffect(() => {
+        if (searchQuery && searchQuery.length > 2) {
+            const timer = setTimeout(() => {
+                setRecentSearches(prev => {
+                    const filtered = prev.filter(s => s !== searchQuery)
+                    const updated = [searchQuery, ...filtered].slice(0, 5)
+                    localStorage.setItem('recent_searches_students', JSON.stringify(updated))
+                    return updated
+                })
+            }, 2000)
+            return () => clearTimeout(timer)
+        }
+    }, [searchQuery])
+
+    // --- Grouping Logic for Sticky Headers ---
+    const groupedStudents = useMemo(() => {
+        if (!students.length) return []
+        // Only group if not searching or if explicitly grouped
+        const groups = {}
+        students.forEach(s => {
+            const key = s.className || 'Tanpa Kelas'
+            if (!groups[key]) groups[key] = []
+            groups[key].push(s)
+        })
+        return Object.entries(groups)
+    }, [students])
+
+    const handleTouchStart = (e) => {
+        if (window.scrollY === 0) {
+            touchStartRef.current = e.touches[0].clientY
+        } else {
+            touchStartRef.current = -1
+        }
+    }
+
+    const handleTouchMove = (e) => {
+        if (touchStartRef.current === -1 || isRefreshing) return
+        const touchY = e.touches[0].clientY
+        const distance = touchY - touchStartRef.current
+        if (distance > 0) {
+            setPullDistance(Math.min(distance * 0.4, 120)) // dampened pull
+        }
+    }
+
+    const handleTouchEnd = async () => {
+        if (pullDistance > pullThreshold && !isRefreshing) {
+            setIsRefreshing(true)
+            setPullDistance(pullThreshold)
+            try {
+                await Promise.all([fetchData(), fetchStats()])
+                addToast('Data diperbarui', 'success')
+            } finally {
+                setIsRefreshing(false)
+                setPullDistance(0)
+            }
+        } else {
+            setPullDistance(0)
+        }
+        touchStartRef.current = -1
+    }
 
 
 
@@ -394,8 +468,29 @@ export default function StudentsPage() {
                 ` : ''}
             </style>
 
-            {/* TAMBAH INI: */}
-            <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
+            <div
+                className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto min-h-screen relative"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
+                {/* Pull-to-Refresh Indicator */}
+                <div
+                    className="absolute left-0 right-0 flex justify-center pointer-events-none z-[100] transition-transform duration-200"
+                    style={{
+                        top: 0,
+                        transform: `translateY(${pullDistance - 40}px)`,
+                        opacity: pullDistance / pullThreshold
+                    }}
+                >
+                    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-2.5 rounded-full shadow-xl flex items-center justify-center">
+                        <FontAwesomeIcon
+                            icon={isRefreshing ? faSpinner : faSync}
+                            className={`text-[var(--color-primary)] text-sm ${isRefreshing ? 'animate-spin' : ''}`}
+                            style={{ transform: `rotate(${pullDistance * 2}deg)` }}
+                        />
+                    </div>
+                </div>
 
                 {/* Privacy Banner */}
                 {isPrivacyMode && (
@@ -409,7 +504,7 @@ export default function StudentsPage() {
                 {!canEdit && (
                     <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
                         <FontAwesomeIcon icon={faEyeSlash} className="text-rose-500 shrink-0 text-xs" />
-                        <p className="text-[11px] font-bold text-rose-600">Mode Read-only â€” Edit data siswa dinonaktifkan oleh administrator.</p>
+                        <p className="text-[11px] font-bold text-rose-600">Mode Read-only —” Edit data siswa dinonaktifkan oleh administrator.</p>
                     </div>
                 )}
 
@@ -427,17 +522,17 @@ export default function StudentsPage() {
                     </div>
 
                     <div className="flex gap-2 items-center">
-                        {/* Tombol aksi sekunder â€” bottom sheet di mobile, dropdown di desktop */}
+                        {/* Tombol aksi sekunder —” bottom sheet di mobile, dropdown di desktop */}
                         <div className="relative" ref={headerMenuRef}>
                             <button
                                 onClick={() => setIsHeaderMenuOpen(v => !v)}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${(isHeaderMenuOpen) ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${(isHeaderMenuOpen) ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
                                 title="Aksi lainnya"
                             >
                                 <FontAwesomeIcon icon={faSliders} />
                             </button>
 
-                            {/* Dropdown â€” desktop only */}
+                            {/* Dropdown —” desktop only */}
                             {isHeaderMenuOpen && (
                                 <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
                                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
@@ -513,7 +608,7 @@ export default function StudentsPage() {
                         <div className="relative" ref={shortcutRef}>
                             <button
                                 onClick={() => setIsShortcutOpen(v => !v)}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all
+                                className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all active:scale-95
                                 ${isShortcutOpen
                                         ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
                                         : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
@@ -571,7 +666,7 @@ export default function StudentsPage() {
 
                         <button
                             onClick={() => navigate('/raport')}
-                            className="h-9 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500/20 transition-all"
+                            className="h-9 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500/20 transition-all active:scale-95"
                             title="Raport Bulanan"
                         >
                             <FontAwesomeIcon icon={faClipboardList} className="text-sm" />
@@ -579,7 +674,7 @@ export default function StudentsPage() {
 
                         <button
                             onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-                            className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
+                            className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all active:scale-95 ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
                             title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}
                         >
                             <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
@@ -591,7 +686,7 @@ export default function StudentsPage() {
                         <button
                             onClick={handleAdd}
                             disabled={!canEdit}
-                            className="h-9 px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            className="h-9 px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                         >
                             <FontAwesomeIcon icon={faPlus} />
                             {canEdit ? 'Tambah' : 'Read-only'}
@@ -633,7 +728,7 @@ export default function StudentsPage() {
                         </div>
 
                         <div
-                            className="w-[210px] xs:w-[230px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-emerald-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-emerald-500/5 cursor-pointer"
+                            className="w-[210px] xs:w-[230px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-emerald-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-emerald-500/5 cursor-pointer active:scale-95 outline-none"
                             onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
                         >
                             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-lg group-hover:scale-110 transition-transform shrink-0">
@@ -655,7 +750,7 @@ export default function StudentsPage() {
 
                         {/* Kelas Bermasalah */}
                         <div
-                            className="w-[230px] xs:w-[250px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-red-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-red-500/5 cursor-pointer sm:col-span-2 lg:col-span-1"
+                            className="w-[230px] xs:w-[250px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-red-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-red-500/5 cursor-pointer sm:col-span-2 lg:col-span-1 active:scale-95 outline-none"
                             onClick={() => { if (globalStats.worstClass) { setFilterClass(''); setFilterPointMode('risk') } }}
                             title="Klik untuk filter siswa risiko"
                         >
@@ -776,15 +871,38 @@ export default function StudentsPage() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Cari nama, kode... (Ctrl+K)"
+                                onFocus={() => setIsSearchFocused(true)}
+                                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                                 className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                             />
+                            {/* Recent Searches Dropdown */}
+                            {isSearchFocused && recentSearches.length > 0 && !searchQuery && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/30">
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pencarian Terakhir</span>
+                                        <button onClick={() => { setRecentSearches([]); localStorage.removeItem('recent_searches_students') }} className="text-[8px] font-black hover:text-red-500 uppercase tracking-tighter">Hapus Semua</button>
+                                    </div>
+                                    <div className="p-1">
+                                        {recentSearches.map((s, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => setSearchQuery(s)}
+                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--color-surface-alt)] text-xs font-bold text-[var(--color-text-muted)] hover:text-[var(--color-primary)] flex items-center gap-2 transition-colors"
+                                            >
+                                                <FontAwesomeIcon icon={faHistory} className="text-[10px] opacity-40" />
+                                                {s}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Filter toggle button */}
                         <div className="flex items-center gap-1.5 shrink-0">
                             <button
                                 onClick={toggleSelectAll}
-                                className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${selectedStudentIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white shadow-md' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
+                                className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedStudentIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white shadow-md' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
                                 title="Pilih Semua / Batal"
                             >
                                 <FontAwesomeIcon icon={selectedStudentIds.length > 0 ? faCheckDouble : faSquareCheck} />
@@ -798,7 +916,7 @@ export default function StudentsPage() {
 
                             <button
                                 onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
-                                className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${showAdvancedFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
+                                className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${showAdvancedFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
                             >
                                 <FontAwesomeIcon icon={faSliders} />
                                 <span className="hidden xs:inline">Filter</span>
@@ -822,6 +940,49 @@ export default function StudentsPage() {
                             )}
                         </div>
 
+                    </div>
+
+                    {/* Quick Filter Horizontal Chips */}
+                    <div className="px-3 pb-2 overflow-x-auto scrollbar-none flex items-center gap-2 whitespace-nowrap mask-fade-right">
+                        <button
+                            onClick={resetAllFilters}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${activeFilterCount === 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
+                        >
+                            Semua
+                        </button>
+                        <button
+                            onClick={() => { setFilterGender(filterGender === 'L' ? '' : 'L'); setPage(1) }}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterGender === 'L' ? 'bg-blue-500 border-blue-500 text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
+                        >
+                            Putra
+                        </button>
+                        <button
+                            onClick={() => { setFilterGender(filterGender === 'P' ? '' : 'P'); setPage(1) }}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterGender === 'P' ? 'bg-pink-500 border-pink-500 text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
+                        >
+                            Putri
+                        </button>
+                        <button
+                            onClick={() => { setFilterPointMode(filterPointMode === 'positive' ? '' : 'positive'); resetAllFilters({ filterPointMode: filterPointMode === 'positive' ? '' : 'positive' }) }}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterPointMode === 'positive' ? 'bg-emerald-500 border-emerald-500 text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
+                        >
+                            Tertinggi
+                        </button>
+                        <button
+                            onClick={() => { setFilterPointMode(filterPointMode === 'risk' ? '' : 'risk'); setFilterClass(''); setPage(1) }}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterPointMode === 'risk' ? 'bg-red-500 border-red-500 text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
+                        >
+                            Bermasalah
+                        </button>
+                        {classesList.slice(0, 8).map(cls => (
+                            <button
+                                key={cls.id}
+                                onClick={() => { setFilterClass(filterClass === cls.id ? '' : cls.id); setFilterClasses([]); setPage(1) }}
+                                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterClass === cls.id ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
+                            >
+                                {cls.name}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Active Filter Chips */}
@@ -1144,13 +1305,13 @@ export default function StudentsPage() {
                                                 <th className="px-6 py-4 text-center">Poin</th>
                                             )}
 
-                                            {/* COLUMN TOGGLE BUTTON â€” di dalam header Aksi */}
+                                            {/* COLUMN TOGGLE BUTTON —” di dalam header Aksi */}
                                             <th className="px-6 py-4 text-center pr-6 relative min-w-[240px]">
                                                 <div className="flex items-center justify-center">
                                                     {visibleColumns.aksi && <span>Aksi</span>}
                                                 </div>
 
-                                                {/* Toggle Button â€” absolute kanan, seperti checkbox di kiri */}
+                                                {/* Toggle Button —” absolute kanan, seperti checkbox di kiri */}
                                                 <div className="absolute right-3 top-1/2 -translate-y-1/2" ref={colMenuRef}>
                                                     <button
                                                         onClick={(e) => {
@@ -1180,7 +1341,7 @@ export default function StudentsPage() {
                                                         </svg>
                                                     </button>
 
-                                                    {/* Dropdown Menu â€” Portal agar tidak ter-clip oleh overflow tabel */}
+                                                    {/* Dropdown Menu —” Portal agar tidak ter-clip oleh overflow tabel */}
                                                     {isColMenuOpen && createPortal(
                                                         <div
                                                             className={`absolute z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${colMenuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
@@ -1231,32 +1392,58 @@ export default function StudentsPage() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ) : (students.map((student) => (
-                                            <StudentRow
-                                                key={student.id}
-                                                student={student}
-                                                visibleColumns={visibleColumns}
-                                                isSelected={selectedIdSet.has(student.id)}
-                                                lastReportMap={lastReportMap}
-                                                isPrivacyMode={isPrivacyMode}
-                                                onEdit={canEdit ? handleEdit : null}
-                                                onViewProfile={handleViewProfile}
-                                                onViewQR={handleViewQR}
-                                                onViewPrint={handleViewPrint}
-                                                onViewTags={(s) => { setStudentForTags(s); setActiveModal('tag') }}
-                                                onViewClassHistory={handleViewClassHistory}
-                                                onConfirmDelete={canEdit ? confirmDelete : null}
-                                                onClassBreakdown={handleClassBreakdown}
-                                                onPhotoZoom={setPhotoZoom}
-                                                onToggleSelect={toggleSelectStudent}
-                                                onQuickPoint={handleQuickPoint}
-                                                onInlineUpdate={canEdit ? handleInlineUpdate : null}
-                                                onTogglePin={handleTogglePin}
-                                                classesList={classesList}
-                                                formatRelativeDate={formatRelativeDate}
-                                                RiskThreshold={RiskThreshold}
-                                            />
-                                        )))}
+                                        ) : (
+                                            groupedStudents.map(([className, classStudents]) => (
+                                                <React.Fragment key={className}>
+                                                    {/* Sticky Header for Table */}
+                                                    <tr className="sticky top-[58px] md:top-[64px] z-[15]">
+                                                        <td colSpan={7} className="p-0">
+                                                            <div className="bg-[var(--color-surface)]/90 backdrop-blur-md px-6 py-2 border-y border-[var(--color-border)] flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-1.5 h-4 rounded-full bg-[var(--color-primary)] shadow-[0_0_8px_var(--color-primary)]/20" />
+                                                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">
+                                                                        {className}
+                                                                        <span className="ml-2 text-[var(--color-text-muted)] opacity-50 font-bold">({classStudents.length} Siswa)</span>
+                                                                    </span>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => { setFilterClass(classStudents[0].class_id); setFilterClasses([]); setPage(1) }}
+                                                                    className="text-[8px] font-black uppercase tracking-tighter text-[var(--color-primary)] hover:underline opacity-60 hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    Fokus Kelas
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    {classStudents.map((student) => (
+                                                        <StudentRow
+                                                            key={student.id}
+                                                            student={student}
+                                                            visibleColumns={visibleColumns}
+                                                            isSelected={selectedIdSet.has(student.id)}
+                                                            lastReportMap={lastReportMap}
+                                                            isPrivacyMode={isPrivacyMode}
+                                                            onEdit={canEdit ? handleEdit : null}
+                                                            onViewProfile={handleViewProfile}
+                                                            onViewQR={handleViewQR}
+                                                            onViewPrint={handleViewPrint}
+                                                            onViewTags={(s) => { setStudentForTags(s); setActiveModal('tag') }}
+                                                            onViewClassHistory={handleViewClassHistory}
+                                                            onConfirmDelete={canEdit ? confirmDelete : null}
+                                                            onClassBreakdown={handleClassBreakdown}
+                                                            onPhotoZoom={setPhotoZoom}
+                                                            onToggleSelect={toggleSelectStudent}
+                                                            onQuickPoint={handleQuickPoint}
+                                                            onInlineUpdate={canEdit ? handleInlineUpdate : null}
+                                                            onTogglePin={handleTogglePin}
+                                                            classesList={classesList}
+                                                            formatRelativeDate={formatRelativeDate}
+                                                            RiskThreshold={RiskThreshold}
+                                                        />
+                                                    ))}
+                                                </React.Fragment>
+                                            ))
+                                        )}
 
                                         {/* Quick Inline Add Row */}
                                         {isInlineAddOpen && (
@@ -1439,32 +1626,52 @@ export default function StudentsPage() {
 
                                         <div className="space-y-4 pt-4">
                                             {mobileView === 'card' ? (
-                                                students.map(student => {
-                                                    const isRisk = (student.total_points || 0) <= RiskThreshold
-                                                    return (
-                                                        <div
-                                                            key={student.id}
-                                                            className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
-                                                        >
-                                                            {/* Risk stripe */}
-                                                            {isRisk && (
-                                                                <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
-                                                            )}
-                                                            <StudentMobileCard
-                                                                student={student}
-                                                                isSelected={selectedIdSet.has(student.id)}
-                                                                onToggleSelect={toggleSelectStudent}
-                                                                onViewProfile={handleViewProfile}
-                                                                onEdit={canEdit ? handleEdit : null}
-                                                                onConfirmDelete={canEdit ? confirmDelete : null}
-                                                                onTogglePin={handleTogglePin}
-                                                                onQuickPoint={handleQuickPoint}
-                                                                isPrivacyMode={isPrivacyMode}
-                                                                RiskThreshold={RiskThreshold}
-                                                            />
+                                                groupedStudents.map(([className, classStudents]) => (
+                                                    <div key={className} className="space-y-4">
+                                                        {/* Sticky Header for Mobile Cards */}
+                                                        <div className="sticky top-[58px] z-20 mx-[-12px] px-5 py-2.5 bg-gradient-to-r from-[var(--color-surface)] via-[var(--color-surface)]/80 to-[var(--color-surface)] backdrop-blur-md border-y border-[var(--color-border)] flex items-center justify-between shadow-sm">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-1 h-3.5 rounded-full bg-[var(--color-primary)]" />
+                                                                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text)]">
+                                                                    {className}
+                                                                    <span className="ml-2 text-[var(--color-text-muted)] opacity-50 font-bold tracking-tight">({classStudents.length})</span>
+                                                                </span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => { setFilterClass(classStudents[0].class_id); setFilterClasses([]); setPage(1) }}
+                                                                className="h-6 px-3 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all"
+                                                            >
+                                                                Fokus
+                                                            </button>
                                                         </div>
-                                                    )
-                                                })
+
+                                                        {classStudents.map(student => {
+                                                            const isRisk = (student.total_points || 0) <= RiskThreshold
+                                                            return (
+                                                                <div
+                                                                    key={student.id}
+                                                                    className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
+                                                                >
+                                                                    {isRisk && (
+                                                                        <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
+                                                                    )}
+                                                                    <StudentMobileCard
+                                                                        student={student}
+                                                                        isSelected={selectedIdSet.has(student.id)}
+                                                                        onToggleSelect={toggleSelectStudent}
+                                                                        onViewProfile={handleViewProfile}
+                                                                        onEdit={canEdit ? handleEdit : null}
+                                                                        onConfirmDelete={canEdit ? confirmDelete : null}
+                                                                        onTogglePin={handleTogglePin}
+                                                                        onQuickPoint={handleQuickPoint}
+                                                                        isPrivacyMode={isPrivacyMode}
+                                                                        RiskThreshold={RiskThreshold}
+                                                                    />
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                ))
                                             ) : (
                                                 <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/50 overflow-hidden shadow-sm">
                                                     <div className="grid grid-cols-[1fr_auto_auto] items-center px-4 py-3 bg-[var(--color-surface-alt)]/30 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)]/50">
@@ -1472,54 +1679,64 @@ export default function StudentsPage() {
                                                         <span className="px-4 text-center">Poin</span>
                                                         <span className="w-10"></span>
                                                     </div>
-                                                    {students.map((student) => {
-                                                        const p = student.total_points || 0
-                                                        return (
-                                                            <div
-                                                                key={student.id}
-                                                                className={`grid grid-cols-[1fr_auto_auto] items-center px-4 py-3 gap-3 transition-colors active:bg-[var(--color-primary)]/5
-                                                                        ${selectedIdSet.has(student.id) ? 'bg-[var(--color-primary)]/[0.03]' : ''}
-                                                                        ${student.is_pinned ? 'border-l-4 border-l-amber-400' : ''}`}
-                                                                onClick={() => handleViewProfile(student)}
-                                                            >
-                                                                <div className="flex items-center gap-3 min-w-0">
-                                                                    <div
-                                                                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0 shadow-inner
-                                                                                ${(student.total_points || 0) <= RiskThreshold ? 'bg-red-500/10 text-red-500' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}
-                                                                    >
-                                                                        {student.photo_url ? <img src={student.photo_url} className="w-full h-full object-cover rounded-xl" /> : (student.name || 'S').charAt(0)}
-                                                                    </div>
-                                                                    <div className="min-w-0">
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <p className="text-xs font-black text-[var(--color-text)] truncate">{student.name}</p>
-                                                                            {student.is_pinned && <FontAwesomeIcon icon={faThumbtack} className="text-amber-500 text-[8px]" />}
-                                                                        </div>
-                                                                        <div className="flex items-center gap-2 text-[9px] font-bold text-[var(--color-text-muted)] opacity-60">
-                                                                            <span>{student.className}</span>
-                                                                            <span>·</span>
-                                                                            <span>{student.gender}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className={`text-xs font-black px-3 py-1 rounded-lg border text-center min-w-[50px]
-                                                                        ${p < 0 ? 'bg-red-500/10 border-red-500/20 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-[var(--color-surface-alt)]/60 border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                                                                    {p > 0 ? '+' : ''}{p}
-                                                                </div>
-                                                                <div
-                                                                    className="w-10 flex justify-center py-2"
-                                                                    onClick={(e) => { e.stopPropagation(); toggleSelectStudent(student.id) }}
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={selectedIdSet.has(student.id)}
-                                                                        readOnly
-                                                                        className="w-4.5 h-4.5 rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                                                                    />
-                                                                </div>
+                                                    {groupedStudents.map(([className, classStudents]) => (
+                                                        <React.Fragment key={className}>
+                                                            <div className="sticky top-[58px] z-20 px-4 py-2 bg-[var(--color-surface-alt)]/90 backdrop-blur-md border-b border-[var(--color-border)] flex items-center justify-between">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                                                    {className} · <span className="opacity-60">{classStudents.length} Siswa</span>
+                                                                </span>
+                                                                <button onClick={() => { setFilterClass(classStudents[0].class_id); setFilterClasses([]); setPage(1) }} className="text-[9px] font-black text-[var(--color-primary)]">Lihat Kelas</button>
                                                             </div>
-                                                        )
-                                                    })}
+                                                            {classStudents.map((student) => {
+                                                                const p = student.total_points || 0
+                                                                return (
+                                                                    <div
+                                                                        key={student.id}
+                                                                        className={`grid grid-cols-[1fr_auto_auto] items-center px-4 py-3 gap-3 transition-colors active:bg-[var(--color-primary)]/5
+                                                                                ${selectedIdSet.has(student.id) ? 'bg-[var(--color-primary)]/[0.03]' : ''}
+                                                                                ${student.is_pinned ? 'border-l-4 border-l-amber-400' : ''}`}
+                                                                        onClick={() => handleViewProfile(student)}
+                                                                    >
+                                                                        <div className="flex items-center gap-3 min-w-0">
+                                                                            <div
+                                                                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0 shadow-inner
+                                                                                        ${(student.total_points || 0) <= RiskThreshold ? 'bg-red-500/10 text-red-500' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}
+                                                                            >
+                                                                                {student.photo_url ? <img src={student.photo_url} className="w-full h-full object-cover rounded-xl" /> : (student.name || 'S').charAt(0)}
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <p className="text-xs font-black text-[var(--color-text)] truncate">{student.name}</p>
+                                                                                    {student.is_pinned && <FontAwesomeIcon icon={faThumbtack} className="text-amber-500 text-[8px]" />}
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2 text-[9px] font-bold text-[var(--color-text-muted)] opacity-60">
+                                                                                    <span>{student.className}</span>
+                                                                                    <span>·</span>
+                                                                                    <span>{student.gender}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className={`text-xs font-black px-3 py-1 rounded-lg border text-center min-w-[50px]
+                                                                                ${p < 0 ? 'bg-red-500/10 border-red-500/20 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-[var(--color-surface-alt)]/60 border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                                                            {p > 0 ? '+' : ''}{p}
+                                                                        </div>
+                                                                        <div
+                                                                            className="w-10 flex justify-center py-2"
+                                                                            onClick={(e) => { e.stopPropagation(); toggleSelectStudent(student.id) }}
+                                                                        >
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={selectedIdSet.has(student.id)}
+                                                                                readOnly
+                                                                                className="w-4.5 h-4.5 rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </React.Fragment>
+                                                    ))}
                                                 </div>
                                             )}
 
@@ -1943,7 +2160,7 @@ export default function StudentsPage() {
                         />
                     )}
                 </React.Suspense>
-                {/* Modal Detail Profil Siswa â€” lazy loaded */}
+                {/* Modal Detail Profil Siswa —” lazy loaded */}
                 {
                     activeModal === 'profile' && selectedStudent && (
                         <React.Suspense fallback={null}>
@@ -2222,7 +2439,7 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'classHistory'}
                             onClose={() => closeModal()}
-                            title={`Riwayat Kelas â€” ${selectedStudent?.name || ''}`}
+                            title={`Riwayat Kelas —” ${selectedStudent?.name || ''}`}
                             size="md"
                         >
                             <div className="space-y-4">
@@ -2281,7 +2498,7 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'classBreakdown'}
                             onClose={() => closeModal()}
-                            title={`Statistik Kelas â€” ${classBreakdownData?.className || ''}`}
+                            title={`Statistik Kelas —” ${classBreakdownData?.className || ''}`}
                             size="md"
                         >
                             {loadingBreakdown ? (
@@ -2387,7 +2604,7 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'tag'}
                             onClose={() => closeModal()}
-                            title={`Kelola Label â€” ${studentForTags?.name || ''}`}
+                            title={`Kelola Label —” ${studentForTags?.name || ''}`}
                             size="sm"
                         >
                             <div className="space-y-4">
@@ -2815,7 +3032,7 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'bulkTag'}
                             onClose={() => closeModal()}
-                            title={`Aksi Label Massal â€” ${selectedStudentIds.length} Siswa`}
+                            title={`Aksi Label Massal —” ${selectedStudentIds.length} Siswa`}
                             size="sm"
                         >
                             <div className="space-y-6">
@@ -2889,7 +3106,7 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'bulkPoint'}
                             onClose={() => closeModal()}
-                            title={`Aksi Poin Massal â€” ${selectedStudentIds.length} Siswa`}
+                            title={`Aksi Poin Massal —” ${selectedStudentIds.length} Siswa`}
                             size="sm"
                         >
                             <div className="space-y-6">

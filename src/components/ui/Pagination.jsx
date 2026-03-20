@@ -33,38 +33,58 @@ export default function Pagination({
     return (
         <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 rounded-b-2xl">
             {/* ── MOBILE COMPACT PAGINATION (< md) ── */}
-            <div className="flex md:hidden items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] whitespace-nowrap">{totalRows} {label}</span>
+            <div className="flex md:hidden flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{totalRows} <span className="opacity-60">{label}</span></span>
                     <div className="relative">
                         <select
                             value={pageSize}
                             onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                            className="h-10 pl-3 pr-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black outline-none focus:border-[var(--color-primary)] transition-all appearance-none cursor-pointer hover:bg-[var(--color-surface-alt)]"
+                            className="h-10 pl-4 pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all appearance-none cursor-pointer hover:bg-[var(--color-surface-alt)] shadow-sm"
                         >
                             {[10, 25, 50, 100].map(v => <option key={v} value={v}>{v} / hal</option>)}
                         </select>
-                        <FontAwesomeIcon icon={faChevronDown} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[8px] text-[var(--color-text-muted)] pointer-events-none" />
+                        <FontAwesomeIcon icon={faChevronDown} className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-[var(--color-text-muted)] pointer-events-none" />
                     </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <button
-                        disabled={page <= 1}
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                        className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-25 active:scale-90"
-                    >
-                        <FontAwesomeIcon icon={faChevronLeft} className="text-xs" />
-                    </button>
-                    <span className="text-[11px] font-black text-[var(--color-text)] px-2 min-w-[52px] text-center">
-                        {page} / {totalPages}
+                <div className="flex items-center justify-between gap-1 w-full">
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            disabled={page <= 1}
+                            onClick={() => setPage(1)}
+                            className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 transition-all disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:text-[var(--color-text-muted)] disabled:active:scale-100 shadow-sm"
+                        >
+                            <FontAwesomeIcon icon={faAnglesLeft} className="text-[11px]" />
+                        </button>
+                        <button
+                            disabled={page <= 1}
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 transition-all disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:text-[var(--color-text-muted)] disabled:active:scale-100 shadow-sm"
+                        >
+                            <FontAwesomeIcon icon={faChevronLeft} className="text-[11px]" />
+                        </button>
+                    </div>
+
+                    <span className="text-[12px] font-black text-[var(--color-text)] flex-1 text-center truncate px-2">
+                        {page} <span className="opacity-40 text-[10px] mx-0.5">/</span> {totalPages}
                     </span>
-                    <button
-                        disabled={page >= totalPages}
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                        className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-25 active:scale-90"
-                    >
-                        <FontAwesomeIcon icon={faChevronRight} className="text-xs" />
-                    </button>
+
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            disabled={page >= totalPages}
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 transition-all disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:text-[var(--color-text-muted)] disabled:active:scale-100 shadow-sm"
+                        >
+                            <FontAwesomeIcon icon={faChevronRight} className="text-[11px]" />
+                        </button>
+                        <button
+                            disabled={page >= totalPages}
+                            onClick={() => setPage(totalPages)}
+                            className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 transition-all disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:text-[var(--color-text-muted)] disabled:active:scale-100 shadow-sm"
+                        >
+                            <FontAwesomeIcon icon={faAnglesRight} className="text-[11px]" />
+                        </button>
+                    </div>
                 </div>
             </div>
 

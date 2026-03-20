@@ -20,7 +20,7 @@ export function useStudentsImportExport({
     closeModal,
     importFileInputRef,
     generateCode,
-    
+
     // Filter & sort dependencies for export
     filterClasses,
     filterClass,
@@ -33,7 +33,7 @@ export function useStudentsImportExport({
     filterPointMin,
     filterPointMax,
     sortBy,
-    
+
     // Additional features state
     selectedStudentIds,
     selectedStudents,
@@ -249,7 +249,7 @@ export function useStudentsImportExport({
             // Fetch as CSV (requires public sheet)
             const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`
             const res = await fetch(csvUrl)
-            if (!res.ok) throw new Error('Gagal fetch sheet â€” pastikan sheet bersifat publik')
+            if (!res.ok) throw new Error('Gagal fetch sheet —” pastikan sheet bersifat publik')
             const text = await res.text()
             const rows = await parseCSVFile(new Blob([text], { type: 'text/csv' }))
             if (!rows.length) throw new Error('Sheet kosong')
@@ -520,7 +520,7 @@ export function useStudentsImportExport({
             setImportStep(1)
             setIsImportModalOpen(true)
         } else {
-            // Already open (e.g. "Ganti File" button inside modal) â€” open picker directly
+            // Already open (e.g. "Ganti File" button inside modal) —” open picker directly
             importFileInputRef.current?.click()
         }
     }
@@ -716,13 +716,13 @@ export function useStudentsImportExport({
         importCachedDBStudents, setImportCachedDBStudents,
         exporting, setExporting,
         importTab, setImportTab,
-        
+
         // Computed
         importReadyRows,
         hasImportBlockingErrors,
         ALL_EXPORT_COLUMNS,
         SYSTEM_COLS,
-        
+
         // Actions
         processImportFile,
         handleImportClick,

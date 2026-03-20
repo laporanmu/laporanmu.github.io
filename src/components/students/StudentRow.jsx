@@ -708,8 +708,8 @@ const StudentMobileCard = memo(({
                 </div>
 
                 {/* ACTION FOOTER */}
-                <div className="mt-1.5 bg-[var(--color-surface-alt)] rounded-[1.8rem] p-1.5 flex items-center justify-between gap-1 border border-[var(--color-border)] shadow-sm">
-                    <div className="flex items-center gap-0.5">
+                <div className="mt-1.5 bg-[var(--color-surface-alt)] rounded-[1.8rem] p-1.5 flex items-center gap-1 border border-[var(--color-border)] shadow-sm">
+                    <div className="flex items-center flex-1 justify-around gap-1 px-2">
                         <button
                             onClick={(e) => { e.stopPropagation(); onViewProfile(student) }}
                             className="w-10 h-10 rounded-2xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all outline-none"
@@ -731,7 +731,7 @@ const StudentMobileCard = memo(({
                         <button
                             onClick={(e) => { e.stopPropagation(); onTogglePin(student) }}
                             className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-95 outline-none
-                                ${student.is_pinned ? 'text-amber-500 bg-[var(--color-surface)] shadow-sm' : 'text-[var(--color-text-muted)] opacity-40 hover:opacity-100 hover:bg-[var(--color-surface)]'}`}
+                                ${student.is_pinned ? 'text-amber-500 bg-[var(--color-surface)] shadow-sm' : 'text-[var(--color-text-muted)] opacity-70 hover:opacity-100 hover:bg-[var(--color-surface)]'}`}
                             title={student.is_pinned ? 'Unpin' : 'Pin Siswa'}
                         >
                             <FontAwesomeIcon icon={faThumbtack} className={`text-[12px] ${student.is_pinned ? 'rotate-0' : 'rotate-45'}`} />
@@ -740,7 +740,7 @@ const StudentMobileCard = memo(({
                         {onConfirmDelete && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onConfirmDelete(student) }}
-                                className="w-10 h-10 rounded-2xl text-[var(--color-text-muted)] opacity-30 hover:text-red-500 hover:bg-[var(--color-surface)] hover:opacity-100 active:scale-95 transition-all outline-none"
+                                className="w-10 h-10 rounded-2xl text-[var(--color-text-muted)] opacity-50 hover:text-red-500 hover:bg-[var(--color-surface)] hover:opacity-100 active:scale-95 transition-all outline-none"
                                 title="Hapus / Arsip"
                             >
                                 <FontAwesomeIcon icon={faBoxArchive} className="text-[12px]" />
