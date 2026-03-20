@@ -1338,7 +1338,7 @@ export default function StudentsPage() {
                                     </tbody>
                                 </table>
                             </div>
-                            
+
                             {/* Quick Add trigger FOR DESKTOP — stays below table */}
                             {!isInlineAddOpen && canEdit && (
                                 <div className="hidden md:block p-4 border-t border-[var(--color-border)] border-dashed bg-[var(--color-surface-alt)]/10">
