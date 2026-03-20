@@ -24,8 +24,13 @@ import {
     faThumbtack,
     faChevronDown,
     faCheckDouble,
-    faLink
+    faLink,
+    faStar,
+    faFire,
+    faPaperPlane
 } from '@fortawesome/free-solid-svg-icons'
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
+import useLongPress from '../../hooks/useLongPress'
 import { getTagColor, calculateCompleteness } from '../../utils/students/studentsConstants'
 
 // Singleton portal manager to prevent 'removeChild' errors in concurrent mode or Android/Chrome Translate
@@ -172,8 +177,20 @@ const StudentRow = memo(({
     isPrivacyMode,
     visibleColumns = {},
     classesList = [],
+    buildWAMessage,
+    openWAForStudent,
+    waTemplate
 }) => {
     const vc = { gender: true, kelas: true, poin: true, aksi: true, ...visibleColumns }
+    const [lastAction, setLastAction] = useState(null) // { amount, reason, timestamp }
+    const lastActionTimerRef = useRef(null)
+
+    const handleQuickPointInternal = (student, amount, reason) => {
+        onQuickPoint(student, amount, reason)
+        setLastAction({ amount, reason, timestamp: Date.now() })
+        if (lastActionTimerRef.current) clearTimeout(lastActionTimerRef.current)
+        lastActionTimerRef.current = setTimeout(() => setLastAction(null), 8000)
+    }
 
     const maskInfo = (str, visibleLen = 3) => {
         if (!str) return '---'
@@ -187,6 +204,8 @@ const StudentRow = memo(({
     const [showQuickAction, setShowQuickAction] = useState(false)
     const [showQuickViewPopover, setShowQuickViewPopover] = useState(false)
     const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 })
+    const [boltRect, setBoltRect] = useState(null)
+    const boltRef = useRef(null)
     const nameRef = useRef(null)
 
     const handleMouseEnter = () => {
@@ -211,6 +230,20 @@ const StudentRow = memo(({
     }
 
     const cancelEdit = () => setEditingField(null)
+
+    // Sticky positioning for portaled dropdown
+    useEffect(() => {
+        if (!showQuickAction || !boltRef.current) return
+        const updateRect = () => {
+            setBoltRect(boltRef.current.getBoundingClientRect())
+        }
+        window.addEventListener('scroll', updateRect, true)
+        window.addEventListener('resize', updateRect)
+        return () => {
+            window.removeEventListener('scroll', updateRect, true)
+            window.removeEventListener('resize', updateRect)
+        }
+    }, [showQuickAction])
 
     const quickActions = [
         { label: 'Sangat Aktif', amount: 5, color: 'text-emerald-500' },
@@ -376,10 +409,20 @@ const StudentRow = memo(({
                                         <FontAwesomeIcon icon={faTriangleExclamation} className="text-[7px]" />
                                         Monitor
                                     </span>
+                                ) : p >= 200 ? (
+                                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black bg-orange-500/10 text-orange-600 border border-orange-500/20 uppercase tracking-widest">
+                                        <FontAwesomeIcon icon={faFire} className="text-[7px]" />
+                                        Legendary
+                                    </span>
                                 ) : p >= 100 ? (
                                     <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 uppercase tracking-widest">
                                         <FontAwesomeIcon icon={faCrown} className="text-[7px]" />
                                         Excellent
+                                    </span>
+                                ) : p >= 50 ? (
+                                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-black bg-amber-500/10 text-amber-600 border border-amber-500/20 uppercase tracking-widest">
+                                        <FontAwesomeIcon icon={faStar} className="text-[7px]" />
+                                        Star
                                     </span>
                                 ) : null}
                             </div>
@@ -488,34 +531,65 @@ const StudentRow = memo(({
 
                                 {/* Quick Action bolt */}
                                 <div className="relative">
-                                    <button
-                                        onClick={() => setShowQuickAction(!showQuickAction)}
-                                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all
-                                            ${showQuickAction ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-amber-500/10 text-amber-500 opacity-0 group-hover/point:opacity-100 hover:bg-amber-500 hover:text-white'}`}
-                                        title="Aksi Cepat"
-                                    >
-                                        <FontAwesomeIcon icon={faBolt} className="text-[10px]" />
-                                    </button>
-                                    {showQuickAction && (
-                                        <>
-                                            <div className="fixed inset-0 z-[70]" onClick={() => setShowQuickAction(false)} />
-                                            <div className="absolute left-1/2 -translate-x-1/2 top-8 z-[80] w-36 glass-morphism bg-white dark:bg-gray-800 shadow-2xl rounded-2xl border border-[var(--color-border)] p-1.5 animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] p-2 mb-1 border-b border-[var(--color-border)] text-center">Quick Points</div>
-                                                {quickActions.map((act, idx) => (
-                                                    <button
-                                                        key={idx}
-                                                        onClick={() => { onQuickPoint(student, act.amount, act.label); setShowQuickAction(false) }}
-                                                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-between group/act"
-                                                    >
-                                                        <span className="text-[10px] font-bold text-[var(--color-text-muted)] group-hover/act:text-[var(--color-text)]">{act.label}</span>
-                                                        <span className={`text-[10px] font-black ${act.color}`}>{act.amount > 0 ? `+${act.amount}` : act.amount}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </>
-                                    )}
+                                        <button
+                                            ref={boltRef}
+                                            onClick={() => {
+                                                if (!showQuickAction) {
+                                                    const rect = boltRef.current?.getBoundingClientRect()
+                                                    setBoltRect(rect)
+                                                }
+                                                setShowQuickAction(!showQuickAction)
+                                            }}
+                                            className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all
+                                                ${showQuickAction ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-amber-500/10 text-amber-500 opacity-0 group-hover/point:opacity-100 hover:bg-amber-500 hover:text-white'}`}
+                                            title="Aksi Cepat"
+                                        >
+                                            <FontAwesomeIcon icon={faBolt} className="text-[10px]" />
+                                        </button>
+                                        {showQuickAction && boltRect && createPortal(
+                                            <>
+                                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setShowQuickAction(false)} />
+                                                <div 
+                                                    className="fixed z-[9991] w-40 glass-morphism bg-white dark:bg-gray-800 shadow-2xl rounded-2xl border border-[var(--color-border)] p-1.5 animate-in fade-in zoom-in-95 duration-200"
+                                                    style={{
+                                                        top: boltRect.top + boltRect.height + 8,
+                                                        left: boltRect.left + (boltRect.width / 2) - 80 
+                                                    }}
+                                                >
+                                                    <div className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] p-2 mb-1 border-b border-[var(--color-border)] text-center">Quick Points</div>
+                                                    {quickActions.map((act, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            onClick={() => { handleQuickPointInternal(student, act.amount, act.label); setShowQuickAction(false) }}
+                                                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-between group/act"
+                                                        >
+                                                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] group-hover/act:text-[var(--color-text)]">{act.label}</span>
+                                                            <span className={`text-[10px] font-black ${act.color}`}>{act.amount > 0 ? `+${act.amount}` : act.amount}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>,
+                                            getPortalContainer('portal-quick-action')
+                                        )}
                                 </div>
                             </div>
+                            
+                            {/* WhatsApp Post-Action Button */}
+                            {lastAction && student.phone && (
+                                <div className="absolute left-[-180px] top-1/2 -translate-y-1/2 animate-in slide-in-from-right-4 fade-in duration-500 z-[60]">
+                                    <button
+                                        onClick={() => {
+                                            const msg = buildWAMessage?.(student, 'points') || `Laporan untuk ${student.name}: Poin ${lastAction.amount > 0 ? '+' : ''}${lastAction.amount} (${lastAction.reason})`
+                                            openWAForStudent?.(student, msg)
+                                            setLastAction(null)
+                                        }}
+                                        className="h-8 px-3 rounded-xl bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all"
+                                    >
+                                        <FontAwesomeIcon icon={faWhatsapp} className="text-xs" />
+                                        Laporkan ke WA
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </td>
@@ -559,6 +633,7 @@ const StudentRow = memo(({
 })
 
 StudentRow.displayName = 'StudentRow'
+
 // ─── Mobile Card ─────────────────────────────────────────────────────────────
 const StudentMobileCard = memo(({
     student,
@@ -570,12 +645,50 @@ const StudentMobileCard = memo(({
     onTogglePin,
     onQuickPoint,
     isPrivacyMode,
-    RiskThreshold
+    RiskThreshold,
+    buildWAMessage,
+    openWAForStudent,
+    waTemplate
 }) => {
     const isRisk = (student.total_points || 0) <= RiskThreshold
     const p = student.total_points || 0
     const [showQuickAction, setShowQuickAction] = useState(false)
     const [isPressed, setIsPressed] = useState(false)
+    const [lastAction, setLastAction] = useState(null)
+    const lastActionTimerRef = useRef(null)
+
+    const [boltRect, setBoltRect] = useState(null)
+    const boltRef = useRef(null)
+
+    const handleQuickPointInternal = (student, amount, reason) => {
+        onQuickPoint(student, amount, reason)
+        setLastAction({ amount, reason, timestamp: Date.now() })
+        if (lastActionTimerRef.current) clearTimeout(lastActionTimerRef.current)
+        lastActionTimerRef.current = setTimeout(() => setLastAction(null), 8000)
+    }
+
+    // Sticky positioning for portaled dropdown (Mobile)
+    useEffect(() => {
+        if (!showQuickAction || !boltRef.current) return
+        const updateRect = () => {
+            setBoltRect(boltRef.current.getBoundingClientRect())
+        }
+        window.addEventListener('scroll', updateRect, true)
+        window.addEventListener('resize', updateRect)
+        return () => {
+            window.removeEventListener('scroll', updateRect, true)
+            window.removeEventListener('resize', updateRect)
+        }
+    }, [showQuickAction])
+
+    const longPressProps = useLongPress(() => {
+        onToggleSelect(student.id)
+    }, { delay: 600, onClick: () => onViewProfile(student) })
+
+    const stopPropagation = (e) => e.stopPropagation();
+    const handleActionAreaClick = (e) => {
+        e.stopPropagation();
+    };
 
     const quickActions = [
         { label: 'Sangat Aktif', amount: 5, color: 'text-emerald-500', icon: faPlus },
@@ -592,24 +705,27 @@ const StudentMobileCard = memo(({
 
     return (
         <div
-            className={`group relative p-2 rounded-[2.2rem] border transition-all duration-300 ease-out overflow-hidden
+            className={`group relative p-2 rounded-[2.2rem] border transition-all duration-300 ease-out
+                ${showQuickAction ? 'z-[100]' : 'z-auto'}
                 ${isSelected
-                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/[0.03] shadow-lg shadow-[var(--color-primary)]/5 pb-2.5 translate-y-[-2px]'
+                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/[0.03] shadow-lg shadow-[var(--color-primary)]/10 pb-2.5 translate-y-[-2px]'
                     : 'border-[var(--color-border)] bg-[var(--color-surface)] shadow-md shadow-black/[0.02]'}
                 ${student.is_pinned ? 'border-amber-400/40' : ''}
-                ${isPressed ? 'scale-[0.97] brightness-95' : 'scale-100'}
+                ${isPressed ? 'scale-[0.985] shadow-inner brightness-[0.98]' : 'scale-100'}
             `}
-            onTouchStart={() => setIsPressed(true)}
-            onTouchEnd={() => setIsPressed(false)}
         >
-            {/* Minimalist Bottom Progress Bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[var(--color-border)]/50 z-0">
-                <div
-                    className={`h-full transition-all duration-1000 ${calculateCompleteness(student) >= 80 ? 'bg-emerald-500' : calculateCompleteness(student) >= 50 ? 'bg-amber-500' : 'bg-red-400'}`}
-                    style={{ width: `${calculateCompleteness(student)}%` }}
-                    title={`Data ${calculateCompleteness(student)}% lengkap`}
-                />
+            {/* Minimalist Bottom Progress Bar (Clipped by card boundary) */}
+            <div className="absolute inset-0 z-0 overflow-hidden rounded-[2.2rem] pointer-events-none">
+                <div className="absolute bottom-0 left-0 right-0 h-1 px-[2px]">
+                    <div className="w-full h-full bg-[var(--color-border)]/10">
+                        <div
+                            className={`h-full transition-all duration-1000 ${calculateCompleteness(student) >= 80 ? 'bg-emerald-500/60' : calculateCompleteness(student) >= 50 ? 'bg-amber-500/60' : 'bg-red-400/60'}`}
+                            style={{ width: `${calculateCompleteness(student)}%` }}
+                        />
+                    </div>
+                </div>
             </div>
+
             {/* PIN INDICATOR (Visual Only) */}
             {student.is_pinned && (
                 <div className="absolute top-3 right-5 flex items-center gap-1">
@@ -619,12 +735,12 @@ const StudentMobileCard = memo(({
             )}
 
             <div className="p-3">
-                <div className="flex items-center gap-4">
+                {/* IDENTITY AREA - Wrapped in LongPress for Profile View */}
+                <div {...longPressProps} className="flex items-center gap-4">
                     {/* AVATAR SECTION */}
-                    <div className="relative">
+                    <div className="relative pointer-events-none">
                         <div
-                            onClick={() => onToggleSelect(student.id)}
-                            className={`w-16 h-16 rounded-[2rem] flex items-center justify-center text-lg font-black shadow-xl overflow-hidden relative cursor-pointer border-2 transition-all
+                            className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black shadow-inner border-2 transition-all
                                 ${isSelected ? 'border-[var(--color-primary)] scale-110' : 'border-white dark:border-gray-800'}
                                 ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-gradient-to-br from-[var(--color-primary)] via-[var(--color-primary)]/90 to-[var(--color-accent)] text-white'}
                                 ${isPrivacyMode ? 'blur-md grayscale opacity-60' : ''}`}
@@ -653,12 +769,9 @@ const StudentMobileCard = memo(({
                     </div>
 
                     {/* NAME & IDENTITY */}
-                    <div className="flex-1 min-w-0 pr-4">
+                    <div className="flex-1 min-w-0 pr-4 pointer-events-none">
                         <div className="flex flex-col">
-                            <h3
-                                onClick={() => onViewProfile(student)}
-                                className="font-extrabold text-[17px] text-[var(--color-text)] leading-tight tracking-tight mb-0.5 hover:text-[var(--color-primary)] active:opacity-70 transition-all truncate"
-                            >
+                            <h3 className="font-extrabold text-[17px] text-[var(--color-text)] leading-tight tracking-tight mb-0.5 truncate">
                                 {isPrivacyMode ? maskInfo(student.name, 4) : student.name}
                             </h3>
                             <div className="flex items-center gap-2">
@@ -674,139 +787,231 @@ const StudentMobileCard = memo(({
                     </div>
                 </div>
 
-                {/* INFO PILLS */}
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[var(--color-surface-alt)]/80 border border-[var(--color-border)]/40 hover:bg-[var(--color-surface-alt)] transition-colors">
-                        <FontAwesomeIcon icon={faUserTie} className="text-[9px] text-[var(--color-text-muted)]" />
-                        <span className="text-[10px] font-black text-[var(--color-text)] uppercase tracking-tight">{student.className}</span>
-                    </div>
-
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border font-black text-[10px] transition-all
-                        ${p < 0 ? 'bg-red-500/10 border-red-500/10 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/10 text-emerald-600' : 'bg-[var(--color-surface-alt)]/80 border-[var(--color-border)]/40 text-[var(--color-text-muted)]'}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${p < 0 ? 'bg-red-500' : p > 0 ? 'bg-emerald-500' : 'bg-gray-400 opacity-40'}`} />
-                        {p > 0 ? '+' : ''}{p} Poin
-                    </div>
-
-                    {(student.tags || []).slice(0, 2).map(tag => (
-                        <span key={tag} className={`text-[9px] font-black px-3 py-1.5 rounded-xl border uppercase tracking-wider ${getTagColor(tag)}`}>
-                            {tag}
-                        </span>
-                    ))}
-                    {(student.tags || []).length > 2 && (
-                        <span className="text-[8px] font-black text-[var(--color-text-muted)] opacity-40">+{(student.tags || []).length - 2}</span>
-                    )}
-
-                    {/* WA Link Hint & Completeness */}
-                    <div className="flex items-center gap-1.5 ml-auto">
-                        <div className={`px-2 py-1 rounded-lg font-black text-[9px] border transition-all ${calculateCompleteness(student) >= 80 ? 'bg-emerald-500/10 border-emerald-500/10 text-emerald-600' : calculateCompleteness(student) >= 50 ? 'bg-amber-500/10 border-amber-500/10 text-amber-600' : 'bg-red-500/10 border-red-500/10 text-red-500'}`} title="Kelengkapan Data">
-                            {calculateCompleteness(student)}%
+                {/* INFO PILLS - Single Row with Dynamic Indicator */}
+                <div className="mt-4 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[var(--color-surface-alt)]/80 border border-[var(--color-border)]/40 min-w-0">
+                            <FontAwesomeIcon icon={faUserTie} className="text-[9px] text-[var(--color-text-muted)] shrink-0" />
+                            <span className="text-[10px] font-black text-[var(--color-text)] uppercase tracking-tight truncate">
+                                {student.className}
+                            </span>
                         </div>
-                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-all ${!!student.phone ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] opacity-40'}`} title={!!student.phone ? 'WA Terhubung' : 'WA Kosong'}>
-                            <FontAwesomeIcon icon={!!student.phone ? faCheckDouble : faLink} className="text-[10px]" />
+
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border font-black text-[10px] transition-all shrink-0
+                            ${p < 0 ? 'bg-red-500/10 border-red-500/10 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/10 text-emerald-600' : 'bg-[var(--color-surface-alt)]/80 border-[var(--color-border)]/40 text-[var(--color-text-muted)]'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${p < 0 ? 'bg-red-500' : p > 0 ? 'bg-emerald-500' : 'bg-gray-400 opacity-40'}`} />
+                            {p > 0 ? '+' : ''}{p} Poin
+                        </div>
+                    </div>
+
+                    {/* Dynamic Status Indicator (Link vs WhatsApp) */}
+                    <div className="flex items-center shrink-0">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center border shadow-sm transition-all active:scale-90
+                            ${student.phone 
+                                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500' 
+                                : 'border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/80 text-[var(--color-text-muted)] opacity-60'}`}>
+                            <FontAwesomeIcon icon={student.phone ? faCheckDouble : faLink} className="text-[10px]" />
                         </div>
                     </div>
                 </div>
 
-                {/* ACTION FOOTER */}
-                <div className="mt-1.5 bg-[var(--color-surface-alt)] rounded-[1.8rem] p-1.5 flex items-center gap-1 border border-[var(--color-border)] shadow-sm">
-                    <div className="flex items-center flex-1 justify-around gap-1 px-2">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onViewProfile(student) }}
-                            className="w-10 h-10 rounded-2xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all outline-none"
-                            title="Profil Lengkap"
-                        >
-                            <FontAwesomeIcon icon={faIdCard} className="text-[14px]" />
-                        </button>
+                {/* Additional Tags (Second row if needed) */}
+                {((student.tags || []).length > 0 || p >= 50) && (
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                        {p >= 200 ? (
+                            <span className="text-[8px] font-black px-2.5 py-1 rounded-lg border border-orange-500/20 bg-orange-500/10 text-orange-600 uppercase tracking-wider">Legendary</span>
+                        ) : p >= 100 ? (
+                            <span className="text-[8px] font-black px-2.5 py-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 uppercase tracking-wider">Perfect</span>
+                        ) : p >= 50 ? (
+                            <span className="text-[8px] font-black px-2.5 py-1 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-600 uppercase tracking-wider">Star</span>
+                        ) : null}
 
-                        {onEdit && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onEdit(student) }}
-                                className="w-10 h-10 rounded-2xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all outline-none"
-                                title="Edit Data"
-                            >
-                                <FontAwesomeIcon icon={faEdit} className="text-[14px]" />
-                            </button>
-                        )}
-
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onTogglePin(student) }}
-                            className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-95 outline-none
-                                ${student.is_pinned ? 'text-amber-500 bg-[var(--color-surface)] shadow-sm' : 'text-[var(--color-text-muted)] opacity-70 hover:opacity-100 hover:bg-[var(--color-surface)]'}`}
-                            title={student.is_pinned ? 'Unpin' : 'Pin Siswa'}
-                        >
-                            <FontAwesomeIcon icon={faThumbtack} className={`text-[12px] ${student.is_pinned ? 'rotate-0' : 'rotate-45'}`} />
-                        </button>
-
-                        {onConfirmDelete && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onConfirmDelete(student) }}
-                                className="w-10 h-10 rounded-2xl text-[var(--color-text-muted)] opacity-50 hover:text-red-500 hover:bg-[var(--color-surface)] hover:opacity-100 active:scale-95 transition-all outline-none"
-                                title="Hapus / Arsip"
-                            >
-                                <FontAwesomeIcon icon={faBoxArchive} className="text-[12px]" />
-                            </button>
-                        )}
+                        {(student.tags || []).slice(0, 3).map(tag => (
+                            <span key={tag} className={`text-[8px] font-black px-2.5 py-1 rounded-lg border uppercase tracking-wider ${getTagColor(tag)}`}>
+                                {tag}
+                            </span>
+                        ))}
                     </div>
+                )}
 
-                    <div className="flex items-center gap-1">
-                        <div className="w-px h-6 bg-[var(--color-border)] mx-1 opacity-50" />
-                        <div className="relative isolate">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setShowQuickAction(!showQuickAction) }}
-                                className={`h-10 w-10 shrink-0 rounded-2xl flex items-center justify-center transition-all active:scale-95 border
-                                    ${showQuickAction
-                                        ? 'bg-amber-500/20 border-amber-500/30 text-amber-500'
-                                        : 'bg-transparent border-transparent text-[var(--color-text-muted)] hover:bg-amber-500/10 hover:border-amber-500/20 hover:text-amber-500'}`}
-                                title="Aksi Cepat Poin"
-                            >
-                                <FontAwesomeIcon icon={faBolt} className={`text-[14px] transition-transform duration-500 ${showQuickAction ? 'rotate-[360deg]' : ''}`} />
-                            </button>
+                {/* ACTION FOOTER - Isolated from Card Clicks */}
+                <div 
+                    onClick={handleActionAreaClick}
+                    className="mt-4 bg-[var(--color-surface-alt)] rounded-[2.2rem] p-1.5 flex items-center justify-between border border-[var(--color-border)] shadow-sm relative z-10"
+                >
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onViewProfile(student) }}
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all"
+                    >
+                        <FontAwesomeIcon icon={faIdCard} className="text-[14px]" />
+                    </button>
 
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(student) }}
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all"
+                    >
+                        <FontAwesomeIcon icon={faEdit} className="text-[14px]" />
+                    </button>
 
-                            {/* Quick Point Dropdown Overlay */}
-                            {showQuickAction && (
-                                <>
-                                    <div className="fixed inset-0 z-[70] bg-black/5" onClick={(e) => { e.stopPropagation(); setShowQuickAction(false) }} />
-                                    <div
-                                        onClick={e => e.stopPropagation()}
-                                        className="absolute right-0 bottom-full mb-3 z-[80] w-52 bg-gray-900 border border-white/20 rounded-[1.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 p-2.5 text-white"
-                                    >
-                                        <div className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 p-2 mb-1.5 border-b border-white/10 text-center flex items-center justify-center gap-2">
-                                            <FontAwesomeIcon icon={faBolt} className="text-[8px]" />
-                                            Input Poin Cepat
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-1.5">
-                                            {quickActions.map((act, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    onClick={() => { onQuickPoint(student, act.amount, act.label); setShowQuickAction(false) }}
-                                                    className="flex flex-col items-center justify-center gap-1 p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 active:scale-95"
-                                                >
-                                                    <FontAwesomeIcon icon={act.icon} className={`text-[10px] ${act.color}`} />
-                                                    <span className="text-[8px] font-black uppercase tracking-widest leading-none mt-0.5">{act.label.split(' ')[0]}</span>
-                                                    <span className={`text-[10px] font-black ${act.color}`}>{act.amount > 0 ? `+${act.amount}` : act.amount}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <button
-                                            onClick={() => { onQuickPoint(student, 0, 'custom'); setShowQuickAction(false) }}
-                                            className="w-full mt-2 py-3 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all active:scale-[0.98]"
-                                        >
-                                            Input Kustom
-                                        </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onTogglePin(student) }}
+                        className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95
+                            ${student.is_pinned ? 'text-amber-500 bg-[var(--color-surface)] shadow-sm' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}
+                    >
+                        <FontAwesomeIcon icon={faThumbtack} className={`text-[12px] ${student.is_pinned ? 'rotate-0' : 'rotate-45'}`} />
+                    </button>
+
+                    <div className="relative isolate">
+                        <button
+                            ref={boltRef}
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                if (!showQuickAction) {
+                                    const rect = boltRef.current?.getBoundingClientRect()
+                                    setBoltRect(rect)
+                                }
+                                setShowQuickAction(!showQuickAction) 
+                            }}
+                            className={`h-11 w-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 border
+                                ${showQuickAction
+                                    ? 'bg-amber-500 text-white border-amber-500 shadow-lg'
+                                    : 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-white'}`}
+                        >
+                            <FontAwesomeIcon icon={faBolt} className="text-[14px]" />
+                        </button>
+                        
+                        {showQuickAction && boltRect && createPortal(
+                            <>
+                                <div className="fixed inset-0 z-[9990] bg-black/10 backdrop-blur-[1px]" onClick={(e) => { e.stopPropagation(); setShowQuickAction(false) }} />
+                                <div
+                                    onClick={e => e.stopPropagation()}
+                                    className="fixed z-[9991] w-52 bg-gray-900 border border-white/20 rounded-[1.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 p-2.5 text-white"
+                                    style={{
+                                        top: boltRect.top - 8,
+                                        left: Math.min(window.innerWidth - 215, Math.max(10, boltRect.right - 208)), 
+                                        transform: 'translateY(-100%)'
+                                    }}
+                                >
+                                    <div className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 p-2 mb-1.5 border-b border-white/10 text-center flex items-center justify-center gap-2">
+                                        <FontAwesomeIcon icon={faBolt} className="text-[8px]" />
+                                        Input Poin Cepat
                                     </div>
-                                </>
-                            )}
-                        </div>
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        {quickActions.map((act, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => { handleQuickPointInternal(student, act.amount, act.label); setShowQuickAction(false) }}
+                                                className="flex flex-col items-center justify-center gap-1 p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 active:scale-95"
+                                            >
+                                                <FontAwesomeIcon icon={act.icon} className={`text-[10px] ${act.color}`} />
+                                                <span className="text-[8px] font-black uppercase tracking-widest leading-none mt-0.5">{act.label.split(' ')[0]}</span>
+                                                <span className={`text-[10px] font-black ${act.color}`}>{act.amount > 0 ? `+${act.amount}` : act.amount}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        onClick={() => { handleQuickPointInternal(student, 0, 'custom'); setShowQuickAction(false) }}
+                                        className="w-full mt-2 py-3 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all active:scale-[0.98]"
+                                    >
+                                        Input Kustom
+                                    </button>
+                                </div>
+                            </>,
+                            getPortalContainer('portal-quick-action')
+                        )}
                     </div>
+
+                    {onConfirmDelete && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onConfirmDelete(student) }}
+                            className="w-11 h-11 rounded-2xl flex items-center justify-center text-red-500/30 hover:text-red-500 hover:bg-red-500/10 active:scale-95 transition-all"
+                        >
+                            <FontAwesomeIcon icon={faBoxArchive} className="text-[14px]" />
+                        </button>
+                    )}
                 </div>
 
+                {/* Mobile WA Post-Action Overlay - Rounded to match card */}
+                {lastAction && student.phone && (
+                    <div className="absolute inset-0 bg-emerald-500 z-[90] animate-in slide-in-from-right-full duration-500 rounded-[2.2rem] flex flex-col items-center justify-center text-white shadow-2xl overflow-hidden">
+                        <button
+                            onClick={() => {
+                                const msg = buildWAMessage?.(student, 'points') || `Laporan untuk ${student.name}: Poin ${lastAction.amount > 0 ? '+' : ''}${lastAction.amount} (${lastAction.reason})`
+                                openWAForStudent?.(student, msg)
+                                setLastAction(null)
+                            }}
+                            className="w-full h-full flex flex-col items-center justify-center gap-1 active:scale-90 transition-transform"
+                        >
+                            <FontAwesomeIcon icon={faWhatsapp} className="text-xl" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">Kirim WA</span>
+                        </button>
+                        <button 
+                            onClick={() => setLastAction(null)}
+                            className="absolute top-4 right-5 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-[12px] active:scale-95 transition-all"
+                        >
+                            <FontAwesomeIcon icon={faXmark} />
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )
 })
 
 StudentMobileCard.displayName = 'StudentMobileCard'
+
+export const StudentSkeletonRow = () => (
+    <tr className="animate-pulse border-b border-[var(--color-border)]/50">
+        <td className="py-4 px-4 w-12 text-center">
+            <div className="w-5 h-5 bg-[var(--color-surface-alt)] rounded-lg mx-auto" />
+        </td>
+        <td className="py-4 px-1 w-12 truncate">
+             <div className="w-8 h-8 rounded-full bg-[var(--color-surface-alt)] mx-auto" />
+        </td>
+         <td className="py-4 px-1 w-16 text-center">
+             <div className="w-10 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
+        </td>
+        <td className="py-4 px-4 min-w-[300px]">
+            <div className="flex flex-col gap-2">
+                <div className="w-48 h-4 bg-[var(--color-surface-alt)] rounded-md" />
+                <div className="w-32 h-3 bg-[var(--color-surface-alt)]/60 rounded-sm" />
+            </div>
+        </td>
+        <td className="py-4 px-4 text-center">
+            <div className="w-8 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
+        </td>
+        <td className="py-4 px-4 text-center">
+             <div className="w-12 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
+        </td>
+        <td className="py-4 px-4 text-center">
+            <div className="w-12 h-6 bg-[var(--color-surface-alt)] rounded-lg mx-auto" />
+        </td>
+        <td className="py-4 px-4">
+             <div className="flex gap-2 justify-center">
+                <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
+                <div className="w-px h-8 bg-[var(--color-border)] opacity-30 mx-1" />
+                <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
+             </div>
+        </td>
+    </tr>
+)
+
+export const StudentSkeletonCard = () => (
+    <div className="animate-pulse rounded-2xl border border-[var(--color-border)]/50 p-4 space-y-4 bg-[var(--color-surface)] shadow-sm">
+        <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface-alt)]" />
+            <div className="flex-1 space-y-2">
+                <div className="w-3/4 h-4 bg-[var(--color-surface-alt)] rounded-md" />
+                <div className="w-1/2 h-3 bg-[var(--color-surface-alt)]/60 rounded-sm" />
+            </div>
+            <div className="w-12 h-6 bg-[var(--color-surface-alt)] rounded-lg" />
+        </div>
+        <div className="flex gap-2">
+             <div className="flex-1 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
+             <div className="w-24 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
+        </div>
+    </div>
+)
 
 export { StudentRow, StudentMobileCard }
 export default StudentRow

@@ -95,7 +95,7 @@ import { useStudentsCore } from '../../hooks/students/useStudentsCore'
 // Ini mencegah backdrop modal mencover bottom nav sehingga tap nav tetap berfungsi.
 
 import StudentFormModal from '../../components/students/StudentFormModal'
-import { StudentRow, StudentMobileCard } from '../../components/students/StudentRow'
+import { StudentRow, StudentMobileCard, StudentSkeletonRow, StudentSkeletonCard } from '../../components/students/StudentRow'
 
 const LazyQRCodeCanvas = React.lazy(() =>
     import('qrcode.react').then((m) => ({ default: m.QRCodeCanvas }))
@@ -216,7 +216,7 @@ export default function StudentsPage() {
         fetchBehaviorHistory, fetchRaportHistory, handleViewProfile,
         handleResetPin, checkDuplicate, fetchAuditLog, fetchClassHistory, handleViewClassHistory,
         handleQuickPoint, handleInlineUpdate, handleTogglePin, handlePhotoUpload,
-        handleInlineSubmit, handleViewQR, handleViewPrint, handleBulkWA, buildWAMessage, openWAForStudent,
+        handleInlineSubmit, handleViewQR, handleViewPrint, handleBulkWA, buildWAMessage, openWAForStudent, waTemplate,
         generateStudentPDF, handlePrintSingle, handlePrintThermal, handleSavePNG, handleBulkPrint,
         handleBulkPhotoMatch, handleBulkPhotoUpload, handleClassBreakdown, handleBatchResetPoints,
         // State Helpers
@@ -261,18 +261,6 @@ export default function StudentsPage() {
         }
     }, [searchQuery])
 
-    // --- Grouping Logic for Sticky Headers ---
-    const groupedStudents = useMemo(() => {
-        if (!students.length) return []
-        // Only group if not searching or if explicitly grouped
-        const groups = {}
-        students.forEach(s => {
-            const key = s.className || 'Tanpa Kelas'
-            if (!groups[key]) groups[key] = []
-            groups[key].push(s)
-        })
-        return Object.entries(groups)
-    }, [students])
 
     const handleTouchStart = (e) => {
         if (window.scrollY === 0) {
@@ -942,48 +930,6 @@ export default function StudentsPage() {
 
                     </div>
 
-                    {/* Quick Filter Horizontal Chips */}
-                    <div className="px-3 pb-2 overflow-x-auto scrollbar-none flex items-center gap-2 whitespace-nowrap mask-fade-right">
-                        <button
-                            onClick={resetAllFilters}
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${activeFilterCount === 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
-                        >
-                            Semua
-                        </button>
-                        <button
-                            onClick={() => { setFilterGender(filterGender === 'L' ? '' : 'L'); setPage(1) }}
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterGender === 'L' ? 'bg-blue-500 border-blue-500 text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
-                        >
-                            Putra
-                        </button>
-                        <button
-                            onClick={() => { setFilterGender(filterGender === 'P' ? '' : 'P'); setPage(1) }}
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterGender === 'P' ? 'bg-pink-500 border-pink-500 text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
-                        >
-                            Putri
-                        </button>
-                        <button
-                            onClick={() => { setFilterPointMode(filterPointMode === 'positive' ? '' : 'positive'); resetAllFilters({ filterPointMode: filterPointMode === 'positive' ? '' : 'positive' }) }}
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterPointMode === 'positive' ? 'bg-emerald-500 border-emerald-500 text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
-                        >
-                            Tertinggi
-                        </button>
-                        <button
-                            onClick={() => { setFilterPointMode(filterPointMode === 'risk' ? '' : 'risk'); setFilterClass(''); setPage(1) }}
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterPointMode === 'risk' ? 'bg-red-500 border-red-500 text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
-                        >
-                            Bermasalah
-                        </button>
-                        {classesList.slice(0, 8).map(cls => (
-                            <button
-                                key={cls.id}
-                                onClick={() => { setFilterClass(filterClass === cls.id ? '' : cls.id); setFilterClasses([]); setPage(1) }}
-                                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${filterClass === cls.id ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}
-                            >
-                                {cls.name}
-                            </button>
-                        ))}
-                    </div>
 
                     {/* Active Filter Chips */}
                     {(searchQuery || filterClass || filterGender || filterStatus || filterTag || filterMissing || filterPointMode) && (
@@ -1375,7 +1321,11 @@ export default function StudentsPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {students.length === 0 ? (
+                                        {loading ? (
+                                            Array.from({ length: 10 }).map((_, i) => (
+                                                <StudentSkeletonRow key={i} />
+                                            ))
+                                        ) : students.length === 0 ? (
                                             <tr>
                                                 <td colSpan={6} className="px-6 py-14 ">
                                                     <div className="flex flex-col items-center text-center gap-2">
@@ -1393,55 +1343,34 @@ export default function StudentsPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            groupedStudents.map(([className, classStudents]) => (
-                                                <React.Fragment key={className}>
-                                                    {/* Sticky Header for Table */}
-                                                    <tr className="sticky top-[58px] md:top-[64px] z-[15]">
-                                                        <td colSpan={7} className="p-0">
-                                                            <div className="bg-[var(--color-surface)]/90 backdrop-blur-md px-6 py-2 border-y border-[var(--color-border)] flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-1.5 h-4 rounded-full bg-[var(--color-primary)] shadow-[0_0_8px_var(--color-primary)]/20" />
-                                                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">
-                                                                        {className}
-                                                                        <span className="ml-2 text-[var(--color-text-muted)] opacity-50 font-bold">({classStudents.length} Siswa)</span>
-                                                                    </span>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => { setFilterClass(classStudents[0].class_id); setFilterClasses([]); setPage(1) }}
-                                                                    className="text-[8px] font-black uppercase tracking-tighter text-[var(--color-primary)] hover:underline opacity-60 hover:opacity-100 transition-opacity"
-                                                                >
-                                                                    Fokus Kelas
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                    {classStudents.map((student) => (
-                                                        <StudentRow
-                                                            key={student.id}
-                                                            student={student}
-                                                            visibleColumns={visibleColumns}
-                                                            isSelected={selectedIdSet.has(student.id)}
-                                                            lastReportMap={lastReportMap}
-                                                            isPrivacyMode={isPrivacyMode}
-                                                            onEdit={canEdit ? handleEdit : null}
-                                                            onViewProfile={handleViewProfile}
-                                                            onViewQR={handleViewQR}
-                                                            onViewPrint={handleViewPrint}
-                                                            onViewTags={(s) => { setStudentForTags(s); setActiveModal('tag') }}
-                                                            onViewClassHistory={handleViewClassHistory}
-                                                            onConfirmDelete={canEdit ? confirmDelete : null}
-                                                            onClassBreakdown={handleClassBreakdown}
-                                                            onPhotoZoom={setPhotoZoom}
-                                                            onToggleSelect={toggleSelectStudent}
-                                                            onQuickPoint={handleQuickPoint}
-                                                            onInlineUpdate={canEdit ? handleInlineUpdate : null}
-                                                            onTogglePin={handleTogglePin}
-                                                            classesList={classesList}
-                                                            formatRelativeDate={formatRelativeDate}
-                                                            RiskThreshold={RiskThreshold}
-                                                        />
-                                                    ))}
-                                                </React.Fragment>
+                                            students.map((student) => (
+                                                <StudentRow
+                                                    key={student.id}
+                                                    student={student}
+                                                    visibleColumns={visibleColumns}
+                                                    isSelected={selectedIdSet.has(student.id)}
+                                                    lastReportMap={lastReportMap}
+                                                    isPrivacyMode={isPrivacyMode}
+                                                    onEdit={canEdit ? handleEdit : null}
+                                                    onViewProfile={handleViewProfile}
+                                                    onViewQR={handleViewQR}
+                                                    onViewPrint={handleViewPrint}
+                                                    onViewTags={(s) => { setStudentForTags(s); setActiveModal('tag') }}
+                                                    onViewClassHistory={handleViewClassHistory}
+                                                    onConfirmDelete={canEdit ? confirmDelete : null}
+                                                    onClassBreakdown={handleClassBreakdown}
+                                                    onPhotoZoom={setPhotoZoom}
+                                                    onToggleSelect={toggleSelectStudent}
+                                                    onQuickPoint={handleQuickPoint}
+                                                    onInlineUpdate={canEdit ? handleInlineUpdate : null}
+                                                    onTogglePin={handleTogglePin}
+                                                    classesList={classesList}
+                                                    formatRelativeDate={formatRelativeDate}
+                                                    RiskThreshold={RiskThreshold}
+                                                    buildWAMessage={buildWAMessage}
+                                                    openWAForStudent={openWAForStudent}
+                                                    waTemplate={waTemplate}
+                                                />
                                             ))
                                         )}
 
@@ -1625,53 +1554,56 @@ export default function StudentsPage() {
 
 
                                         <div className="space-y-4 pt-4">
-                                            {mobileView === 'card' ? (
-                                                groupedStudents.map(([className, classStudents]) => (
-                                                    <div key={className} className="space-y-4">
-                                                        {/* Sticky Header for Mobile Cards */}
-                                                        <div className="sticky top-[58px] z-20 mx-[-12px] px-5 py-2.5 bg-gradient-to-r from-[var(--color-surface)] via-[var(--color-surface)]/80 to-[var(--color-surface)] backdrop-blur-md border-y border-[var(--color-border)] flex items-center justify-between shadow-sm">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-1 h-3.5 rounded-full bg-[var(--color-primary)]" />
-                                                                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text)]">
-                                                                    {className}
-                                                                    <span className="ml-2 text-[var(--color-text-muted)] opacity-50 font-bold tracking-tight">({classStudents.length})</span>
-                                                                </span>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => { setFilterClass(classStudents[0].class_id); setFilterClasses([]); setPage(1) }}
-                                                                className="h-6 px-3 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all"
-                                                            >
-                                                                Fokus
-                                                            </button>
-                                                        </div>
-
-                                                        {classStudents.map(student => {
-                                                            const isRisk = (student.total_points || 0) <= RiskThreshold
-                                                            return (
-                                                                <div
-                                                                    key={student.id}
-                                                                    className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
-                                                                >
-                                                                    {isRisk && (
-                                                                        <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
-                                                                    )}
-                                                                    <StudentMobileCard
-                                                                        student={student}
-                                                                        isSelected={selectedIdSet.has(student.id)}
-                                                                        onToggleSelect={toggleSelectStudent}
-                                                                        onViewProfile={handleViewProfile}
-                                                                        onEdit={canEdit ? handleEdit : null}
-                                                                        onConfirmDelete={canEdit ? confirmDelete : null}
-                                                                        onTogglePin={handleTogglePin}
-                                                                        onQuickPoint={handleQuickPoint}
-                                                                        isPrivacyMode={isPrivacyMode}
-                                                                        RiskThreshold={RiskThreshold}
-                                                                    />
+                                            {loading ? (
+                                                <div className="space-y-4">
+                                                    {mobileView === 'card' ? (
+                                                        Array.from({ length: 5 }).map((_, i) => (
+                                                            <StudentSkeletonCard key={i} />
+                                                        ))
+                                                    ) : (
+                                                        <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/50 overflow-hidden shadow-sm">
+                                                            {Array.from({ length: 8 }).map((_, i) => (
+                                                                <div key={i} className="animate-pulse flex items-center gap-4 px-4 py-4">
+                                                                    <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-alt)]" />
+                                                                    <div className="flex-1 space-y-2">
+                                                                        <div className="w-3/4 h-3 bg-[var(--color-surface-alt)] rounded" />
+                                                                        <div className="w-1/2 h-2 bg-[var(--color-surface-alt)]/60 rounded" />
+                                                                    </div>
+                                                                    <div className="w-10 h-6 bg-[var(--color-surface-alt)] rounded-lg" />
                                                                 </div>
-                                                            )
-                                                        })}
-                                                    </div>
-                                                ))
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : mobileView === 'card' ? (
+                                                students.map(student => {
+                                                    const isRisk = (student.total_points || 0) <= RiskThreshold
+                                                    return (
+                                                        <div
+                                                            key={student.id}
+                                                            className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
+                                                        >
+                                                            {isRisk && (
+                                                                <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
+                                                            )}
+                                                            <StudentMobileCard
+                                                                student={student}
+                                                                isSelected={selectedIdSet.has(student.id)}
+                                                                onToggleSelect={toggleSelectStudent}
+                                                                onViewProfile={handleViewProfile}
+                                                                onEdit={canEdit ? handleEdit : null}
+                                                                onConfirmDelete={canEdit ? confirmDelete : null}
+                                                                onTogglePin={handleTogglePin}
+                                                                onQuickPoint={handleQuickPoint}
+                                                                isPrivacyMode={isPrivacyMode}
+                                                                RiskThreshold={RiskThreshold}
+                                                                buildWAMessage={buildWAMessage}
+                                                                openWAForStudent={openWAForStudent}
+                                                                waTemplate={waTemplate}
+                                                            />
+                                                        </div>
+                                                    )
+                                                })
                                             ) : (
                                                 <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/50 overflow-hidden shadow-sm">
                                                     <div className="grid grid-cols-[1fr_auto_auto] items-center px-4 py-3 bg-[var(--color-surface-alt)]/30 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)]/50">
@@ -1679,64 +1611,54 @@ export default function StudentsPage() {
                                                         <span className="px-4 text-center">Poin</span>
                                                         <span className="w-10"></span>
                                                     </div>
-                                                    {groupedStudents.map(([className, classStudents]) => (
-                                                        <React.Fragment key={className}>
-                                                            <div className="sticky top-[58px] z-20 px-4 py-2 bg-[var(--color-surface-alt)]/90 backdrop-blur-md border-b border-[var(--color-border)] flex items-center justify-between">
-                                                                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                                                    {className} · <span className="opacity-60">{classStudents.length} Siswa</span>
-                                                                </span>
-                                                                <button onClick={() => { setFilterClass(classStudents[0].class_id); setFilterClasses([]); setPage(1) }} className="text-[9px] font-black text-[var(--color-primary)]">Lihat Kelas</button>
-                                                            </div>
-                                                            {classStudents.map((student) => {
-                                                                const p = student.total_points || 0
-                                                                return (
+                                                    {students.map((student) => {
+                                                        const p = student.total_points || 0
+                                                        return (
+                                                            <div
+                                                                key={student.id}
+                                                                className={`grid grid-cols-[1fr_auto_auto] items-center px-4 py-3 gap-3 transition-colors active:bg-[var(--color-primary)]/5
+                                                                        ${selectedIdSet.has(student.id) ? 'bg-[var(--color-primary)]/[0.03]' : ''}
+                                                                        ${student.is_pinned ? 'border-l-4 border-l-amber-400' : ''}`}
+                                                                onClick={() => handleViewProfile(student)}
+                                                            >
+                                                                <div className="flex items-center gap-3 min-w-0">
                                                                     <div
-                                                                        key={student.id}
-                                                                        className={`grid grid-cols-[1fr_auto_auto] items-center px-4 py-3 gap-3 transition-colors active:bg-[var(--color-primary)]/5
-                                                                                ${selectedIdSet.has(student.id) ? 'bg-[var(--color-primary)]/[0.03]' : ''}
-                                                                                ${student.is_pinned ? 'border-l-4 border-l-amber-400' : ''}`}
-                                                                        onClick={() => handleViewProfile(student)}
+                                                                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0 shadow-inner
+                                                                                ${(student.total_points || 0) <= RiskThreshold ? 'bg-red-500/10 text-red-500' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}
                                                                     >
-                                                                        <div className="flex items-center gap-3 min-w-0">
-                                                                            <div
-                                                                                className={`w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0 shadow-inner
-                                                                                        ${(student.total_points || 0) <= RiskThreshold ? 'bg-red-500/10 text-red-500' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}
-                                                                            >
-                                                                                {student.photo_url ? <img src={student.photo_url} className="w-full h-full object-cover rounded-xl" /> : (student.name || 'S').charAt(0)}
-                                                                            </div>
-                                                                            <div className="min-w-0">
-                                                                                <div className="flex items-center gap-1.5">
-                                                                                    <p className="text-xs font-black text-[var(--color-text)] truncate">{student.name}</p>
-                                                                                    {student.is_pinned && <FontAwesomeIcon icon={faThumbtack} className="text-amber-500 text-[8px]" />}
-                                                                                </div>
-                                                                                <div className="flex items-center gap-2 text-[9px] font-bold text-[var(--color-text-muted)] opacity-60">
-                                                                                    <span>{student.className}</span>
-                                                                                    <span>·</span>
-                                                                                    <span>{student.gender}</span>
-                                                                                </div>
-                                                                            </div>
+                                                                        {student.photo_url ? <img src={student.photo_url} className="w-full h-full object-cover rounded-xl" /> : (student.name || 'S').charAt(0)}
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <p className="text-xs font-black text-[var(--color-text)] truncate">{student.name}</p>
+                                                                            {student.is_pinned && <FontAwesomeIcon icon={faThumbtack} className="text-amber-500 text-[8px]" />}
                                                                         </div>
-
-                                                                        <div className={`text-xs font-black px-3 py-1 rounded-lg border text-center min-w-[50px]
-                                                                                ${p < 0 ? 'bg-red-500/10 border-red-500/20 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-[var(--color-surface-alt)]/60 border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                                                                            {p > 0 ? '+' : ''}{p}
-                                                                        </div>
-                                                                        <div
-                                                                            className="w-10 flex justify-center py-2"
-                                                                            onClick={(e) => { e.stopPropagation(); toggleSelectStudent(student.id) }}
-                                                                        >
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={selectedIdSet.has(student.id)}
-                                                                                readOnly
-                                                                                className="w-4.5 h-4.5 rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                                                                            />
+                                                                        <div className="flex items-center gap-2 text-[9px] font-bold text-[var(--color-text-muted)] opacity-60">
+                                                                            <span>{student.className}</span>
+                                                                            <span>·</span>
+                                                                            <span>{student.gender}</span>
                                                                         </div>
                                                                     </div>
-                                                                );
-                                                            })}
-                                                        </React.Fragment>
-                                                    ))}
+                                                                </div>
+
+                                                                <div className={`text-xs font-black px-3 py-1 rounded-lg border text-center min-w-[50px]
+                                                                        ${p < 0 ? 'bg-red-500/10 border-red-500/20 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-[var(--color-surface-alt)]/60 border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                                                    {p > 0 ? '+' : ''}{p}
+                                                                </div>
+                                                                <div
+                                                                    className="w-10 flex justify-center py-2"
+                                                                    onClick={(e) => { e.stopPropagation(); toggleSelectStudent(student.id) }}
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selectedIdSet.has(student.id)}
+                                                                        readOnly
+                                                                        className="w-4.5 h-4.5 rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
 
@@ -2143,6 +2065,7 @@ export default function StudentsPage() {
                                 if (newlyCreatedStudent) setNewlyCreatedStudent(null);
                             }}
                             selectedStudent={selectedStudent}
+                            selectedStudents={selectedStudents}
                             newlyCreatedStudent={newlyCreatedStudent}
                             isPrivacyMode={isPrivacyMode}
                             maskInfo={maskInfo}
@@ -2157,6 +2080,7 @@ export default function StudentsPage() {
                             handlePrintSingle={handlePrintSingle}
                             handleSavePNG={handleSavePNG}
                             handlePrintThermal={handlePrintThermal}
+                            generateStudentPDF={generateStudentPDF}
                         />
                     )}
                 </React.Suspense>
@@ -2251,31 +2175,33 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'delete'}
                             onClose={() => closeModal()}
-                            title="Arsipkan Siswa?"
+                            title="Konfirmasi Arsip"
+                            size="sm"
                         >
-                            <div className="space-y-6">
-                                <div className="p-4 bg-amber-500/10 rounded-[1.5rem] flex items-center gap-4 text-amber-600 border border-amber-500/20">
-                                    <div className="w-12 h-12 rounded-[1rem] bg-amber-500/20 flex items-center justify-center shrink-0 text-xl border border-amber-500/30">
+                            <div className="space-y-5">
+                                <div className="p-3.5 bg-amber-500/10 rounded-2xl flex items-center gap-3.5 text-amber-600 border border-amber-500/20">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 text-lg border border-amber-500/30">
                                         <FontAwesomeIcon icon={faBoxArchive} />
                                     </div>
                                     <div className="min-w-0">
-                                        <h3 className="text-sm font-black uppercase tracking-wider leading-tight">Pindahkan ke Arsip?</h3>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mt-1">Data dapat dipulihkan kapan saja dari menu Arsip.</p>
+                                        <h3 className="text-[11px] font-black uppercase tracking-wider leading-tight">Pindahkan ke Arsip?</h3>
+                                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-80 mt-1">Dapat dipulihkan dari menu Arsip.</p>
                                     </div>
                                 </div>
 
                                 <div className="px-1">
-                                    <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">
-                                        <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20">{studentToDelete?.name}</span> akan dipindahkan ke arsip. Riwayat laporan & poin tetap tersimpan dan bisa dipulihkan.
+                                    <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                        Siswa <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20">{studentToDelete?.name}</span> akan diarsipkan. Riwayat laporan & poin tetap tersimpan dengan aman.
                                     </p>
                                 </div>
 
-                                <div className="flex gap-3 pt-2">
-                                    <button type="button" onClick={() => closeModal()} className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all">
-                                        BATAL
+                                <div className="flex gap-2.5 pt-1">
+                                    <button type="button" onClick={() => closeModal()} className="h-10 px-4 rounded-xl flex-1 bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest transition-all">
+                                        Batal
                                     </button>
-                                    <button type="button" onClick={executeDelete} className="btn bg-amber-500 hover:bg-amber-600 text-white border-0 shadow-lg shadow-amber-500/20 flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all hover:scale-[1.02]">
-                                        ARSIPKAN
+                                    <button type="button" onClick={executeDelete} className="h-10 px-5 rounded-xl flex-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2">
+                                        <FontAwesomeIcon icon={faBoxArchive} className="text-[11px] opacity-70" />
+                                        Arsipkan
                                     </button>
                                 </div>
                             </div>
@@ -2289,30 +2215,42 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'bulkDelete'}
                             onClose={() => closeModal()}
-                            title="Hapus Siswa Terpilih?"
+                            title="Konfirmasi Hapus"
                             size="sm"
                         >
-                            <div className="space-y-6">
-                                <div className="p-4 bg-red-500/10 rounded-[1.5rem] flex items-center gap-4 text-red-500 border border-red-500/20">
-                                    <div className="w-12 h-12 rounded-[1rem] bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30">
+                            <div className="space-y-5">
+                                <div className="p-3.5 bg-red-500/10 rounded-2xl flex items-center gap-3.5 text-red-500 border border-red-500/20">
+                                    <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-lg border border-red-500/30">
                                         <FontAwesomeIcon icon={faTrash} />
                                     </div>
                                     <div className="min-w-0">
-                                        <h3 className="text-sm font-black uppercase tracking-wider leading-tight">Hapus {selectedStudentIds.length} Siswa?</h3>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mt-1">Riwayat laporan & poin terhapus permanen.</p>
+                                        <h3 className="text-[11px] font-black uppercase tracking-wider leading-tight">Hapus {selectedStudentIds.length} Siswa?</h3>
+                                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-80 mt-1">Data akan terhapus secara permanen.</p>
                                     </div>
                                 </div>
+
                                 <div className="px-1">
-                                    <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">
-                                        Tindakan ini akan menghapus <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{selectedStudentIds.length} siswa</span> beserta seluruh riwayat perilaku mereka. Tindakan ini tidak dapat dibatalkan.
+                                    <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                        Anda akan menghapus <span className="text-red-500 font-black bg-red-500/10 px-1.5 py-0.5 rounded-md border border-red-500/20">{selectedStudentIds.length} siswa</span>. Tindakan ini tidak dapat dibatalkan. Riwayat behavior mereka akan hilang.
                                     </p>
                                 </div>
-                                <div className="flex gap-3 pt-2">
-                                    <button type="button" onClick={() => closeModal()} className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all">
-                                        BATAL
+
+                                <div className="flex gap-2.5 pt-1">
+                                    <button type="button" onClick={() => closeModal()} className="h-10 px-4 rounded-xl flex-1 bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest transition-all">
+                                        Batal
                                     </button>
-                                    <button type="button" onClick={handleBulkDelete} disabled={submitting} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-lg shadow-red-500/20 flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all hover:scale-[1.02]">
-                                        {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'HAPUS PERMANEN'}
+                                    <button
+                                        type="button"
+                                        onClick={handleBulkDelete}
+                                        disabled={submitting}
+                                        className="h-10 px-5 rounded-xl flex-1 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (
+                                            <>
+                                                <FontAwesomeIcon icon={faTrash} className="text-[11px] opacity-70" />
+                                                Hapus
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -2969,7 +2907,7 @@ export default function StudentsPage() {
                                             title="Broadcast WA"
                                         >
                                             <FontAwesomeIcon icon={faWhatsapp} className="text-base" />
-                                            <span className="hidden sm:inline">WA</span>
+                                            <span className="hidden sm:inline">Whatsapp</span>
                                         </button>
 
                                         <button

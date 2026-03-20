@@ -13,10 +13,10 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const [students, setStudents] = useState([])
     const [classesList, setClassesList] = useState([])
     const [loading, setLoading] = useState(true)
-    const [globalStats, setGlobalStats] = useState({ 
-        total: 0, boys: 0, girls: 0, avgPoints: 0, risk: 0, 
-        worstClass: null, topPerformer: null, incompleteCount: 0, 
-        noPhoneCount: 0, avgPointsLastWeek: null 
+    const [globalStats, setGlobalStats] = useState({
+        total: 0, boys: 0, girls: 0, avgPoints: 0, risk: 0,
+        worstClass: null, topPerformer: null, incompleteCount: 0,
+        noPhoneCount: 0, avgPointsLastWeek: null
     })
     const [totalRows, setTotalRows] = useState(0)
 
@@ -43,20 +43,20 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const [isShortcutOpen, setIsShortcutOpen] = useState(false)
     const [photoZoom, setPhotoZoom] = useState(null)
     const [isPrivacyMode, setIsPrivacyMode] = useState(false)
-    
+
     // ---- STATE: ACTION CONTEXT ----
     const [selectedStudent, setSelectedStudent] = useState(null)
     const [studentToDelete, setStudentToDelete] = useState(null)
     const [selectedStudentIds, setSelectedStudentIds] = useState([])
     const [submitting, setSubmitting] = useState(false)
     const [newlyCreatedStudent, setNewlyCreatedStudent] = useState(null)
-    
+
     // ---- STATE: BULK ACTIONS ----
     const [bulkClassId, setBulkClassId] = useState('')
     const [bulkTagAction, setBulkTagAction] = useState('add')
     const [bulkPointValue, setBulkPointValue] = useState(0)
     const [bulkPointLabel, setBulkPointLabel] = useState('')
-    
+
     // ---- STATE: PROFILE / DETAIL ----
     const [behaviorHistory, setBehaviorHistory] = useState([])
     const [raportHistory, setRaportHistory] = useState([])
@@ -66,13 +66,13 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const [auditLogs, setAuditLogs] = useState([])
     const [loadingAudit, setLoadingAudit] = useState(false)
     const [loadingHistory, setLoadingHistory] = useState(false)
-    
+
     // ---- STATE: ARCHIVE & HISTORY ----
     const [archivedStudents, setArchivedStudents] = useState([])
     const [loadingArchived, setLoadingArchived] = useState(false)
     const [classHistory, setClassHistory] = useState([])
     const [loadingClassHistory, setLoadingClassHistory] = useState(false)
-    
+
     // ---- STATE: OTHERS ----
     const [isInlineAddOpen, setIsInlineAddOpen] = useState(false)
     const [inlineForm, setInlineForm] = useState({ name: '', gender: 'L', class_id: '', phone: '' })
@@ -112,10 +112,10 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const [loadingRaport, setLoadingRaport] = useState(false)
 
     // ---- REFS ----
-    const formDataRef = useRef({ 
-        name: '', gender: 'L', class_id: '', phone: '', photo_url: '', 
-        nisn: '', guardian_name: '', guardian_relation: 'Ayah', 
-        status: 'aktif', tags: [] 
+    const formDataRef = useRef({
+        name: '', gender: 'L', class_id: '', phone: '', photo_url: '',
+        nisn: '', guardian_name: '', guardian_relation: 'Ayah',
+        status: 'aktif', tags: []
     })
     const importFileInputRef = useRef(null)
     const photoInputRef = useRef(null)
@@ -131,14 +131,14 @@ export function useStudentsCore({ addToast, addUndoToast }) {
         return students.filter((s) => selectedIdSet.has(s.id))
     }, [students, selectedIdSet, selectedStudentIds.length])
     const selectedStudentsWithPhone = useMemo(() => selectedStudents.filter((s) => s.phone), [selectedStudents])
-    
-    const activeFilterCount = useMemo(() => 
-        [filterClass, filterClasses.length > 0 ? 'multi' : '', filterGender, filterStatus, filterTag, filterPointMode, filterMissing, debouncedSearch].filter(Boolean).length
-    , [filterClass, filterClasses.length, filterGender, filterStatus, filterTag, filterPointMode, filterMissing, debouncedSearch])
 
-    const isAnyModalOpen = useMemo(() => 
+    const activeFilterCount = useMemo(() =>
+        [filterClass, filterClasses.length > 0 ? 'multi' : '', filterGender, filterStatus, filterTag, filterPointMode, filterMissing, debouncedSearch].filter(Boolean).length
+        , [filterClass, filterClasses.length, filterGender, filterStatus, filterTag, filterPointMode, filterMissing, debouncedSearch])
+
+    const isAnyModalOpen = useMemo(() =>
         !!(isModalOpen || !!activeModal || isPrintModalOpen || photoZoom)
-    , [isModalOpen, activeModal, isPrintModalOpen, photoZoom])
+        , [isModalOpen, activeModal, isPrintModalOpen, photoZoom])
 
     const allSelected = students.length > 0 && selectedStudentIds.length === students.length
     const someSelected = selectedStudentIds.length > 0 && selectedStudentIds.length < students.length
@@ -189,7 +189,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 : 0
             const incompleteCount = statsData.filter(s => calculateCompleteness(s) < 80).length
             const noPhoneCount = statsData.filter(s => !s.phone).length
-            
+
             const sorted = [...statsData].sort((a, b) => (b.total_points || 0) - (a.total_points || 0))
             const topPerformer = sorted[0] && (sorted[0].total_points || 0) > 0
                 ? { name: sorted[0].name, points: sorted[0].total_points, className: sorted[0].classes?.name || '' }
@@ -281,12 +281,12 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     .order('created_at', { ascending: false })
 
                 const map = {}
-                ;(reportsData || []).forEach(r => {
-                    if (!map[r.student_id]) {
-                        map[r.student_id] = r.created_at
-                        trendMap[r.student_id] = r.points > 0 ? 'up' : r.points < 0 ? 'down' : 'neutral'
-                    }
-                })
+                    ; (reportsData || []).forEach(r => {
+                        if (!map[r.student_id]) {
+                            map[r.student_id] = r.created_at
+                            trendMap[r.student_id] = r.points > 0 ? 'up' : r.points < 0 ? 'down' : 'neutral'
+                        }
+                    })
                 setLastReportMap(map)
             } else {
                 setLastReportMap({})
@@ -328,10 +328,10 @@ export function useStudentsCore({ addToast, addUndoToast }) {
 
     const handleAdd = useCallback(() => {
         setSelectedStudent(null)
-        formDataRef.current = { 
-            name: '', gender: 'L', class_id: '', phone: '', photo_url: '', 
-            nisn: '', guardian_name: '', guardian_relation: 'Ayah', 
-            status: 'aktif', tags: [] 
+        formDataRef.current = {
+            name: '', gender: 'L', class_id: '', phone: '', photo_url: '',
+            nisn: '', guardian_name: '', guardian_relation: 'Ayah',
+            status: 'aktif', tags: []
         }
         setIsModalOpen(true)
     }, [])
@@ -452,7 +452,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 }
                 const { error } = await supabase.from('students').insert([newStudentData])
                 if (error) throw error
-                
+
                 const studentToView = {
                     ...newStudentData,
                     code: newCode,
@@ -531,7 +531,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
         try {
             const { data: prevData } = await supabase.from('students').select('id, total_points').in('id', idsToUpdate)
             const prevPointMap = Object.fromEntries((prevData || []).map(s => [s.id, s.total_points || 0]))
-            
+
             const updates = idsToUpdate.map(async (sid) => {
                 const oldPoints = prevPointMap[sid] ?? 0
                 const newPoints = oldPoints + pointDelta
@@ -848,7 +848,7 @@ Laporanmu System`
         let payload = {}, msg = ''
         if (field === 'name') { payload = { name: value }; msg = 'Nama updated' }
         else if (field === 'gender') { payload = { gender: value }; msg = 'Gender updated' }
-        else if (field === 'kelas') { 
+        else if (field === 'kelas') {
             payload = { class_id: value }; msg = 'Kelas updated'
             if (value !== data.class_id) await supabase.from('student_class_history').insert([{ student_id: id, from_class_id: data.class_id, to_class_id: value, changed_at: new Date().toISOString() }])
         }
@@ -869,7 +869,7 @@ Laporanmu System`
     }
 
     const handleBulkWA = () => {
-        if (!selectedStudentsWithPhone.length) return addToast('Pilih siswa dengan nomor WA', 'warning')
+        if (!selectedStudentsWithPhone.length) return addToast(selectedStudents.map(s => s.name).join(', ') + ' tidak memiliki nomor Whatsapp', 'error')
         setBroadcastResults({}); setBroadcastIndex(-1); setActiveModal('bulkWA')
     }
 
@@ -937,14 +937,14 @@ Laporanmu System`
         fetchBehaviorHistory, fetchRaportHistory, handleViewProfile,
         handleResetPin, checkDuplicate, fetchAuditLog, fetchClassHistory, handleViewClassHistory,
         handleQuickPoint, handleInlineUpdate, handleTogglePin, handlePhotoUpload, uploadingPhoto,
-        handleInlineSubmit, handleViewQR, handleViewPrint, handleBulkWA, buildWAMessage, openWAForStudent,
+        handleInlineSubmit, handleViewQR, handleViewPrint, handleBulkWA, buildWAMessage, openWAForStudent, waTemplate,
         generateStudentPDF, handlePrintSingle, handlePrintThermal, handleSavePNG, handleBulkPrint,
         handleBulkPhotoMatch, handleBulkPhotoUpload, handleClassBreakdown, handleBatchResetPoints,
         // State Helpers
-        setNewTagInput, newTagInput, tagToEdit, setTagToEdit, tagStats, duplicateWarning, 
+        setNewTagInput, newTagInput, tagToEdit, setTagToEdit, tagStats, duplicateWarning,
         checkingDuplicate, gSheetsUrl, setGSheetsUrl, fetchingGSheets, setFetchingGSheets,
         page, setPage, pageSize, setPageSize, jumpPage, setJumpPage, generatingPdf,
-        studentForTags, setStudentForTags, renameInput, setRenameInput, 
+        studentForTags, setStudentForTags, renameInput, setRenameInput,
         archivePage, setArchivePage, archivePageSize, setArchivePageSize, loadingRaport,
         allSelected, someSelected, lastReportMap,
         allUsedTags, archivedStudents, loadingArchived, classHistory, loadingClassHistory,
