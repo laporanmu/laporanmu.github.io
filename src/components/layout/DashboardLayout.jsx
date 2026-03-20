@@ -11,7 +11,7 @@ export default function DashboardLayout({ children, title }) {
     useSessionGuard(15000)
 
     return (
-        <div className="min-h-screen bg-[var(--color-app-bg)] transition-colors">
+        <div className="min-h-screen bg-[var(--color-app-bg)] transition-colors" translate="no">
             {/* Mobile */}
             <BottomNav />
 
