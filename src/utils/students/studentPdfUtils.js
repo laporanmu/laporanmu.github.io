@@ -1,5 +1,4 @@
-import React from 'react'
-import { createRoot } from 'react-dom/client'
+import QRCode from 'qrcode'
 
 // ── Helper: Convert image URL to Base64 ──────────────────────────────────
 export const getBase64Image = (url) => {
@@ -26,20 +25,10 @@ export const handlePrintThermal = async (student, { addToast, setGeneratingPdf }
     setGeneratingPdf(true);
     addToast('Menyiapkan struk thermal...', 'info');
     try {
-        const { QRCodeCanvas } = await import('qrcode.react')
         const qrValue = `${window.location.origin}/check?code=${student.code}&pin=${student.pin}`;
-        const qrContainer = document.createElement('div');
-        qrContainer.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
-        document.body.appendChild(qrContainer);
-        const qrRoot = createRoot(qrContainer);
-        await new Promise(resolve => {
-            qrRoot.render(React.createElement(QRCodeCanvas, { value: qrValue, size: 220, level: 'H' }));
-            setTimeout(resolve, 200);
-        });
-        const qrCanvas = qrContainer.querySelector('canvas');
-        const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : null;
-        qrRoot.unmount();
-        document.body.removeChild(qrContainer);
+        const qrDataUrl = await QRCode.toDataURL(qrValue, {
+            width: 220, errorCorrectionLevel: 'H', margin: 4
+        }).catch(() => null);
 
         const dateStr = new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(new Date());
         const thermalHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -103,26 +92,16 @@ export const handleSavePNG = async (student, { addToast, setGeneratingPdf }) => 
     setGeneratingPdf(true);
     addToast('Menyiapkan gambar kartu...', 'info');
     try {
-        const [{ QRCodeCanvas }, { default: html2canvas }] = await Promise.all([
-            import('qrcode.react'),
+        const [{ default: html2canvas }] = await Promise.all([
             import('html2canvas'),
         ])
         let photoDataUrl = null;
         if (student.photo_url) photoDataUrl = await getBase64Image(student.photo_url);
 
         const qrValue = `${window.location.origin}/check?code=${student.code}&pin=${student.pin}`;
-        const qrContainer = document.createElement('div');
-        qrContainer.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
-        document.body.appendChild(qrContainer);
-        const qrRoot = createRoot(qrContainer);
-        await new Promise(resolve => {
-            qrRoot.render(React.createElement(QRCodeCanvas, { value: qrValue, size: 200, level: 'H' }));
-            setTimeout(resolve, 200);
-        });
-        const qrCanvas = qrContainer.querySelector('canvas');
-        const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : null;
-        qrRoot.unmount();
-        document.body.removeChild(qrContainer);
+        const qrDataUrl = await QRCode.toDataURL(qrValue, {
+            width: 200, errorCorrectionLevel: 'H', margin: 4
+        }).catch(() => null);
 
         // Build offscreen kartu (sama seperti PDF tapi ukuran lebih besar)
         const offscreen = document.createElement('div');
@@ -346,7 +325,6 @@ export const generateStudentPDF = async (targets, captureRef = null, { addToast,
             import('jspdf'),
             import('html2canvas'),
         ])
-        const QRCodeCanvas = (await import('qrcode.react')).QRCodeCanvas;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
         const pageWidth = 210;
@@ -574,28 +552,10 @@ export const generateStudentPDF = async (targets, captureRef = null, { addToast,
                         font-family: system-ui, -apple-system, sans-serif;
                     `;
 
-                    // Render QR ke canvas dulu, lalu embed sebagai <img>
-                    const qrContainer = document.createElement('div');
-                    qrContainer.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
-                    document.body.appendChild(qrContainer);
-
-                    // Pakai QRCodeCanvas yang sudah ter-import
-                    const qrRoot = createRoot(qrContainer);
-                    await new Promise(resolve => {
-                        qrRoot.render(
-                            React.createElement(QRCodeCanvas, {
-                                value: qrValue,
-                                size: 200,
-                                level: 'H',
-                                id: '__qr_offscreen__'
-                            })
-                        );
-                        setTimeout(resolve, 150); // tunggu render selesai
-                    });
-                    const qrCanvas = qrContainer.querySelector('canvas');
-                    const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : null;
-                    qrRoot.unmount();
-                    document.body.removeChild(qrContainer);
+                    // Render QR ke dataURL langsung — tanpa React root
+                    const qrDataUrl = await QRCode.toDataURL(qrValue, {
+                        width: 200, errorCorrectionLevel: 'H', margin: 4
+                    }).catch(() => null);
 
                     backCard.innerHTML = `
                         <div style="

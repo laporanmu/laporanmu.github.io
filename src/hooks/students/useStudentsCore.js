@@ -173,7 +173,14 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     }, [filterGender, filterStatus, filterTag, sortBy, pageSize])
 
     // ---- FUNCTIONS: LOAD DATA ----
-    const fetchStats = useCallback(async () => {
+    const fetchStats = useCallback(async (invalidateCache = false) => {
+        // Kalau explicit refresh, reset cache ranking & trend
+        if (invalidateCache) {
+            rankingsFetchedRef.current = false
+            trendMapRef.current = {}
+            lastReportMapRef.current = {}
+            setLastReportMap({})
+        }
         try {
             const { data: statsData } = await supabase
                 .from('students')
@@ -226,6 +233,52 @@ export function useStudentsCore({ addToast, addUndoToast }) {
         }
     }, [])
 
+    // ---- REFS: CACHE DATA YANG JARANG BERUBAH ----
+    // Rankings & trend tidak perlu refetch setiap search/filter
+    const rankingsRef = useRef({})
+    const trendMapRef = useRef({})
+    const lastReportMapRef = useRef({})
+    const rankingsFetchedRef = useRef(false)
+
+    const fetchRankingsAndTrends = useCallback(async (ids) => {
+        // Fetch rankings sekali saja per session
+        if (!rankingsFetchedRef.current) {
+            try {
+                const { data, error: rpcErr } = await supabase.rpc('get_student_rankings')
+                if (!rpcErr && data) {
+                    rankingsRef.current = Object.fromEntries((data || []).map((r, i) => [r.id, r.student_rank || (i + 1)]))
+                }
+            } catch { }
+            rankingsFetchedRef.current = true
+        }
+
+        // Fetch trend hanya untuk IDs yang belum ada di cache
+        const uncachedIds = ids.filter(id => !(id in trendMapRef.current))
+        if (uncachedIds.length > 0) {
+            try {
+                const { data: reportsData } = await supabase
+                    .from('reports')
+                    .select('student_id, created_at, points')
+                    .in('student_id', uncachedIds)
+                    .order('created_at', { ascending: false })
+
+                const newLastReportMap = { ...lastReportMapRef.current };
+                (reportsData || []).forEach(r => {
+                    if (!(r.student_id in trendMapRef.current)) {
+                        newLastReportMap[r.student_id] = r.created_at
+                        trendMapRef.current[r.student_id] = r.points > 0 ? 'up' : r.points < 0 ? 'down' : 'neutral'
+                    }
+                })
+                // Siswa tanpa report = neutral
+                uncachedIds.forEach(id => {
+                    if (!(id in trendMapRef.current)) trendMapRef.current[id] = 'neutral'
+                })
+                lastReportMapRef.current = newLastReportMap
+                setLastReportMap(newLastReportMap)
+            } catch { }
+        }
+    }, [])
+
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
@@ -265,33 +318,10 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             const { data: studentsData, count } = await q
             setTotalRows(count || 0)
 
-            let rankings = []
-            try {
-                const { data, error: rpcErr } = await supabase.rpc('get_student_rankings')
-                if (!rpcErr && data) rankings = data
-            } catch { }
-            const globalRankMap = Object.fromEntries((rankings || []).map((r, i) => [r.id, r.student_rank || (i + 1)]))
-
             const ids = (studentsData || []).map(s => s.id)
-            const trendMap = {}
-            if (ids.length > 0) {
-                const { data: reportsData } = await supabase
-                    .from('reports')
-                    .select('student_id, created_at, points')
-                    .in('student_id', ids)
-                    .order('created_at', { ascending: false })
 
-                const map = {}
-                    ; (reportsData || []).forEach(r => {
-                        if (!map[r.student_id]) {
-                            map[r.student_id] = r.created_at
-                            trendMap[r.student_id] = r.points > 0 ? 'up' : r.points < 0 ? 'down' : 'neutral'
-                        }
-                    })
-                setLastReportMap(map)
-            } else {
-                setLastReportMap({})
-            }
+            // Fetch rankings & trends dari cache (hanya hit DB untuk data baru)
+            await fetchRankingsAndTrends(ids)
 
             const transformed = (studentsData || []).map(s => {
                 const pts = s.total_points ?? 0
@@ -300,8 +330,8 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     className: s.classes?.name || '-',
                     code: s.registration_code,
                     points: pts,
-                    trend: trendMap[s.id] || 'neutral',
-                    _rank: globalRankMap[s.id] || '-',
+                    trend: trendMapRef.current[s.id] || 'neutral',
+                    _rank: rankingsRef.current[s.id] || '-',
                     is_pinned: s.is_pinned || false,
                 }
             })
@@ -314,7 +344,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
         } finally {
             setLoading(false)
         }
-    }, [page, pageSize, sortBy, filterGender, filterStatus, filterTag, filterMissing, debouncedSearch, filterClasses, filterClass, filterPointMode, filterPointMin, filterPointMax, addToast])
+    }, [page, pageSize, sortBy, filterGender, filterStatus, filterTag, filterMissing, debouncedSearch, filterClasses, filterClass, filterPointMode, filterPointMin, filterPointMax, addToast, fetchRankingsAndTrends])
 
 
     // ---- FUNCTIONS: BASIC CRUD ----
