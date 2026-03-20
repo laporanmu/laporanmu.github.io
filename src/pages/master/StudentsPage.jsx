@@ -461,6 +461,7 @@ export default function StudentsPage() {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                translate="no"
             >
                 {/* Pull-to-Refresh Indicator */}
                 <div
