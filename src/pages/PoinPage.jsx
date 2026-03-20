@@ -17,6 +17,7 @@ import Modal from '../components/ui/Modal'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { useFlag } from '../context/FeatureFlagsContext'
+import Pagination from '../components/ui/Pagination'
 import { supabase } from '../lib/supabase'
 
 import Papa from 'papaparse'
@@ -27,74 +28,6 @@ const LS_VIEW = 'reports_view'
 const LS_COLS = 'reports_columns'
 const LS_PAGE_SIZE = 'reports_page_size'
 
-function getPageItems(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-    if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
-    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
-    return [1, '...', current - 1, current, current + 1, '...', total]
-}
-
-// ── Shared Pagination strip (renders inside any card) ────────────────────────
-function PaginationStrip({ page, totalPages, totalRows, fromRow, toRow, pageSize, onPage, onPageSize }) {
-    if (!totalRows) return null
-    return (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-            <div className="flex items-center gap-4">
-                <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.08em] tabular-nums">
-                    Menampilkan{' '}
-                    <span className="text-[var(--color-text)]">{fromRow}–{toRow}</span>
-                    <span className="opacity-40 font-medium"> dari </span>
-                    <span className="text-[var(--color-text)]">{totalRows}</span>
-                    {' '}laporan
-                </p>
-                <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-[var(--color-border)]">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Baris:</span>
-                    <select
-                        value={pageSize}
-                        onChange={e => onPageSize(Number(e.target.value))}
-                        className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer hover:text-[var(--color-primary)] transition-all"
-                    >
-                        {[10, 25, 50, 100].map(v => (
-                            <option key={v} value={v} className="bg-[var(--color-surface)] text-[var(--color-text)]">{v}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-            <div className="flex items-center gap-1">
-                {[
-                    { icon: faAnglesLeft, action: () => onPage(1), disabled: page === 1 },
-                    { icon: faChevronLeft, action: () => onPage(page - 1), disabled: page === 1 },
-                ].map((b, i) => (
-                    <button key={i} disabled={b.disabled} onClick={b.action}
-                        className="w-8 h-8 rounded-lg border border-[var(--color-border)] text-xs disabled:opacity-20 hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
-                        <FontAwesomeIcon icon={b.icon} className="text-[10px]" />
-                    </button>
-                ))}
-                <div className="flex gap-0.5 mx-1">
-                    {getPageItems(page, totalPages).map((it, idx) =>
-                        it === '...'
-                            ? <span key={idx} className="w-8 h-8 flex items-center justify-center opacity-30 text-xs">···</span>
-                            : <button key={it} onClick={() => onPage(it)}
-                                className={`w-8 h-8 rounded-lg font-black text-[10px] transition-all ${it === page
-                                    ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30'
-                                    : 'border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
-                                {it}
-                            </button>
-                    )}
-                </div>
-                {[
-                    { icon: faChevronRight, action: () => onPage(page + 1), disabled: page >= totalPages },
-                    { icon: faAnglesRight, action: () => onPage(totalPages), disabled: page >= totalPages },
-                ].map((b, i) => (
-                    <button key={i} disabled={b.disabled} onClick={b.action}
-                        className="w-8 h-8 rounded-lg border border-[var(--color-border)] text-xs disabled:opacity-20 hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
-                        <FontAwesomeIcon icon={b.icon} className="text-[10px]" />
-                    </button>
-                ))}
-            </div>
-        </div>
-    )
-}
 
 export default function PoinPage() {
     const { profile } = useAuth()
@@ -119,6 +52,7 @@ export default function PoinPage() {
     const [sortBy, setSortBy] = useState('newest')
     const [showAdvFilter, setShowAdvFilter] = useState(false)
     const [page, setPage] = useState(1)
+    const [jumpPage, setJumpPage] = useState('')
     const [pageSize, setPageSize] = useState(() => {
         try { return Number(localStorage.getItem(LS_PAGE_SIZE)) || 10 } catch { return 10 }
     })
@@ -1186,10 +1120,16 @@ export default function PoinPage() {
                                 ))}
                             </div>
                         </div>
-                        {/* Pagination INSIDE the timeline card */}
-                        <PaginationStrip page={page} totalPages={totalPages} totalRows={totalRows}
-                            fromRow={fromRow} toRow={toRow} pageSize={pageSize} onPage={setPage}
-                            onPageSize={(val) => { setPageSize(val); setPage(1) }} />
+                        <Pagination
+                            totalRows={totalRows}
+                            page={page}
+                            pageSize={pageSize}
+                            setPage={setPage}
+                            setPageSize={setPageSize}
+                            label="laporan"
+                            jumpPage={jumpPage}
+                            setJumpPage={setJumpPage}
+                        />
                     </div>
 
                 ) : (
@@ -1310,10 +1250,16 @@ export default function PoinPage() {
                                 </tbody>
                             </table>
                         </div>
-                        {/* Pagination INSIDE the table card */}
-                        <PaginationStrip page={page} totalPages={totalPages} totalRows={totalRows}
-                            fromRow={fromRow} toRow={toRow} pageSize={pageSize} onPage={setPage}
-                            onPageSize={(val) => { setPageSize(val); setPage(1) }} />
+                        <Pagination
+                            totalRows={totalRows}
+                            page={page}
+                            pageSize={pageSize}
+                            setPage={setPage}
+                            setPageSize={setPageSize}
+                            label="laporan"
+                            jumpPage={jumpPage}
+                            setJumpPage={setJumpPage}
+                        />
                     </div>
                 )}
 

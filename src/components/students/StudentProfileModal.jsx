@@ -36,20 +36,20 @@ export default memo(function StudentProfileModal({
     if (!isOpen || !selectedStudent) return null
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Profil Siswa" size="lg">
-            <div className="space-y-4 -mt-2">
-                <p className="text-[10px] text-[var(--color-text-muted)] font-bold opacity-70">
-                    Ringkasan data, statistik, laporan, dan raport
+        <Modal isOpen={isOpen} onClose={onClose} title="Profil Siswa" size="lg" mobileVariant="bottom-sheet">
+            <div className="space-y-4 pt-1">
+                <p className="text-[10px] sm:text-[11px] text-[var(--color-text-muted)] font-bold opacity-70 leading-relaxed px-0.5">
+                    Detail informasi akademik, statistik perilaku, histori laporan perizinan, dan rekapan raport siswa.
                 </p>
                 {/* Compact Slim Header */}
                 <div className="relative overflow-hidden rounded-2xl border border-white/10 shadow-xl">
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-700 via-violet-600 to-purple-800"></div>
                     <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
 
-                    <div className="relative p-3.5 flex items-center gap-5 text-white">
+                    <div className="relative p-3 sm:p-4 flex items-center gap-3 sm:gap-5 text-white">
                         {/* Slim Avatar */}
                         <div className="relative shrink-0">
-                            <div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur-xl border border-white/30 flex items-center justify-center text-2xl font-black shadow-xl overflow-hidden z-10 relative">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-white/20 backdrop-blur-xl border border-white/30 flex items-center justify-center text-xl sm:text-2xl font-black shadow-xl overflow-hidden z-10 relative">
                                 {selectedStudent.photo_url && !isPrivacyMode ? (
                                     <img src={selectedStudent.photo_url} alt="" className="w-full h-full object-cover" />
                                 ) : (
@@ -63,26 +63,26 @@ export default memo(function StudentProfileModal({
 
                         {/* Name & Quick Stats */}
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-1">
-                                <h2 className="text-base font-black text-white truncate drop-shadow-sm">
+                            <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                                <h2 className="text-[15px] sm:text-lg font-black text-white leading-tight drop-shadow-sm max-w-[200px] sm:max-w-none">
                                     {isPrivacyMode ? maskInfo(selectedStudent.name, 4) : selectedStudent.name}
                                 </h2>
                                 {(() => {
                                     const completeness = calculateCompleteness(selectedStudent);
                                     return (
-                                        <span className={`text-[7px] px-2 py-0.5 rounded-md font-black uppercase tracking-widest border ${completeness === 100 ? 'bg-emerald-400/20 text-emerald-100 border-emerald-400/30' : 'bg-white/10 text-white/90 border-white/20'}`}>
+                                        <div className={`text-[7px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-widest border shrink-0 ${completeness === 100 ? 'bg-emerald-400/20 text-emerald-100 border-emerald-400/30' : 'bg-white/10 text-white/90 border-white/20'}`}>
                                             {completeness}% READY
-                                        </span>
+                                        </div>
                                     )
                                 })()}
                             </div>
 
                             <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-1.5 text-white/70">
-                                    <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
-                                    <span className="text-[10px] font-bold tracking-wider">{isPrivacyMode ? maskInfo(selectedStudent.registration_code || selectedStudent.code, 3) : (selectedStudent.registration_code || selectedStudent.code)}</span>
+                                <div className="flex items-center gap-1.5 text-white/70 overflow-hidden">
+                                    <FontAwesomeIcon icon={faIdCard} className="text-[9px] shrink-0" />
+                                    <span className="text-[10px] font-bold tracking-wider truncate uppercase">{isPrivacyMode ? maskInfo(selectedStudent.registration_code || selectedStudent.code, 3) : (selectedStudent.registration_code || selectedStudent.code)}</span>
                                 </div>
-                                <div className="flex-1 max-w-[140px]">
+                                <div className="flex-1 max-w-[120px] hidden xs:block">
                                     <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-white transition-all duration-700"
@@ -100,7 +100,7 @@ export default memo(function StudentProfileModal({
                                 navigator.clipboard.writeText(selectedStudent.registration_code || selectedStudent.code);
                                 addToast('ID disalin', 'success');
                             }}
-                            className="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-[9px] font-black uppercase transition-all"
+                            className="hidden xs:flex h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-[8px] sm:text-[9px] font-black uppercase transition-all tracking-wider items-center justify-center whitespace-nowrap"
                         >
                             SALIN ID
                         </button>
@@ -593,16 +593,17 @@ export default memo(function StudentProfileModal({
                 })()}
 
                 {/* Footer Actions */}
-                <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-[var(--color-border)]">
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-4 pb-2 border-t border-[var(--color-border)] bg-[var(--color-surface)] sticky bottom-0 z-30 -mx-0.5 mt-2">
                     {canEdit && (
                         <button
                             onClick={() => {
                                 onClose()
                                 onOpenTagModal()
                             }}
-                            className="h-8 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"
+                            className="h-9 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
                         >
-                            <FontAwesomeIcon icon={faTags} /> Label
+                            <FontAwesomeIcon icon={faTags} className="text-[11px]" />
+                            <span className="hidden xs:inline">Label</span>
                         </button>
                     )}
                     {canEdit && (
@@ -611,14 +612,15 @@ export default memo(function StudentProfileModal({
                                 onClose()
                                 handleEdit(selectedStudent)
                             }}
-                            className="h-8 px-3 rounded-lg border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"
+                            className="h-9 px-5 rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95"
                         >
-                            <FontAwesomeIcon icon={faEdit} /> Edit
+                            <FontAwesomeIcon icon={faEdit} className="text-[11px]" />
+                            <span className="hidden xs:inline">Edit Data</span>
                         </button>
                     )}
                     <button
                         onClick={() => onClose()}
-                        className="h-8 px-4 rounded-lg bg-gray-900 text-white text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all"
+                        className="h-9 px-6 rounded-xl bg-[var(--color-text)] text-[var(--color-surface)] text-[10px] font-black uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-text)]/10"
                     >
                         Tutup
                     </button>

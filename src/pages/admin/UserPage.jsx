@@ -17,6 +17,7 @@ import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import Pagination from '../../components/ui/Pagination'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -38,12 +39,6 @@ const canCreateUsers = (role) => ['developer', 'admin'].includes(role)
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
 
-function getPageItems(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-    if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
-    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
-    return [1, '...', current - 1, current, current + 1, '...', total]
-}
 
 // ─── RoleBadge ────────────────────────────────────────────────────────────────
 
@@ -89,7 +84,7 @@ export default function UserManagementPage() {
     const [sortBy, setSortBy] = useState('name_asc')
     const [page, setPage] = useState(1)
     const [jumpPage, setJumpPage] = useState('')
-    const PAGE_SIZE = 15
+    const [pageSize, setPageSize] = useState(15)
 
     // ── State: modals ──────────────────────────────────────────────────────────
     const [createModal, setCreateModal] = useState(false)
@@ -228,8 +223,7 @@ export default function UserManagementPage() {
         return list
     }, [users, debouncedSearch, filterRole, filterLinked, sortBy])
 
-    const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
-    const pagedUsers = filteredUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    const pagedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize)
 
     const resetFilters = () => { setSearch(''); setFilterRole(''); setFilterLinked(''); setSortBy('name_asc'); setPage(1) }
     const hasFilters = !!(search || filterRole || filterLinked || sortBy !== 'name_asc')
@@ -756,25 +750,16 @@ export default function UserManagementPage() {
                             </table>
                         </div>
 
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="px-5 py-3 border-t border-[var(--color-border)] flex items-center justify-between gap-3 bg-[var(--color-surface-alt)]/30 flex-wrap">
-                                <p className="text-[10px] font-bold text-[var(--color-text-muted)]">
-                                    {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredUsers.length)} dari {filteredUsers.length} user
-                                </p>
-                                <div className="flex items-center gap-1.5">
-                                    <button disabled={page <= 1} onClick={() => setPage(1)} className="h-8 w-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[9px]" /></button>
-                                    <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="h-8 w-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[9px]" /></button>
-                                    {getPageItems(page, totalPages).map((it, i) => it === '...'
-                                        ? <span key={`e${i}`} className="text-[var(--color-text-muted)] px-1">…</span>
-                                        : <button key={it} onClick={() => setPage(it)} className={`h-8 min-w-[32px] px-2 rounded-xl font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-md' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}>{it}</button>
-                                    )}
-                                    <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="h-8 w-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[9px]" /></button>
-                                    <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-8 w-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[9px]" /></button>
-                                    <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/\D/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal…" className="w-14 h-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-center text-[10px] font-black focus:border-[var(--color-primary)] outline-none" />
-                                </div>
-                            </div>
-                        )}
+                        <Pagination
+                            totalRows={filteredUsers.length}
+                            page={page}
+                            pageSize={pageSize}
+                            setPage={setPage}
+                            setPageSize={setPageSize}
+                            label="user"
+                            jumpPage={jumpPage}
+                            setJumpPage={setJumpPage}
+                        />
                     </div>
                 )}
 

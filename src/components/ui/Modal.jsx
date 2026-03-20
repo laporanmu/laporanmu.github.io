@@ -18,7 +18,7 @@ function getPortalContainer(id) {
     return _portalContainers[id]
 }
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', variant = 'centered', mobileVariant = 'centered' }) {
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden'
@@ -50,25 +50,50 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
 
     const container = getPortalContainer('portal-modals-system')
 
+    // Determine classes based on variant and screen size
+    const isBottomSheet = mobileVariant === 'bottom-sheet'
+    
     const node = (
-        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-sm p-4 md:p-8 flex justify-center items-start" onClick={onClose} role="dialog" aria-modal="true">
+        <div 
+            className={`fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm transition-all duration-300
+                ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}
+                ${isBottomSheet ? 'flex items-end md:items-center justify-center' : 'flex items-start justify-center overflow-y-auto p-4 md:p-8'}
+            `} 
+            onClick={onClose} 
+            role="dialog" 
+            aria-modal="true"
+        >
             <div
-                className={`bg-[var(--color-surface)] rounded-2xl p-6 shadow-2xl w-full ${sizeClasses[size]} relative my-auto`}
+                className={`bg-[var(--color-surface)] shadow-2xl w-full relative transition-all duration-500 transform
+                    ${sizeClasses[size]}
+                    ${isBottomSheet 
+                        ? 'rounded-t-[2.5rem] md:rounded-2xl h-[90vh] md:h-auto md:my-auto translate-y-0 animate-in slide-in-from-bottom-full md:slide-in-from-top-4 flex flex-col' 
+                        : 'rounded-2xl p-6 my-auto translate-y-0 animate-in zoom-in-95'
+                    }
+                `}
+                style={isBottomSheet ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' } : {}}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">{title}</h3>
+                {/* Drag Handle for Bottom Sheet */}
+                {isBottomSheet && (
+                    <div className="shrink-0 w-12 h-1.5 bg-[var(--color-border)] rounded-full mx-auto mt-4 mb-4 md:hidden opacity-30" />
+                )}
+
+                <div className={`flex items-center justify-between mb-4 ${isBottomSheet ? 'px-6 pt-2' : ''}`}>
+                    <h3 className="text-lg font-black font-heading tracking-tight text-[var(--color-text)]">{title}</h3>
                     <button
                         onClick={onClose}
                         className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]
-              hover:bg-[var(--color-surface-alt)] rounded-lg transition-colors"
+              hover:bg-[var(--color-surface-alt)] rounded-xl transition-all active:scale-90"
                         aria-label="Close modal"
                     >
                         <FontAwesomeIcon icon={faXmark} />
                     </button>
                 </div>
 
-                <div>{children}</div>
+                <div className={`flex-1 min-h-0 ${isBottomSheet ? 'overflow-y-auto px-6 pr-4' : ''}`}>
+                    {children}
+                </div>
             </div>
         </div>
     )
