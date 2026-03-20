@@ -4,7 +4,6 @@ import {
     faIdCard, faMars, faVenus, faTrophy, faEdit, faTags,
     faHistory, faArrowTrendUp, faTableList, faClockRotateLeft,
     faTriangleExclamation, faCircleExclamation, faBolt, faChevronDown,
-    faChevronUp, faChevronLeft, faChevronRight,
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
@@ -29,8 +28,6 @@ export default memo(function StudentProfileModal({
     timelineVisible,
     setTimelineVisible,
     timelineFiltered,
-    setStudentForTags,
-    timelineGroups,
     raportHistory,
     loadingRaport,
     addToast,
@@ -600,8 +597,8 @@ export default memo(function StudentProfileModal({
                     {canEdit && (
                         <button
                             onClick={() => {
-                                setStudentForTags(selectedStudent)
-                                setIsTagModalOpen(true)
+                                onClose()
+                                onOpenTagModal()
                             }}
                             className="h-8 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"
                         >

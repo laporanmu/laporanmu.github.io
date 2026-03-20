@@ -1974,7 +1974,6 @@ export default function StudentsPage() {
                                 timelineVisible={timelineVisible}
                                 setTimelineVisible={setTimelineVisible}
                                 timelineFiltered={timelineFiltered}
-                                timelineGroups={timelineGroups}
                                 raportHistory={raportHistory}
                                 loadingRaport={loadingRaport}
                                 addToast={addToast}
