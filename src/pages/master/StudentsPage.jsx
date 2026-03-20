@@ -746,11 +746,11 @@ export default function StudentsPage() {
                                 <FontAwesomeIcon icon={faTriangleExclamation} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">Kls Bermasalah</p>
+                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">Kelas Bermasalah</p>
                                 {globalStats.worstClass ? (
                                     <>
                                         <h3 className="text-[13px] font-black font-heading leading-tight text-red-500 line-clamp-2" title={globalStats.worstClass.name}>{globalStats.worstClass.name}</h3>
-                                        <p className="text-[9px] font-bold text-red-500/60 mt-0.5 whitespace-nowrap">avg {globalStats.worstClass.avg} poin</p>
+                                        <p className="text-[9px] font-bold text-red-500/60 mt-0.5 whitespace-nowrap">Average {globalStats.worstClass.avg} poin</p>
                                     </>
                                 ) : (
                                     <h3 className="text-sm font-black text-[var(--color-text-muted)]">-</h3>
