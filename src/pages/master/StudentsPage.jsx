@@ -1,5 +1,5 @@
 import React from 'react'
-import { useState, useRef, useEffect, useCallback, memo, useMemo, useDeferredValue } from 'react'
+import { useState, useRef, useEffect, useCallback, memo, useMemo, useDeferredValue, startTransition } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
@@ -343,6 +343,15 @@ export default function StudentsPage() {
     const [mobileView, setMobileView] = useState(() => {
         try { return localStorage.getItem('students_mobile_view') || 'card' } catch { return 'card' }
     }) // 'card' | 'list'
+
+    // Local state untuk search input — dipisah dari searchQuery global
+    // supaya ketikan tidak trigger re-render seluruh halaman
+    const [inputValue, setInputValue] = useState(searchQuery)
+
+    // Sync inputValue kalau searchQuery di-clear dari luar (misal resetAllFilters)
+    useEffect(() => {
+        if (searchQuery === '') setInputValue('')
+    }, [searchQuery])
     const quickAddRef = useRef(null)
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
     const [colMenuPos, setColMenuPos] = useState({ top: 0, left: 0 })
@@ -856,15 +865,21 @@ export default function StudentsPage() {
                             <input
                                 ref={searchInputRef}
                                 type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                value={inputValue}
+                                onChange={(e) => {
+                                    // Update input visual langsung (tidak delay)
+                                    setInputValue(e.target.value)
+                                    // Update global search state dengan priority rendah
+                                    // sehingga tidak block keystroke
+                                    startTransition(() => setSearchQuery(e.target.value))
+                                }}
                                 placeholder="Cari nama, kode... (Ctrl+K)"
                                 onFocus={() => setIsSearchFocused(true)}
                                 onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                                 className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                             />
                             {/* Recent Searches Dropdown */}
-                            {isSearchFocused && recentSearches.length > 0 && !searchQuery && (
+                            {isSearchFocused && recentSearches.length > 0 && !inputValue && (
                                 <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                     <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/30">
                                         <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pencarian Terakhir</span>
@@ -874,7 +889,7 @@ export default function StudentsPage() {
                                         {recentSearches.map((s, i) => (
                                             <button
                                                 key={i}
-                                                onClick={() => setSearchQuery(s)}
+                                                onClick={() => { setInputValue(s); startTransition(() => setSearchQuery(s)) }}
                                                 className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--color-surface-alt)] text-xs font-bold text-[var(--color-text-muted)] hover:text-[var(--color-primary)] flex items-center gap-2 transition-colors"
                                             >
                                                 <FontAwesomeIcon icon={faHistory} className="text-[10px] opacity-40" />
