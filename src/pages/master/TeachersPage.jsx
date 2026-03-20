@@ -22,8 +22,11 @@ import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 import { TeacherRow, TeacherMobileCard, STATUS_CONFIG } from '../../components/teachers/TeacherRow'
 import TeacherFormModal from '../../components/teachers/TeacherFormModal'
+import Pagination from '../../components/ui/Pagination'
 import Papa from 'papaparse'
+
 import * as XLSX from 'xlsx'
+import { useDebounce } from '../../hooks/useDebounce'
 
 // STATUS_CONFIG imported from TeacherRow component
 const LS_FILTERS = 'teachers_filters'
@@ -36,12 +39,7 @@ const maskInfo = (str, vis = 4) => {
     return str.substring(0, vis) + '***'
 }
 
-function getPageItems(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-    if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
-    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
-    return [1, '...', current - 1, current, current + 1, '...', total]
-}
+
 
 export default function TeachersPage() {
     // core
@@ -54,7 +52,7 @@ export default function TeachersPage() {
     const [stats, setStats] = useState({ total: 0, active: 0, male: 0, female: 0, guru: 0, karyawan: 0 })
     // filters
     const [searchQuery, setSearchQuery] = useState('')
-    const [debouncedSearch, setDebouncedSearch] = useState('')
+    const debouncedSearch = useDebounce(searchQuery, 350)
     const [filterSubject, setFilterSubject] = useState('')
     const [filterGender, setFilterGender] = useState('')
     const [filterStatus, setFilterStatus] = useState('active')
@@ -141,8 +139,8 @@ export default function TeachersPage() {
     useEffect(() => { try { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) } catch { } }, [visibleCols])
     useEffect(() => { try { localStorage.setItem(LS_PAGE_SIZE, pageSize) } catch { } }, [pageSize])
 
-    // ── debounce ─────────────────────────────────────────────────────────────
-    useEffect(() => { const t = setTimeout(() => { setDebouncedSearch(searchQuery.trim()); setPage(1) }, 350); return () => clearTimeout(t) }, [searchQuery])
+    // debounce handled by useDebounce hook — reset page on search change
+    useEffect(() => { setPage(1) }, [debouncedSearch])
 
     // ── outside click ─────────────────────────────────────────────────────────
     useEffect(() => {
@@ -257,9 +255,7 @@ export default function TeachersPage() {
     useEffect(() => { fetchStats() }, [])
     useEffect(() => { fetchData() }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, debouncedSearch])
 
-    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
-    const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1
-    const toRow = Math.min(page * pageSize, totalRows)
+
 
     // Insights Row
     const insights = useMemo(() => {
@@ -868,42 +864,17 @@ export default function TeachersPage() {
                             ))}
                         </div>
 
-                        {/* Pagination */}
-                        {totalRows > 0 && (
-                            <div className="px-6 py-5 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Menampilkan {fromRow}–{toRow} dari {totalRows} guru</p>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-2 mr-2 pr-3 border-r border-[var(--color-border)]">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">Baris:</span>
-                                        <select
-                                            value={pageSize}
-                                            onChange={e => {
-                                                const val = Number(e.target.value)
-                                                setPageSize(val)
-                                                setPage(1)
-                                            }}
-                                            className="bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer hover:text-[var(--color-primary)] transition-all"
-                                        >
-                                            {[10, 25, 50, 100].map(v => (
-                                                <option key={v} value={v} className="bg-[var(--color-surface)] text-[var(--color-text)]">{v}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <button disabled={page === 1} onClick={() => setPage(1)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" /></button>
-                                    <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /></button>
-                                    <div className="flex items-center gap-1.5 mx-1">
-                                        {getPageItems(page, totalPages).map((it, idx) => it === '...' ? <span key={`s${idx}`} className="w-8 flex items-center justify-center text-[var(--color-text-muted)] font-bold opacity-30">···</span> : (
-                                            <button key={it} onClick={() => setPage(it)} className={`h-9 min-w-[36px] px-2.5 rounded-xl font-black text-[10px] transition-all ${it === page ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/25' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}>{it}</button>
-                                        ))}
-                                    </div>
-                                    <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faChevronRight} className="text-[10px]" /></button>
-                                    <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all disabled:opacity-30"><FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" /></button>
-                                    <div className="ml-2 relative flex items-center">
-                                        <input value={jumpPage} onChange={e => setJumpPage(e.target.value.replace(/[^\d]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') { const n = Number(jumpPage); if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') } } }} placeholder="Hal..." className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[11px] font-black focus:border-[var(--color-primary)] outline-none" />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                            <Pagination
+                                totalRows={totalRows}
+                                page={page}
+                                pageSize={pageSize}
+                                setPage={setPage}
+                                setPageSize={setPageSize}
+                                label="guru"
+                                jumpPage={jumpPage}
+                                setJumpPage={setJumpPage}
+                            />
+
                     </div>
                 )}
 

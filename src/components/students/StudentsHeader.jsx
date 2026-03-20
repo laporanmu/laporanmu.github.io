@@ -5,8 +5,7 @@ import {
     faFileExport, faCamera, faClipboardList, faBoxArchive,
     faRotateLeft, faPlus, faKeyboard
 } from '@fortawesome/free-solid-svg-icons'
-import Breadcrumb from '../../../components/ui/Breadcrumb'
-import ShortcutCheatsheet from './components/ShortcutCheatsheet'
+import Breadcrumb from '../ui/Breadcrumb'
 import { useNavigate } from 'react-router-dom'
 
 const StudentsHeader = memo(function StudentsHeader({
@@ -59,11 +58,6 @@ const StudentsHeader = memo(function StudentsHeader({
                     >
                         <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
                     </button>
-                    {isShortcutOpen && (
-                        <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[340px] sm:w-72 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
-                            <ShortcutCheatsheet isOpen={isShortcutOpen} />
-                        </div>
-                    )}
                 </div>
 
                 {/* Sub-menu button */}
