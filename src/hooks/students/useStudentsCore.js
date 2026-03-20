@@ -240,6 +240,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             if (filterTag) q = q.contains('tags', [filterTag])
             if (filterMissing === 'photo') q = q.or('photo_url.is.null,photo_url.eq.""')
             else if (filterMissing === 'wa') q = q.or('phone.is.null,phone.eq.""')
+            else if (filterMissing === 'all') q = q.or('photo_url.is.null,photo_url.eq."",phone.is.null,phone.eq."",nisn.is.null,nisn.eq.""')
 
             if (debouncedSearch) {
                 const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
