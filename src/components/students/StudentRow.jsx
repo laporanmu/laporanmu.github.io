@@ -24,7 +24,6 @@ import {
     faThumbtack,
     faChevronDown,
     faCheckDouble,
-    faLink,
     faStar,
     faFire,
     faPaperPlane
@@ -531,49 +530,49 @@ const StudentRow = memo(({
 
                                 {/* Quick Action bolt */}
                                 <div className="relative">
-                                        <button
-                                            ref={boltRef}
-                                            onClick={() => {
-                                                if (!showQuickAction) {
-                                                    const rect = boltRef.current?.getBoundingClientRect()
-                                                    setBoltRect(rect)
-                                                }
-                                                setShowQuickAction(!showQuickAction)
-                                            }}
-                                            className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all
+                                    <button
+                                        ref={boltRef}
+                                        onClick={() => {
+                                            if (!showQuickAction) {
+                                                const rect = boltRef.current?.getBoundingClientRect()
+                                                setBoltRect(rect)
+                                            }
+                                            setShowQuickAction(!showQuickAction)
+                                        }}
+                                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all
                                                 ${showQuickAction ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-amber-500/10 text-amber-500 opacity-0 group-hover/point:opacity-100 hover:bg-amber-500 hover:text-white'}`}
-                                            title="Aksi Cepat"
-                                        >
-                                            <FontAwesomeIcon icon={faBolt} className="text-[10px]" />
-                                        </button>
-                                        {showQuickAction && boltRect && createPortal(
-                                            <>
-                                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setShowQuickAction(false)} />
-                                                <div 
-                                                    className="fixed z-[9991] w-40 glass-morphism bg-white dark:bg-gray-800 shadow-2xl rounded-2xl border border-[var(--color-border)] p-1.5 animate-in fade-in zoom-in-95 duration-200"
-                                                    style={{
-                                                        top: boltRect.top + boltRect.height + 8,
-                                                        left: boltRect.left + (boltRect.width / 2) - 80 
-                                                    }}
-                                                >
-                                                    <div className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] p-2 mb-1 border-b border-[var(--color-border)] text-center">Quick Points</div>
-                                                    {quickActions.map((act, idx) => (
-                                                        <button
-                                                            key={idx}
-                                                            onClick={() => { handleQuickPointInternal(student, act.amount, act.label); setShowQuickAction(false) }}
-                                                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-between group/act"
-                                                        >
-                                                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] group-hover/act:text-[var(--color-text)]">{act.label}</span>
-                                                            <span className={`text-[10px] font-black ${act.color}`}>{act.amount > 0 ? `+${act.amount}` : act.amount}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </>,
-                                            getPortalContainer('portal-quick-action')
-                                        )}
+                                        title="Aksi Cepat"
+                                    >
+                                        <FontAwesomeIcon icon={faBolt} className="text-[10px]" />
+                                    </button>
+                                    {showQuickAction && boltRect && createPortal(
+                                        <>
+                                            <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setShowQuickAction(false)} />
+                                            <div
+                                                className="fixed z-[9991] w-40 glass-morphism bg-white dark:bg-gray-800 shadow-2xl rounded-2xl border border-[var(--color-border)] p-1.5 animate-in fade-in zoom-in-95 duration-200"
+                                                style={{
+                                                    top: boltRect.top + boltRect.height + 8,
+                                                    left: boltRect.left + (boltRect.width / 2) - 80
+                                                }}
+                                            >
+                                                <div className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] p-2 mb-1 border-b border-[var(--color-border)] text-center">Quick Points</div>
+                                                {quickActions.map((act, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => { handleQuickPointInternal(student, act.amount, act.label); setShowQuickAction(false) }}
+                                                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-between group/act"
+                                                    >
+                                                        <span className="text-[10px] font-bold text-[var(--color-text-muted)] group-hover/act:text-[var(--color-text)]">{act.label}</span>
+                                                        <span className={`text-[10px] font-black ${act.color}`}>{act.amount > 0 ? `+${act.amount}` : act.amount}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </>,
+                                        getPortalContainer('portal-quick-action')
+                                    )}
                                 </div>
                             </div>
-                            
+
                             {/* WhatsApp Post-Action Button */}
                             {lastAction && student.phone && (
                                 <div className="absolute left-[-180px] top-1/2 -translate-y-1/2 animate-in slide-in-from-right-4 fade-in duration-500 z-[60]">
@@ -804,13 +803,16 @@ const StudentMobileCard = memo(({
                         </div>
                     </div>
 
-                    {/* Dynamic Status Indicator (Link vs WhatsApp) */}
+                    {/* WA Status Indicator */}
                     <div className="flex items-center shrink-0">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center border shadow-sm transition-all active:scale-90
-                            ${student.phone 
-                                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500' 
-                                : 'border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/80 text-[var(--color-text-muted)] opacity-60'}`}>
-                            <FontAwesomeIcon icon={student.phone ? faCheckDouble : faLink} className="text-[10px]" />
+                        <div
+                            title={student.phone ? `WA: ${student.phone}` : 'Belum ada nomor WA'}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all
+                                ${student.phone
+                                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
+                                    : 'border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/80 text-[var(--color-text-muted)] opacity-40'}`}
+                        >
+                            <FontAwesomeIcon icon={faWhatsapp} className="text-[12px]" />
                         </div>
                     </div>
                 </div>
@@ -835,51 +837,61 @@ const StudentMobileCard = memo(({
                 )}
 
                 {/* ACTION FOOTER - Isolated from Card Clicks */}
-                <div 
+                <div
                     onClick={handleActionAreaClick}
                     className="mt-4 bg-[var(--color-surface-alt)] rounded-[2.2rem] p-1.5 flex items-center justify-between border border-[var(--color-border)] shadow-sm relative z-10"
                 >
+                    {/* Profil */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onViewProfile(student) }}
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all"
+                        className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all"
                     >
-                        <FontAwesomeIcon icon={faIdCard} className="text-[14px]" />
+                        <FontAwesomeIcon icon={faIdCard} className="text-[13px]" />
+                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">Profil</span>
                     </button>
 
+                    {/* Edit */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onEdit(student) }}
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all"
+                        className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all"
                     >
-                        <FontAwesomeIcon icon={faEdit} className="text-[14px]" />
+                        <FontAwesomeIcon icon={faEdit} className="text-[13px]" />
+                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">Edit</span>
                     </button>
 
+                    {/* Pin */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onTogglePin(student) }}
-                        className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95
+                        className={`flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl transition-all active:scale-95
                             ${student.is_pinned ? 'text-amber-500 bg-[var(--color-surface)] shadow-sm' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}
                     >
-                        <FontAwesomeIcon icon={faThumbtack} className={`text-[12px] ${student.is_pinned ? 'rotate-0' : 'rotate-45'}`} />
+                        <FontAwesomeIcon icon={faThumbtack} className={`text-[11px] ${student.is_pinned ? 'rotate-0' : 'rotate-45'}`} />
+                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">
+                            {student.is_pinned ? 'Unpin' : 'Pin'}
+                        </span>
                     </button>
 
+                    {/* Poin Cepat */}
                     <div className="relative isolate">
                         <button
                             ref={boltRef}
-                            onClick={(e) => { 
-                                e.stopPropagation(); 
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 if (!showQuickAction) {
                                     const rect = boltRef.current?.getBoundingClientRect()
                                     setBoltRect(rect)
                                 }
-                                setShowQuickAction(!showQuickAction) 
+                                setShowQuickAction(!showQuickAction)
                             }}
-                            className={`h-11 w-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 border
+                            className={`flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl transition-all active:scale-95 border
                                 ${showQuickAction
                                     ? 'bg-amber-500 text-white border-amber-500 shadow-lg'
                                     : 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-white'}`}
                         >
-                            <FontAwesomeIcon icon={faBolt} className="text-[14px]" />
+                            <FontAwesomeIcon icon={faBolt} className="text-[13px]" />
+                            <span className="text-[8px] font-black uppercase tracking-widest leading-none">Poin</span>
                         </button>
-                        
+
                         {showQuickAction && boltRect && createPortal(
                             <>
                                 <div className="fixed inset-0 z-[9990] bg-black/10 backdrop-blur-[1px]" onClick={(e) => { e.stopPropagation(); setShowQuickAction(false) }} />
@@ -888,7 +900,7 @@ const StudentMobileCard = memo(({
                                     className="fixed z-[9991] w-52 bg-gray-900 border border-white/20 rounded-[1.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 p-2.5 text-white"
                                     style={{
                                         top: boltRect.top - 8,
-                                        left: Math.min(window.innerWidth - 215, Math.max(10, boltRect.right - 208)), 
+                                        left: Math.min(window.innerWidth - 215, Math.max(10, boltRect.right - 208)),
                                         transform: 'translateY(-100%)'
                                     }}
                                 >
@@ -921,12 +933,14 @@ const StudentMobileCard = memo(({
                         )}
                     </div>
 
+                    {/* Arsip */}
                     {onConfirmDelete && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onConfirmDelete(student) }}
-                            className="w-11 h-11 rounded-2xl flex items-center justify-center text-red-500/30 hover:text-red-500 hover:bg-red-500/10 active:scale-95 transition-all"
+                            className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-red-400/50 hover:text-red-500 hover:bg-red-500/10 active:scale-95 transition-all"
                         >
-                            <FontAwesomeIcon icon={faBoxArchive} className="text-[14px]" />
+                            <FontAwesomeIcon icon={faBoxArchive} className="text-[13px]" />
+                            <span className="text-[8px] font-black uppercase tracking-widest leading-none">Arsip</span>
                         </button>
                     )}
                 </div>
@@ -945,7 +959,7 @@ const StudentMobileCard = memo(({
                             <FontAwesomeIcon icon={faWhatsapp} className="text-xl" />
                             <span className="text-[8px] font-black uppercase tracking-widest">Kirim WA</span>
                         </button>
-                        <button 
+                        <button
                             onClick={() => setLastAction(null)}
                             className="absolute top-4 right-5 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-[12px] active:scale-95 transition-all"
                         >
@@ -966,10 +980,10 @@ export const StudentSkeletonRow = () => (
             <div className="w-5 h-5 bg-[var(--color-surface-alt)] rounded-lg mx-auto" />
         </td>
         <td className="py-4 px-1 w-12 truncate">
-             <div className="w-8 h-8 rounded-full bg-[var(--color-surface-alt)] mx-auto" />
+            <div className="w-8 h-8 rounded-full bg-[var(--color-surface-alt)] mx-auto" />
         </td>
-         <td className="py-4 px-1 w-16 text-center">
-             <div className="w-10 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
+        <td className="py-4 px-1 w-16 text-center">
+            <div className="w-10 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
         </td>
         <td className="py-4 px-4 min-w-[300px]">
             <div className="flex flex-col gap-2">
@@ -981,17 +995,17 @@ export const StudentSkeletonRow = () => (
             <div className="w-8 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
         </td>
         <td className="py-4 px-4 text-center">
-             <div className="w-12 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
+            <div className="w-12 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
         </td>
         <td className="py-4 px-4 text-center">
             <div className="w-12 h-6 bg-[var(--color-surface-alt)] rounded-lg mx-auto" />
         </td>
         <td className="py-4 px-4">
-             <div className="flex gap-2 justify-center">
+            <div className="flex gap-2 justify-center">
                 <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
                 <div className="w-px h-8 bg-[var(--color-border)] opacity-30 mx-1" />
                 <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
-             </div>
+            </div>
         </td>
     </tr>
 )
@@ -1007,8 +1021,8 @@ export const StudentSkeletonCard = () => (
             <div className="w-12 h-6 bg-[var(--color-surface-alt)] rounded-lg" />
         </div>
         <div className="flex gap-2">
-             <div className="flex-1 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
-             <div className="w-24 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
+            <div className="flex-1 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
+            <div className="w-24 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
         </div>
     </div>
 )
