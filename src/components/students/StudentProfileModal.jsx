@@ -2,9 +2,9 @@ import React, { memo, useState, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faIdCard, faMars, faVenus, faTrophy, faEdit, faTags,
-    faHistory, faArrowTrendUp, faTableList, faClockRotateLeft,
+    faHistory, faArrowTrendUp, faArrowTrendDown, faTableList, faClockRotateLeft,
     faTriangleExclamation, faCircleExclamation, faBolt, faChevronDown,
-    faXmark, faPlus, faMinus, faStar, faFire, faCrown
+    faXmark, faPlus, faMinus, faStar, faFire, faCrown, faAddressCard, faCopy
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
@@ -36,9 +36,35 @@ export default memo(function StudentProfileModal({
 }) {
     if (!isOpen || !selectedStudent) return null
 
+    const handleSaveContact = () => {
+        if (isPrivacyMode) return addToast('Mode privasi aktif', 'warning')
+        if (!selectedStudent.phone) return addToast('Nomor WA kosong', 'error')
+
+        const guardianName = selectedStudent.guardian_name || 'Ortu'
+        const studentName = selectedStudent.name || 'Siswa'
+        const cleanPhone = selectedStudent.phone.replace(/\D/g, '')
+        const phoneNum = cleanPhone.startsWith('0') ? `+62${cleanPhone.substring(1)}` : `+${cleanPhone}`
+
+        const vCardData = `BEGIN:VCARD
+VERSION:3.0
+FN:Wali - ${studentName} (${guardianName})
+TEL;TYPE=CELL:${phoneNum}
+END:VCARD`
+
+        const blob = new Blob([vCardData], { type: 'text/vcard;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `Wali_${studentName.replace(/\s+/g, '_')}.vcf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        addToast('Kontak VCF berhasil diunduh', 'success')
+    }
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Profil Siswa" size="lg" mobileVariant="bottom-sheet">
-            <div className="flex flex-col h-full max-h-[85vh] sm:max-h-[600px] overflow-hidden">
+            <div className="flex flex-col h-full max-h-[85vh] sm:max-h-[80vh] overflow-hidden">
                 {/* Header Section (Fixed) */}
                 <div className="shrink-0 space-y-3 pb-4">
                     <p className="text-[10px] sm:text-[11px] text-[var(--color-text-muted)] font-bold opacity-70 leading-relaxed px-0.5">
@@ -97,16 +123,16 @@ export default memo(function StudentProfileModal({
                                 </div>
                             </div>
 
-                            {/* Quick Actions (Copy ID) */}
+                            {/* Quick Actions (Copy Data) */}
                             <button
                                 onClick={() => {
                                     if (isPrivacyMode) return addToast('Mode Privasi aktif', 'warning');
-                                    navigator.clipboard.writeText(selectedStudent.registration_code || selectedStudent.code);
-                                    addToast('ID disalin', 'success');
+                                    navigator.clipboard.writeText(`Nama: ${selectedStudent.name}\nNISN: ${selectedStudent.nisn || '-'}\nHP: ${selectedStudent.phone || '-'}`);
+                                    addToast('Data Siswa disalin', 'success');
                                 }}
-                                className="hidden xs:flex h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-[8px] sm:text-[9px] font-black uppercase transition-all tracking-wider items-center justify-center whitespace-nowrap"
+                                className="flex h-7 px-2.5 sm:h-8 sm:px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-[8px] sm:text-[9px] font-black uppercase transition-all tracking-wider items-center justify-center whitespace-nowrap gap-1.5 shrink-0"
                             >
-                                SALIN ID
+                                <FontAwesomeIcon icon={faCopy} className="text-[9px]" /> <span className="hidden sm:inline">SALIN INFO</span>
                             </button>
                         </div>
                     </div>
@@ -230,12 +256,19 @@ export default memo(function StudentProfileModal({
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center group">
                                             <span className="text-[8px] text-[var(--color-text-muted)] font-black uppercase">WhatsApp</span>
-                                            {selectedStudent.phone && (
-                                                <a href={isPrivacyMode ? '#' : `https://wa.me/${selectedStudent.phone.replace(/\D/g, '').replace(/^0/, '62')}`} target="_blank" rel="noreferrer"
-                                                    className="text-emerald-500 hover:text-emerald-600 transition-colors text-[9px] font-black uppercase flex items-center gap-1">
-                                                    Chat <FontAwesomeIcon icon={faBolt} className="text-[7px]" />
-                                                </a>
-                                            )}
+                                            <div className="flex gap-1.5">
+                                                {selectedStudent.phone && !isPrivacyMode && (
+                                                    <button onClick={handleSaveContact} className="text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors text-[8px] font-black uppercase flex items-center gap-1 border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 rounded shadow-sm hover:shadow">
+                                                        VCard <FontAwesomeIcon icon={faAddressCard} className="text-[8px]" />
+                                                    </button>
+                                                )}
+                                                {selectedStudent.phone && (
+                                                    <a href={isPrivacyMode ? '#' : `https://wa.me/${selectedStudent.phone.replace(/\D/g, '').replace(/^0/, '62')}`} target="_blank" rel="noreferrer"
+                                                        className="text-emerald-600 dark:text-emerald-400 hover:brightness-110 transition-colors text-[8px] font-black uppercase flex items-center gap-1 border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 rounded shadow-sm hover:shadow">
+                                                        Chat <FontAwesomeIcon icon={faBolt} className="text-[7px]" />
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
                                         <p className="text-[10px] font-black text-[var(--color-text)] tracking-wider">{isPrivacyMode ? maskInfo(selectedStudent.phone, 3) : (selectedStudent.phone || '---')}</p>
                                         <div className="pt-1.5 border-t border-[var(--color-border)]/30">
@@ -344,10 +377,11 @@ export default memo(function StudentProfileModal({
                                         )}
                                     </h3>
                                     <div className="flex gap-0.5 bg-[var(--color-surface-alt)] rounded-lg p-0.5 border border-[var(--color-border)]">
-                                        {[{ key: 'all', label: 'Semua' }, { key: 'pos', label: '▲ Pos' }, { key: 'neg', label: '▼ Neg' }].map(tab => (
+                                        {[{ key: 'all', label: 'Semua' }, { key: 'pos', label: 'Positif', icon: faArrowTrendUp, color: 'text-emerald-500' }, { key: 'neg', label: 'Negatif', icon: faArrowTrendDown, color: 'text-red-500' }].map(tab => (
                                             <button key={tab.key} onClick={() => { setTimelineFilter(tab.key); setTimelineVisible(8) }}
-                                                className={`px-2 py-0.5 rounded-md text-[8px] font-black transition-all
+                                                className={`px-2 py-0.5 rounded-md text-[8px] font-black transition-all flex items-center gap-1
                                                     ${timelineFilter === tab.key ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                                {tab.icon && <FontAwesomeIcon icon={tab.icon} className={timelineFilter === tab.key ? tab.color : 'opacity-60'} />}
                                                 {tab.label}
                                             </button>
                                         ))}

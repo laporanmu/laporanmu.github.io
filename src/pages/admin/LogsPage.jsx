@@ -48,6 +48,7 @@ const SYSTEM_EVENT_TYPES = {
     teacher_linked: { label: 'Teacher Di-link', color: '#10b981', bg: '#10b98115', icon: faLink },
     teacher_unlinked: { label: 'Teacher Di-unlink', color: '#6b7280', bg: '#6b728015', icon: faLinkSlash },
     role_changed: { label: 'Role Diubah', color: '#3b82f6', bg: '#3b82f615', icon: faUserPen },
+    student_updated: { label: 'Data Siswa Diubah', color: '#8b5cf6', bg: '#8b5cf615', icon: faUserPen },
     settings_changed: { label: 'Settings Diubah', color: '#f59e0b', bg: '#f59e0b15', icon: faFloppyDisk },
     flag_toggled: { label: 'Feature Flag Diubah', color: '#06b6d4', bg: '#06b6d415', icon: faBolt },
 }

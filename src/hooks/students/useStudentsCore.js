@@ -5,9 +5,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faThumbtack } from '@fortawesome/free-solid-svg-icons'
 import { RiskThreshold, calculateCompleteness } from '../../utils/students/studentsConstants'
 import { generateStudentPDF as _generateStudentPDF, handlePrintThermal as _handlePrintThermal, handleSavePNG as _handleSavePNG } from '../../utils/students/studentPdfUtils'
+import { useAuth } from '../../context/AuthContext'
 
 export function useStudentsCore({ addToast, addUndoToast }) {
     const navigate = useNavigate()
+    const { profile } = useAuth()
 
     // ---- STATE: CORE DATA ----
     const [students, setStudents] = useState([])
@@ -144,10 +146,11 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const someSelected = selectedStudentIds.length > 0 && selectedStudentIds.length < students.length
 
     // ---- EFFECTS ----
+    // Debounce sudah dilakukan di StudentsPage (inputValue → searchQuery 350ms)
+    // Di sini cukup pakai useDeferredValue untuk prioritas React, tanpa delay tambahan
     const deferredSearchQuery = useDeferredValue(searchQuery)
     useEffect(() => {
-        const t = setTimeout(() => setDebouncedSearch(deferredSearchQuery.trim()), 350)
-        return () => clearTimeout(t)
+        setDebouncedSearch(deferredSearchQuery.trim())
     }, [deferredSearchQuery])
 
     useEffect(() => {
@@ -307,8 +310,12 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 if (filterPointMax !== '') q = q.lte('total_points', Number(filterPointMax))
             }
 
-            if (sortBy === 'total_points_desc') q = q.order('total_points', { ascending: false })
-            else if (sortBy === 'created_at') q = q.order('created_at', { ascending: false })
+            if (sortBy === 'name_asc') q = q.order('name', { ascending: true })
+            else if (sortBy === 'name_desc') q = q.order('name', { ascending: false })
+            else if (sortBy === 'class_asc') q = q.order('class_id', { ascending: true }).order('name', { ascending: true })
+            else if (sortBy === 'points_desc') q = q.order('total_points', { ascending: false, nullsFirst: false })
+            else if (sortBy === 'points_asc') q = q.order('total_points', { ascending: true, nullsFirst: false })
+            else if (sortBy === 'updated_desc') q = q.order('updated_at', { ascending: false })
             else q = q.order('name', { ascending: true })
 
             const from = (page - 1) * pageSize
@@ -462,6 +469,23 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                         note: 'Diubah manual'
                     }])
                 }
+
+                try {
+                    await supabase.from('audit_logs').insert([{
+                        event_type: 'student_updated',
+                        actor_id: profile?.id,
+                        actor_name: profile?.name || 'Admin',
+                        actor_role: profile?.role || 'admin',
+                        target_id: selectedStudent.id,
+                        target_name: formData.name,
+                        target_email: formData.nisn || null,
+                        metadata: {
+                            old: { name: selectedStudent.name, class_id: selectedStudent.class_id },
+                            new: { name: formData.name, class_id: formData.class_id }
+                        }
+                    }])
+                } catch (auditErr) { console.error('Failed to save audit log:', auditErr) }
+
                 addToast('Data siswa berhasil diperbarui', 'success')
             } else {
                 const newCode = generateCode()
@@ -680,7 +704,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
 
     const fetchRaportHistory = useCallback(async (studentId) => {
         try {
-            const { data } = await supabase.from('raports').select('*').eq('student_id', studentId).order('created_at', { ascending: false })
+            const { data } = await supabase.from('student_monthly_reports').select('*').eq('student_id', studentId).order('created_at', { ascending: false })
             setRaportHistory(data || [])
         } catch { setRaportHistory([]) }
     }, [])
@@ -761,12 +785,14 @@ Laporanmu System`
 
     const handleViewQR = (student) => {
         setSelectedStudent(student)
+        // If an explicit QR modal state exists, set it. Otherwise fallback to activeModal.
+        // Assuming activeModal is the generic handler if no specific state exists.
         setActiveModal('qr')
     }
 
     const handleViewPrint = (student) => {
         setSelectedStudent(student)
-        setActiveModal('print')
+        setIsPrintModalOpen(true)
     }
 
     const pdfCallbacks = { addToast, setGeneratingPdf }
@@ -890,13 +916,32 @@ Laporanmu System`
         } catch { addToast('Gagal', 'error') }
     }
 
-    const handleInlineSubmit = async () => {
-        if (!inlineForm.name || !inlineForm.class_id) return
+    const handleInlineSubmit = async (payloadOverride = null) => {
+        const payload = payloadOverride || inlineForm
+        if (!payload.name || !payload.class_id) return
         setSubmittingInline(true)
         try {
-            await supabase.from('students').insert([{ ...inlineForm, registration_code: generateCode(), pin: String(Math.floor(1000 + Math.random() * 9000)), total_points: 0 }])
-            addToast('Berhasil', 'success'); setInlineForm({ name: '', gender: 'L', class_id: inlineForm.class_id, phone: '' }); fetchData(); fetchStats()
-        } catch { addToast('Gagal', 'error') } finally { setSubmittingInline(false) }
+            const { error } = await supabase.from('students').insert([{ 
+                name: payload.name,
+                gender: payload.gender || 'L',
+                class_id: payload.class_id,
+                phone: payload.phone || null,
+                status: 'aktif',
+                tags: [],
+                registration_code: generateCode(), 
+                pin: String(Math.floor(1000 + Math.random() * 9000)), 
+                total_points: 0 
+            }])
+            if (error) throw error
+            addToast('Berhasil menambahkan siswa', 'success')
+            if (!payloadOverride) setInlineForm({ name: '', gender: 'L', class_id: inlineForm.class_id, phone: '' })
+            fetchData(); fetchStats()
+        } catch (err) { 
+            console.error('Inline Add Error:', err)
+            addToast('Gagal menambahkan siswa', 'error') 
+        } finally { 
+            setSubmittingInline(false) 
+        }
     }
 
     const handleBulkWA = () => {
@@ -963,7 +1008,7 @@ Laporanmu System`
         handleSubmit, handleAdd, handleEdit, confirmDelete, executeDelete, closeModal,
         toggleSelectAll, toggleSelectStudent, handleBulkPromote, handleBulkDelete,
         handleBulkPointUpdate, handleBulkTagApply,
-        fetchArchivedStudents, handleRestoreStudent, handlePermanentDelete,
+        fetchArchivedStudents, handleRestoreStudent, handlePermanentDelete, setArchivedStudents,
         fetchUsedTags, handleToggleTag, handleGlobalDeleteTag, handleGlobalRenameTag,
         fetchBehaviorHistory, fetchRaportHistory, handleViewProfile,
         handleResetPin, checkDuplicate, fetchAuditLog, fetchClassHistory, handleViewClassHistory,
@@ -971,7 +1016,7 @@ Laporanmu System`
         handleInlineSubmit, handleViewQR, handleViewPrint, handleBulkWA, buildWAMessage, openWAForStudent, waTemplate,
         generateStudentPDF, handlePrintSingle, handlePrintThermal, handleSavePNG, handleBulkPrint,
         handleBulkPhotoMatch, handleBulkPhotoUpload, handleClassBreakdown, handleBatchResetPoints,
-        bulkPhotoMatches, uploadingBulkPhotos,
+        bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches,
         // State Helpers
         setNewTagInput, newTagInput, tagToEdit, setTagToEdit, tagStats, duplicateWarning,
         checkingDuplicate, gSheetsUrl, setGSheetsUrl, fetchingGSheets, setFetchingGSheets,

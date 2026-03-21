@@ -8,6 +8,7 @@ import {
     faTableList,
     faTriangleExclamation,
     faUsers,
+    faIdCard
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 
@@ -73,7 +74,7 @@ export default function StudentExportModal({
                             <button onClick={() => setExportColumns({ id: false, kode: false, nisn: false, nama: true, gender: false, kelas: false, poin: false, phone: false, status: false, tags: false, kelengkapan: false })} className="text-[9px] font-black text-[var(--color-text-muted)] hover:underline uppercase tracking-widest">Reset</button>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                         {[
                             { key: 'id', label: 'ID' },
                             { key: 'kode', label: 'Kode Registrasi' },

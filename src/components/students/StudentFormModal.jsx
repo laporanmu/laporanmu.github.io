@@ -191,17 +191,18 @@ const StudentFormModal = memo(function StudentFormModal({
                             </div>
 
                             <div className="col-span-12 md:col-span-4 relative">
-                                <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">WhatsApp Wali</label>
-                                <div className="relative">
-                                    <input
-                                        type="tel"
-                                        value={form.phone}
-                                        onChange={(e) => setField('phone', e.target.value.replace(/\D/g, ''))}
-                                        placeholder="08xxxxxxxxxx"
-                                        className="w-full pl-9 pr-3 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold font-mono tracking-widest placeholder:text-[10px] placeholder:font-normal placeholder:opacity-40"
-                                    />
-                                    <FontAwesomeIcon icon={faWhatsapp} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 opacity-60 text-base" />
-                                </div>
+                                <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-1.5 ml-1 opacity-60">NISN</label>
+                                <input
+                                    type="text"
+                                    value={form.nisn}
+                                    onChange={(e) => setField('nisn', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                    onBlur={() => setNisnTouched(true)}
+                                    placeholder="00xxxxxxxx"
+                                    className={`w-full px-4 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 focus:ring-4 focus:ring-[var(--color-primary)]/10 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-mono tracking-widest placeholder:opacity-40 ${nisnTouched && form.nisn && form.nisn.length !== 10 ? 'border-amber-500 ring-2 ring-amber-500/10' : ''}`}
+                                />
+                                {nisnTouched && form.nisn && form.nisn.length !== 10 && (
+                                    <div className="absolute top-1 right-2 text-[7px] font-black text-amber-500 uppercase tracking-widest my-0">10 Digit</div>
+                                )}
                             </div>
 
                             {/* Row 2: Gender, Kelas, Status */}
@@ -286,7 +287,7 @@ const StudentFormModal = memo(function StudentFormModal({
                         >
                             <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
                                 <FontAwesomeIcon icon={faPlus} className={showOptional ? 'text-[var(--color-primary)]' : ''} />
-                                Info Wali & Akademik
+                                Info Wali Siswa
                             </span>
                             <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all bg-black/5 ${showOptional ? 'rotate-180 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : ''}`}>
                                 <FontAwesomeIcon icon={faChevronDown} className="text-[9px]" />
@@ -296,19 +297,21 @@ const StudentFormModal = memo(function StudentFormModal({
                         <div className={`grid transition-all duration-300 ease-out ${showOptional ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                             <div className="overflow-hidden">
                                 <div className="p-4 pt-2 border-t border-[var(--color-border)] space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="col-span-1">
-                                            <label className="block text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 ml-1 opacity-60">NISN</label>
-                                            <input
-                                                type="text"
-                                                value={form.nisn}
-                                                onChange={(e) => setField('nisn', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                                onBlur={() => setNisnTouched(true)}
-                                                placeholder="00xxxxxxxx"
-                                                className={`w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-surface focus:border-[var(--color-primary)] outline-none transition-all text-sm font-mono tracking-widest ${nisnTouched && form.nisn && form.nisn.length !== 10 ? 'border-amber-500 ring-2 ring-amber-500/10' : ''}`}
-                                            />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 ml-1 opacity-60">WhatsApp Wali</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="tel"
+                                                    value={form.phone}
+                                                    onChange={(e) => setField('phone', e.target.value.replace(/\D/g, ''))}
+                                                    placeholder="08xxxxxxxxxx"
+                                                    className="w-full pl-8 pr-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold font-mono tracking-wider placeholder:text-[10px] placeholder:font-normal placeholder:opacity-40"
+                                                />
+                                                <FontAwesomeIcon icon={faWhatsapp} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 opacity-60 text-sm" />
+                                            </div>
                                         </div>
-                                        <div className="col-span-1">
+                                        <div>
                                             <label className="block text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 ml-1 opacity-60">Hubungan</label>
                                             <select
                                                 value={form.guardian_relation}
