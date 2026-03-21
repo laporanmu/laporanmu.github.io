@@ -736,6 +736,8 @@ export function useStudentsImportExport({
         handleExportPDF,
         handleFetchGSheets,
         fetchFilteredForExport,
-        getExportData
+        getExportData,
+        downloadBlob,
+        buildImportPreview
     }
 }

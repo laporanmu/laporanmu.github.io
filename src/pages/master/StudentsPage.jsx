@@ -138,48 +138,6 @@ function getPortalContainer(id) {
     return _portalContainers[id]
 }
 
-const BehaviorHeatmap = memo(({ history }) => {
-    const today = new Date()
-    const rangeKey = `${today.getFullYear()}-${today.getMonth()}`
-    const days = useMemo(() => {
-        const end = new Date()
-        const start = new Date(end)
-        start.setMonth(end.getMonth() - 3)
-        start.setDate(1)
-        const out = []
-        let curr = new Date(start)
-        while (curr <= end) { out.push(new Date(curr)); curr.setDate(curr.getDate() + 1) }
-        return out
-    }, [rangeKey])
-    const activityMap = useMemo(() => history.reduce((acc, item) => {
-        const d = new Date(item.created_at).toDateString()
-        acc[d] = (acc[d] || 0) + (item.points || 0)
-        return acc
-    }, {}), [history])
-    const getLevel = (val) => {
-        if (!val) return 'bg-[var(--color-surface-alt)] opacity-20'
-        if (val > 0) {
-            if (val > 10) return 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
-            if (val > 5) return 'bg-emerald-400'
-            return 'bg-emerald-300/60'
-        } else {
-            if (val < -10) return 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
-            if (val < -5) return 'bg-red-400'
-            return 'bg-red-300/60'
-        }
-    }
-    return (
-        <div className="flex flex-wrap gap-1">
-            {days.map((d, i) => {
-                const dateStr = d.toDateString()
-                const val = activityMap[dateStr] || 0
-                return <div key={i} title={`${dateStr}: ${val} poin`} className={`w-2.5 h-2.5 rounded-[2px] transition-all cursor-help hover:scale-125 hover:z-10 ${getLevel(val)}`} />
-            })}
-        </div>
-    )
-});
-
-
 export default function StudentsPage() {
     const { addToast, addUndoToast } = useToast()
     const { enabled: canEdit } = useFlag('access.teacher_students')
@@ -231,7 +189,8 @@ export default function StudentsPage() {
         classBreakdownData, loadingBreakdown, resetPointsClassId, setResetPointsClassId, resettingPoints,
         resettingPin, uploadingPhoto, broadcastTemplate, setBroadcastTemplate, customWaMsg, setCustomWaMsg, broadcastIndex, setBroadcastIndex,
         formDataRef, importFileInputRef, photoInputRef, searchInputRef, headerMenuRef, shortcutRef, cardCaptureRef,
-        selectedStudents, selectedStudentsWithPhone, selectedIdSet, generateCode, handleAddCustomTag
+        selectedStudents, selectedStudentsWithPhone, selectedIdSet, generateCode, handleAddCustomTag,
+        bulkPhotoMatches, uploadingBulkPhotos
     } = core
 
     // --- Pull-to-Refresh Logic ---
@@ -240,26 +199,11 @@ export default function StudentsPage() {
     const touchStartRef = useRef(0)
     const pullThreshold = 80 // px
 
-    // --- Recent Searches Logic ---
-    const [recentSearches, setRecentSearches] = useState(() => {
-        const saved = localStorage.getItem('recent_searches_students')
-        return saved ? JSON.parse(saved) : []
-    })
-    const [isSearchFocused, setIsSearchFocused] = useState(false)
+    // --- Stats Carousel Dot Indicator ---
+    const statsScrollRef = useRef(null)
+    const [activeStatIdx, setActiveStatIdx] = useState(0)
+    const STAT_CARD_COUNT = 5
 
-    useEffect(() => {
-        if (searchQuery && searchQuery.length > 2) {
-            const timer = setTimeout(() => {
-                setRecentSearches(prev => {
-                    const filtered = prev.filter(s => s !== searchQuery)
-                    const updated = [searchQuery, ...filtered].slice(0, 5)
-                    localStorage.setItem('recent_searches_students', JSON.stringify(updated))
-                    return updated
-                })
-            }, 2000)
-            return () => clearTimeout(timer)
-        }
-    }, [searchQuery])
 
 
     const handleTouchStart = (e) => {
@@ -322,7 +266,8 @@ export default function StudentsPage() {
         processImportFile, handleImportClick, handleFileChange, handleCommitImport,
         handleBulkFix, validateImportPreview, handleDownloadTemplate,
         handleExportCSV, handleExportExcel, handleExportPDF, handleFetchGSheets,
-        fetchFilteredForExport, getExportData, importTab, setImportTab
+        fetchFilteredForExport, getExportData, importTab, setImportTab,
+        downloadBlob, buildImportPreview
     } = importExport
 
     const timelineFiltered = useMemo(() =>
@@ -356,6 +301,25 @@ export default function StudentsPage() {
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
     const [colMenuPos, setColMenuPos] = useState({ top: 0, left: 0 })
     const colMenuRef = useRef(null)
+
+    // Sticky portal refs & rects for header menu + shortcut dropdowns
+    const headerMenuBtnRef = useRef(null)
+    const shortcutBtnRef = useRef(null)
+    const [headerMenuRect, setHeaderMenuRect] = useState(null)
+    const [shortcutRect, setShortcutRect] = useState(null)
+
+    // Sticky positioning - keep portaled dropdowns anchored on scroll/resize
+    useEffect(() => {
+        if (!isHeaderMenuOpen && !isShortcutOpen) return
+        const update = () => {
+            if (isHeaderMenuOpen && headerMenuBtnRef.current) setHeaderMenuRect(headerMenuBtnRef.current.getBoundingClientRect())
+            if (isShortcutOpen && shortcutBtnRef.current) setShortcutRect(shortcutBtnRef.current.getBoundingClientRect())
+        }
+        update()
+        window.addEventListener('scroll', update, true)
+        window.addEventListener('resize', update)
+        return () => { window.removeEventListener('scroll', update, true); window.removeEventListener('resize', update) }
+    }, [isHeaderMenuOpen, isShortcutOpen])
 
     const toggleColumn = (key) => setVisibleColumns(prev => ({
         ...prev,
@@ -418,12 +382,7 @@ export default function StudentsPage() {
         }
 
         const handleGlobalClick = (e) => {
-            if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) {
-                setIsHeaderMenuOpen(false)
-            }
-            if (shortcutRef.current && !shortcutRef.current.contains(e.target)) {
-                setIsShortcutOpen(false)
-            }
+            // Header menu & shortcut are now portaled with backdrop dismiss
             if (colMenuRef.current && !colMenuRef.current.contains(e.target)) {
                 setIsColMenuOpen(false)
             }
@@ -513,25 +472,33 @@ export default function StudentsPage() {
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">
                             Kelola {globalStats.total} data siswa aktif dalam sistem laporan.
                         </p>
-                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                        <p className="hidden sm:block text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
                             Untuk pengisian awal, gunakan menu import (Excel / GSheets) agar lebih cepat dan minim salah ketik.
                         </p>
                     </div>
 
                     <div className="flex gap-2 items-center">
-                        {/* Tombol aksi sekunder —” bottom sheet di mobile, dropdown di desktop */}
-                        <div className="relative" ref={headerMenuRef}>
-                            <button
-                                onClick={() => setIsHeaderMenuOpen(v => !v)}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${(isHeaderMenuOpen) ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                                title="Aksi lainnya"
-                            >
-                                <FontAwesomeIcon icon={faSliders} />
-                            </button>
+                        {/* Header Menu Button */}
+                        <button
+                            ref={headerMenuBtnRef}
+                            onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                            title="Aksi lainnya"
+                        >
+                            <FontAwesomeIcon icon={faSliders} />
+                        </button>
 
-                            {/* Dropdown —” desktop only */}
-                            {isHeaderMenuOpen && (
-                                <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                        {/* Portaled Header Menu Dropdown */}
+                        {isHeaderMenuOpen && headerMenuRect && createPortal(
+                            <>
+                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsHeaderMenuOpen(false)} />
+                                <div
+                                    className="fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-200"
+                                    style={{
+                                        top: headerMenuRect.bottom + 8,
+                                        left: Math.max(10, headerMenuRect.right - 224)
+                                    }}
+                                >
                                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
                                     <button onClick={() => { setIsHeaderMenuOpen(false); handleImportClick() }}
                                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
@@ -598,25 +565,35 @@ export default function StudentsPage() {
                                         </div>
                                     </button>
                                 </div>
-                            )}
-                        </div>
+                            </>,
+                            getPortalContainer('portal-header-menu')
+                        )}
 
-                        {/* Keyboard Shortcuts Button + Cheatsheet */}
-                        <div className="relative" ref={shortcutRef}>
-                            <button
-                                onClick={() => setIsShortcutOpen(v => !v)}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all active:scale-95
+                        {/* Keyboard Shortcuts Button - hidden on mobile */}
+                        <button
+                            ref={shortcutBtnRef}
+                            onClick={() => { if (!isShortcutOpen) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setIsShortcutOpen(v => !v) }}
+                            className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center transition-all active:scale-95
                                 ${isShortcutOpen
-                                        ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
-                                        : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-                                    }`}
-                                title="Keyboard Shortcuts (?)"
-                            >
-                                <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
-                            </button>
+                                    ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
+                                    : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                                }`}
+                            title="Keyboard Shortcuts (?)"
+                        >
+                            <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
+                        </button>
 
-                            {isShortcutOpen && (
-                                <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-11 -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[340px] sm:w-72 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                        {/* Portaled Keyboard Shortcuts Dropdown */}
+                        {isShortcutOpen && shortcutRect && createPortal(
+                            <>
+                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsShortcutOpen(false)} />
+                                <div
+                                    className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200"
+                                    style={{
+                                        top: shortcutRect.bottom + 8,
+                                        left: Math.max(10, shortcutRect.right - 288)
+                                    }}
+                                >
                                     <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
                                         <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
                                         <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
@@ -650,8 +627,9 @@ export default function StudentsPage() {
                                         ))}
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            </>,
+                            getPortalContainer('portal-shortcut-menu')
+                        )}
 
                         <input
                             type="file"
@@ -662,16 +640,8 @@ export default function StudentsPage() {
                         />
 
                         <button
-                            onClick={() => navigate('/raport')}
-                            className="h-9 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500/20 transition-all active:scale-95"
-                            title="Raport Bulanan"
-                        >
-                            <FontAwesomeIcon icon={faClipboardList} className="text-sm" />
-                        </button>
-
-                        <button
                             onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-                            className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all active:scale-95 ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
+                            className={`h-9 w-9 sm:w-auto sm:px-3 rounded-lg border flex items-center justify-center sm:justify-start gap-2 transition-all active:scale-95 ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
                             title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}
                         >
                             <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
@@ -683,17 +653,27 @@ export default function StudentsPage() {
                         <button
                             onClick={handleAdd}
                             disabled={!canEdit}
-                            className="h-9 px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
+                            className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                         >
                             <FontAwesomeIcon icon={faPlus} />
-                            {canEdit ? 'Tambah' : 'Read-only'}
+                            <span className="hidden sm:inline">{canEdit ? 'Tambah' : 'Read-only'}</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Stats Row Wrapper */}
                 <div className="relative mb-6 -mx-3 sm:mx-0 group/scroll">
-                    <div className="flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0 lg:snap-none">
+                    <div
+                        ref={statsScrollRef}
+                        onScroll={() => {
+                            const el = statsScrollRef.current
+                            if (!el) return
+                            const cardWidth = el.scrollWidth / STAT_CARD_COUNT
+                            const idx = Math.round(el.scrollLeft / cardWidth)
+                            setActiveStatIdx(Math.min(idx, STAT_CARD_COUNT - 1))
+                        }}
+                        className="flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0 lg:snap-none"
+                    >
                         <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-[var(--color-primary)] flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-[var(--color-primary)]/5">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 flex items-center justify-center text-[var(--color-primary)] text-lg group-hover:scale-110 transition-transform shrink-0">
                                 <FontAwesomeIcon icon={faUsers} />
@@ -766,6 +746,26 @@ export default function StudentsPage() {
                                 )}
                             </div>
                         </div>
+                    </div>
+
+                    {/* Dot Indicators - Mobile Only */}
+                    <div className="flex justify-center gap-1.5 mt-2 sm:hidden">
+                        {Array.from({ length: STAT_CARD_COUNT }).map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => {
+                                    const el = statsScrollRef.current
+                                    if (!el) return
+                                    const cardWidth = el.scrollWidth / STAT_CARD_COUNT
+                                    el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
+                                }}
+                                className={`rounded-full transition-all duration-300 ${
+                                    activeStatIdx === i
+                                        ? 'w-5 h-1.5 bg-[var(--color-primary)]'
+                                        : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
+                                }`}
+                            />
+                        ))}
                     </div>
                 </div>
 
@@ -873,32 +873,11 @@ export default function StudentsPage() {
                                     // sehingga tidak block keystroke
                                     startTransition(() => setSearchQuery(e.target.value))
                                 }}
-                                placeholder="Cari nama, kode... (Ctrl+K)"
-                                onFocus={() => setIsSearchFocused(true)}
-                                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                                placeholder="Cari nama, NISN, no HP..."
+
                                 className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                             />
-                            {/* Recent Searches Dropdown */}
-                            {isSearchFocused && recentSearches.length > 0 && !inputValue && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                                    <div className="px-3 py-2 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/30">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pencarian Terakhir</span>
-                                        <button onClick={() => { setRecentSearches([]); localStorage.removeItem('recent_searches_students') }} className="text-[8px] font-black hover:text-red-500 uppercase tracking-tighter">Hapus Semua</button>
-                                    </div>
-                                    <div className="p-1">
-                                        {recentSearches.map((s, i) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => { setInputValue(s); startTransition(() => setSearchQuery(s)) }}
-                                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--color-surface-alt)] text-xs font-bold text-[var(--color-text-muted)] hover:text-[var(--color-primary)] flex items-center gap-2 transition-colors"
-                                            >
-                                                <FontAwesomeIcon icon={faHistory} className="text-[10px] opacity-40" />
-                                                {s}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+
                         </div>
 
                         {/* Filter toggle button */}
@@ -1465,16 +1444,14 @@ export default function StudentsPage() {
 
                             {/* Quick Add trigger FOR DESKTOP — stays below table */}
                             {!isInlineAddOpen && canEdit && (
-                                <div className="hidden md:block p-4 border-t border-[var(--color-border)] border-dashed bg-[var(--color-surface-alt)]/10">
+                                <div className="hidden md:block p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/5">
                                     <button
                                         onClick={() => {
                                             setIsInlineAddOpen(true)
-                                            // Optional: quickAddRef.current?.scrollIntoView({ behavior: 'smooth' }) 
-                                            // tapi biasanya inline row muncul di akhir tbody
                                         }}
-                                        className="w-full py-2.5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all outline-none rounded-xl"
+                                        className="w-full py-3 flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--color-primary)] bg-[var(--color-primary)]/[0.04] hover:bg-[var(--color-primary)]/10 active:scale-[0.99] transition-all border-2 border-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/40 border-dashed rounded-2xl"
                                     >
-                                        <FontAwesomeIcon icon={faPlus} className="text-[9px]" />
+                                        <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
                                         Quick Add Siswa
                                     </button>
                                 </div>
@@ -1542,24 +1519,24 @@ export default function StudentsPage() {
                                 ) : (
                                     <>
                                         {/* Mobile View Switcher */}
-                                        <div className="flex items-center justify-between px-2 pt-4 pb-2">
+                                        <div className="pt-3 pb-2 px-1 mb-1 flex items-center justify-between bg-[var(--color-surface)]/20 rounded-2xl -mx-3 px-3">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                                                     {totalRows} Siswa ditemukan
                                                 </span>
                                             </div>
-                                            <div className="flex items-center bg-[var(--color-surface-alt)] p-1 rounded-[1.2rem] border border-[var(--color-border)]">
+                                            <div className="flex items-center bg-[var(--color-surface)] shadow-inner p-1 rounded-[1.2rem] border border-[var(--color-border)]">
                                                 <button
                                                     onClick={() => { setMobileView('card'); try { localStorage.setItem('students_mobile_view', 'card') } catch (e) { } }}
-                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all ${mobileView === 'card' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all ${mobileView === 'card' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
                                                 >
                                                     <FontAwesomeIcon icon={faTable} className="text-[11px]" />
                                                     Card
                                                 </button>
                                                 <button
                                                     onClick={() => { setMobileView('list'); try { localStorage.setItem('students_mobile_view', 'list') } catch (e) { } }}
-                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all ${mobileView === 'list' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all ${mobileView === 'list' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
                                                 >
                                                     <FontAwesomeIcon icon={faTableList} className="text-[11px]" />
                                                     List
@@ -1568,7 +1545,7 @@ export default function StudentsPage() {
                                         </div>
 
 
-                                        <div className="space-y-4 pt-4">
+                                        <div className="space-y-3 mt-2">
                                             {loading ? (
                                                 <div className="space-y-4">
                                                     {mobileView === 'card' ? (
@@ -1620,61 +1597,120 @@ export default function StudentsPage() {
                                                     )
                                                 })
                                             ) : (
-                                                <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/50 overflow-hidden shadow-sm">
-                                                    <div className="grid grid-cols-[1fr_auto_auto] items-center px-4 py-3 bg-[var(--color-surface-alt)]/30 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)]/50">
-                                                        <span>Identitas & Kelas</span>
-                                                        <span className="px-4 text-center">Poin</span>
-                                                        <span className="w-10"></span>
-                                                    </div>
-                                                    {students.map((student) => {
-                                                        const p = student.total_points || 0
-                                                        return (
-                                                            <div
-                                                                key={student.id}
-                                                                className={`grid grid-cols-[1fr_auto_auto] items-center px-4 py-3 gap-3 transition-colors active:bg-[var(--color-primary)]/5
-                                                                        ${selectedIdSet.has(student.id) ? 'bg-[var(--color-primary)]/[0.03]' : ''}
-                                                                        ${student.is_pinned ? 'border-l-4 border-l-amber-400' : ''}`}
-                                                                onClick={() => handleViewProfile(student)}
-                                                            >
-                                                                <div className="flex items-center gap-3 min-w-0">
-                                                                    <div
-                                                                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0 shadow-inner
-                                                                                ${(student.total_points || 0) <= RiskThreshold ? 'bg-red-500/10 text-red-500' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}
-                                                                    >
-                                                                        {student.photo_url ? <img src={student.photo_url} className="w-full h-full object-cover rounded-xl" /> : (student.name || 'S').charAt(0)}
-                                                                    </div>
-                                                                    <div className="min-w-0">
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <p className="text-xs font-black text-[var(--color-text)] truncate">{student.name}</p>
-                                                                            {student.is_pinned && <FontAwesomeIcon icon={faThumbtack} className="text-amber-500 text-[8px]" />}
-                                                                        </div>
-                                                                        <div className="flex items-center gap-2 text-[9px] font-bold text-[var(--color-text-muted)] opacity-60">
-                                                                            <span>{student.className}</span>
-                                                                            <span>·</span>
-                                                                            <span>{student.gender}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className={`text-xs font-black px-3 py-1 rounded-lg border text-center min-w-[50px]
-                                                                        ${p < 0 ? 'bg-red-500/10 border-red-500/20 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-[var(--color-surface-alt)]/60 border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                                                                    {p > 0 ? '+' : ''}{p}
-                                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    {students.length > 0 && canEdit && (
+                                                        <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
+                                                            <FontAwesomeIcon icon={faAnglesLeft} />
+                                                            Geser baris ke kiri untuk menu Edit & Poin
+                                                        </div>
+                                                    )}
+                                                    <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/40 overflow-hidden shadow-sm">
+                                                        {students.map((student) => {
+                                                            const p = student.total_points || 0
+                                                            const isRisk = p <= RiskThreshold
+                                                            return (
                                                                 <div
-                                                                    className="w-10 flex justify-center py-2"
-                                                                    onClick={(e) => { e.stopPropagation(); toggleSelectStudent(student.id) }}
+                                                                    key={student.id}
+                                                                    className="w-full overflow-x-auto snap-x snap-mandatory flex [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                                                                 >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={selectedIdSet.has(student.id)}
-                                                                        readOnly
-                                                                        className="w-4.5 h-4.5 rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                                                                    />
+                                                                    {/* Main Content Pane */}
+                                                                    <div
+                                                                        className={`w-full shrink-0 snap-center flex items-center gap-3 px-3 py-3 transition-colors active:bg-[var(--color-primary)]/5
+                                                                                ${selectedIdSet.has(student.id) ? 'bg-[var(--color-primary)]/[0.04]' : ''}
+                                                                                ${student.is_pinned ? 'border-l-4 border-l-amber-400' : ''}`}
+                                                                        onClick={() => handleViewProfile(student)}
+                                                                    >
+                                                                        {/* Checkbox */}
+                                                                        <div
+                                                                            className="flex justify-center shrink-0 w-6"
+                                                                            onClick={(e) => { e.stopPropagation(); toggleSelectStudent(student.id) }}
+                                                                        >
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={selectedIdSet.has(student.id)}
+                                                                                readOnly
+                                                                                className="w-4.5 h-4.5 rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-[var(--color-surface)]"
+                                                                            />
+                                                                        </div>
+
+                                                                        {/* Avatar with Status Indicator */}
+                                                                        <div className="relative shrink-0 pointer-events-none">
+                                                                            <div
+                                                                                className={`w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-black shadow-inner border
+                                                                                        ${isRisk ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20'}
+                                                                                        ${isPrivacyMode ? 'blur-sm grayscale opacity-60' : ''}`}
+                                                                            >
+                                                                                {student.photo_url && !isPrivacyMode ? <img src={student.photo_url} className="w-full h-full object-cover rounded-full" /> : (student.name || 'S').charAt(0)}
+                                                                            </div>
+                                                                            <div className={`absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full border-2 border-[var(--color-surface)] flex items-center justify-center shadow-sm
+                                                                                ${p < 0 ? 'bg-amber-500' : p > 0 ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                                                                                <FontAwesomeIcon
+                                                                                    icon={p < 0 ? faArrowTrendDown : p > 0 ? faArrowTrendUp : faBolt}
+                                                                                    className="text-white text-[7px]"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Identity Details */}
+                                                                        <div className="flex-1 min-w-0 pointer-events-none pr-2">
+                                                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                                                <p className="text-[14px] font-extrabold text-[var(--color-text)] tracking-tight truncate">
+                                                                                    {isPrivacyMode ? maskInfo(student.name, 4) : student.name}
+                                                                                </p>
+                                                                                {student.is_pinned && <FontAwesomeIcon icon={faThumbtack} className="text-amber-500 text-[9px] shrink-0" />}
+                                                                                {p >= 100 && <FontAwesomeIcon icon={faCrown} className="text-emerald-500 text-[9px] shrink-0" />}
+                                                                            </div>
+                                                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-bold text-[var(--color-text-muted)] opacity-80">
+                                                                                <span className="flex items-center gap-1"><FontAwesomeIcon icon={faUserTie} className="opacity-50 text-[9px]" /> {student.className}</span>
+                                                                                <span>•</span>
+                                                                                <span className={student.gender === 'L' ? 'text-blue-500' : 'text-pink-500'}>{student.gender === 'L' ? 'Putra' : 'Putri'}</span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Quick Actions & Score */}
+                                                                        <div className="flex items-center gap-2 shrink-0 ml-1">
+                                                                            {student.phone && !isPrivacyMode && (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation()
+                                                                                        if (!student.phone) return
+                                                                                        const phone = student.phone.replace(/[^0-9]/g, '').replace(/^0/, '62')
+                                                                                        window.open(`https://wa.me/${phone}`, '_blank')
+                                                                                    }}
+                                                                                    className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                                                                                >
+                                                                                    <FontAwesomeIcon icon={faWhatsapp} className="text-[14px]" />
+                                                                                </button>
+                                                                            )}
+                                                                            <div className={`text-[12px] font-black px-3 py-1.5 rounded-xl border text-center min-w-[48px] shadow-sm flex items-center justify-center
+                                                                                    ${p < 0 ? 'bg-red-500/10 border-red-500/20 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                                                                {p > 0 ? '+' : ''}{p}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Swipe Actions Pane */}
+                                                                    {canEdit && (
+                                                                        <div className="shrink-0 flex items-stretch snap-end border-l border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                                                                            <button onClick={() => handleQuickPoint(student)} className="w-[64px] flex flex-col items-center justify-center gap-1.5 text-amber-500 hover:bg-amber-500 hover:text-white transition-colors bg-amber-500/5 border-r border-[var(--color-border)]/50 active:scale-95">
+                                                                                <FontAwesomeIcon icon={faBolt} className="text-[16px]" />
+                                                                                <span className="text-[8px] font-black uppercase tracking-widest">Poin</span>
+                                                                            </button>
+                                                                            <button onClick={() => handleTogglePin(student)} className="w-[64px] flex flex-col items-center justify-center gap-1.5 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors bg-blue-500/5 border-r border-[var(--color-border)]/50 active:scale-95">
+                                                                                <FontAwesomeIcon icon={faThumbtack} className={`text-[15px] ${student.is_pinned ? 'rotate-0' : 'rotate-45'}`} />
+                                                                                <span className="text-[8px] font-black uppercase tracking-widest">{student.is_pinned ? 'Unpin' : 'Pin'}</span>
+                                                                            </button>
+                                                                            <button onClick={() => handleEdit(student)} className="w-[64px] flex flex-col items-center justify-center gap-1.5 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors bg-indigo-500/5 active:scale-95">
+                                                                                <FontAwesomeIcon icon={faEdit} className="text-[16px]" />
+                                                                                <span className="text-[8px] font-black uppercase tracking-widest">Edit</span>
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                            </div>
-                                                        );
+                                                            );
                                                     })}
                                                 </div>
+                                            </div>
                                             )}
 
                                             {/* Quick Add trigger — stays below list */}
@@ -1684,9 +1720,9 @@ export default function StudentsPage() {
                                                         setIsInlineAddOpen(true)
                                                         setTimeout(() => quickAddRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80)
                                                     }}
-                                                    className="w-full py-2.5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all border-t border-[var(--color-border)] border-dashed mt-4 rounded-xl"
+                                                    className="w-full py-3 flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--color-primary)] bg-[var(--color-primary)]/[0.04] hover:bg-[var(--color-primary)]/10 active:scale-[0.98] transition-all border-2 border-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/40 border-dashed rounded-2xl mt-4 mb-2 shadow-sm"
                                                 >
-                                                    <FontAwesomeIcon icon={faPlus} className="text-[9px]" />
+                                                    <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
                                                     Quick Add Siswa
                                                 </button>
                                             )}
@@ -1772,20 +1808,16 @@ export default function StudentsPage() {
 
                             {/* Pagination Footer */}
                             {totalRows > 0 && (
-                                <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20">
-
-                                    <Pagination
-                                        totalRows={totalRows}
-                                        page={page}
-                                        pageSize={pageSize}
-                                        setPage={setPage}
-                                        setPageSize={setPageSize}
-                                        label="Siswa"
-                                        jumpPage={jumpPage}
-                                        setJumpPage={setJumpPage}
-                                    />
-
-                                </div>
+                                <Pagination
+                                    totalRows={totalRows}
+                                    page={page}
+                                    pageSize={pageSize}
+                                    setPage={setPage}
+                                    setPageSize={setPageSize}
+                                    label="Siswa"
+                                    jumpPage={jumpPage}
+                                    setJumpPage={setJumpPage}
+                                />
                             )}
                         </div>
                     </div>
