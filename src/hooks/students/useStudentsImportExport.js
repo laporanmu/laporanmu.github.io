@@ -283,7 +283,6 @@ export function useStudentsImportExport({
         link.download = 'TemplateImportSiswa.xlsx'
         link.click()
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
-        addToast('Template berhasil didownload', 'success')
     }
 
     // ---- HELPERS & IMPORT PROCESS ----
