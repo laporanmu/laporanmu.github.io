@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef, useDeferredValue } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faThumbtack } from '@fortawesome/free-solid-svg-icons'
 import { RiskThreshold, calculateCompleteness } from '../../utils/students/studentsConstants'
@@ -11,6 +11,8 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const navigate = useNavigate()
     const { profile } = useAuth()
 
+    const [searchParams, setSearchParams] = useSearchParams()
+    
     // ---- STATE: CORE DATA ----
     const [students, setStudents] = useState([])
     const [classesList, setClassesList] = useState([])
@@ -74,6 +76,43 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const [loadingArchived, setLoadingArchived] = useState(false)
     const [classHistory, setClassHistory] = useState([])
     const [loadingClassHistory, setLoadingClassHistory] = useState(false)
+
+    // ---- SYNC FILTERS TO URL ----
+    useEffect(() => {
+        const q = searchParams.get('q') || ''
+        const c = searchParams.get('c') || ''
+        const g = searchParams.get('g') || ''
+        const s = searchParams.get('s') || ''
+        const t = searchParams.get('t') || ''
+        
+        if (q) setSearchQuery(q)
+        if (c) setFilterClass(c)
+        if (g) setFilterGender(g)
+        if (s) setFilterStatus(s)
+        if (t) setFilterTag(t)
+        
+        const sortByParam = searchParams.get('sort')
+        if (sortByParam) setSortBy(sortByParam)
+    }, [])
+
+    useEffect(() => {
+        const params = {}
+        if (searchQuery) params.q = searchQuery
+        if (filterClass) params.c = filterClass
+        if (filterGender) params.g = filterGender
+        if (filterStatus) params.s = filterStatus
+        if (filterTag) params.t = filterTag
+        if (sortBy !== 'name_asc') params.sort = sortBy
+        
+        // Clean URL by removing empty params
+        Object.keys(params).forEach(key => !params[key] && delete params[key])
+        
+        // Only update if something changed to avoid infinity loops
+        const current = Object.fromEntries(searchParams.entries())
+        if (JSON.stringify(current) !== JSON.stringify(params)) {
+             setSearchParams(params, { replace: true })
+        }
+    }, [searchQuery, filterClass, filterGender, filterStatus, filterTag, sortBy])
 
     // ---- STATE: OTHERS ----
     const [isInlineAddOpen, setIsInlineAddOpen] = useState(false)
@@ -266,16 +305,32 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     .order('created_at', { ascending: false })
 
                 const newLastReportMap = { ...lastReportMapRef.current };
+                
+                // Group points by student
+                const studentPointsMap = {};
                 (reportsData || []).forEach(r => {
-                    if (!(r.student_id in trendMapRef.current)) {
-                        newLastReportMap[r.student_id] = r.created_at
-                        trendMapRef.current[r.student_id] = r.points > 0 ? 'up' : r.points < 0 ? 'down' : 'neutral'
+                    if (!studentPointsMap[r.student_id]) studentPointsMap[r.student_id] = []
+                    if (studentPointsMap[r.student_id].length < 5) studentPointsMap[r.student_id].push(r.points)
+                });
+
+                Object.entries(studentPointsMap).forEach(([sid, pts]) => {
+                    const latest = pts[0] || 0
+                    trendMapRef.current[sid] = {
+                        trend: latest > 0 ? 'up' : latest < 0 ? 'down' : 'neutral',
+                        history: pts.reverse() // Reverse so it's chronologically left-to-right
                     }
                 })
+
+                // Get latest report timestamps
+                (reportsData || []).forEach(r => {
+                    if (!newLastReportMap[r.student_id]) newLastReportMap[r.student_id] = r.created_at
+                })
+
                 // Siswa tanpa report = neutral
                 uncachedIds.forEach(id => {
-                    if (!(id in trendMapRef.current)) trendMapRef.current[id] = 'neutral'
+                    if (!(id in trendMapRef.current)) trendMapRef.current[id] = { trend: 'neutral', history: [] }
                 })
+                
                 lastReportMapRef.current = newLastReportMap
                 setLastReportMap(newLastReportMap)
             } catch { }
@@ -332,12 +387,14 @@ export function useStudentsCore({ addToast, addUndoToast }) {
 
             const transformed = (studentsData || []).map(s => {
                 const pts = s.total_points ?? 0
+                const trendInfo = trendMapRef.current[s.id] || { trend: 'neutral', history: [] }
                 return {
                     ...s,
                     className: s.classes?.name || '-',
                     code: s.registration_code,
                     points: pts,
-                    trend: trendMapRef.current[s.id] || 'neutral',
+                    trend: trendInfo.trend,
+                    trendHistory: trendInfo.history,
                     _rank: rankingsRef.current[s.id] || '-',
                     is_pinned: s.is_pinned || false,
                 }
@@ -805,14 +862,37 @@ Laporanmu System`
         setIsPrintModalOpen(true)
     }
 
-    const handleBulkPhotoMatch = async (files) => {
+    const handleBulkPhotoMatch = async (files, method = 'nisn') => {
         setMatchingPhotos(true)
+        const normalize = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim()
+        
         const matches = Array.from(files).map(file => {
-            const clean = file.name.split('.')[0].trim().toLowerCase()
-            const s = students.find(s => (s.nisn && s.nisn.toLowerCase() === clean) || (s.name && s.name.toLowerCase() === clean) || (s.id && s.id.toLowerCase() === clean))
-            return { file, studentId: s?.id || null, studentName: s?.name || '?', preview: URL.createObjectURL(file), status: s ? 'matched' : 'unmatched' }
+            const fileName = file.name.split('.')[0].trim().toLowerCase()
+            const normalizedFileName = normalize(fileName)
+            
+            const s = students.find(std => {
+                if (method === 'name') {
+                    const normalizedStdName = normalize(std.name)
+                    return normalizedStdName === normalizedFileName || normalizedStdName.includes(normalizedFileName) || normalizedFileName.includes(normalizedStdName)
+                } 
+                if (method === 'code') {
+                    return normalize(std.registration_code) === normalizedFileName || normalize(std.id) === normalizedFileName
+                }
+                // Default NISN
+                return normalize(std.nisn) === normalizedFileName
+            })
+
+            return { 
+                file, 
+                studentId: s?.id || null, 
+                studentName: s?.name || '?', 
+                preview: URL.createObjectURL(file), 
+                status: s ? 'matched' : 'unmatched',
+                matchMethod: method
+            }
         })
-        setBulkPhotoMatches(matches); setMatchingPhotos(false)
+        setBulkPhotoMatches(prev => [...prev, ...matches])
+        setMatchingPhotos(false)
     }
 
     const handleBulkPhotoUpload = async () => {

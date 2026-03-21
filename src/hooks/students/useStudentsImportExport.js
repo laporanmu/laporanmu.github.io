@@ -267,20 +267,20 @@ export function useStudentsImportExport({
 
     const handleDownloadTemplate = async () => {
         const templateData = [
-            { name: 'Contoh: Ahmad Rizki', gender: 'L', phone: '081234567890', class_name: 'XII IPA 1', nisn: '1234567890', guardian_name: 'Budi Rizki' },
-            { name: 'Contoh: Siti Aminah', gender: 'P', phone: '081234567891', class_name: 'XI IPS 2', nisn: '0987654321', guardian_name: 'Aminah' },
+            { 'Nama': 'Ahmad Rizki', 'Jenis Kelamin': 'L', 'No. WhatsApp': '081234567890', 'Kelas': 'XII IPA 1', 'NISN': '1234567890', 'Nama Wali': 'Budi Rizki' },
+            { 'Nama': 'Siti Aminah', 'Jenis Kelamin': 'P', 'No. WhatsApp': '081234567891', 'Kelas': 'XI IPS 2', 'NISN': '0987654321', 'Nama Wali': 'Aminah' },
         ]
         const XLSX = await import('xlsx')
         const ws = XLSX.utils.json_to_sheet(templateData)
-        ws['!cols'] = [{ wch: 25 }, { wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 15 }, { wch: 20 }]
+        ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 }]
         const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, 'Template')
+        XLSX.utils.book_append_sheet(wb, ws, 'Template Import')
         const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
         const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
         const link = document.createElement('a')
         const blobUrl = URL.createObjectURL(blob)
         link.href = blobUrl
-        link.download = 'TemplateImportSiswa.xlsx'
+        link.download = 'Template_Import_Siswa.xlsx'
         link.click()
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
     }

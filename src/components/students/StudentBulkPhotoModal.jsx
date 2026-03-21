@@ -14,10 +14,18 @@ export default function StudentBulkPhotoModal({
 }) {
     if (!isOpen) return null
 
+    const [matchMethod, setMatchMethod] = React.useState('nisn')
+
     // Menghapus spesifik foto dari list preview (opsional jika foto salah cocok)
     const handleRemoveMatch = (index) => {
         setBulkPhotoMatches(prev => prev.filter((_, i) => i !== index))
     }
+
+    const methods = [
+        { id: 'nisn', label: 'NISN', desc: 'Contoh: 0012345.jpg' },
+        { id: 'name', label: 'Nama', desc: 'Contoh: Ahmad Muazza.png' },
+        { id: 'code', label: 'ID/Reg', desc: 'Contoh: REG-ABCD.jpg' },
+    ]
 
     return (
         <Modal
@@ -27,13 +35,28 @@ export default function StudentBulkPhotoModal({
             size="lg"
         >
             <div className="space-y-5">
+                <div className="flex flex-col gap-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Metode Pencocokan</label>
+                    <div className="grid grid-cols-3 gap-2 bg-[var(--color-surface-alt)] p-1.5 rounded-2xl border border-[var(--color-border)]">
+                        {methods.map(m => (
+                            <button
+                                key={m.id}
+                                onClick={() => setMatchMethod(m.id)}
+                                className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${matchMethod === m.id ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-border)]'}`}
+                            >
+                                {m.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <div className="p-8 border-2 border-dashed border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 flex flex-col items-center text-center group hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all cursor-pointer relative rounded-2xl overflow-hidden">
                     <input
                         type="file"
                         multiple
                         accept="image/*"
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                        onChange={(e) => handleBulkPhotoMatch(e.target.files)}
+                        onChange={(e) => handleBulkPhotoMatch(e.target.files, matchMethod)}
                         disabled={uploadingBulkPhotos}
                     />
                     <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] mb-4 group-hover:scale-110 transition-transform">
@@ -42,7 +65,9 @@ export default function StudentBulkPhotoModal({
                     <h4 className="text-sm font-black text-[var(--color-text)] mb-1">
                         {bulkPhotoMatches.length > 0 ? 'Tambah File Foto Lain' : 'Drag & Drop atau Pilih Foto Massal'}
                     </h4>
-                    <p className="text-[11px] text-[var(--color-text-muted)] max-w-xs">Pastikan nama file foto menggunakan <b>NISN</b> atau <b>ID Siswa</b> (contoh: 12345.jpg)</p>
+                    <p className="text-[11px] text-[var(--color-text-muted)] max-w-xs transition-all">
+                        Pastikan nama file foto menggunakan <b>{methods.find(m => m.id === matchMethod).label}</b> siswa ({methods.find(m => m.id === matchMethod).desc})
+                    </p>
                 </div>
 
                 {bulkPhotoMatches.length > 0 && (
