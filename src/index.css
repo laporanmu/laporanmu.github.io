@@ -135,19 +135,21 @@ h6,
 
 /* Premium Glass Effect */
 .glass {
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px -1px rgba(0, 0, 0, 0.05);
+  isolation: isolate;
 }
 
 .dark .glass {
-  background: rgba(2, 6, 23, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(2, 6, 23, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+  isolation: isolate;
 }
 
 /* Gradient Text */
@@ -363,9 +365,7 @@ tr:hover td {
     animation-duration: var(--theme-transition);
   }
  
-  body {
-    /* No transitions needed here! Let View Transitions API do the magic */
-  }
+  /* Note: Removed empty body ruleset to address linting. */
 
   /* Respect reduced motion preference */
   @media (prefers-reduced-motion: reduce) {

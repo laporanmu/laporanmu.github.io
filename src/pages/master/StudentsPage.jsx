@@ -714,7 +714,7 @@ export default function StudentsPage() {
                         }}
                         className="flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0 lg:snap-none"
                     >
-                        <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-[var(--color-primary)] flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-[var(--color-primary)]/5">
+                        <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-[var(--color-primary)] flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-[var(--color-primary)]/5 overflow-hidden shadow-lg shadow-[var(--color-primary)]/5">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 flex items-center justify-center text-[var(--color-primary)] text-lg group-hover:scale-110 transition-transform shrink-0">
                                 <FontAwesomeIcon icon={faUsers} />
                             </div>
@@ -724,7 +724,7 @@ export default function StudentsPage() {
                             </div>
                         </div>
 
-                        <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-blue-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-blue-500/5">
+                        <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-blue-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-blue-500/5 overflow-hidden shadow-lg shadow-blue-500/5">
                             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 text-lg group-hover:scale-110 transition-transform shrink-0">
                                 <FontAwesomeIcon icon={faMars} />
                             </div>
@@ -734,7 +734,7 @@ export default function StudentsPage() {
                             </div>
                         </div>
 
-                        <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-pink-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-pink-500/5">
+                        <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-pink-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-pink-500/5 overflow-hidden shadow-lg shadow-pink-500/5">
                             <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500 text-lg group-hover:scale-110 transition-transform shrink-0">
                                 <FontAwesomeIcon icon={faVenus} />
                             </div>
@@ -745,7 +745,7 @@ export default function StudentsPage() {
                         </div>
 
                         <div
-                            className="w-[210px] xs:w-[230px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-emerald-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-emerald-500/5 cursor-pointer active:scale-95 outline-none"
+                            className="w-[210px] xs:w-[230px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-emerald-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-emerald-500/5 cursor-pointer active:scale-95 outline-none overflow-hidden shadow-lg shadow-emerald-500/5"
                             onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
                         >
                             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-lg group-hover:scale-110 transition-transform shrink-0">
@@ -767,7 +767,7 @@ export default function StudentsPage() {
 
                         {/* Kelas Bermasalah */}
                         <div
-                            className="w-[230px] xs:w-[250px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-red-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-red-500/5 cursor-pointer sm:col-span-2 lg:col-span-1 active:scale-95 outline-none"
+                            className="w-[230px] xs:w-[250px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-red-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-red-500/5 cursor-pointer sm:col-span-2 lg:col-span-1 active:scale-95 outline-none overflow-hidden shadow-lg shadow-red-500/5"
                             onClick={() => { if (globalStats.worstClass) { setFilterClass(''); setFilterPointMode('risk') } }}
                             title="Klik untuk filter siswa risiko"
                         >
@@ -1551,6 +1551,7 @@ export default function StudentsPage() {
                                                             <StudentMobileCard
                                                                 student={student}
                                                                 isSelected={selectedIdSet.has(student.id)}
+                                                                hasSelection={selectedIdSet.size > 0}
                                                                 onToggleSelect={toggleSelectStudent}
                                                                 onViewProfile={handleViewProfile}
                                                                 onEdit={canEdit ? handleEdit : null}
@@ -1588,7 +1589,13 @@ export default function StudentsPage() {
                                                                         className={`w-full shrink-0 snap-center flex items-center gap-3 px-3 py-3 transition-colors active:bg-[var(--color-primary)]/5
                                                                                 ${selectedIdSet.has(student.id) ? 'bg-[var(--color-primary)]/[0.04]' : ''}
                                                                                 ${student.is_pinned ? 'border-l-4 border-l-amber-400' : ''}`}
-                                                                        onClick={() => handleViewProfile(student)}
+                                                                        onClick={() => {
+                                                                            if (selectedIdSet.size > 0) {
+                                                                                toggleSelectStudent(student.id)
+                                                                            } else {
+                                                                                handleViewProfile(student)
+                                                                            }
+                                                                        }}
                                                                     >
                                                                         {/* Checkbox */}
                                                                         <div

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mimbar Santri - Asisten Pidato Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Amiri:wght@400;700&family=Quicksand:wght@500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary-emerald: #064e3b;
+            --accent-gold: #d4af37;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body.light {
+            background-color: #f8fafc;
+            background-image: url("https://www.transparenttextures.com/patterns/islamic-art.png");
+            background-attachment: fixed;
+            color: #1e293b;
+        }
+
+        body.dark {
+            background-color: #0f172a;
+            background-image: url("https://www.transparenttextures.com/patterns/stardust.png");
+            background-attachment: fixed;
+            color: #f1f5f9;
+        }
+
+        .arabic {
+            font-family: 'Amiri', serif;
+            direction: rtl;
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #059669 100%);
+        }
+
+        .glass-card {
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+        }
+
+        body.light .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        body.dark .glass-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
+        }
+
+        .custom-input {
+            transition: all 0.2s ease;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.03);
+        }
+
+        body.light .custom-input {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+
+        body.dark .custom-input {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            color: #f1f5f9;
+        }
+
+        .custom-input:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
+
+        .btn-gold {
+            background: linear-gradient(to right, #d4af37, #f59e0b);
+            transition: all 0.3s ease;
+            color: #064e3b;
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(212, 175, 55, 0.5);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #059669;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="light min-h-screen">
+
+    <!-- Tombol Ganti Tema -->
+    <div class="fixed top-4 right-4 z-50">
+        <button onclick="toggleTheme()"
+            class="p-3 rounded-2xl glass-card border border-emerald-500/20 text-emerald-600 shadow-xl active:scale-90 transition-all flex items-center justify-center">
+            <svg id="sunIcon" class="w-6 h-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M16.95 16.95l.707.707M7.05 7.05l.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <svg id="moonIcon" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+        </button>
+    </div>
+
+    <!-- Header -->
+    <header class="hero-gradient text-white pt-12 pb-24 px-6 relative overflow-hidden">
+        <div class="max-w-6xl mx-auto text-center relative z-10">
+            <div
+                class="inline-block px-4 py-1.5 rounded-full bg-black/20 border border-white/20 text-emerald-100 text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase mb-4 backdrop-blur-md">
+                Pondok Pesantren Digital
+            </div>
+            <h1 class="text-3xl md:text-6xl font-bold mb-4 tracking-tight">Mimbar Santri<span
+                    class="text-amber-400">.</span></h1>
+            <p class="text-emerald-50/70 text-sm md:text-xl max-w-2xl mx-auto font-light leading-relaxed">
+                Asisten naskah pidato otomatis untuk syiar dakwah santri Nusantara.
+            </p>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 md:px-8 -mt-16 relative z-20">
+
+        <!-- Formulir Generator -->
+        <div class="glass-card rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-10 mb-12">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                </div>
+                <h2 class="text-xl md:text-2xl font-bold opacity-90">Konfigurasi Naskah</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
+                <div class="space-y-2">
+                    <label class="text-[11px] font-bold uppercase tracking-wider opacity-60 ml-1">Jenis Kegiatan</label>
+                    <select id="speechType" class="custom-input w-full p-4 rounded-2xl outline-none cursor-pointer">
+                        <option value="Khutbah Jumat">Khutbah Jumat</option>
+                        <option value="Kultum Subuh">Kultum Subuh</option>
+                        <option value="Ceramah Umum">Ceramah Umum</option>
+                        <option value="Pidato Perpisahan Pondok">Pidato Perpisahan</option>
+                        <option value="Muhadharah Mingguan">Muhadharah Mingguan</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[11px] font-bold uppercase tracking-wider opacity-60 ml-1">Durasi</label>
+                    <select id="duration" class="custom-input w-full p-4 rounded-2xl outline-none cursor-pointer">
+                        <option value="Singkat (5 Menit)">Singkat (5 Menit)</option>
+                        <option value="Sedang (10-15 Menit)">Sedang (10-15 Menit)</option>
+                        <option value="Lengkap (20+ Menit)">Lengkap (20+ Menit)</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[11px] font-bold uppercase tracking-wider opacity-60 ml-1">Tema / Topik</label>
+                    <input type="text" id="topic" placeholder="Cth: Adab Menuntut Ilmu"
+                        class="custom-input w-full p-4 rounded-2xl outline-none">
+                </div>
+            </div>
+
+            <button onclick="generateSpeech()" id="btnGenerate"
+                class="btn-gold w-full mt-10 font-bold py-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 text-lg group">
+                <span>Susun Naskah Sekarang</span>
+                <svg xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 transform group-hover:translate-x-1 transition-transform" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Tampilan Hasil -->
+        <div id="outputContainer" class="hidden space-y-8 animate-fade-in mb-20">
+            <div class="glass-card rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <div class="hero-gradient px-6 md:px-10 py-6 flex flex-wrap justify-between items-center gap-4">
+                    <h3 class="text-white font-bold flex items-center gap-3">
+                        <span class="p-2 bg-white/20 rounded-lg">📄</span>
+                        Teks Naskah Hasil AI
+                    </h3>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="copySpeech()"
+                            class="flex-1 md:flex-none px-5 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold border border-white/20 backdrop-blur-md transition-all">Salin</button>
+                        <button onclick="window.print()"
+                            class="flex-1 md:flex-none px-5 py-3 bg-amber-400 hover:bg-amber-500 text-emerald-950 rounded-xl text-sm font-bold transition-all">Cetak</button>
+                    </div>
+                </div>
+                <div id="speechContent" class="p-6 md:p-16 text-justify leading-relaxed"></div>
+            </div>
+        </div>
+
+        <!-- Grid Inspirasi -->
+        <section class="mt-16 pb-12">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+                <div class="max-w-xl">
+                    <h2 class="text-3xl font-bold opacity-90 mb-2">Inspirasi Tema</h2>
+                    <p class="text-sm font-medium opacity-60">Pilih tema populer untuk mengisi formulir secara otomatis.
+                    </p>
+                </div>
+                <div class="w-full md:w-48 h-2 bg-emerald-500/10 rounded-full overflow-hidden">
+                    <div id="progressBar" class="h-full bg-emerald-500 transition-all duration-700" style="width: 0%">
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-5" id="presetsGrid">
+                <!-- Data via JS -->
+            </div>
+
+            <div id="loadMoreContainer" class="mt-12 text-center">
+                <button onclick="loadMorePresets()" id="btnLoadMore"
+                    class="px-8 py-4 glass-card border-emerald-500/20 text-emerald-600 font-bold rounded-2xl transition-all hover:bg-emerald-500 hover:text-white inline-flex items-center gap-3 shadow-lg">
+                    <span>Muat 10 Tema Lagi</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7" />
+                    </svg>
+                </button>
+                <p id="allLoadedText" class="hidden font-medium opacity-40 mt-6 italic">Seluruh 50 tema telah
+                    ditampilkan.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-20 opacity-40 text-xs md:text-sm">
+        <p>Mimbar Santri v3.8 &bull; Khidmah Dakwah Digital Pesantren</p>
+    </footer>
+
+    <!-- Toast UI - Diperbarui agar dinamis bisa centang hijau atau silang merah -->
+    <div id="toast"
+        class="fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl transition-all opacity-0 translate-y-10 pointer-events-none z-[100] flex items-center gap-3">
+        <div id="toastIconDiv" class="bg-emerald-500 rounded-full p-1 text-white">
+            <!-- Ikon akan diinjeksi via JS (Success / Error) -->
+        </div>
+        <span id="toastMessage" class="font-bold"></span>
+    </div>
+
+    <!-- Loading UI -->
+    <div id="loading"
+        class="hidden fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 text-center">
+        <div class="glass-card p-10 rounded-[3rem] max-w-xs w-full shadow-2xl">
+            <div
+                class="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-6">
+            </div>
+            <h4 class="text-xl font-bold mb-2">Menyusun Hikmah...</h4>
+            <p class="text-sm opacity-60">AI sedang bekerja merangkai naskah terbaik.</p>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "AIzaSyCMOY4U01We8QvCHs9-QlhpEako8DK1P6Y";
+
+        function toggleTheme() {
+            const body = document.body;
+            const moon = document.getElementById('moonIcon');
+            const sun = document.getElementById('sunIcon');
+
+            if (body.classList.contains('light')) {
+                body.classList.replace('light', 'dark');
+                moon.classList.add('hidden');
+                sun.classList.remove('hidden');
+            } else {
+                body.classList.replace('dark', 'light');
+                sun.classList.add('hidden');
+                moon.classList.remove('hidden');
+            }
+        }
+
+        const icons = {
+            "Khutbah Jumat": `<svg class="w-6 h-6 md:w-8 md:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18"/><path d="M12 3v18"/><path d="M8 11h8"/><path d="M9 7h6"/></svg>`,
+            "Kultum Subuh": `<svg class="w-6 h-6 md:w-8 md:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/></svg>`,
+            "Ceramah Umum": `<svg class="w-6 h-6 md:w-8 md:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+            "Pidato Perpisahan Pondok": `<svg class="w-6 h-6 md:w-8 md:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z"/><path d="m9 10 2 2 4-4"/></svg>`,
+            "Muhadharah Mingguan": `<svg class="w-6 h-6 md:w-8 md:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20"/><path d="M2 12h20"/></svg>`
+        };
+
+        const themes = [
+            { topic: "Adab kepada Orang Tua", type: "Kultum Subuh" },
+            { topic: "Keutamaan Menuntut Ilmu", type: "Muhadharah Mingguan" },
+            { topic: "Bahaya Lisan dan Ghibah", type: "Ceramah Umum" },
+            { topic: "Cinta Tanah Air (Hubbul Wathan)", type: "Khutbah Jumat" },
+            { topic: "Kebersihan Sebagian dari Iman", type: "Kultum Subuh" },
+            { topic: "Sabar Menghadapi Ujian Santri", type: "Muhadharah Mingguan" },
+            { topic: "Keajaiban Sedekah", type: "Ceramah Umum" },
+            { topic: "Pentingnya Shalat Berjamaah", type: "Khutbah Jumat" },
+            { topic: "Syukur Nikmat di Pondok", type: "Kultum Subuh" },
+            { topic: "Pemuda Islam Era Digital", type: "Muhadharah Mingguan" },
+            { topic: "Meneladani Akhlak Rasulullah", type: "Khutbah Jumat" },
+            { topic: "Pentingnya Menjaga Waktu", type: "Kultum Subuh" },
+            { topic: "Adab Terhadap Guru & Kyai", type: "Muhadharah Mingguan" },
+            { topic: "Persaudaraan Sesama Muslim", type: "Ceramah Umum" },
+            { topic: "Keutamaan Malam Lailatul Qadar", type: "Kultum Subuh" },
+            { topic: "Tanggung Jawab Pemimpin", type: "Khutbah Jumat" },
+            { topic: "Hormat kepada Sesama Santri", type: "Muhadharah Mingguan" },
+            { topic: "Mengenal Sifat Wajib Allah", type: "Ceramah Umum" },
+            { topic: "Kekuatan Doa Orang Tua", type: "Kultum Subuh" },
+            { topic: "Mensyukuri Kemerdekaan RI", type: "Pidato Perpisahan Pondok" },
+            { topic: "Kewajiban Zakat & Fitrah", type: "Khutbah Jumat" },
+            { topic: "Keutamaan Membaca Al-Qur'an", type: "Kultum Subuh" },
+            { topic: "Berbakti Kepada Ibu", type: "Ceramah Umum" },
+            { topic: "Menjauhi Sifat Iri & Dengki", type: "Muhadharah Mingguan" },
+            { topic: "Membangun Karakter Qur'ani", type: "Khutbah Jumat" },
+            { topic: "Tips Khusyuk Shalat", type: "Kultum Subuh" },
+            { topic: "Manfaat Hidup Sederhana", type: "Muhadharah Mingguan" },
+            { topic: "Kisah Sahabat Abu Bakar", type: "Ceramah Umum" },
+            { topic: "Pentingnya Kejujuran", type: "Kultum Subuh" },
+            { topic: "Bahaya Pergaulan Bebas", type: "Khutbah Jumat" },
+            { topic: "Adab Berpakaian Sunnah", type: "Kultum Subuh" },
+            { topic: "Keajaiban Tahajud", type: "Muhadharah Mingguan" },
+            { topic: "Mengenal Rukun Iman", type: "Ceramah Umum" },
+            { topic: "Ukhuwah di Pesantren", type: "Pidato Perpisahan Pondok" },
+            { topic: "Ciri-ciri Orang Munafik", type: "Khutbah Jumat" },
+            { topic: "Keutamaan Puasa Daud", type: "Kultum Subuh" },
+            { topic: "Kewajiban Menutup Aurat", type: "Muhadharah Mingguan" },
+            { topic: "Kisah Perjuangan Wali Songo", type: "Ceramah Umum" },
+            { topic: "Berprasangka Baik (Husnuzan)", type: "Kultum Subuh" },
+            { topic: "Bekal Menuju Akhirat", type: "Khutbah Jumat" },
+            { topic: "Manfaat Bangun Pagi", type: "Kultum Subuh" },
+            { topic: "Menghargai Madzhab", type: "Ceramah Umum" },
+            { topic: "Adab Makan & Minum", type: "Muhadharah Mingguan" },
+            { topic: "Keutamaan Menolong Sesama", type: "Kultum Subuh" },
+            { topic: "Fitnah Akhir Zaman", type: "Khutbah Jumat" },
+            { topic: "Kisah Umar bin Khattab", type: "Ceramah Umum" },
+            { topic: "Menjaga Kesucian Hati", type: "Kultum Subuh" },
+            { topic: "Semangat Juang Santri", type: "Muhadharah Mingguan" },
+            { topic: "Pentingnya Belajar Tajwid", type: "Ceramah Umum" },
+            { topic: "Generasi Emas Islam", type: "Khutbah Jumat" }
+        ];
+
+        let visibleCount = 0;
+        const step = 10;
+
+        function loadMorePresets() {
+            const grid = document.getElementById('presetsGrid');
+            const nextBatch = themes.slice(visibleCount, visibleCount + step);
+
+            nextBatch.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = "preset-card glass-card p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center text-center gap-2 md:gap-4 cursor-pointer hover:scale-[1.03] animate-fade-in";
+                card.style.animationDelay = `${index * 50}ms`;
+                card.onclick = () => {
+                    document.getElementById('topic').value = item.topic;
+                    document.getElementById('speechType').value = item.type;
+                    showToast(`Tema dipilih: ${item.topic}`, false);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                };
+
+                card.innerHTML = `
+                    <div class="p-2 md:p-4 bg-emerald-500/10 rounded-xl md:rounded-2xl text-emerald-600">
+                        ${icons[item.type] || icons["Ceramah Umum"]}
+                    </div>
+                    <div>
+                        <span class="text-[8px] md:text-[10px] font-extrabold text-emerald-500 uppercase tracking-widest">${item.type}</span>
+                        <h4 class="text-xs md:text-sm font-bold mt-1 leading-tight">${item.topic}</h4>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            visibleCount += step;
+            const progress = (visibleCount / themes.length) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+
+            if (visibleCount >= themes.length) {
+                document.getElementById('btnLoadMore').classList.add('hidden');
+                document.getElementById('allLoadedText').classList.remove('hidden');
+            }
+        }
+
+        async function generateSpeech() {
+            const topic = document.getElementById('topic').value;
+            const type = document.getElementById('speechType').value;
+            const duration = document.getElementById('duration').value;
+            const loading = document.getElementById('loading');
+            const output = document.getElementById('outputContainer');
+            const contentDiv = document.getElementById('speechContent');
+
+            if (!topic.trim()) {
+                showToast("Silakan tuliskan tema naskah Anda terlebih dahulu.", true);
+                return;
+            }
+
+            loading.classList.remove('hidden');
+            output.classList.add('hidden');
+
+            const systemPrompt = `Anda adalah asisten ahli pembuat teks pidato/ceramah santri.
+            Teks harus mencakup:
+            1. Muqaddimah Bahasa Arab yang indah (tulis dengan harakat).
+            2. Isi yang menyentuh hati dan relevan dengan kehidupan santri.
+            3. Minimal 1 Ayat Al-Qur'an atau Hadis beserta artinya.
+            4. Gunakan poin-poin hikmah agar mudah dihafal.
+            5. Tambahkan [Petunjuk Ekspresi] di dalam kurung siku.`;
+
+            const userQuery = `Buatkan naskah ${type} bertema "${topic}" berdurasi ${duration}.`;
+
+            let retries = 0;
+            const delays = [1000, 2000, 4000, 8000, 16000];
+
+            const makeRequest = async () => {
+                try {
+                    // Endpoint v1beta dari Gemini API
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: userQuery }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(`API Error: ${response.status} - ${errData.error?.message || 'Forbidden'}`);
+                    }
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (text) {
+                        displayResult(text);
+                    } else {
+                        throw new Error('Hasil AI tidak ditemukan dalam respons.');
+                    }
+                } catch (e) {
+                    if (retries < delays.length) {
+                        setTimeout(makeRequest, delays[retries++]);
+                    } else {
+                        showToast("Koneksi gagal! Silakan masukkan API Key Google Anda di dalam kode untuk Vercel.", true);
+                        loading.classList.add('hidden');
+                    }
+                }
+            };
+            makeRequest();
+        }
+
+        function displayResult(text) {
+            const contentDiv = document.getElementById('speechContent');
+            const loading = document.getElementById('loading');
+            const output = document.getElementById('outputContainer');
+
+            // Format markdown ke HTML secara sederhana
+            const formatted = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-emerald-600 font-bold">$1</strong>')
+                .replace(/^# (.*$)/gm, '<h1 class="text-2xl md:text-3xl font-bold mb-6 border-b pb-4 opacity-90">$1</h1>')
+                .replace(/^## (.*$)/gm, '<h2 class="text-lg md:text-xl font-bold mt-8 mb-4 flex items-center gap-2"><span class="w-1.5 h-6 bg-emerald-500 rounded-full"></span>$1</h2>')
+                .replace(/\[(.*?)\]/g, '<span class="italic text-amber-600 font-medium text-xs md:text-sm">($1)</span>')
+                .replace(/^(.*:.*)$/gm, '<div class="arabic text-2xl md:text-4xl text-center my-10 leading-relaxed p-6 md:p-10 bg-emerald-500/5 rounded-[2.5rem] border border-emerald-500/10 shadow-inner">$1</div>');
+
+            contentDiv.innerHTML = formatted;
+            loading.classList.add('hidden');
+            output.classList.remove('hidden');
+            output.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copySpeech() {
+            const text = document.getElementById('speechContent').innerText;
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            showToast("Naskah berhasil disalin!", false);
+        }
+
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            const msgEl = document.getElementById('toastMessage');
+            const iconDiv = document.getElementById('toastIconDiv');
+
+            msgEl.innerText = msg;
+
+            // Ubah ikon berdasarkan Success/Error
+            if (isError) {
+                iconDiv.className = "bg-red-500 rounded-full p-1 text-white";
+                iconDiv.innerHTML = `<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
+            } else {
+                iconDiv.className = "bg-emerald-500 rounded-full p-1 text-white";
+                iconDiv.innerHTML = `<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
+            }
+
+            // Atur warna toast berdasarkan mode tema saat ini
+            if (document.body.classList.contains('dark')) {
+                t.style.backgroundColor = 'rgba(30, 41, 59, 0.95)';
+                t.style.color = '#f1f5f9';
+            } else {
+                t.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                t.style.color = '#064e3b';
+            }
+
+            // Animasi tampil
+            t.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            t.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                t.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+                t.classList.remove('opacity-100', 'translate-y-0');
+            }, 3000);
+        }
+
+        window.onload = loadMorePresets;
+    </script>
+</body>
+
+</html>

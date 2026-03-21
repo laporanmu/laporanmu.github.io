@@ -5,16 +5,18 @@ import {
     faArrowRight,
     faChartLine,
     faShieldAlt,
-    faMobileAlt,
+    faUsers,
     faBell,
+    faEnvelope,
     faMoon,
     faSun,
     faBars,
     faTimes,
     faStar,
-    faFaceSmile
+    faQuoteLeft
 } from '@fortawesome/free-solid-svg-icons'
 import { useTheme } from '../context/ThemeContext'
+import ChatAssistant from '../components/ui/ChatAssistant'
 
 export default function LandingPage() {
     const { isDark, toggleTheme } = useTheme()
@@ -39,7 +41,7 @@ export default function LandingPage() {
 
             {/* Navbar */}
             <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'glass py-3' : 'bg-transparent py-5'}`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between">
                         {/* Logo */}
                         <Link to="/" className="flex items-center gap-3 group relative z-50">
@@ -73,13 +75,13 @@ export default function LandingPage() {
                             </button>
                             <Link
                                 to="/check"
-                                className="inline-flex items-center px-5 py-2.5 text-sm font-medium rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all"
+                                className="inline-flex items-center px-4 py-2 text-[13px] font-bold rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all"
                             >
                                 Cek Data Siswa
                             </Link>
                             <Link
                                 to="/login"
-                                className="btn btn-primary shadow-lg shadow-[var(--color-primary)]/20"
+                                className="inline-flex items-center px-5 py-2 text-[13px] font-black rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all"
                             >
                                 Login Staff
                             </Link>
@@ -141,7 +143,7 @@ export default function LandingPage() {
 
             {/* Hero Section */}
             <section className="pt-32 lg:pt-48 pb-20 lg:pb-32 relative z-10 flex flex-col items-center justify-center min-h-[90vh]">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
+                <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8 w-full text-center">
 
                     {/* Badge */}
                     <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-[var(--color-surface)]/80 backdrop-blur-md border border-[var(--color-primary)]/20 shadow-xl shadow-[var(--color-primary)]/5 mb-10 animate-[fadeIn_1s_ease-out]">
@@ -150,7 +152,7 @@ export default function LandingPage() {
                             <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--color-primary)]" />
                         </span>
                         <span className="text-sm font-semibold text-[var(--color-text)] tracking-wide">
-                            Sistem Manajemen Perilaku Generasi Baru
+                            Sistem Manajemen Perilaku Siswa
                         </span>
                     </div>
 
@@ -161,7 +163,7 @@ export default function LandingPage() {
                     </h1>
 
                     <p className="text-lg sm:text-xl text-[var(--color-text-muted)] mb-12 max-w-2xl mx-auto leading-relaxed animate-[fadeIn_1s_ease-out_0.4s_both]">
-                        Ciptakan lingkungan sekolah yang disiplin dengan pencatatan real-time. Guru lebih fokus mengajar, wali murid lebih tenang memantau.
+                        Layanan resmi pemantauan perilaku dan prestasi siswa secara terintegrasi. Memudahkan koordinasi antara sekolah dan wali murid secara transparan.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-5 w-full sm:w-auto animate-[fadeIn_1s_ease-out_0.6s_both]">
@@ -225,132 +227,146 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Bento Grid Features Section */}
-            <section id="fitur" className="py-24 relative z-10 bg-[var(--color-surface-alt)]/50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text)] mb-4">
-                            Fitur Premium <span className="text-[var(--color-primary)]">Laporanmu</span>
-                        </h2>
-                        <p className="text-lg text-[var(--color-text-muted)] max-w-2xl mx-auto">
-                            Lebih dari sekadar buku catatan digital. Solusi cerdas untuk analitik perilaku siswa.
-                        </p>
-                    </div>
+            {/* Vision & Mission Section */}
+            <section id="visi-misi" className="py-20 sm:py-24 relative z-10 overflow-hidden">
+                {/* Background decorative elements */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--color-primary)]/5 rounded-full blur-[100px] -mr-48 -mt-48" />
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-[var(--color-accent)]/5 rounded-full blur-[100px] -ml-48 -mb-48" />
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6">
-                        {/* Big Card - Real-time Analytics */}
-                        <div className="col-span-1 md:col-span-2 md:row-span-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl p-8 hover:border-[var(--color-primary)]/50 transition-colors shadow-sm relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[var(--color-primary)]/10 to-transparent rounded-full blur-3xl -mr-20 -mt-20 group-hover:from-[var(--color-primary)]/20 transition-all" />
-                            <div className="relative z-10 h-full flex flex-col justify-center">
-                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white flex items-center justify-center mb-6 shadow-lg shadow-[var(--color-primary)]/30">
-                                    <FontAwesomeIcon icon={faChartLine} className="text-xl" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-[var(--color-text)] mb-3">Analytics Real-time & Terukur</h3>
-                                <p className="text-[var(--color-text-muted)] max-w-md text-base leading-relaxed">
-                                    Pantau grafik tren pelanggaran dan prestasi siswa langsung dari dashboard. Pengambilan keputusan lebih cepat dan akurat untuk penanganan siswa berbasis data (Data-driven).
-                                </p>
+                <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8 relative">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-16 items-start">
+                        {/* Vision Side */}
+                        <div className="bg-gradient-to-br from-slate-900 to-indigo-950 p-8 sm:p-12 rounded-[2.5rem] sm:rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden group border border-white/5">
+                            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                                <FontAwesomeIcon icon={faQuoteLeft} className="text-8xl text-indigo-400" />
                             </div>
-                        </div>
-
-                        {/* Tall Card - Portal Wali Murid */}
-                        <div className="col-span-1 md:col-span-1 md:row-span-2 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-3xl p-8 hover:border-[var(--color-accent)]/50 transition-colors shadow-sm flex flex-col">
-                            <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-accent)] flex items-center justify-center mb-6 shadow-sm">
-                                <FontAwesomeIcon icon={faBell} className="text-xl" />
-                            </div>
-                            <h3 className="text-2xl font-bold text-[var(--color-text)] mb-3">Portal Eksklusif Wali Murid</h3>
-                            <p className="text-[var(--color-text-muted)] text-base mb-8 leading-relaxed flex-grow">
-                                Keterbukaan informasi sangat penting. Wali murid dapat memantau akumulasi poin dan riwayat anak secara live hanya dengan memasukkan NISN unik, tanpa perlu registrasi rumit.
-                            </p>
-                            <div className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] p-4 rounded-2xl shadow-inner mt-auto items-center flex gap-3">
-                                <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)]">
-                                    <FontAwesomeIcon icon={faMobileAlt} />
-                                </div>
-                                <div>
-                                    <div className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">Notifikasi</div>
-                                    <div className="text-sm text-[var(--color-text-muted)]">Data terupdate cepat</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Standard Card 1 */}
-                        <div className="col-span-1 border border-[var(--color-border)] bg-[var(--color-surface)] rounded-3xl p-8 hover:border-[var(--color-primary)]/50 transition-colors shadow-sm">
-                            <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface-alt)] text-[var(--color-primary)] flex items-center justify-center mb-6">
-                                <FontAwesomeIcon icon={faShieldAlt} className="text-xl" />
-                            </div>
-                            <h3 className="text-xl font-bold text-[var(--color-text)] mb-2">Keamanan Privasi</h3>
-                            <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-                                Data tersimpan aman dengan enkripsi modern dan akses Multi-Role yang memisahkan hak akses antara Admin, BK, dan Guru.
-                            </p>
-                        </div>
-
-                        {/* Standard Card 2 */}
-                        <div className="col-span-1 border border-[var(--color-border)] bg-[var(--color-surface)] rounded-3xl p-8 hover:border-[var(--color-primary)]/50 transition-colors shadow-sm relative overflow-hidden">
-                            <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center mb-6">
-                                <FontAwesomeIcon icon={faFaceSmile} className="text-xl" />
-                            </div>
-                            <h3 className="text-xl font-bold text-[var(--color-text)] mb-2">UI Modern & Cepat</h3>
-                            <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-                                Antarmuka dirancang agar tidak membingungkan. Input pelanggaran atau prestasi dalam hitungan detik.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Workflow / Cara Kerja Section */}
-            <section id="alur" className="py-24 bg-[var(--color-surface)] relative z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col lg:flex-row items-center gap-16">
-                        <div className="flex-1 text-center lg:text-left">
-                            <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text)] mb-6">
-                                Alur Kerja Sederhana, <br />
-                                <span className="text-[var(--color-primary)]">Dampak Maksimal.</span>
+                            <span className="inline-block px-4 py-1.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase tracking-[0.2em] mb-8 border border-indigo-500/30">Visi Utama</span>
+                            <h2 className="text-3xl sm:text-4xl font-black mb-10 leading-tight">
+                                Mewujudkan Ekosistem Sekolah yang <span className="text-indigo-400">Disiplin, Adil, dan Transparan</span> Melalui Pendekatan Inovatif.
                             </h2>
-                            <p className="text-lg text-[var(--color-text-muted)] mb-8 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                                Tidak perlu pelatihan panjang. Desain intuitif Laporanmu memungkinkan sekolah langsung menggunakannya di hari pertama.
+                            <p className="text-slate-400 leading-relaxed text-lg italic border-l-2 border-indigo-500 pl-6">
+                                "Kedisiplinan bukan tentang hukuman, melainkan tentang pembentukan karakter yang siap menghadapi masa depan."
                             </p>
+                        </div>
 
-                            <div className="space-y-6 max-w-md mx-auto lg:mx-0">
+                        {/* Mission Side */}
+                        <div className="py-2">
+                            <span className="text-[var(--color-primary)] font-bold uppercase tracking-[0.3em] text-[10px] mb-4 block">Misi Kedisiplinan</span>
+                            <h3 className="text-3xl font-black text-[var(--color-text)] mb-12 leading-tight">Membangun Karakter & Integritas Siswa Secara Berkelanjutan.</h3>
+
+                            <div className="space-y-12">
                                 {[
-                                    { step: '1', title: 'Input Data Siswa & Master Poin', desc: 'Atur poin jenis pelanggaran dan prestasi sesuai buku tatib sekolah.' },
-                                    { step: '2', title: 'Catat Perilaku Harian', desc: 'Guru atau BK mencatat pelanggaran via dashboard saat kejadian berlangsung.' },
-                                    { step: '3', title: 'Evaluasi & Pantau', desc: 'Sistem akumulasi poin otomatis. Wali murid bisa mengecek dari rumah.' },
-                                ].map((item, idx) => (
-                                    <div key={idx} className="flex gap-4 p-4 rounded-2xl hover:bg-[var(--color-surface-alt)] transition-colors border border-transparent hover:border-[var(--color-border)] text-left">
-                                        <div className="w-12 h-12 shrink-0 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-bold text-xl border border-[var(--color-primary)]/20">
-                                            {item.step}
+                                    {
+                                        icon: faShieldAlt,
+                                        color: 'bg-blue-500/10 text-blue-500',
+                                        title: 'Integritas Data',
+                                        desc: 'Menjamin setiap rekaman perilaku tercatat secara akurat, objektif, dan transparan tanpa ada manipulasi.'
+                                    },
+                                    {
+                                        icon: faChartLine,
+                                        color: 'bg-emerald-500/10 text-emerald-500',
+                                        title: 'Monitoring Pertumbuhan',
+                                        desc: 'Fokus pada evaluasi prestasi dan perilaku harian untuk mendukung potensi terbaik setiap murid.'
+                                    },
+                                    {
+                                        icon: faUsers,
+                                        color: 'bg-amber-500/10 text-amber-500',
+                                        title: 'Sinergi Orang Tua',
+                                        desc: 'Memperkuat jalinan komunikasi antara sekolah dan wali murid dalam memantau tumbuh kembang karakter siswa.'
+                                    }
+                                ].map((misi, i) => (
+                                    <div key={i} className="flex gap-6 group">
+                                        <div className={`w-14 h-14 shrink-0 rounded-2xl ${misi.color} flex items-center justify-center text-xl shadow-sm border border-transparent group-hover:scale-110 transition-all duration-300`}>
+                                            <FontAwesomeIcon icon={misi.icon} />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-[var(--color-text)] text-lg mb-1">{item.title}</h4>
-                                            <p className="text-sm text-[var(--color-text-muted)]">{item.desc}</p>
+                                            <h4 className="text-lg font-bold text-[var(--color-text)] mb-2 group-hover:text-[var(--color-primary)] transition-colors">{misi.title}</h4>
+                                            <p className="text-[var(--color-text-muted)] text-sm leading-relaxed max-w-sm">{misi.desc}</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                        <div className="flex-1 w-full max-w-lg lg:max-w-none relative">
-                            {/* Abstract visual representation of workflow */}
-                            <div className="aspect-square rounded-[3rem] bg-gradient-to-tr from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 border border-[var(--color-border)] p-8 relative flex items-center justify-center overflow-hidden">
-                                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9InJnYmEoMTU2LCAxNjMsIDE3NSLCAwLjIpIi8+PC9zdmc+')] opacity-50" />
+                    </div>
+                </div>
+            </section>
 
-                                <div className="w-full space-y-4 z-10">
-                                    <div className="glass p-4 rounded-2xl w-3/4 mx-auto flex items-center justify-between border-l-4 border-red-500 transform -rotate-2 hover:rotate-0 transition-transform shadow-lg cursor-default">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center"><FontAwesomeIcon icon={faTimes} /></div>
-                                            <div><div className="text-sm font-bold text-[var(--color-text)]">Terlambat Masuk</div><div className="text-xs text-[var(--color-text-muted)]">Andi - Kelas 10A</div></div>
-                                        </div>
-                                        <span className="font-bold font-mono text-red-500">+10 Poin</span>
-                                    </div>
-                                    <div className="glass p-4 rounded-2xl w-4/5 mx-auto flex items-center justify-between border-l-4 border-green-500 transform hover:-rotate-1 transition-transform shadow-lg cursor-default">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center"><FontAwesomeIcon icon={faStar} /></div>
-                                            <div><div className="text-sm font-bold text-[var(--color-text)]">Juara 1 Lomba</div><div className="text-xs text-[var(--color-text-muted)]">Budi - Kelas 11B</div></div>
-                                        </div>
-                                        <span className="font-bold font-mono text-green-500">-50 Poin</span>
-                                    </div>
-                                </div>
-                            </div>
+
+            {/* Announcements Section */}
+            <section id="pengumuman" className="py-24 relative z-10">
+                <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
+                    <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+                        <div>
+                            <h2 className="text-3xl font-extrabold text-[var(--color-text)] mb-4">Pengumuman <span className="text-[var(--color-primary)]">Terkini</span></h2>
+                            <p className="text-slate-500 font-medium">Informasi terbaru seputar kegiatan dan kebijakan sekolah.</p>
                         </div>
+                        <button className="text-[var(--color-primary)] font-bold flex items-center gap-2 hover:underline">
+                            Lihat Semua Berita <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {[
+                            {
+                                date: "21 Maret 2026",
+                                tag: "Kebijakan",
+                                title: "Pembaruan Standar Poin Pelanggaran Semester Genap",
+                                desc: "Penyesuaian poin untuk meningkatkan kedisiplinan siswa di lingkungan sekolah."
+                            },
+                            {
+                                date: "15 Maret 2026",
+                                tag: "Pengumuman",
+                                title: "Sosialisasi Portal Laporanmu Bagi Wali Murid Baru",
+                                desc: "Pertemuan daring untuk memandu penggunaan sistem pemantauan poin siswa."
+                            },
+                            {
+                                date: "10 Maret 2026",
+                                tag: "Prestasi",
+                                title: "Apresiasi Siswa Berprestasi Bulan Februari",
+                                desc: "Pemberian reward bagi siswa dengan akumulasi poin positif tertinggi."
+                            }
+                        ].map((news, i) => (
+                            <div key={i} className="group bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] p-8 hover:shadow-xl transition-all duration-300">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <span className="px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-bold uppercase tracking-wider">{news.tag}</span>
+                                    <span className="text-[var(--color-text-muted)] text-[11px] font-medium">{news.date}</span>
+                                </div>
+                                <h3 className="text-xl font-bold text-[var(--color-text)] mb-4 leading-tight group-hover:text-[var(--color-primary)] transition-colors">{news.title}</h3>
+                                <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-6">{news.desc}</p>
+                                <button className="text-xs font-bold text-[var(--color-text)] border-b border-[var(--color-border)] pb-1 hover:border-[var(--color-primary)] transition-all">Baca Selengkapnya</button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Workflow / Cara Kerja Section */}
+            <section id="alur" className="py-20 bg-[var(--color-surface)] relative z-10 border-t border-[var(--color-border)]">
+                <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl sm:text-4xl font-black text-[var(--color-text)] mb-4 leading-tight">
+                            Alur Kerja <span className="text-[var(--color-primary)]">Sederhana</span>
+                        </h2>
+                        <p className="text-sm sm:text-base text-[var(--color-text-muted)] max-w-xl mx-auto leading-relaxed">
+                            Membangun ekosistem kedisiplinan sekolah yang modern hanya butuh 3 langkah instan.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+
+                        {[
+                            { step: '01', title: 'Input Master Data', desc: 'Atur poin pelanggaran dan prestasi sesuai buku tatib sekolah Anda.' },
+                            { step: '02', title: 'Catat Perilaku', desc: 'Guru/BK mencatat kejadian lewat dashboard yang cepat dan instan.' },
+                            { step: '03', title: 'Analisis & Pantau', desc: 'Sistem akumulasi poin otomatis. Wali murid bisa pantau via HP.' },
+                        ].map((item, idx) => (
+                            <div key={idx} className="relative z-10 group bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[2.5rem] p-8 hover:border-[var(--color-primary)]/50 transition-all duration-300 shadow-sm flex flex-col items-center text-center">
+                                <div className="w-14 h-14 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-500/30 mb-8 group-hover:scale-110 transition-transform">
+                                    {item.step}
+                                </div>
+                                <h4 className="font-bold text-[var(--color-text)] text-lg mb-3 tracking-tight group-hover:text-[var(--color-primary)] transition-colors">{item.title}</h4>
+                                <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{item.desc}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>
@@ -389,53 +405,41 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer id="kontak" className="bg-[var(--color-surface)] border-t border-[var(--color-border)] py-12 relative z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid md:grid-cols-4 gap-8 mb-12">
-                        <div className="col-span-1 md:col-span-2">
-                            <Link to="/" className="flex items-center gap-2 mb-4">
-                                <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)] flex items-center justify-center">
+            {/* Ultra Mini Footer Bar */}
+            <footer id="kontak" className="bg-[var(--color-surface)] text-[var(--color-text)] py-6 md:py-8 border-t border-[var(--color-border)] relative z-10">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-4">
+                        {/* Brand & Main Links Group */}
+                        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-10">
+                            <Link to="/" className="flex items-center gap-2 group">
+                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
                                     <span className="text-white font-bold text-sm">L</span>
                                 </div>
-                                <span className="font-bold text-xl text-[var(--color-text)]">
-                                    Laporanmu
-                                </span>
+                                <span className="font-heading font-bold text-lg tracking-tight text-[var(--color-text)]">Laporanmu</span>
                             </Link>
-                            <p className="text-sm text-[var(--color-text-muted)] max-w-sm leading-relaxed">
-                                Platform web cerdas untuk mengatur rekam jejak kedisiplinan dan prestasi siswa secara terintegrasi dan transparan.
-                            </p>
+
+                            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
+                                {['Fitur', 'Visi', 'Alur', 'Berita'].map((item, idx) => (
+                                    <a key={idx} href={`#${item.toLowerCase()}`} className="hover:text-[var(--color-primary)] transition-colors">
+                                        {item}
+                                    </a>
+                                ))}
+                                <Link to="/login" className="text-[var(--color-primary)] hover:opacity-80">Akses Portal</Link>
+                            </div>
                         </div>
 
-                        <div>
-                            <h4 className="font-bold text-[var(--color-text)] mb-4 uppercase tracking-wider text-xs">Akses Pegawai</h4>
-                            <ul className="space-y-2 text-sm text-[var(--color-text-muted)]">
-                                <li><Link to="/login" className="hover:text-[var(--color-primary)]">Admin Sekolah</Link></li>
-                                <li><Link to="/login" className="hover:text-[var(--color-primary)]">Guru Bimbingan Konseling</Link></li>
-                                <li><Link to="/login" className="hover:text-[var(--color-primary)]">Wali Kelas</Link></li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="font-bold text-[var(--color-text)] mb-4 uppercase tracking-wider text-xs">Kontak & Info</h4>
-                            <ul className="space-y-2 text-sm text-[var(--color-text-muted)]">
-                                <li>Email: hello@laporanmu.com</li>
-                                <li>WhatsApp: +62 821-xxxx-xxxx</li>
-                                <li>Panduan Penggunaan</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="border-t border-[var(--color-border)] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            © 2026 Laporanmu. Coded with passion.
-                        </p>
-                        <div className="flex gap-4">
-                            <span className="text-sm text-[var(--color-text-muted)]">Privacy Policy</span>
-                            <span className="text-sm text-[var(--color-text-muted)]">Terms of Service</span>
+                        {/* Copyright & Legal Group */}
+                        <div className="flex items-center gap-6 text-[10px] md:text-[11px] text-[var(--color-text-muted)] font-medium">
+                            <span>© 2026 <span className="text-[var(--color-text)] font-semibold">Laporanmu.</span> Built for excellence.</span>
+                            <div className="hidden sm:flex items-center gap-4 uppercase font-bold tracking-widest border-l border-[var(--color-border)] pl-6">
+                                <Link to="/privacy" className="hover:text-[var(--color-text)] transition-colors">Privacy</Link>
+                                <Link to="/terms" className="hover:text-[var(--color-text)] transition-colors">Terms</Link>
+                            </div>
                         </div>
                     </div>
                 </div>
             </footer>
+            <ChatAssistant />
         </div>
     )
 }

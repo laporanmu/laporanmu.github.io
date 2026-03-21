@@ -153,6 +153,46 @@ const InlineEditPoin = ({ value, onSave, onCancel }) => {
     )
 }
 
+const Sparkline = ({ data = [], width = 30, height = 12 }) => {
+    if (!data || data.length < 2) return null
+    
+    // Calculate bounds
+    const max = Math.max(...data, 2)
+    const min = Math.min(...data, -2)
+    const range = max - min || 1
+    
+    // Generate points string
+    const points = data.map((val, i) => {
+        const x = (i / (data.length - 1)) * width
+        const y = height - ((val - min) / range) * height
+        return `${x},${y}`
+    }).join(' ')
+
+    const latest = data[data.length - 1]
+    const color = latest > 0 ? '#10b981' : latest < 0 ? '#ef4444' : '#9ca3af'
+
+    return (
+        <svg width={width} height={height} className="overflow-visible ml-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+            <polyline
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={points}
+                className={latest > 0 ? 'text-emerald-500' : latest < 0 ? 'text-red-500' : 'text-gray-400'}
+            />
+            <circle 
+                cx={width} 
+                cy={height - ((latest - min) / range) * height} 
+                r="1.5" 
+                fill="currentColor"
+                className={latest > 0 ? 'text-emerald-500 animate-pulse' : latest < 0 ? 'text-red-500 animate-pulse' : 'text-gray-400'}
+            />
+        </svg>
+    )
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 const StudentRow = memo(({
     student,
@@ -169,8 +209,8 @@ const StudentRow = memo(({
     onPhotoZoom,
     onToggleSelect,
     onQuickPoint,
-    onInlineUpdate,   // ← prop baru: (studentId, field, value) => Promise
-    onTogglePin,      // ← prop baru: (student) => void
+    onInlineUpdate,
+    onTogglePin,
     formatRelativeDate,
     RiskThreshold,
     isPrivacyMode,
@@ -199,7 +239,6 @@ const StudentRow = memo(({
 
     const isRisk = (student.total_points || 0) <= RiskThreshold
     const p = student.total_points || 0
-    const completeness = calculateCompleteness(student)
     const [showQuickAction, setShowQuickAction] = useState(false)
     const [showQuickViewPopover, setShowQuickViewPopover] = useState(false)
     const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 })
@@ -265,7 +304,6 @@ const StudentRow = memo(({
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => onToggleSelect(student.id)}
-                        className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                     />
                     <button
                         onClick={() => onTogglePin(student)}
@@ -518,6 +556,7 @@ const StudentRow = memo(({
                                 <span className={`text-sm font-black tracking-tight ${p < 0 ? 'text-red-500' : p > 0 ? 'text-emerald-500' : 'text-[var(--color-text)] opacity-40'}`}>
                                     {p > 0 ? '+' : ''}{p}
                                 </span>
+                                <Sparkline data={student.trendHistory} />
 
                                 {/* Inline edit poin — pensil */}
                                 <button
@@ -638,6 +677,7 @@ const StudentMobileCard = memo(({
     student,
     isSelected = false,
     onToggleSelect,
+    hasSelection = false,
     onViewProfile,
     onEdit,
     onConfirmDelete,
@@ -682,7 +722,16 @@ const StudentMobileCard = memo(({
 
     const longPressProps = useLongPress(() => {
         onToggleSelect(student.id)
-    }, { delay: 600, onClick: () => onViewProfile(student) })
+    }, { 
+        delay: 600, 
+        onClick: () => {
+            if (hasSelection) {
+                onToggleSelect(student.id)
+            } else {
+                onViewProfile(student)
+            }
+        } 
+    })
 
     const stopPropagation = (e) => e.stopPropagation();
     const handleActionAreaClick = (e) => {
@@ -704,13 +753,15 @@ const StudentMobileCard = memo(({
 
     return (
         <div
-            className={`group relative p-2 rounded-[2.2rem] border transition-all duration-300 ease-out
+            {...longPressProps}
+            className={`group relative p-2 rounded-[2.2rem] border transition-all duration-300 ease-out select-none
                 ${showQuickAction ? 'z-[100]' : 'z-auto'}
                 ${isSelected
                     ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/[0.03] shadow-lg shadow-[var(--color-primary)]/10 pb-2.5 translate-y-[-2px]'
                     : 'border-[var(--color-border)] bg-[var(--color-surface)] shadow-md shadow-black/[0.02]'}
                 ${student.is_pinned ? 'border-amber-400/40' : ''}
                 ${isPressed ? 'scale-[0.985] shadow-inner brightness-[0.98]' : 'scale-100'}
+                ${hasSelection ? 'cursor-pointer' : ''}
             `}
         >
             {/* Minimalist Bottom Progress Bar (Clipped by card boundary) */}
@@ -734,8 +785,8 @@ const StudentMobileCard = memo(({
             )}
 
             <div className="p-3">
-                {/* IDENTITY AREA - Wrapped in LongPress for Profile View */}
-                <div {...longPressProps} className="flex items-center gap-4">
+                {/* IDENTITY AREA */}
+                <div className="flex items-center gap-4">
                     {/* AVATAR SECTION */}
                     <div className="relative pointer-events-none">
                         <div
@@ -800,6 +851,7 @@ const StudentMobileCard = memo(({
                             ${p < 0 ? 'bg-red-500/10 border-red-500/10 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/10 text-emerald-600' : 'bg-[var(--color-surface-alt)]/80 border-[var(--color-border)]/40 text-[var(--color-text-muted)]'}`}>
                             <div className={`w-1.5 h-1.5 rounded-full ${p < 0 ? 'bg-red-500' : p > 0 ? 'bg-emerald-500' : 'bg-gray-400 opacity-40'}`} />
                             {p > 0 ? '+' : ''}{p} Poin
+                            <Sparkline data={student.trendHistory} />
                         </div>
                     </div>
 
@@ -987,22 +1039,22 @@ export const StudentSkeletonRow = () => (
             <div className="w-5 h-5 bg-[var(--color-surface-alt)] rounded-lg mx-auto" />
         </td>
         <td className="py-4 px-1 w-12 truncate">
-            <div className="w-8 h-8 rounded-full bg-[var(--color-surface-alt)] mx-auto" />
+            <div className="w-9 h-9 rounded-full bg-[var(--color-surface-alt)] mx-auto" />
         </td>
         <td className="py-4 px-1 w-16 text-center">
-            <div className="w-10 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
+            <div className="w-10 h-4 bg-[var(--color-surface-alt)] rounded-md mx-auto" />
         </td>
         <td className="py-4 px-4 min-w-[300px]">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
                 <div className="w-48 h-4 bg-[var(--color-surface-alt)] rounded-md" />
-                <div className="w-32 h-3 bg-[var(--color-surface-alt)]/60 rounded-sm" />
+                <div className="w-32 h-3 bg-[var(--color-surface-alt)]/60 rounded-md" />
             </div>
         </td>
         <td className="py-4 px-4 text-center">
-            <div className="w-8 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
+            <div className="w-8 h-4 bg-[var(--color-surface-alt)] rounded-md mx-auto" />
         </td>
         <td className="py-4 px-4 text-center">
-            <div className="w-12 h-4 bg-[var(--color-surface-alt)] rounded mx-auto" />
+            <div className="w-12 h-4 bg-[var(--color-surface-alt)] rounded-md mx-auto" />
         </td>
         <td className="py-4 px-4 text-center">
             <div className="w-12 h-6 bg-[var(--color-surface-alt)] rounded-lg mx-auto" />
@@ -1010,7 +1062,6 @@ export const StudentSkeletonRow = () => (
         <td className="py-4 px-4">
             <div className="flex gap-2 justify-center">
                 <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
-                <div className="w-px h-8 bg-[var(--color-border)] opacity-30 mx-1" />
                 <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
             </div>
         </td>
@@ -1018,18 +1069,25 @@ export const StudentSkeletonRow = () => (
 )
 
 export const StudentSkeletonCard = () => (
-    <div className="animate-pulse rounded-2xl border border-[var(--color-border)]/50 p-4 space-y-4 bg-[var(--color-surface)] shadow-sm">
-        <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface-alt)]" />
-            <div className="flex-1 space-y-2">
-                <div className="w-3/4 h-4 bg-[var(--color-surface-alt)] rounded-md" />
-                <div className="w-1/2 h-3 bg-[var(--color-surface-alt)]/60 rounded-sm" />
+    <div className="animate-pulse rounded-[2.2rem] border border-[var(--color-border)]/50 p-2 bg-[var(--color-surface)] shadow-md shadow-black/[0.02] flex flex-col gap-1">
+        <div className="p-3">
+            <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-alt)]" />
+                <div className="flex-1 space-y-2.5">
+                    <div className="w-3/4 h-5 bg-[var(--color-surface-alt)] rounded-lg" />
+                    <div className="w-1/2 h-3 bg-[var(--color-surface-alt)]/60 rounded-md" />
+                </div>
             </div>
-            <div className="w-12 h-6 bg-[var(--color-surface-alt)] rounded-lg" />
-        </div>
-        <div className="flex gap-2">
-            <div className="flex-1 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
-            <div className="w-24 h-8 bg-[var(--color-surface-alt)] rounded-xl" />
+            
+            <div className="mt-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1">
+                    <div className="w-24 h-8 bg-[var(--color-surface-alt)]/80 rounded-2xl border border-[var(--color-border)]/40" />
+                    <div className="w-16 h-8 bg-[var(--color-surface-alt)]/80 rounded-2xl border border-[var(--color-border)]/40" />
+                </div>
+                <div className="w-8 h-8 bg-[var(--color-surface-alt)]/80 rounded-xl border border-[var(--color-border)]/40" />
+            </div>
+            
+            <div className="mt-4 h-11 bg-[var(--color-surface-alt)] rounded-[2.2rem] border border-[var(--color-border)] shadow-sm" />
         </div>
     </div>
 )
