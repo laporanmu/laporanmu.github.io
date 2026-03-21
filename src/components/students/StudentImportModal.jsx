@@ -81,23 +81,23 @@ export default function StudentImportModal(props) {
                 </div>
             )}
 
-            <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="flex items-center justify-center gap-3 mb-5">
                 {[
                     { step: 1, label: 'Upload', icon: faUpload, desc: 'Pilih File' },
                     { step: 2, label: 'Mapping', icon: faArrowRightArrowLeft, desc: 'Atur Kolom' },
                     { step: 3, label: 'Review', icon: faTableList, desc: 'Validasi' },
                 ].map(s => (
                     <React.Fragment key={s.step}>
-                        <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${importStep >= s.step ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]'}`}>
-                                {importStep > s.step ? <FontAwesomeIcon icon={faCheck} /> : s.step}
+                        <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${importStep >= s.step ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]'}`}>
+                                {importStep > s.step ? <FontAwesomeIcon icon={faCheck} className="text-[9px]" /> : s.step}
                             </div>
                             <div className="flex flex-col">
-                                <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${importStep >= s.step ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-50'}`}>{s.label}</span>
-                                <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-40 uppercase tracking-tighter mt-0.5">{s.desc}</span>
+                                <span className={`text-[9px] font-black uppercase tracking-widest leading-none ${importStep >= s.step ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-50'}`}>{s.label}</span>
+                                <span className="text-[7px] font-bold text-[var(--color-text-muted)] opacity-40 uppercase tracking-tighter mt-0.5">{s.desc}</span>
                             </div>
                         </div>
-                        {s.step < 3 && <div className={`w-8 h-0.5 rounded-full transition-all ${importStep > s.step ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)] opacity-30'}`} />}
+                        {s.step < 3 && <div className={`w-6 h-0.5 rounded-full transition-all ${importStep > s.step ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)] opacity-30'}`} />}
                     </React.Fragment>
                 ))}
             </div>
@@ -114,35 +114,35 @@ export default function StudentImportModal(props) {
                             if (file) await processImportFile(file)
                         }}
                         onClick={() => importFileInputRef.current?.click()}
-                        className={`w-full h-16 rounded-xl border-2 border-dashed cursor-pointer flex items-center justify-center gap-3 transition-all
+                        className={`w-full h-14 rounded-xl border-2 border-dashed cursor-pointer flex items-center justify-center gap-3 transition-all
                         ${importDragOver
                                 ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 scale-[1.01]'
                                 : 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/4 hover:border-[var(--color-primary)]/60 hover:bg-[var(--color-primary)]/8'}`}
                     >
-                        <FontAwesomeIcon icon={faUpload} className={`text-base transition-all ${importDragOver ? 'text-[var(--color-primary)] scale-110' : 'text-[var(--color-primary)]/60'}`} />
+                        <FontAwesomeIcon icon={faUpload} className={`text-sm transition-all ${importDragOver ? 'text-[var(--color-primary)] scale-110' : 'text-[var(--color-primary)]/60'}`} />
                         <div className="text-left">
-                            <p className="text-[10px] font-black text-[var(--color-primary)] uppercase tracking-widest leading-none">
+                            <p className="text-[9px] font-black text-[var(--color-primary)] uppercase tracking-widest leading-none">
                                 {importDragOver ? 'Lepaskan file di sini' : 'Drag & Drop atau Klik untuk Pilih File'}
                             </p>
-                            <p className="text-[8px] text-[var(--color-text-muted)] font-bold mt-0.5">Mendukung .csv dan .xlsx</p>
+                            <p className="text-[8px] text-[var(--color-text-muted)] font-bold mt-0.5 opacity-60">Mendukung .csv dan .xlsx</p>
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                    <div className="flex flex-col gap-2 p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
                         <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5 opacity-80">
                                 <FontAwesomeIcon icon={faTags} className="text-emerald-500/70" /> Daftar Kelas Valid
                             </span>
                             <button
                                 onClick={handleDownloadTemplate}
-                                className="shrink-0 h-7 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:bg-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
+                                className="shrink-0 h-6 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:bg-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
                             >
-                                <FontAwesomeIcon icon={faDownload} className="text-[8px]" /> Template
+                                <FontAwesomeIcon icon={faDownload} className="text-[7px]" /> Template
                             </button>
                         </div>
-                        <div className="flex flex-wrap gap-1.5 max-h-[72px] overflow-y-auto pr-1 pb-2 custom-scrollbar">
+                        <div className="flex flex-wrap gap-1 max-h-[58px] overflow-y-auto pr-1 pb-1 custom-scrollbar">
                             {classesList.length > 0 ? classesList.map(c => (
-                                <span key={c.id} className="px-2 py-1 rounded-md bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] text-[9px] font-bold text-[var(--color-text)] shrink-0 hover:border-emerald-500/30 transition-colors">
+                                <span key={c.id} className="px-1.5 py-0.5 rounded bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] text-[8px] font-bold text-[var(--color-text)] shrink-0 hover:border-emerald-500/30 transition-colors">
                                     {c.name}
                                 </span>
                             )) : (
@@ -151,33 +151,57 @@ export default function StudentImportModal(props) {
                         </div>
                     </div>
 
-                    <div className="rounded-xl border border-[var(--color-border)] overflow-hidden">
-                        <div className="px-3 py-1.5 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kolom yang Dikenali</span>
+                    <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)] shadow-sm">
+                        <div className="px-4 py-2.5 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kolom yang Dikenali</span>
+                            <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-50 px-2 py-0.5 rounded-full bg-[var(--color-border)]/30">Auto-Matching Active</span>
                         </div>
-                        <div className="grid grid-cols-2 divide-x divide-[var(--color-border)]">
-                            <div className="divide-y divide-[var(--color-border)]">
+                        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[var(--color-border)]">
+                            <div className="flex flex-col">
                                 {[
-                                    { col: 'name / nama', req: true, note: 'Nama siswa' },
-                                    { col: 'class_name / kelas', req: true, note: 'Harus cocok dengan kelas di atas' },
-                                    { col: 'gender / jk', req: false, note: 'L / P — default L' },
+                                    { label: 'Nama Lengkap', keys: 'name, nama', req: true, note: 'Diidentifikasi sebagai Nama Siswa' },
+                                    { label: 'Kelas / Rombel', keys: 'class_name, kelas', req: true, note: 'Harus sesuai daftar di atas' },
+                                    { label: 'Jenis Kelamin', keys: 'gender, jk', req: false, note: 'L (Laki) / P (Perempuan)' },
                                 ].map((r, i) => (
-                                    <div key={i} className="flex items-center gap-2 px-3 py-1.5">
-                                        <code className="text-[8px] font-black text-[var(--color-primary)] shrink-0">{r.col}</code>
-                                        {r.req && <span className="text-[7px] font-black text-red-500 shrink-0">*</span>}
-                                        <span className="text-[8px] text-[var(--color-text-muted)] font-medium truncate">{r.note}</span>
+                                    <div key={i} className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-[var(--color-surface-alt)]/30 transition-colors border-b border-[var(--color-border)] last:border-b-0">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                <span className="text-[9px] font-black text-[var(--color-text)]">{r.label}</span>
+                                                {r.req && <span className="text-red-500 text-[9px] font-black">*</span>}
+                                            </div>
+                                            <p className="text-[7.5px] text-[var(--color-text-muted)] font-medium truncate opacity-70">{r.note}</p>
+                                        </div>
+                                        <div className="shrink-0 flex items-center gap-1">
+                                            {r.keys.split(', ').map(k => (
+                                                <span key={k} className="px-1.5 py-0.5 rounded bg-[var(--color-primary)]/5 text-[var(--color-primary)] text-[7.5px] font-black border border-[var(--color-primary)]/10">
+                                                    {k}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
-                            <div className="divide-y divide-[var(--color-border)]">
+                            <div className="flex flex-col">
                                 {[
-                                    { col: 'phone / no_hp', req: false, note: '08xx atau +62xx' },
-                                    { col: 'nisn', req: false, note: 'Untuk deteksi duplikat' },
-                                    { col: 'guardian_name', req: false, note: 'Nama wali' },
+                                    { label: 'No. WhatsApp', keys: 'phone, no_hp', req: false, note: '08xx atau +62xxx' },
+                                    { label: 'NISN', keys: 'nisn', req: false, note: 'Opsional, cegah duplikasi' },
+                                    { label: 'Nama Wali', keys: 'guardian_name', req: false, note: 'Nama orang tua / wali' },
                                 ].map((r, i) => (
-                                    <div key={i} className="flex items-center gap-2 px-3 py-1.5">
-                                        <code className="text-[8px] font-black text-[var(--color-primary)] shrink-0">{r.col}</code>
-                                        <span className="text-[8px] text-[var(--color-text-muted)] font-medium truncate">{r.note}</span>
+                                    <div key={i} className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-[var(--color-surface-alt)]/30 transition-colors border-b border-[var(--color-border)] last:border-b-0">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                <span className="text-[9px] font-black text-[var(--color-text)]">{r.label}</span>
+                                                {r.req && <span className="text-red-500 text-[9px] font-black">*</span>}
+                                            </div>
+                                            <p className="text-[7.5px] text-[var(--color-text-muted)] font-medium truncate opacity-70">{r.note}</p>
+                                        </div>
+                                        <div className="shrink-0 flex items-center gap-1">
+                                            {r.keys.split(', ').map(k => (
+                                                <span key={k} className="px-1.5 py-0.5 rounded bg-[var(--color-primary)]/5 text-[var(--color-primary)] text-[7.5px] font-black border border-[var(--color-primary)]/10">
+                                                    {k}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -262,13 +286,13 @@ export default function StudentImportModal(props) {
                                         </thead>
                                         <tbody className="divide-y divide-[var(--color-border)]">
                                             {importPreview.slice(0, 300).map((r, i) => {
-                                                const isError = r._errors?.length > 0
-                                                const isDupe = r._dupe
-                                                const isWarn = r._warnings?.length > 0
+                                                const isError = r._hasError
+                                                const isDupe = r._isDupe
+                                                const isWarn = r._hasWarn
                                                 return (
                                                     <tr key={i} className={`hover:bg-[var(--color-surface-alt)]/40 transition-colors ${isError ? 'bg-red-500/3' : isDupe ? 'bg-violet-500/3' : ''}`}>
                                                         <td className="px-3 py-1.5 font-bold text-[var(--color-text)]">{r.name}</td>
-                                                        <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{r.class_name}</td>
+                                                        <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{r._className}</td>
                                                         <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{r.gender}</td>
                                                         <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{r.phone || '-'}</td>
                                                         <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{r.nisn || '-'}</td>
