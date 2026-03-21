@@ -33,56 +33,64 @@ export default function Pagination({
     return (
         <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 rounded-b-2xl">
             {/* ── MOBILE COMPACT PAGINATION (< md) ── */}
-            <div className="flex md:hidden flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{totalRows} <span className="opacity-60">{label}</span></span>
-                    <div className="relative">
+            <div className="flex md:hidden flex-col gap-3.5">
+                <div className="flex items-center justify-between px-1">
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-0.5">Total Data</span>
+                        <span className="text-[12px] font-extrabold text-[var(--color-text)] tracking-tight">{totalRows} <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider ml-0.5">{label}</span></span>
+                    </div>
+                    <div className="relative bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] shadow-sm">
                         <select
                             value={pageSize}
                             onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                            className="h-10 pl-4 pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all appearance-none cursor-pointer hover:bg-[var(--color-surface-alt)] shadow-sm"
+                            className="h-9 pl-3 pr-7 bg-transparent text-[10px] font-black outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-[var(--color-primary)]/20 rounded-xl text-[var(--color-text)]"
                         >
                             {[10, 25, 50, 100].map(v => <option key={v} value={v}>{v} / hal</option>)}
                         </select>
-                        <FontAwesomeIcon icon={faChevronDown} className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-[var(--color-text-muted)] pointer-events-none" />
+                        <FontAwesomeIcon icon={faChevronDown} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[8px] text-[var(--color-primary)] pointer-events-none" />
                     </div>
                 </div>
-                <div className="flex items-center justify-between gap-1 w-full">
-                    <div className="flex items-center gap-1.5">
+
+                <div className="flex items-center justify-between w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[1.25rem] shadow-sm p-1.5">
+                    <div className="flex items-center gap-1">
                         <button
                             disabled={page <= 1}
                             onClick={() => setPage(1)}
-                            className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 transition-all disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:text-[var(--color-text-muted)] disabled:active:scale-100 shadow-sm"
+                            className="w-9 h-9 flex items-center justify-center rounded-[0.8rem] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-primary)] transition-all disabled:opacity-20 disabled:hover:bg-transparent disabled:active:scale-100 active:scale-90"
                         >
-                            <FontAwesomeIcon icon={faAnglesLeft} className="text-[11px]" />
+                            <FontAwesomeIcon icon={faAnglesLeft} className="text-[10px]" />
                         </button>
                         <button
                             disabled={page <= 1}
                             onClick={() => setPage(p => Math.max(1, p - 1))}
-                            className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 transition-all disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:text-[var(--color-text-muted)] disabled:active:scale-100 shadow-sm"
+                            className="w-9 h-9 flex items-center justify-center rounded-[0.8rem] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-primary)] transition-all disabled:opacity-20 disabled:hover:bg-transparent disabled:active:scale-100 active:scale-90"
                         >
-                            <FontAwesomeIcon icon={faChevronLeft} className="text-[11px]" />
+                            <FontAwesomeIcon icon={faChevronLeft} className="text-[12px]" />
                         </button>
                     </div>
 
-                    <span className="text-[12px] font-black text-[var(--color-text)] flex-1 text-center truncate px-2">
-                        {page} <span className="opacity-40 text-[10px] mx-0.5">/</span> {totalPages}
-                    </span>
+                    <div className="flex flex-col items-center justify-center px-2">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-0.5">Halaman</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-[14px] font-black text-[var(--color-primary)] leading-none">{page}</span>
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-50 leading-none">/ {totalPages}</span>
+                        </div>
+                    </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                         <button
                             disabled={page >= totalPages}
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 transition-all disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:text-[var(--color-text-muted)] disabled:active:scale-100 shadow-sm"
+                            className="w-9 h-9 flex items-center justify-center rounded-[0.8rem] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-primary)] transition-all disabled:opacity-20 disabled:hover:bg-transparent disabled:active:scale-100 active:scale-90"
                         >
-                            <FontAwesomeIcon icon={faChevronRight} className="text-[11px]" />
+                            <FontAwesomeIcon icon={faChevronRight} className="text-[12px]" />
                         </button>
                         <button
                             disabled={page >= totalPages}
                             onClick={() => setPage(totalPages)}
-                            className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] active:scale-95 transition-all disabled:opacity-30 disabled:hover:border-[var(--color-border)] disabled:hover:text-[var(--color-text-muted)] disabled:active:scale-100 shadow-sm"
+                            className="w-9 h-9 flex items-center justify-center rounded-[0.8rem] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-primary)] transition-all disabled:opacity-20 disabled:hover:bg-transparent disabled:active:scale-100 active:scale-90"
                         >
-                            <FontAwesomeIcon icon={faAnglesRight} className="text-[11px]" />
+                            <FontAwesomeIcon icon={faAnglesRight} className="text-[10px]" />
                         </button>
                     </div>
                 </div>

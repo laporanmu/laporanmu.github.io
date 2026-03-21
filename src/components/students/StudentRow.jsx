@@ -803,17 +803,24 @@ const StudentMobileCard = memo(({
                         </div>
                     </div>
 
-                    {/* WA Status Indicator */}
+                    {/* WA Shortcut Button */}
                     <div className="flex items-center shrink-0">
-                        <div
-                            title={student.phone ? `WA: ${student.phone}` : 'Belum ada nomor WA'}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                if (!student.phone) return
+                                const phone = student.phone.replace(/[^0-9]/g, '').replace(/^0/, '62')
+                                window.open(`https://wa.me/${phone}`, '_blank')
+                            }}
+                            disabled={!student.phone}
+                            title={student.phone ? `Hubungi WA: ${student.phone}` : 'Belum ada nomor WA'}
                             className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all
                                 ${student.phone
-                                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
-                                    : 'border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/80 text-[var(--color-text-muted)] opacity-40'}`}
+                                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-500/20 active:scale-90'
+                                    : 'border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/80 text-[var(--color-text-muted)] opacity-40 cursor-not-allowed'}`}
                         >
                             <FontAwesomeIcon icon={faWhatsapp} className="text-[12px]" />
-                        </div>
+                        </button>
                     </div>
                 </div>
 
@@ -897,14 +904,14 @@ const StudentMobileCard = memo(({
                                 <div className="fixed inset-0 z-[9990] bg-black/10 backdrop-blur-[1px]" onClick={(e) => { e.stopPropagation(); setShowQuickAction(false) }} />
                                 <div
                                     onClick={e => e.stopPropagation()}
-                                    className="fixed z-[9991] w-52 bg-gray-900 border border-white/20 rounded-[1.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 p-2.5 text-white"
+                                    className="fixed z-[9991] w-52 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[1.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 p-2.5 text-[var(--color-text)]"
                                     style={{
                                         top: boltRect.top - 8,
                                         left: Math.min(window.innerWidth - 215, Math.max(10, boltRect.right - 208)),
                                         transform: 'translateY(-100%)'
                                     }}
                                 >
-                                    <div className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 p-2 mb-1.5 border-b border-white/10 text-center flex items-center justify-center gap-2">
+                                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] p-2 mb-1.5 border-b border-[var(--color-border)] text-center flex items-center justify-center gap-2">
                                         <FontAwesomeIcon icon={faBolt} className="text-[8px]" />
                                         Input Poin Cepat
                                     </div>
@@ -913,7 +920,7 @@ const StudentMobileCard = memo(({
                                             <button
                                                 key={idx}
                                                 onClick={() => { handleQuickPointInternal(student, act.amount, act.label); setShowQuickAction(false) }}
-                                                className="flex flex-col items-center justify-center gap-1 p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 active:scale-95"
+                                                className="flex flex-col items-center justify-center gap-1 p-2.5 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] transition-all border border-[var(--color-border)] active:scale-95"
                                             >
                                                 <FontAwesomeIcon icon={act.icon} className={`text-[10px] ${act.color}`} />
                                                 <span className="text-[8px] font-black uppercase tracking-widest leading-none mt-0.5">{act.label.split(' ')[0]}</span>

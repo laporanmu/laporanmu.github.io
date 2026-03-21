@@ -48,6 +48,11 @@ export default function ClassesPage() {
     // Stats
     const [stats, setStats] = useState({ total: 0, boarding: 0, reguler: 0, totalStudents: 0 })
 
+    // --- Stats Carousel Dot Indicator ---
+    const statsScrollRef = useRef(null)
+    const [activeStatIdx, setActiveStatIdx] = useState(0)
+    const STAT_CARD_COUNT = 4
+
     // UI states
     const [searchQuery, setSearchQuery] = useState('')
     const debouncedSearch = useDebounce(searchQuery, 350)
@@ -477,21 +482,53 @@ export default function ClassesPage() {
 
 
                 {/* Stats Overview */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                    {[
-                        { icon: faSchool, label: 'Total Kelas', value: stats.total, top: 'border-t-[var(--color-primary)]', ibg: 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]', hover: 'hover:bg-[var(--color-primary)]/5' },
-                        { icon: faBed, label: 'Boarding', value: stats.boarding, top: 'border-t-amber-500', ibg: 'bg-amber-500/10 text-amber-500', hover: 'hover:bg-amber-500/5' },
-                        { icon: faBuilding, label: 'Reguler', value: stats.reguler, top: 'border-t-emerald-500', ibg: 'bg-emerald-500/10 text-emerald-500', hover: 'hover:bg-emerald-500/5' },
-                        { icon: faUsers, label: 'Total Siswa', value: stats.totalStudents, top: 'border-t-pink-500', ibg: 'bg-pink-500/10 text-pink-500', hover: 'hover:bg-pink-500/5' },
-                    ].map((s, i) => (
-                        <div key={i} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.top} flex items-center gap-3 group ${s.hover} transition-all`}>
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform shrink-0 ${s.ibg}`}><FontAwesomeIcon icon={s.icon} /></div>
-                            <div>
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">{s.label}</p>
-                                <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{s.value}</h3>
+                <div className="relative mb-6 -mx-3 sm:mx-0 group/scroll">
+                    <div
+                        ref={statsScrollRef}
+                        onScroll={() => {
+                            const el = statsScrollRef.current
+                            if (!el) return
+                            const cardWidth = el.scrollWidth / STAT_CARD_COUNT
+                            const idx = Math.round(el.scrollLeft / cardWidth)
+                            setActiveStatIdx(Math.min(idx, STAT_CARD_COUNT - 1))
+                        }}
+                        className="flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0 lg:snap-none"
+                    >
+                        {[
+                            { icon: faSchool, label: 'Total Kelas', value: stats.total, top: 'border-t-[var(--color-primary)]', ibg: 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]', hover: 'hover:bg-[var(--color-primary)]/5' },
+                            { icon: faBed, label: 'Boarding', value: stats.boarding, top: 'border-t-amber-500', ibg: 'bg-amber-500/10 text-amber-500', hover: 'hover:bg-amber-500/5' },
+                            { icon: faBuilding, label: 'Reguler', value: stats.reguler, top: 'border-t-emerald-500', ibg: 'bg-emerald-500/10 text-emerald-500', hover: 'hover:bg-emerald-500/5' },
+                            { icon: faUsers, label: 'Total Siswa', value: stats.totalStudents, top: 'border-t-pink-500', ibg: 'bg-pink-500/10 text-pink-500', hover: 'hover:bg-pink-500/5' },
+                        ].map((s, i) => (
+                            <div key={i} className={`w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] ${s.top} flex items-center gap-3 group ${s.hover} transition-all`}>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform shrink-0 ${s.ibg}`}><FontAwesomeIcon icon={s.icon} /></div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">{s.label}</p>
+                                    <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{s.value}</h3>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+
+                    {/* Dot Indicators - Mobile Only */}
+                    <div className="flex justify-center gap-1.5 mt-2 sm:hidden">
+                        {Array.from({ length: STAT_CARD_COUNT }).map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => {
+                                    const el = statsScrollRef.current
+                                    if (!el) return
+                                    const cardWidth = el.scrollWidth / STAT_CARD_COUNT
+                                    el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
+                                }}
+                                className={`rounded-full transition-all duration-300 ${
+                                    activeStatIdx === i
+                                        ? 'w-5 h-1.5 bg-[var(--color-primary)]'
+                                        : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
+                                }`}
+                            />
+                        ))}
+                    </div>
                 </div>
 
                 {/* Insights Row — Repositioned below stats */}

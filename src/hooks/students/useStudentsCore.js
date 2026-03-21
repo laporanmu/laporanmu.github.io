@@ -297,7 +297,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
 
             if (debouncedSearch) {
                 const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
-                q = q.or(`name.ilike.%${s}%,registration_code.ilike.%${s}%,nisn.ilike.%${s}%`)
+                q = q.or(`name.ilike.%${s}%,registration_code.ilike.%${s}%,nisn.ilike.%${s}%,phone.ilike.%${s}%`)
             }
 
             if (filterPointMode === 'risk') q = q.lt('total_points', RiskThreshold)
@@ -971,6 +971,7 @@ Laporanmu System`
         handleInlineSubmit, handleViewQR, handleViewPrint, handleBulkWA, buildWAMessage, openWAForStudent, waTemplate,
         generateStudentPDF, handlePrintSingle, handlePrintThermal, handleSavePNG, handleBulkPrint,
         handleBulkPhotoMatch, handleBulkPhotoUpload, handleClassBreakdown, handleBatchResetPoints,
+        bulkPhotoMatches, uploadingBulkPhotos,
         // State Helpers
         setNewTagInput, newTagInput, tagToEdit, setTagToEdit, tagStats, duplicateWarning,
         checkingDuplicate, gSheetsUrl, setGSheetsUrl, fetchingGSheets, setFetchingGSheets,

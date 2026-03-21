@@ -117,17 +117,17 @@ const StudentFormModal = memo(function StudentFormModal({
             <form
                 id="student-form-modal"
                 onSubmit={handleSubmit}
-                className="flex flex-col max-h-[75vh]"
+                className="flex flex-col h-full max-h-[85vh] sm:max-h-[600px] overflow-hidden relative"
             >
                 {/* Sub header */}
-                <div className="mb-3">
-                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold opacity-70">
+                <div className="shrink-0 mb-3">
+                    <p className="text-[10px] sm:text-[11px] text-[var(--color-text-muted)] font-bold opacity-70 leading-relaxed px-0.5">
                         {selectedStudent ? 'Perbarui data siswa dengan form yang tetap ringan.' : 'Form singkat untuk registrasi siswa baru.'}
                     </p>
                 </div>
 
                 {/* Scrollable content */}
-                <div className="flex-1 overflow-y-auto pr-1 space-y-5">
+                <div className="flex-1 overflow-y-auto min-h-0 pr-1 -mr-1 custom-scrollbar pb-20 space-y-5">
                     {/* Top Section: Photo + Essential Info - Responsive */}
                     <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                         {/* Interactive Photo Upload - Smaller */}
@@ -410,32 +410,34 @@ const StudentFormModal = memo(function StudentFormModal({
                     {/* Danger notes spot if needed */}
                 </div>
 
-                {/* Footer */}
-                <div className="pt-4 mt-4 border-t border-[var(--color-border)] flex items-center justify-between gap-3">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)] transition-all"
-                    >
-                        Batal
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={submitting || !form.name.trim() || !form.class_id}
-                        className="h-10 px-8 rounded-xl bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30 hover:brightness-110 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
-                    >
-                        {submitting ? (
-                            <>
-                                <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
-                                Menyimpan...
-                            </>
-                        ) : (
-                            <>
-                                <FontAwesomeIcon icon={selectedStudent ? faCheckCircle : faPlus} className="opacity-70" />
-                                {selectedStudent ? 'Simpan' : 'Daftarkan'}
-                            </>
-                        )}
-                    </button>
+                {/* Footer Actions (Sticky Overlay) */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[var(--color-surface)] via-[var(--color-surface)] to-transparent pointer-events-none z-50">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-4 pointer-events-auto">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="h-9 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submitting || !form.name.trim() || !form.class_id}
+                            className="h-9 px-6 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-primary)]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {submitting ? (
+                                <>
+                                    <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                                    Menyimpan...
+                                </>
+                            ) : (
+                                <>
+                                    <FontAwesomeIcon icon={selectedStudent ? faCheckCircle : faPlus} className="opacity-70" />
+                                    {selectedStudent ? 'Simpan' : 'Daftarkan'}
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </form>
         </Modal>
