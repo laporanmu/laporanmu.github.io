@@ -57,17 +57,17 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', v
         <div 
             className={`fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm transition-all duration-300
                 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}
-                ${isBottomSheet ? 'flex items-end md:items-center justify-center' : 'flex items-start justify-center overflow-y-auto p-4 md:p-8'}
+                ${isBottomSheet ? 'flex items-end md:items-start justify-center md:overflow-y-auto md:p-8' : 'flex items-start justify-center overflow-y-auto p-4 md:p-8'}
             `} 
             onClick={onClose} 
             role="dialog" 
             aria-modal="true"
         >
             <div
-                className={`bg-[var(--color-surface)] shadow-2xl w-full relative transition-all duration-500 transform
+                className={`bg-[var(--color-surface)] shadow-2xl w-full relative transition-all duration-500 transform overflow-hidden
                     ${sizeClasses[size]}
                     ${isBottomSheet 
-                        ? 'rounded-t-[2.5rem] md:rounded-2xl h-[90vh] md:h-auto md:my-auto translate-y-0 animate-in slide-in-from-bottom-full md:slide-in-from-top-4 flex flex-col' 
+                        ? 'rounded-t-[2.5rem] md:rounded-2xl h-[90vh] md:h-auto md:max-h-[calc(100vh-4rem)] md:my-auto translate-y-0 animate-in slide-in-from-bottom-full md:slide-in-from-top-4 flex flex-col' 
                         : 'rounded-2xl p-6 my-auto translate-y-0 animate-in zoom-in-95'
                     }
                 `}

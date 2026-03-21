@@ -39,7 +39,7 @@ export default function ViolationsPage() {
 
     // Stats
     const [stats, setStats] = useState({ total: 0, violations: 0, achievements: 0, avgPoints: 0 })
-    
+
     // --- Stats Carousel Dot Indicator ---
     const statsScrollRef = useRef(null)
     const [activeStatIdx, setActiveStatIdx] = useState(0)
@@ -455,11 +455,10 @@ export default function ViolationsPage() {
                                     const cardWidth = el.scrollWidth / STAT_CARD_COUNT
                                     el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
                                 }}
-                                className={`rounded-full transition-all duration-300 ${
-                                    activeStatIdx === i
+                                className={`rounded-full transition-all duration-300 ${activeStatIdx === i
                                         ? 'w-5 h-1.5 bg-[var(--color-primary)]'
                                         : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
-                                }`}
+                                    }`}
                             />
                         ))}
                     </div>

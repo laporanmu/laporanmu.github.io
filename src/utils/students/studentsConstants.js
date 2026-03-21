@@ -4,6 +4,7 @@ export const SortOptions = [
     { value: 'class_asc', label: 'Kelas A–Z' },
     { value: 'points_desc', label: 'Poin tertinggi' },
     { value: 'points_asc', label: 'Poin terendah' },
+    { value: 'updated_desc', label: 'Terakhir diubah' },
 ]
 
 export const RiskThreshold = -30

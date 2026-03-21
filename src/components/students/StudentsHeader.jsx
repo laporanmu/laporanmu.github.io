@@ -80,7 +80,7 @@ const StudentsHeader = memo(function StudentsHeader({
                                 </div>
                                 <div className="text-left">
                                     <p className="text-[11px] font-black leading-tight">Import CSV / Excel</p>
-                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Unggah data murid masal dari file Excel/CSV</p>
                                 </div>
                             </button>
                             <button onClick={() => { setIsHeaderMenuOpen(false); setIsGSheetsModalOpen(true) }}
@@ -90,7 +90,7 @@ const StudentsHeader = memo(function StudentsHeader({
                                 </div>
                                 <div className="text-left">
                                     <p className="text-[11px] font-black leading-tight">Import GSheets</p>
-                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">online</p>
+                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Sinkronisasi data otomatis via Google Sheets</p>
                                 </div>
                             </button>
                             <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
@@ -100,7 +100,7 @@ const StudentsHeader = memo(function StudentsHeader({
                                 </div>
                                 <div className="text-left">
                                     <p className="text-[11px] font-black leading-tight">Export Data</p>
-                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Cadangkan seluruh database ke format Excel</p>
                                 </div>
                             </button>
                             <button onClick={() => { setIsHeaderMenuOpen(false); setIsBulkPhotoModalOpen(true) }}
@@ -110,7 +110,7 @@ const StudentsHeader = memo(function StudentsHeader({
                                 </div>
                                 <div className="text-left">
                                     <p className="text-[11px] font-black leading-tight">Bulk Foto</p>
-                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">png, jpg</p>
+                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Update foto siswa secara masal via NISN</p>
                                 </div>
                             </button>
 
@@ -135,7 +135,7 @@ const StudentsHeader = memo(function StudentsHeader({
                                 </div>
                                 <div className="text-left">
                                     <p className="text-[11px] font-black leading-tight">Arsip Siswa</p>
-                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">arsip</p>
+                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data siswa tidak aktif</p>
                                 </div>
                             </button>
                             <button onClick={() => { setIsHeaderMenuOpen(false); setResetPointsClassId(''); setIsResetPointsModalOpen(true) }}
@@ -145,7 +145,7 @@ const StudentsHeader = memo(function StudentsHeader({
                                 </div>
                                 <div className="text-left">
                                     <p className="text-[11px] font-black leading-tight">Reset Poin</p>
-                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">poin</p>
+                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Bersihkan semua poin untuk semester baru</p>
                                 </div>
                             </button>
                         </div>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { useState, useRef, useEffect, useCallback, memo, useMemo, useDeferredValue, startTransition } from 'react'
+import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
@@ -94,7 +94,12 @@ import { useStudentsCore } from '../../hooks/students/useStudentsCore'
 //   <nav className="fixed bottom-0 z-[80] ...">
 // Ini mencegah backdrop modal mencover bottom nav sehingga tap nav tetap berfungsi.
 
+import StudentArchiveModal from '../../components/students/StudentArchiveModal'
+import StudentBulkPhotoModal from '../../components/students/StudentBulkPhotoModal'
+import StudentGSheetsModal from '../../components/students/StudentGSheetsModal'
+import RaportBulananModal from '../../components/students/RaportBulananModal'
 import StudentFormModal from '../../components/students/StudentFormModal'
+import StudentInlineAddRow from '../../components/students/StudentInlineAddRow'
 import { StudentRow, StudentMobileCard, StudentSkeletonRow, StudentSkeletonCard } from '../../components/students/StudentRow'
 
 const LazyQRCodeCanvas = React.lazy(() =>
@@ -121,6 +126,41 @@ import Pagination from '../../components/ui/Pagination'
 
 
 const MOBILE_BOTTOM_NAV_PX = 5
+
+// ── Isolated Search Input ────────────────────────────────────────────────────
+// State ketikan HARUS di komponen terpisah supaya keystroke tidak
+// re-render seluruh StudentsPage (3000+ baris)
+const DebouncedSearchInput = memo(({ searchQuery, onSearch, inputRef }) => {
+    const [value, setValue] = useState(searchQuery)
+
+    // Debounce: propagate ke parent setelah 350ms berhenti mengetik
+    useEffect(() => {
+        const t = setTimeout(() => onSearch(value), 350)
+        return () => clearTimeout(t)
+    }, [value])
+
+    // Sync saat di-clear dari luar (resetAllFilters, klik chip ×)
+    useEffect(() => {
+        if (searchQuery === '' && value !== '') setValue('')
+    }, [searchQuery])
+
+    return (
+        <div className="flex-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
+                <FontAwesomeIcon icon={faSearch} />
+            </div>
+            <input
+                ref={inputRef}
+                type="text"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="Cari nama, NISN, no HP..."
+                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
+            />
+        </div>
+    )
+})
+DebouncedSearchInput.displayName = 'DebouncedSearchInput'
 
 // Singleton portal manager to prevent 'removeChild' errors in concurrent mode or Android/Chrome Translate
 const _portalContainers = {}
@@ -169,7 +209,7 @@ export default function StudentsPage() {
         handleSubmit, handleAdd, handleEdit, confirmDelete, executeDelete, closeModal,
         toggleSelectAll, toggleSelectStudent, handleBulkPromote, handleBulkDelete,
         handleBulkPointUpdate, handleBulkTagApply,
-        fetchArchivedStudents, handleRestoreStudent, handlePermanentDelete,
+        fetchArchivedStudents, handleRestoreStudent, handlePermanentDelete, setArchivedStudents,
         fetchUsedTags, handleToggleTag, handleGlobalDeleteTag, handleGlobalRenameTag,
         fetchBehaviorHistory, fetchRaportHistory, handleViewProfile,
         handleResetPin, checkDuplicate, fetchAuditLog, fetchClassHistory, handleViewClassHistory,
@@ -190,7 +230,7 @@ export default function StudentsPage() {
         resettingPin, uploadingPhoto, broadcastTemplate, setBroadcastTemplate, customWaMsg, setCustomWaMsg, broadcastIndex, setBroadcastIndex,
         formDataRef, importFileInputRef, photoInputRef, searchInputRef, headerMenuRef, shortcutRef, cardCaptureRef,
         selectedStudents, selectedStudentsWithPhone, selectedIdSet, generateCode, handleAddCustomTag,
-        bulkPhotoMatches, uploadingBulkPhotos
+        bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches,
     } = core
 
     // --- Pull-to-Refresh Logic ---
@@ -250,6 +290,11 @@ export default function StudentsPage() {
         setFetchingGSheets, fetchingGSheets
     })
 
+    const handleViewTags = useCallback((s) => {
+        setStudentForTags(s)
+        setActiveModal('tag')
+    }, [setStudentForTags, setActiveModal])
+
     const {
         isImportModalOpen, setIsImportModalOpen, isExportModalOpen, setIsExportModalOpen,
         exportScope, setExportScope, exportColumns, setExportColumns,
@@ -289,14 +334,9 @@ export default function StudentsPage() {
         try { return localStorage.getItem('students_mobile_view') || 'card' } catch { return 'card' }
     }) // 'card' | 'list'
 
-    // Local state untuk search input — dipisah dari searchQuery global
-    // supaya ketikan tidak trigger re-render seluruh halaman
-    const [inputValue, setInputValue] = useState(searchQuery)
+    // Stable callback for DebouncedSearchInput
+    const handleSearchChange = useCallback((val) => setSearchQuery(val), [setSearchQuery])
 
-    // Sync inputValue kalau searchQuery di-clear dari luar (misal resetAllFilters)
-    useEffect(() => {
-        if (searchQuery === '') setInputValue('')
-    }, [searchQuery])
     const quickAddRef = useRef(null)
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
     const [colMenuPos, setColMenuPos] = useState({ top: 0, left: 0 })
@@ -507,7 +547,7 @@ export default function StudentsPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Import CSV / Excel</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Unggah data murid masal dari file Excel/CSV</p>
                                         </div>
                                     </button>
                                     <button onClick={() => { setIsHeaderMenuOpen(false); setActiveModal('gsheets') }}
@@ -517,7 +557,7 @@ export default function StudentsPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Import GSheets</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">online</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Sinkronisasi data otomatis via Google Sheets</p>
                                         </div>
                                     </button>
                                     <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
@@ -527,7 +567,7 @@ export default function StudentsPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Export Data</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Cadangkan seluruh database ke format Excel</p>
                                         </div>
                                     </button>
                                     <button onClick={() => { setIsHeaderMenuOpen(false); setActiveModal('bulkPhoto') }}
@@ -537,7 +577,7 @@ export default function StudentsPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Bulk Foto</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">png, jpg</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Update foto siswa secara masal via NISN</p>
                                         </div>
                                     </button>
 
@@ -551,7 +591,7 @@ export default function StudentsPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Arsip Siswa</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">arsip</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data siswa tidak aktif</p>
                                         </div>
                                     </button>
                                     <button onClick={() => { setIsHeaderMenuOpen(false); setResetPointsClassId(''); setActiveModal('resetPoints') }}
@@ -561,7 +601,7 @@ export default function StudentsPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Reset Poin</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">poin</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Bersihkan semua poin untuk semester baru</p>
                                         </div>
                                     </button>
                                 </div>
@@ -858,27 +898,11 @@ export default function StudentsPage() {
 
                     {/* Row 1: Search + action buttons */}
                     <div className="flex flex-row items-center gap-2 p-3">
-                        <div className="flex-1 relative">
-                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
-                                <FontAwesomeIcon icon={faSearch} />
-                            </div>
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                value={inputValue}
-                                onChange={(e) => {
-                                    // Update input visual langsung (tidak delay)
-                                    setInputValue(e.target.value)
-                                    // Update global search state dengan priority rendah
-                                    // sehingga tidak block keystroke
-                                    startTransition(() => setSearchQuery(e.target.value))
-                                }}
-                                placeholder="Cari nama, NISN, no HP..."
-
-                                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
-                            />
-
-                        </div>
+                        <DebouncedSearchInput
+                            searchQuery={searchQuery}
+                            onSearch={handleSearchChange}
+                            inputRef={searchInputRef}
+                        />
 
                         {/* Filter toggle button */}
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -1321,11 +1345,18 @@ export default function StudentsPage() {
                                             ))
                                         ) : students.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-14 ">
-                                                    <div className="flex flex-col items-center text-center gap-2">
-                                                        <FontAwesomeIcon icon={faTableList} className="text-3xl text-[var(--color-text-muted)] opacity-30 mb-2" />
-                                                        <div className="text-sm font-extrabold text-[var(--color-text)]">Data tidak ditemukan</div>
-                                                        <div className="text-xs font-bold text-[var(--color-text-muted)]">Coba ganti filter / kata kunci pencarian.</div>
+                                                <td colSpan={6} className="px-6 py-20">
+                                                    <div className="flex flex-col items-center text-center gap-4 animate-in fade-in zoom-in duration-500">
+                                                        <div className="relative">
+                                                            <div className="absolute inset-0 bg-amber-500/10 blur-2xl rounded-full scale-150 animate-pulse" />
+                                                            <div className="relative w-24 h-24 rounded-3xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm flex items-center justify-center -rotate-6 hover:rotate-0 transition-transform duration-300">
+                                                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-4xl text-amber-500/80" />
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-base font-black text-[var(--color-text)] mb-1">Pencarian Tidak Ditemukan</h3>
+                                                            <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-sm">Maaf, kami tidak menemukan data siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter.</p>
+                                                        </div>
                                                         <button
                                                             type="button"
                                                             onClick={resetAllFilters}
@@ -1349,7 +1380,7 @@ export default function StudentsPage() {
                                                     onViewProfile={handleViewProfile}
                                                     onViewQR={handleViewQR}
                                                     onViewPrint={handleViewPrint}
-                                                    onViewTags={(s) => { setStudentForTags(s); setActiveModal('tag') }}
+                                                    onViewTags={handleViewTags}
                                                     onViewClassHistory={handleViewClassHistory}
                                                     onConfirmDelete={canEdit ? confirmDelete : null}
                                                     onClassBreakdown={handleClassBreakdown}
@@ -1370,73 +1401,14 @@ export default function StudentsPage() {
 
                                         {/* Quick Inline Add Row */}
                                         {isInlineAddOpen && (
-                                            <tr className="border-t-2 border-[var(--color-primary)]/30 bg-[var(--color-primary)]/[0.01] transition-all duration-300">
-                                                {/* Column 1: Selection (Empty for add) */}
-                                                <td className="px-6 py-3 text-center">
-                                                    <div className="w-4 h-4 rounded border border-[var(--color-border)] opacity-20 mx-auto" />
-                                                </td>
-
-                                                {/* Column 2: Name */}
-                                                <td className="px-6 py-3">
-                                                    <input
-                                                        type="text"
-                                                        value={inlineForm.name}
-                                                        onChange={e => setInlineForm(p => ({ ...p, name: e.target.value }))}
-                                                        onKeyDown={e => e.key === 'Enter' && handleInlineSubmit()}
-                                                        placeholder="Nama siswa baru..."
-                                                        autoFocus
-                                                        className="input-field text-sm h-9 px-3 rounded-xl border-[var(--color-border)] focus:border-[var(--color-primary)] bg-[var(--color-surface)] w-full max-w-[240px] font-bold"
-                                                    />
-                                                </td>
-
-                                                {/* Column 3: Gender */}
-                                                <td className="px-6 py-3 text-center">
-                                                    <div className="flex gap-1 justify-center">
-                                                        {['L', 'P'].map(g => (
-                                                            <button key={g} type="button" onClick={() => setInlineForm(p => ({ ...p, gender: g }))}
-                                                                className={`w-8 h-8 rounded-lg text-[10px] font-black border transition-all ${inlineForm.gender === g ? (g === 'L' ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-pink-500 text-white border-pink-500 shadow-lg shadow-pink-500/20') : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
-                                                            >{g}</button>
-                                                        ))}
-                                                    </div>
-                                                </td>
-
-                                                {/* Column 4: Class */}
-                                                <td className="px-6 py-3 text-center">
-                                                    <select
-                                                        value={inlineForm.class_id}
-                                                        onChange={e => setInlineForm(p => ({ ...p, class_id: e.target.value }))}
-                                                        className="select-field text-xs h-9 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] font-bold min-w-[140px] outline-none focus:border-[var(--color-primary)]"
-                                                    >
-                                                        <option value="">Pilih kelas</option>
-                                                        {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                                    </select>
-                                                </td>
-
-                                                {/* Column 5: Phone (Mapped to Point column during add) */}
-                                                <td className="px-6 py-3 text-center">
-                                                    <input
-                                                        type="text"
-                                                        value={inlineForm.phone}
-                                                        onChange={e => setInlineForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))}
-                                                        placeholder="08xxx (WA)"
-                                                        className="input-field text-xs h-9 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] w-28 text-center font-bold"
-                                                    />
-                                                </td>
-
-                                                {/* Column 6: Actions */}
-                                                <td className="px-6 py-3 text-right pr-6">
-                                                    <div className="flex items-center justify-end gap-1.5">
-                                                        <button onClick={handleInlineSubmit} disabled={submittingInline || !canEdit}
-                                                            className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center gap-2">
-                                                            {submittingInline ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faCheck} /> Simpan</>}
-                                                        </button>
-                                                        <button onClick={() => setIsInlineAddOpen(false)}
-                                                            className="h-9 w-9 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center">
-                                                            <FontAwesomeIcon icon={faXmark} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                            <StudentInlineAddRow
+                                                classesList={classesList}
+                                                submitting={submittingInline}
+                                                canEdit={canEdit}
+                                                initialClassId={inlineForm.class_id}
+                                                onSubmit={handleInlineSubmit}
+                                                onCancel={() => setIsInlineAddOpen(false)}
+                                            />
                                         )}
                                     </tbody>
                                 </table>
@@ -1494,7 +1466,28 @@ export default function StudentsPage() {
                                 }}
                             >
 
-                                {students.length === 0 ? (
+                                {loading ? (
+                                    <div className="space-y-4 pt-2">
+                                        {mobileView === 'card' ? (
+                                            Array.from({ length: 5 }).map((_, i) => (
+                                                <StudentSkeletonCard key={i} />
+                                            ))
+                                        ) : (
+                                            <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/50 overflow-hidden shadow-sm">
+                                                {Array.from({ length: 8 }).map((_, i) => (
+                                                    <div key={i} className="animate-pulse flex items-center gap-4 px-4 py-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-alt)]" />
+                                                        <div className="flex-1 space-y-2">
+                                                            <div className="w-3/4 h-3 bg-[var(--color-surface-alt)] rounded" />
+                                                            <div className="w-1/2 h-2 bg-[var(--color-surface-alt)]/60 rounded" />
+                                                        </div>
+                                                        <div className="w-10 h-6 bg-[var(--color-surface-alt)] rounded-lg" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : students.length === 0 ? (
                                     <div className="py-24 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-700">
                                         <div className="relative mb-6">
                                             <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
@@ -1544,31 +1537,8 @@ export default function StudentsPage() {
                                             </div>
                                         </div>
 
-
                                         <div className="space-y-3 mt-2">
-                                            {loading ? (
-                                                <div className="space-y-4">
-                                                    {mobileView === 'card' ? (
-                                                        Array.from({ length: 5 }).map((_, i) => (
-                                                            <StudentSkeletonCard key={i} />
-                                                        ))
-                                                    ) : (
-                                                        <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/50 overflow-hidden shadow-sm">
-                                                            {Array.from({ length: 8 }).map((_, i) => (
-                                                                <div key={i} className="animate-pulse flex items-center gap-4 px-4 py-4">
-                                                                    <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-alt)]" />
-                                                                    <div className="flex-1 space-y-2">
-                                                                        <div className="w-3/4 h-3 bg-[var(--color-surface-alt)] rounded" />
-                                                                        <div className="w-1/2 h-2 bg-[var(--color-surface-alt)]/60 rounded" />
-                                                                    </div>
-                                                                    <div className="w-10 h-6 bg-[var(--color-surface-alt)] rounded-lg" />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : mobileView === 'card' ? (
-                                                students.map(student => {
+                                            {mobileView === 'card' ? students.map(student => {
                                                     const isRisk = (student.total_points || 0) <= RiskThreshold
                                                     return (
                                                         <div
@@ -1596,7 +1566,7 @@ export default function StudentsPage() {
                                                         </div>
                                                     )
                                                 })
-                                            ) : (
+                                             : (
                                                 <div className="flex flex-col gap-2">
                                                     {students.length > 0 && canEdit && (
                                                         <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
@@ -1875,81 +1845,15 @@ export default function StudentsPage() {
 
                 {/* ===================== */}
                 {/* BULK PHOTO MATCHER MODAL */}
-                {/* ===================== */}
-                {
-                    activeModal === 'bulkPhoto' && (
-                        <Modal
-                            isOpen={activeModal === 'bulkPhoto'}
-                            onClose={() => { if (!uploadingBulkPhotos) closeModal() }}
-                            title="Bulk Match Foto Siswa"
-                            size="lg"
-                        >
-                            <div className="space-y-5">
-                                <div className="p-8 border-2 border-dashed border-[var(--color-border)] rounded-2xl bg-[var(--color-surface-alt)]/30 flex flex-col items-center text-center group hover:border-[var(--color-primary)]/50 transition-all cursor-pointer relative overflow-hidden">
-                                    <input
-                                        type="file"
-                                        multiple
-                                        accept="image/*"
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                        onChange={(e) => handleBulkPhotoMatch(e.target.files)}
-                                    />
-                                    <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] mb-4 group-hover:scale-110 transition-transform">
-                                        <FontAwesomeIcon icon={faCamera} className="text-2xl" />
-                                    </div>
-                                    <h4 className="text-sm font-black text-[var(--color-text)] mb-1">Pilih File Foto Massal</h4>
-                                    <p className="text-[11px] text-[var(--color-text-muted)] max-w-xs">Pastikan nama file foto menggunakan <b>NISN</b> atau <b>ID Siswa</b> (contoh: 12345.jpg)</p>
-                                </div>
-
-                                {bulkPhotoMatches.length > 0 && (
-                                    <div className="border border-[var(--color-border)] rounded-2xl overflow-hidden bg-[var(--color-surface)]">
-                                        <div className="max-h-60 overflow-auto scrollbar-none">
-                                            <table className="w-full text-[11px]">
-                                                <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10 border-b border-[var(--color-border)]">
-                                                    <tr className="text-left font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                                        <th className="p-3 w-16">Preview</th>
-                                                        <th className="p-3">Nama File</th>
-                                                        <th className="p-3">Siswa Cocok</th>
-                                                        <th className="p-3 text-right">Status</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-[var(--color-border)]">
-                                                    {bulkPhotoMatches.map((item, i) => (
-                                                        <tr key={i} className="hover:bg-[var(--color-surface-alt)]/50 transition-colors">
-                                                            <td className="p-2">
-                                                                <img src={item.preview} className="w-10 h-10 rounded-lg object-cover border border-[var(--color-border)] shadow-sm" alt="" />
-                                                            </td>
-                                                            <td className="p-3 font-medium opacity-70">{item.file.name}</td>
-                                                            <td className="p-3 font-bold text-[var(--color-text)]">{item.studentName}</td>
-                                                            <td className="p-3 text-right">
-                                                                {item.status === 'matched' ? (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-black uppercase text-[8px]">Matched</span>
-                                                                ) : (
-                                                                    <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 font-black uppercase text-[8px]">Skipped</span>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="p-3 bg-[var(--color-surface-alt)] border-t border-[var(--color-border)] flex items-center justify-between">
-                                            <p className="text-[10px] font-bold text-[var(--color-text-muted)]">
-                                                Ditemukan <span className="text-emerald-600 font-black">{bulkPhotoMatches.filter(m => m.status === 'matched').length}</span> foto cocok.
-                                            </p>
-                                            <button
-                                                onClick={handleBulkPhotoUpload}
-                                                disabled={uploadingBulkPhotos || bulkPhotoMatches.filter(m => m.status === 'matched').length === 0}
-                                                className="h-9 px-6 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center gap-2"
-                                            >
-                                                {uploadingBulkPhotos ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengupload...</> : <><FontAwesomeIcon icon={faCheck} /> Simpan Semua Foto</>}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </Modal>
-                    )
-                }
+                <StudentBulkPhotoModal
+                    isOpen={activeModal === 'bulkPhoto'}
+                    onClose={closeModal}
+                    uploadingBulkPhotos={uploadingBulkPhotos}
+                    bulkPhotoMatches={bulkPhotoMatches}
+                    handleBulkPhotoMatch={handleBulkPhotoMatch}
+                    handleBulkPhotoUpload={handleBulkPhotoUpload}
+                    setBulkPhotoMatches={setBulkPhotoMatches}
+                />
 
                 {/* ===================== */}
                 {/* GUARDIAN BROADCAST HUB */}
@@ -2305,118 +2209,17 @@ export default function StudentsPage() {
                     )
                 }
                 {/* Modal Arsip Siswa */}
-                {/* Modal Arsip */}
-                {
-                    activeModal === 'archived' && (
-                        <Modal
-                            isOpen={activeModal === 'archived'}
-                            onClose={() => closeModal()}
-                            title="Arsip Siswa"
-                            size="lg"
-                        >
-                            <div className="space-y-4">
-                                <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 flex items-center gap-3">
-                                    <FontAwesomeIcon icon={faBoxArchive} className="text-amber-600 text-lg shrink-0" />
-                                    <div>
-                                        <p className="text-xs font-black text-amber-700 dark:text-amber-400">{archivedStudents.length} siswa di arsip</p>
-                                        <p className="text-[10px] text-[var(--color-text-muted)]">Pulihkan untuk mengembalikan ke daftar aktif, atau hapus permanen.</p>
-                                    </div>
-                                </div>
-
-                                {loadingArchived ? (
-                                    <div className="text-center py-8 text-[var(--color-text-muted)]">
-                                        <FontAwesomeIcon icon={faSpinner} className="fa-spin mr-2" /> Memuat arsip...
-                                    </div>
-                                ) : archivedStudents.length === 0 ? (
-                                    <div className="text-center py-10 text-[var(--color-text-muted)]">
-                                        <FontAwesomeIcon icon={faBoxArchive} className="text-3xl opacity-20 mb-2 block" />
-                                        <p className="text-sm font-bold">Arsip kosong</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
-                                            <table className="w-full text-sm">
-                                                <thead className="bg-[var(--color-surface-alt)] sticky top-0">
-                                                    <tr className="text-left text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                                        <th className="px-4 py-3">Siswa</th>
-                                                        <th className="px-4 py-3 text-center">Kelas</th>
-                                                        <th className="px-4 py-3 text-center">Diarsipkan</th>
-                                                        <th className="px-4 py-3 text-center">Aksi</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {archivedStudents.slice((archivePage - 1) * archivePageSize, archivePage * archivePageSize).map(s => (
-                                                        <tr key={s.id} className="border-t border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40">
-                                                            <td className="px-4 py-3">
-                                                                <p className="font-bold text-[var(--color-text)]">{s.name}</p>
-                                                                <p className="text-[10px] font-mono text-[var(--color-text-muted)]">{s.registration_code}</p>
-                                                            </td>
-                                                            <td className="px-4 py-3 text-center">
-                                                                <span className="text-[10px] font-black bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-2 py-0.5 rounded-md border border-[var(--color-primary)]/20">{s.className}</span>
-                                                            </td>
-                                                            <td className="px-4 py-3 text-center text-[11px] text-[var(--color-text-muted)]">
-                                                                {formatRelativeDate(s.deleted_at)}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-right">
-                                                                <div className="flex items-center justify-end gap-2">
-                                                                    <button
-                                                                        onClick={() => handleRestoreStudent(s)}
-                                                                        className="h-8 px-3 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faRotateLeft} />
-                                                                        Pulihkan
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handlePermanentDelete(s)}
-                                                                        className="h-8 px-3 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faTrash} />
-                                                                        Hapus
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        {/* Pagination Arsip */}
-                                        {archivedStudents.length > archivePageSize && (
-                                            <div className="flex items-center justify-between px-1">
-                                                <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
-                                                    Halaman {archivePage} dari {Math.ceil(archivedStudents.length / archivePageSize)}
-                                                </p>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        disabled={archivePage === 1}
-                                                        onClick={() => setArchivePage(p => p - 1)}
-                                                        className="w-8 h-8 rounded-lg border border-[var(--color-border)] flex items-center justify-center disabled:opacity-30 hover:bg-[var(--color-surface-alt)]"
-                                                    >
-                                                        <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
-                                                    </button>
-                                                    <button
-                                                        disabled={archivePage >= Math.ceil(archivedStudents.length / archivePageSize)}
-                                                        onClick={() => setArchivePage(p => p + 1)}
-                                                        className="w-8 h-8 rounded-lg border border-[var(--color-border)] flex items-center justify-center disabled:opacity-30 hover:bg-[var(--color-surface-alt)]"
-                                                    >
-                                                        <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className="flex justify-end">
-                                    <button onClick={() => closeModal()} className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] h-9 px-5 text-[10px] font-black uppercase tracking-widest rounded-lg">
-                                        Tutup
-                                    </button>
-                                </div>
-                            </div>
-                        </Modal>
-                    )
-                }
+                <StudentArchiveModal
+                    isOpen={activeModal === 'archived'}
+                    onClose={closeModal}
+                    archivedStudents={archivedStudents}
+                    loadingArchived={loadingArchived}
+                    setArchivedStudents={setArchivedStudents}
+                    fetchArchivedStudents={fetchArchivedStudents}
+                    fetchData={fetchData}
+                    fetchStats={fetchStats}
+                    addToast={addToast}
+                />
 
                 {/* Modal Riwayat Kelas */}
                 {
@@ -2728,94 +2531,14 @@ export default function StudentsPage() {
                 }
 
                 {/* Fitur 12 - Google Sheets Import Modal */}
-                {
-                    activeModal === 'gsheets' && (
-                        <Modal
-                            isOpen={activeModal === 'gsheets'}
-                            onClose={() => closeModal()}
-                            title="Import dari Google Sheets"
-                            size="md"
-                        >
-                            <div className="space-y-4">
-                                {/* Panduan Mini Sheets */}
-                                <div className="rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)] shadow-inner">
-                                    <div className="bg-emerald-500/10 px-3 py-2 flex items-center justify-between border-b border-[var(--color-border)]">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                            Contoh Format Kolom
-                                        </span>
-                                        <FontAwesomeIcon icon={faTable} className="text-emerald-500/50 text-xs" />
-                                    </div>
-                                    <div className="overflow-x-auto custom-scrollbar">
-                                        <table className="w-full text-left border-collapse min-w-[300px]">
-                                            <thead>
-                                                <tr className="bg-[var(--color-surface-alt)]">
-                                                    <th className="border-b border-r border-[var(--color-border)] px-2 py-1.5 text-[10px] font-bold text-[var(--color-text-muted)] w-8 text-center bg-[var(--color-surface-alt)]/50"></th>
-                                                    <th className="border-b border-r border-[var(--color-border)] px-2 py-1.5 text-center">
-                                                        <p className="text-[10px] font-black text-[var(--color-text)] leading-none">A</p>
-                                                        <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">(name)</p>
-                                                    </th>
-                                                    <th className="border-b border-r border-[var(--color-border)] px-2 py-1.5 text-center">
-                                                        <p className="text-[10px] font-black text-[var(--color-text)] leading-none">B</p>
-                                                        <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">(gender)</p>
-                                                    </th>
-                                                    <th className="border-b border-r border-[var(--color-border)] px-2 py-1.5 text-center">
-                                                        <p className="text-[10px] font-black text-[var(--color-text)] leading-none">C</p>
-                                                        <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">(phone)</p>
-                                                    </th>
-                                                    <th className="border-b border-[var(--color-border)] px-2 py-1.5 text-center">
-                                                        <p className="text-[10px] font-black text-[var(--color-text)] leading-none">D</p>
-                                                        <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">(class_name)</p>
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr className="border-b border-[var(--color-border)]">
-                                                    <td className="border-r border-[var(--color-border)] px-2 py-1.5 text-[9px] font-bold text-[var(--color-text-muted)] text-center bg-[var(--color-surface-alt)]">1</td>
-                                                    <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">Budi Santoso</td>
-                                                    <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">L</td>
-                                                    <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium font-mono text-emerald-600">0812...</td>
-                                                    <td className="px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">10A Boarding Putra</td>
-                                                </tr>
-                                                <tr className="border-[var(--color-border)]">
-                                                    <td className="border-r border-[var(--color-border)] px-2 py-1.5 text-[9px] font-bold text-[var(--color-text-muted)] text-center bg-[var(--color-surface-alt)]">2</td>
-                                                    <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">Siti Aminah</td>
-                                                    <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">P</td>
-                                                    <td className="border-r border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-text)] font-medium font-mono text-emerald-600">0857...</td>
-                                                    <td className="px-2 py-1 text-[11px] text-[var(--color-text)] font-medium">10B Boarding Putri</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-400 font-bold flex gap-3 items-start">
-                                    <FontAwesomeIcon icon={faCircleExclamation} className="mt-0.5 shrink-0" />
-                                    <p>Pastikan akses Google Sheets telah diubah menjadi <b>Anyone with the link</b> (Siapa saja yang memiliki tautan dapat melihat).</p>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-2">URL Google Sheets</label>
-                                    <input
-                                        type="url"
-                                        value={gSheetsUrl}
-                                        onChange={e => setGSheetsUrl(e.target.value)}
-                                        placeholder="https://docs.google.com/spreadsheets/d/..."
-                                        className="input-field text-sm py-2.5 w-full rounded-xl border-[var(--color-border)] bg-transparent"
-                                    />
-                                </div>
-                                <p className="text-[10px] text-[var(--color-text-muted)]">Header kolom: <b>name/nama</b>, <b>gender/jk</b>, <b>phone</b>, <b>class_name/kelas</b></p>
-                                <div className="flex gap-3 mt-2">
-                                    <button onClick={() => closeModal()} className="btn bg-[var(--color-surface-alt)] h-11 flex-1 text-xs font-bold rounded-xl text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors">Batal</button>
-                                    <button onClick={handleFetchGSheets} disabled={fetchingGSheets}
-                                        className="btn bg-emerald-500 hover:bg-emerald-600 text-white flex-1 h-11 text-xs font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-colors">
-                                        {fetchingGSheets ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <FontAwesomeIcon icon={faLink} />}
-                                        Ambil Data
-                                    </button>
-                                </div>
-                            </div>
-                        </Modal>
-                    )
-                }
+                <StudentGSheetsModal
+                    isOpen={activeModal === 'gsheets'}
+                    onClose={closeModal}
+                    gSheetsUrl={gSheetsUrl}
+                    setGSheetsUrl={setGSheetsUrl}
+                    fetchingGSheets={fetchingGSheets}
+                    handleFetchGSheets={handleFetchGSheets}
+                />
 
                 {/* Fitur 13 - Photo Zoom Overlay */}
                 {
