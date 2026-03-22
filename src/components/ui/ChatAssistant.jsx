@@ -94,20 +94,15 @@ export default function ChatAssistant() {
         if (!apiKey) return "Sistem sedang offline."
         
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`
-            const history = messages.slice(-2).map(msg => ({
-                role: msg.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: msg.content }]
-            }))
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`
             
             const body = {
                 contents: [
-                    { role: 'user', parts: [{ text: `Identity: Kamu Asisten MBS Tanggul. Task: Jawab singkat.` }] },
-                    { role: 'model', parts: [{ text: `Siap.` }] },
-                    ...history, 
+                    { role: 'user', parts: [{ text: `Identity: Asisten MBS Tanggul. Task: Jawab pendek.` }] },
+                    { role: 'model', parts: [{ text: `OK.` }] },
                     { role: 'user', parts: [{ text: userText }] }
                 ],
-                generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
+                generationConfig: { temperature: 0.6, maxOutputTokens: 300 }
             }
 
             const response = await fetch(url, {
@@ -127,8 +122,7 @@ export default function ChatAssistant() {
             if (response.status !== 200) {
                 console.error('Gemini API Error:', response.status, data)
                 if (response.status === 429) return "Waduh, jatah nanya asisten lagi abis nih Kak. 🙏 Tunggu 30-60 detik ya!"
-                if (response.status === 401 || response.status === 403) return "Maaf Kak, masalah di API Key (401/403). Segera lapor Tim IT ya!"
-                return "Maaf Kak, ada kendala teknis (Sistem butuh istirahat). Coba lagi nanti ya!"
+                return `Maaf Kak, ada kendala teknis (${response.status}). Coba lagi nanti ya!`
             }
 
             const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf Kak, coba tanya lagi ya!"
@@ -155,7 +149,9 @@ export default function ChatAssistant() {
         setShowInvite(false)
         const botReply = await sendMessageToGemini(userMsg)
         setMessages(prev => [...prev, { role: 'assistant', content: botReply }])
-        setIsLoading(false)
+        
+        // Kasih napas 4 detik biar Google tenang
+        setTimeout(() => setIsLoading(false), 4000)
     }
 
     if (!isOpen) {
