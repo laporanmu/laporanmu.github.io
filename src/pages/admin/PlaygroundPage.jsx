@@ -68,7 +68,7 @@ const tokenizeLine = (line) => {
 
 // ─── Interactive Atom Sub-Components ────────────────────────────────────────────
 
-const TagChipsPreview = () => {
+const TagChipsPreview = memo(() => {
     const [tags, setTags] = useState(['Student', 'Teacher', 'Admin', 'Parent', 'Staff', 'Finance', 'Academic'])
     const pool = ['Principal', 'Operator', 'Counselor', 'Librarian', 'Treasurer']
     const remove = tag => setTags(prev => prev.filter(t => t !== tag))
@@ -96,9 +96,9 @@ const TagChipsPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const ToggleVariantsPreview = () => {
+const ToggleVariantsPreview = memo(() => {
     const [states, setStates] = useState({ darkMode: true, notifications: false, autoSave: true, betaFeatures: true })
     const toggle = key => setStates(prev => ({ ...prev, [key]: !prev[key] }))
     const items = [
@@ -125,9 +125,9 @@ const ToggleVariantsPreview = () => {
             ))}
         </div>
     )
-}
+})
 
-const CheckboxStatesPreview = () => {
+const CheckboxStatesPreview = memo(() => {
     const [items, setItems] = useState([
         { id: 'terms', label: 'Accept terms & conditions', checked: true, indeterminate: false, disabled: false },
         { id: 'news', label: 'Subscribe to newsletter', checked: false, indeterminate: false, disabled: false },
@@ -144,7 +144,7 @@ const CheckboxStatesPreview = () => {
         <div className="space-y-4">
             {items.map(({ id, label, checked, indeterminate, disabled }) => (
                 <label key={id} onClick={() => toggle(id)} className={`flex items-center gap-3 select-none ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer group'}`}>
-                    <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all border ${indeterminate || checked
+                    <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors border ${indeterminate || checked
                         ? 'bg-[var(--color-primary)] border-[var(--color-primary)]'
                         : 'bg-transparent border-[var(--color-border)] group-hover:border-[var(--color-primary)]'
                         }`}>
@@ -156,9 +156,9 @@ const CheckboxStatesPreview = () => {
             ))}
         </div>
     )
-}
+})
 
-const RadioGroupPreview = () => {
+const RadioGroupPreview = memo(() => {
     const [selected, setSelected] = useState('pro')
     const plans = [
         { value: 'free', label: 'Free', desc: 'Up to 5 users' },
@@ -170,7 +170,7 @@ const RadioGroupPreview = () => {
             <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-50">Plan Selection</p>
             <div className="space-y-2.5">
                 {plans.map(({ value, label, desc }) => (
-                    <label key={value} onClick={() => setSelected(value)} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none ${selected === value ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40'}`}>
+                    <label key={value} onClick={() => setSelected(value)} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors select-none ${selected === value ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40'}`}>
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${selected === value ? 'border-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>
                             {selected === value && <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]" />}
                         </div>
@@ -184,9 +184,9 @@ const RadioGroupPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const InputStatesPreview = () => {
+const InputStatesPreview = memo(() => {
     const [vals, setVals] = useState({ default: '', focus: 'Sedang diketik', error: 'nilai@salah', success: 'admin@sekolah.sch.id', disabled: '' })
     const set = (k, v) => setVals(prev => ({ ...prev, [k]: v }))
     const emailValid = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
@@ -218,9 +218,9 @@ const InputStatesPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const InputAddonsPreview = () => {
+const InputAddonsPreview = memo(() => {
     const [search, setSearch] = useState('')
     const [domain, setDomain] = useState('sekolah.sch.id')
     const [apiKey] = useState('sk_live_••••••••••')
@@ -247,18 +247,18 @@ const InputAddonsPreview = () => {
                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">With Suffix Button</label>
                 <div className="flex gap-0">
                     <input readOnly value={apiKey} className="flex-1 h-10 px-3.5 rounded-l-xl bg-[var(--color-surface)] border border-r-0 border-[var(--color-border)] text-sm font-mono text-[var(--color-text-muted)] outline-none" />
-                    <button onClick={copyKey} className={`h-10 px-4 rounded-r-xl border text-[10px] font-black transition-all flex items-center gap-1.5 ${copied ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]'}`}>
+                    <button onClick={copyKey} className={`h-10 px-4 rounded-r-xl border text-[10px] font-black transition-colors flex items-center gap-1.5 ${copied ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]'}`}>
                         <FontAwesomeIcon icon={copied ? faCheck : faCopy} className="text-[9px]" /> {copied ? 'Copied!' : 'Copy'}
                     </button>
                 </div>
             </div>
         </div>
     )
-}
+})
 
 // ─── Library Interactive Sub-Components ─────────────────────────────────────────
 
-const AccordionPreview = () => {
+const AccordionPreview = memo(() => {
     const [open, setOpen] = useState(0)
     const items = [
         { q: 'Apa itu Laporanmu?', a: 'Platform manajemen laporan dan administrasi sekolah yang terintegrasi untuk ekosistem pendidikan Indonesia.' },
@@ -279,9 +279,9 @@ const AccordionPreview = () => {
             ))}
         </div>
     )
-}
+})
 
-const DataTablePreview = () => {
+const DataTablePreview = memo(() => {
     const [selected, setSelected] = useState(new Set([0]))
     const [sortField, setSortField] = useState('name')
     const [sortDir, setSortDir] = useState('asc')
@@ -340,13 +340,13 @@ const DataTablePreview = () => {
             </div>
             <div className="flex items-center justify-between text-[9px] text-[var(--color-text-muted)]">
                 <span>Menampilkan {data.length} dari 320 data</span>
-                <div className="flex gap-1">{[1, 2, 3, '…', 32].map((p, i) => <button key={i} className={`w-6 h-6 rounded text-[9px] font-black transition-all ${p === 1 ? 'bg-[var(--color-primary)] text-white' : 'hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>{p}</button>)}</div>
+                <div className="flex gap-1">{[1, 2, 3, '…', 32].map((p, i) => <button key={i} className={`w-6 h-6 rounded text-[9px] font-black transition-colors ${p === 1 ? 'bg-[var(--color-primary)] text-white' : 'hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>{p}</button>)}</div>
             </div>
         </div>
     )
-}
+})
 
-const FilterBarPreview = () => {
+const FilterBarPreview = memo(() => {
     const [filters, setFilters] = useState([{ id: 'kelas', label: 'Kelas', value: '6A' }, { id: 'status', label: 'Status', value: 'Aktif' }])
     const [search, setSearch] = useState('')
     const remove = id => setFilters(prev => prev.filter(f => f.id !== id))
@@ -372,9 +372,9 @@ const FilterBarPreview = () => {
             <p className="text-[9px] text-[var(--color-text-muted)]">Menampilkan <span className="font-black text-[var(--color-text)]">{filters.length === 0 ? 320 : 48}</span> dari 320 siswa</p>
         </div>
     )
-}
+})
 
-const TabsPreview = () => {
+const TabsPreview = memo(() => {
     const [activeUnder, setActiveUnder] = useState('semua')
     const [activeSeg, setActiveSeg] = useState('list')
     const tabs = [{ k: 'semua', label: 'Semua', count: 320 }, { k: 'aktif', label: 'Aktif', count: 298 }, { k: 'pending', label: 'Pending', count: 14 }, { k: 'nonaktif', label: 'Nonaktif', count: 8 }]
@@ -384,7 +384,7 @@ const TabsPreview = () => {
                 <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-50 mb-3">Underline Tabs</p>
                 <div className="flex border-b border-[var(--color-border)] gap-1">
                     {tabs.map(({ k, label, count }) => (
-                        <button key={k} onClick={() => setActiveUnder(k)} className={`px-3 py-2 text-[10px] font-black transition-all flex items-center gap-1.5 border-b-2 -mb-px ${activeUnder === k ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                        <button key={k} onClick={() => setActiveUnder(k)} className={`px-3 py-2 text-[10px] font-black transition-colors flex items-center gap-1.5 border-b-2 -mb-px ${activeUnder === k ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                             {label}
                             <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black ${activeUnder === k ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>{count}</span>
                         </button>
@@ -395,20 +395,20 @@ const TabsPreview = () => {
                 <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-50 mb-3">Segmented Control</p>
                 <div className="inline-flex p-1 bg-[var(--color-surface-alt)] rounded-xl gap-1">
                     {['list', 'grid', 'chart'].map(v => (
-                        <button key={v} onClick={() => setActiveSeg(v)} className={`px-4 py-1.5 rounded-lg text-[10px] font-black capitalize transition-all ${activeSeg === v ? 'bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>{v}</button>
+                        <button key={v} onClick={() => setActiveSeg(v)} className={`px-4 py-1.5 rounded-lg text-[10px] font-black capitalize transition-colors ${activeSeg === v ? 'bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>{v}</button>
                     ))}
                 </div>
             </div>
         </div>
     )
-}
+})
 
-const DropdownPreview = () => {
+const DropdownPreview = memo(() => {
     const [open, setOpen] = useState(false)
     return (
         <div className="flex gap-6 items-start">
             <div className="relative">
-                <button onClick={() => setOpen(p => !p)} className={`flex items-center gap-2 px-4 h-9 rounded-xl border text-[11px] font-black transition-all ${open ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)] hover:border-[var(--color-primary)]'}`}>
+                <button onClick={() => setOpen(p => !p)} className={`flex items-center gap-2 px-4 h-9 rounded-xl border text-[11px] font-black transition-colors ${open ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)] hover:border-[var(--color-primary)]'}`}>
                     Aksi <FontAwesomeIcon icon={faChevronDown} className={`text-[8px] transition-transform ${open ? 'rotate-180' : ''}`} />
                 </button>
                 {open && (
@@ -429,9 +429,9 @@ const DropdownPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const CommandPalettePreview = () => {
+const CommandPalettePreview = memo(() => {
     const [q, setQ] = useState('')
     const pages = [
         { icon: faGaugeHigh, label: 'Dashboard', shortcut: '⌘1' },
@@ -468,9 +468,9 @@ const CommandPalettePreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const OnboardingPreview = () => {
+const OnboardingPreview = memo(() => {
     const [steps, setSteps] = useState([
         { id: 0, label: 'Buat akun admin', done: true }, { id: 1, label: 'Upload logo sekolah', done: true },
         { id: 2, label: 'Atur tahun ajaran', done: true }, { id: 3, label: 'Import data siswa', done: false },
@@ -490,7 +490,7 @@ const OnboardingPreview = () => {
             </div>
             <div className="space-y-2">
                 {steps.map(s => (
-                    <div key={s.id} className={`flex items-center gap-3 p-2.5 rounded-xl transition-all ${!s.done ? 'cursor-pointer hover:bg-[var(--color-surface-alt)]' : ''}`} onClick={() => !s.done && complete(s.id)}>
+                    <div key={s.id} className={`flex items-center gap-3 p-2.5 rounded-xl transition-colors ${!s.done ? 'cursor-pointer hover:bg-[var(--color-surface-alt)]' : ''}`} onClick={() => !s.done && complete(s.id)}>
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${s.done ? 'bg-[var(--color-primary)]' : 'border-2 border-[var(--color-primary)]'}`}>
                             {s.done && <FontAwesomeIcon icon={faCheck} className="text-white text-[7px]" />}
                         </div>
@@ -502,9 +502,9 @@ const OnboardingPreview = () => {
             {pct === 100 && <div className="text-center text-[11px] font-black text-emerald-600 bg-emerald-500/10 rounded-xl p-3">🎉 Semua langkah selesai!</div>}
         </div>
     )
-}
+})
 
-const WizardPreview = () => {
+const WizardPreview = memo(() => {
     const [step, setStep] = useState(2)
     const steps = ['Profil', 'Sekolah', 'Akademik', 'Review']
     return (
@@ -534,9 +534,9 @@ const WizardPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const ConfirmDialogPreview = () => {
+const ConfirmDialogPreview = memo(() => {
     const [input, setInput] = useState('')
     const [done, setDone] = useState(false)
     const confirmed = input === 'HAPUS'
@@ -557,13 +557,13 @@ const ConfirmDialogPreview = () => {
             </div>
             <div className="flex gap-2">
                 <button onClick={() => setInput('')} className="flex-1 h-9 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Batal</button>
-                <button disabled={!confirmed} onClick={() => setDone(true)} className={`flex-1 h-9 rounded-xl text-[10px] font-black transition-all ${confirmed ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-rose-500/20 text-rose-300 cursor-not-allowed'}`}>Hapus Permanen</button>
+                <button disabled={!confirmed} onClick={() => setDone(true)} className={`flex-1 h-9 rounded-xl text-[10px] font-black transition-colors ${confirmed ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-rose-500/20 text-rose-300 cursor-not-allowed'}`}>Hapus Permanen</button>
             </div>
         </div>
     )
-}
+})
 
-const RatingPreview = () => {
+const RatingPreview = memo(() => {
     const [stars, setStars] = useState(4)
     const [hover, setHover] = useState(null)
     const [mood, setMood] = useState(3)
@@ -607,9 +607,9 @@ const RatingPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const InlineEditPreview = () => {
+const InlineEditPreview = memo(() => {
     const [fields, setFields] = useState([
         { key: 'nama', label: 'Nama', value: 'Andi Setiawan', editing: false },
         { key: 'kelas', label: 'Kelas', value: '6A', editing: false },
@@ -644,11 +644,11 @@ const InlineEditPreview = () => {
             {saved && <p className="text-[9px] font-black text-emerald-600 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />Autosaved</p>}
         </div>
     )
-}
+})
 
 // ─── New Atoms Sub-Components ────────────────────────────────────────────────────
 
-const SelectTextareaPreview = () => {
+const SelectTextareaPreview = memo(() => {
     const [sel, setSel] = useState('kelas-6a')
     const [multi, setMulti] = useState(new Set(['guru', 'siswa']))
     const [ta, setTa] = useState('Catatan wali kelas:\nSiswa menunjukkan perkembangan yang baik bulan ini.')
@@ -671,7 +671,7 @@ const SelectTextareaPreview = () => {
                     <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">Custom Multi-Select</label>
                     <div className="rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)]">
                         {['admin', 'guru', 'siswa', 'ortu', 'tu'].map(v => (
-                            <div key={v} onClick={() => toggleMulti(v)} className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-all ${multi.has(v) ? 'bg-[var(--color-primary)]/5' : ' hover:bg-[var(--color-surface-alt)]'} border-b border-[var(--color-border)] last:border-0`}>
+                            <div key={v} onClick={() => toggleMulti(v)} className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${multi.has(v) ? 'bg-[var(--color-primary)]/5' : ' hover:bg-[var(--color-surface-alt)]'} border-b border-[var(--color-border)] last:border-0`}>
                                 <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${multi.has(v) ? 'bg-[var(--color-primary)] border-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>{multi.has(v) && <FontAwesomeIcon icon={faCheck} className="text-white text-[7px]" />}</div>
                                 <span className={`text-[10px] font-black capitalize ${multi.has(v) ? 'text-[var(--color-primary)]' : 'text-[var(--color-text)]'}`}>{v}</span>
                             </div>
@@ -689,9 +689,9 @@ const SelectTextareaPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const RangeSliderPreview = () => {
+const RangeSliderPreview = memo(() => {
     const [val, setVal] = useState(65)
     const [min, setMin] = useState(20)
     const [max, setMax] = useState(80)
@@ -735,9 +735,9 @@ const RangeSliderPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const OTPInputPreview = () => {
+const OTPInputPreview = memo(() => {
     const [otp, setOtp] = useState(['', '', '', '', '', ''])
     const [done, setDone] = useState(false)
     const handleKey = (i, e) => {
@@ -775,9 +775,9 @@ const OTPInputPreview = () => {
             )}
         </div>
     )
-}
+})
 
-const TagInputPreview = () => {
+const TagInputPreview = memo(() => {
     const [tags, setTags] = useState(['React', 'TypeScript', 'Tailwind'])
     const [input, setInput] = useState('')
     const addTag = () => { const t = input.trim(); if (t && !tags.includes(t) && tags.length < 8) { setTags(p => [...p, t]); setInput('') } }
@@ -796,9 +796,9 @@ const TagInputPreview = () => {
             <p className="text-[9px] text-[var(--color-text-muted)] opacity-50">Enter atau koma untuk tambah · Backspace untuk hapus · {8 - tags.length} slot tersisa</p>
         </div>
     )
-}
+})
 
-const ComboboxPreview = () => {
+const ComboboxPreview = memo(() => {
     const [q, setQ] = useState('')
     const [selected, setSelected] = useState([])
     const [open, setOpen] = useState(false)
@@ -828,11 +828,11 @@ const ComboboxPreview = () => {
             {selected.length > 0 && <p className="text-[9px] text-[var(--color-text-muted)]">Terpilih: <span className="text-[var(--color-primary)] font-black">{selected.length} siswa</span></p>}
         </div>
     )
-}
+})
 
 // ─── Forms Sub-Components ────────────────────────────────────────────────────────
 
-const LoginFormPreview = () => {
+const LoginFormPreview = memo(() => {
     const [email, setEmail] = useState('')
     const [pass, setPass] = useState('')
     const [showPass, setShowPass] = useState(false)
@@ -854,9 +854,9 @@ const LoginFormPreview = () => {
             </button>
         </div>
     )
-}
+})
 
-const SearchFilterFormPreview = () => {
+const SearchFilterFormPreview = memo(() => {
     const [q, setQ] = useState('')
     const [kelas, setKelas] = useState('semua')
     const [status, setStatus] = useState('semua')
@@ -884,11 +884,11 @@ const SearchFilterFormPreview = () => {
             </div>
         </div>
     )
-}
+})
 
 // ─── Data Viz Sub-Components ─────────────────────────────────────────────────────
 
-const BarChartPreview = () => {
+const BarChartPreview = memo(() => {
     const data = [{ l: 'Jan', v: 82 }, { l: 'Feb', v: 91 }, { l: 'Mar', v: 75 }, { l: 'Apr', v: 88 }, { l: 'Mei', v: 94 }, { l: 'Jun', v: 87 }]
     const max = Math.max(...data.map(d => d.v))
     return (
@@ -908,9 +908,9 @@ const BarChartPreview = () => {
             <p className="text-[8px] font-black text-[var(--color-text-muted)] opacity-50 text-center">Rata-rata Nilai Ujian per Bulan</p>
         </div>
     )
-}
+})
 
-const LineChartPreview = () => {
+const LineChartPreview = memo(() => {
     const data = [68, 74, 71, 82, 79, 88, 85, 92, 89, 95, 91, 97]
     const months = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
     const W = 260, H = 80, pad = 8
@@ -932,9 +932,9 @@ const LineChartPreview = () => {
             <p className="text-[8px] font-black text-[var(--color-text-muted)] opacity-50 text-center">Tren Kehadiran Siswa 2024</p>
         </div>
     )
-}
+})
 
-const DonutChartPreview = () => {
+const DonutChartPreview = memo(() => {
     const [hov, setHov] = useState(null)
     const segments = [{ l: 'Aktif', v: 72, c: '#6366f1' }, { l: 'Lulus', v: 18, c: '#22c55e' }, { l: 'Pending', v: 7, c: '#f59e0b' }, { l: 'Nonaktif', v: 3, c: '#ef4444' }]
     let cum = 0
@@ -959,9 +959,9 @@ const DonutChartPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const SparklinePreview = () => {
+const SparklinePreview = memo(() => {
     const kpis = [
         { label: 'Total Siswa', val: '2,840', change: '+12.5%', up: true, data: [62, 65, 68, 64, 70, 72, 75, 73, 78, 80, 82, 84] },
         { label: 'Kehadiran', val: '94.2%', change: '-2.1%', up: false, data: [96, 95, 97, 94, 93, 96, 92, 95, 94, 91, 93, 94] },
@@ -987,9 +987,9 @@ const SparklinePreview = () => {
             })}
         </div>
     )
-}
+})
 
-const HeatmapPreview = () => {
+const HeatmapPreview = memo(() => {
     const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum']
     const hours = ['07', '08', '09', '10', '11', '12', '13', '14']
     const [hov, setHov] = useState(null)
@@ -1018,11 +1018,11 @@ const HeatmapPreview = () => {
             {hov && <p className="text-[9px] font-black text-[var(--color-text-muted)] text-center">{hov.d} {hov.h}:00 — Kehadiran: <span className="text-[var(--color-primary)]">{hov.v}%</span></p>}
         </div>
     )
-}
+})
 
 // ─── Layout Interactive Sub-Components ──────────────────────────────────────────
 
-const SidebarNavPreview = () => {
+const SidebarNavPreview = memo(() => {
     const [active, setActive] = useState('dashboard')
     const [collapsed, setCollapsed] = useState(false)
     const groups = [
@@ -1056,7 +1056,7 @@ const SidebarNavPreview = () => {
                             {!collapsed && <p className="text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 px-2 mb-1">{g.label}</p>}
                             <div className="space-y-0.5">
                                 {g.items.map(item => (
-                                    <button key={item.key} onClick={() => setActive(item.key)} className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-xl transition-all text-left ${active === item.key ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text)]'}`}>
+                                    <button key={item.key} onClick={() => setActive(item.key)} className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-xl transition-colors text-left ${active === item.key ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text)]'}`}>
                                         <FontAwesomeIcon icon={item.icon} className={`text-xs shrink-0 ${active === item.key ? 'text-[var(--color-primary)]' : ''}`} />
                                         {!collapsed && <><span className="text-[10px] font-black flex-1">{item.label}</span>{item.badge && <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[7px] font-black">{item.badge}</span>}</>}
                                         {collapsed && item.badge && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500" />}
@@ -1081,9 +1081,9 @@ const SidebarNavPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const ChatPreview = () => {
+const ChatPreview = memo(() => {
     const [msg, setMsg] = useState('')
     const [messages, setMessages] = useState([
         { from: 'them', text: 'Pak, laporan kelas 6A sudah selesai', time: '09:41' },
@@ -1119,9 +1119,9 @@ const ChatPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const FABPreview = () => {
+const FABPreview = memo(() => {
     const [open, setOpen] = useState(false)
     const actions = [
         { icon: faArrowUpFromBracket, label: 'Import', color: 'bg-sky-500/10 text-sky-600 border-sky-500/20' },
@@ -1147,9 +1147,9 @@ const FABPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const MobileBottomNavPreview = () => {
+const MobileBottomNavPreview = memo(() => {
     const [active, setActive] = useState('home')
     const tabs = [
         { key: 'home', icon: faGaugeHigh, label: 'Home', badge: null },
@@ -1175,9 +1175,9 @@ const MobileBottomNavPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const BreakpointPreview = () => {
+const BreakpointPreview = memo(() => {
     const [width, setWidth] = useState(640)
     const bps = [{ label: 'xs', min: 0, max: 639 }, { label: 'sm', min: 640, max: 767 }, { label: 'md', min: 768, max: 1023 }, { label: 'lg', min: 1024, max: 1279 }, { label: 'xl', min: 1280, max: 1535 }, { label: '2xl', min: 1536, max: 1920 }]
     const current = bps.find(b => width >= b.min && width <= b.max) || bps[bps.length - 1]
@@ -1186,7 +1186,7 @@ const BreakpointPreview = () => {
         <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
                 {bps.map(b => (
-                    <button key={b.label} onClick={() => setWidth(b.min || 320)} className={`px-3 py-1.5 rounded-xl text-[9px] font-black border transition-all ${current.label === b.label ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]'}`}>
+                    <button key={b.label} onClick={() => setWidth(b.min || 320)} className={`px-3 py-1.5 rounded-xl text-[9px] font-black border transition-colors ${current.label === b.label ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]'}`}>
                         <span className="uppercase">{b.label}</span> <span className="opacity-60">≥{b.min}px</span>
                     </button>
                 ))}
@@ -1203,9 +1203,9 @@ const BreakpointPreview = () => {
             </div>
         </div>
     )
-}
+})
 
-const TopbarPreview = () => {
+const TopbarPreview = memo(() => {
     const [search, setSearch] = useState('')
     const [notifOpen, setNotifOpen] = useState(false)
     return (
@@ -1239,7 +1239,7 @@ const TopbarPreview = () => {
                     <span className="text-[11px] font-black text-white">Laporanmu</span>
                     <div className="flex gap-4">
                         {['Dashboard', 'Data Siswa', 'Laporan'].map((item, i) => (
-                            <button key={item} className={`text-[10px] font-black transition-all ${i === 0 ? 'text-white border-b border-white' : 'text-white/60 hover:text-white'}`}>{item}</button>
+                            <button key={item} className={`text-[10px] font-black transition-colors ${i === 0 ? 'text-white border-b border-white' : 'text-white/60 hover:text-white'}`}>{item}</button>
                         ))}
                     </div>
                     <div className="ml-auto w-7 h-7 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">AS</div>
@@ -1247,7 +1247,50 @@ const TopbarPreview = () => {
             </div>
         </div>
     )
-}
+})
+
+// ─── LazySection — renders children only when near viewport ─────────────────────
+const LazySection = memo(({ children }) => {
+    const [visible, setVisible] = useState(false)
+    const ref = useRef(null)
+
+    useEffect(() => {
+        const el = ref.current
+        if (!el) return
+        // Already visible check (e.g. first section)
+        const rect = el.getBoundingClientRect()
+        if (rect.top < window.innerHeight + 600) {
+            setVisible(true)
+            return
+        }
+        const obs = new IntersectionObserver(([e]) => {
+            if (e.isIntersecting) {
+                setVisible(true)
+                obs.disconnect()
+            }
+        }, { rootMargin: '400px 0px' })
+        obs.observe(el)
+        return () => obs.disconnect()
+    }, [])
+
+    return (
+        <div ref={ref}>
+            {visible ? children : (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />
+                        <div className="h-5 w-48 rounded-lg bg-[var(--color-surface-alt)] animate-pulse" />
+                        <div className="h-px bg-[var(--color-border)] flex-1 ml-4 opacity-50" />
+                    </div>
+                    <div className="grid lg:grid-cols-2 gap-8">
+                        <div className="h-48 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] animate-pulse" />
+                        <div className="h-48 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] animate-pulse" />
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+})
 
 // ─── Playground Context ─────────────────────────────────────────────────────────
 const PlaygroundCtx = createContext({ onCopy: () => { } })
@@ -1258,7 +1301,7 @@ const SectionHeader = memo(({ icon, number, title }) => {
     return (
         <div id={id} className="flex items-center gap-4 mb-8 group">
             <div className="relative group/num">
-                <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-sm font-black relative z-10 border border-[var(--color-primary)]/20 group-hover:bg-[var(--color-primary)] group-hover:text-white transition-colors duration-200">{number}</div>
+                <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-sm font-black relative z-10 border border-[var(--color-primary)]/20 group-hover:bg-[var(--color-primary)] group-hover:text-white transition-colors">{number}</div>
             </div>
             <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-primary)] opacity-60 mb-0.5">Section</span>
@@ -1301,37 +1344,14 @@ const UIBlock = memo(({ title, children, code, fullWidth = false, dos = null, do
     const { onCopy } = useContext(PlaygroundCtx)
     const [mode, setMode] = useState('preview')
     const [size, setSize] = useState('L')
-    const [mounted, setMounted] = useState(false)
-    const ref = useRef(null)
     const filename = title.replace(/\s+/g, '') + '.jsx'
     const hasDoDont = dos && donts
     const hasApi = apiProps?.length > 0
     const lines = useMemo(() => code ? code.split('\n') : [], [code])
-
-    // Lazy mount — only render full content when near viewport
-    useEffect(() => {
-        const el = ref.current
-        if (!el) return
-        const obs = new IntersectionObserver(([e]) => {
-            if (e.isIntersecting) { setMounted(true); obs.disconnect() }
-        }, { rootMargin: '400px' })
-        obs.observe(el)
-        return () => obs.disconnect()
-    }, [])
-
     const previewWidth = PREVIEW_SIZES[size]
 
-    if (!mounted) {
-        return (
-            <div ref={ref} className={`space-y-2.5 ${fullWidth ? 'md:col-span-2 lg:col-span-3' : ''}`}>
-                <div className="h-4 w-32 rounded bg-[var(--color-surface-alt)] animate-pulse" />
-                <div className="h-48 rounded-[1.5rem] bg-[var(--color-surface-alt)] border border-[var(--color-border)] animate-pulse" />
-            </div>
-        )
-    }
-
     return (
-        <div ref={ref} className={`space-y-2.5 ${fullWidth ? 'md:col-span-2 lg:col-span-3' : ''}`}>
+        <div className={`space-y-2.5 ${fullWidth ? 'md:col-span-2 lg:col-span-3' : ''}`}>
             {/* Header row */}
             <div className="flex items-center justify-between px-1 gap-2">
                 <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 truncate">{title}</span>
@@ -1599,13 +1619,13 @@ export default function PlaygroundPage() {
                             {/* Desktop tab nav — shrink-0 so it never gets clipped */}
                             <div className="hidden lg:flex items-center gap-1 p-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-sm shrink-0">
                                 {[['atoms', 'Atoms'], ['library', 'Library'], ['layout', 'Layout'], ['forms', 'Forms'], ['dataviz', 'Viz'], ['tokens', 'Tokens']].map(([key, label]) => (
-                                    <button key={key} onClick={() => setActiveTab(key)} className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 whitespace-nowrap ${activeTab === key ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                    <button key={key} onClick={() => setActiveTab(key)} className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 whitespace-nowrap ${activeTab === key ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
                                         {label}
                                         <span className={`text-[7px] px-1 rounded-sm font-black ${activeTab === key ? 'bg-white/20 text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>{tabCounts[key]}</span>
                                     </button>
                                 ))}
                                 <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
-                                <button onClick={() => setShowSearch(p => !p)} className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${showSearch ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'}`}>
+                                <button onClick={() => setShowSearch(p => !p)} className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${showSearch ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'}`}>
                                     <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
                                 </button>
                             </div>
@@ -1617,13 +1637,13 @@ export default function PlaygroundPage() {
                                 <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide" id="tab-scroll-container">
                                     <div className="flex items-center gap-1 p-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-sm w-max">
                                         {[['atoms', 'Atoms'], ['library', 'Library'], ['layout', 'Layout'], ['forms', 'Forms'], ['dataviz', 'Viz'], ['tokens', 'Tokens']].map(([key, label]) => (
-                                            <button key={key} onClick={() => setActiveTab(key)} className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 whitespace-nowrap ${activeTab === key ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                            <button key={key} onClick={() => setActiveTab(key)} className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 whitespace-nowrap ${activeTab === key ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
                                                 {label}
                                                 <span className={`text-[7px] px-1 rounded-sm font-black ${activeTab === key ? 'bg-white/20 text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>{tabCounts[key]}</span>
                                             </button>
                                         ))}
                                         <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
-                                        <button onClick={() => setShowSearch(p => !p)} className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${showSearch ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'}`}>
+                                        <button onClick={() => setShowSearch(p => !p)} className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${showSearch ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'}`}>
                                             <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
                                         </button>
                                     </div>
@@ -1637,7 +1657,7 @@ export default function PlaygroundPage() {
                                     <button
                                         key={key}
                                         onClick={() => setActiveTab(key)}
-                                        className={`rounded-full transition-all duration-200 ${activeTab === key ? 'w-4 h-1.5 bg-[var(--color-primary)]' : 'w-1.5 h-1.5 bg-[var(--color-border)] hover:bg-[var(--color-text-muted)]'}`}
+                                        className={`rounded-full transition-colors duration-200 ${activeTab === key ? 'w-4 h-1.5 bg-[var(--color-primary)]' : 'w-1.5 h-1.5 bg-[var(--color-border)] hover:bg-[var(--color-text-muted)]'}`}
                                     />
                                 ))}
                             </div>
@@ -1672,12 +1692,15 @@ export default function PlaygroundPage() {
                         </div>
                     )}
 
+                    {/* Tab content — opacity dims while transition is pending */}
+
+
                     {/* ── ATOMS ── */}
                     {activeTab === 'atoms' && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                        <div className="space-y-10">
 
                             {/* 01 · Typography */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faFont} number="01" title="Typography & Text" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock
@@ -1715,12 +1738,12 @@ export default function PlaygroundPage() {
                                         code={`<div className="space-y-6">\n  <div>\n    <p className="text-[11px] font-bold text-[var(--color-text-muted)] mb-1.5 uppercase tracking-widest opacity-60">Lead Paragraph</p>\n    <p className="text-base font-medium text-[var(--color-text-muted)] leading-relaxed">The quick brown fox jumps over the lazy dog in a high-fidelity environment.</p>\n  </div>\n  <div>\n    <p className="text-[11px] font-bold text-[var(--color-text-muted)] mb-1.5 uppercase tracking-widest opacity-60">Standard Text</p>\n    <p className="text-sm text-[var(--color-text)] leading-relaxed">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>\n  </div>\n  <div className="flex flex-wrap gap-4">\n    <span className="text-[10px] font-black text-[var(--color-primary)] underline decoration-2 underline-offset-4">Interactive Link</span>\n    <span className="text-[10px] font-mono bg-[var(--color-surface-alt)] px-2 py-0.5 rounded border border-[var(--color-border)] uppercase text-[var(--color-text-muted)]">inline:code</span>\n    <span className="text-[10px] font-bold italic text-[var(--color-text-muted)] opacity-60">Muted & Italic</span>\n  </div>\n</div>`}
                                     />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* 02 · Color System */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faPalette} number="02" title="Color System" />
-                                <div className="glass rounded-[2rem] border border-[var(--color-border)] p-6 md:p-8">
+                                <div className="rounded-[2rem] border border-[var(--color-border)] p-6 md:p-8 bg-[var(--color-surface)]">
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-8">
                                         <ColorBlock name="Primary Brand" variable="--color-primary" description="Main actions & highlights" />
                                         <ColorBlock name="Secondary" variable="--color-secondary" description="Auxiliary interactive elements" />
@@ -1735,10 +1758,10 @@ export default function PlaygroundPage() {
                                         <ColorBlock name="UI Border" variable="--color-border" description="Grid lines & separators" />
                                     </div>
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* 03 · Badge & Status Pills */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faFlag} number="03" title="Badge & Status Pills" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock
@@ -1770,10 +1793,10 @@ export default function PlaygroundPage() {
                                         code={`<div className="flex flex-wrap gap-2">\n  {tags.map(tag => (\n    <span key={tag} className="px-2.5 py-1 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black flex items-center gap-1.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all cursor-pointer">\n      {tag}\n      <FontAwesomeIcon icon={faXmark} className="text-[8px] opacity-50" />\n    </span>\n  ))}\n  <button className="px-2.5 py-1 rounded-lg border-2 border-dashed border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black flex items-center gap-1 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all">\n    <FontAwesomeIcon icon={faPlus} className="text-[8px]" /> Add tag\n  </button>\n</div>`}
                                     />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* 04 · Avatar */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faUser} number="04" title="Avatar & User Identity" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock
@@ -1840,10 +1863,10 @@ export default function PlaygroundPage() {
                                         code={`<div className="flex items-center">\n  {members.map(({ init, bg }, i) => (\n    <div key={i} className={\`w-9 h-9 rounded-full \${bg} text-[10px] font-black flex items-center justify-center border-2 border-[var(--color-surface)] -mr-2 hover:-translate-y-1 transition-all cursor-pointer\`}>\n      {init}\n    </div>\n  ))}\n  <div className="w-9 h-9 rounded-full bg-[var(--color-surface-alt)] border-2 border-[var(--color-border)] text-[var(--color-text-muted)] text-[9px] font-black flex items-center justify-center ml-2">\n    +12\n  </div>\n</div>`}
                                     />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* 05 · Spacing Scale */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faExpand} number="05" title="Spacing Scale" />
                                 <UIBlock
                                     fullWidth
@@ -1882,10 +1905,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`{/* Spacing scale — n × 4px per Tailwind convention */}\n{[1, 2, 3, 4, 6, 8, 10, 12].map(n => (\n  <div key={n} className="flex items-center gap-4">\n    <div\n      className="bg-[var(--color-primary)]/20 border-l-2 border-[var(--color-primary)]/50 h-2"\n      style={{ width: n * 4 }}\n    />\n    <span className="text-[9px] font-mono text-[var(--color-text-muted)]">\n      p-{n} / gap-{n} / m-{n} = {n * 4}px\n    </span>\n  </div>\n))}`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 06 · Border Radius */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faGrip} number="06" title="Border Radius Scale" />
                                 <UIBlock
                                     fullWidth
@@ -1912,10 +1935,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`{[\n  { label: 'none', tw: 'rounded-none', px: '0px' },\n  { label: 'sm',   tw: 'rounded-sm',   px: '2px' },\n  { label: 'md',   tw: 'rounded-md',   px: '6px' },\n  { label: 'lg',   tw: 'rounded-lg',   px: '8px' },\n  { label: 'xl',   tw: 'rounded-xl',   px: '12px' },\n  { label: '2xl',  tw: 'rounded-2xl',  px: '16px' },\n  { label: '3xl',  tw: 'rounded-3xl',  px: '24px' },\n  { label: 'full', tw: 'rounded-full', px: '9999px' },\n].map(({ label, tw, px }) => (\n  <div key={label} className="flex flex-col items-center gap-2">\n    <div className={\`w-14 h-14 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/25 \${tw}\`} />\n    <span className="text-[9px] font-mono font-black text-[var(--color-primary)] opacity-70">{label}</span>\n    <span className="text-[8px] font-mono text-[var(--color-text-muted)] opacity-40">{px}</span>\n  </div>\n))}`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 07 · Dividers */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faCode} number="07" title="Dividers & Separators" />
                                 <UIBlock
                                     fullWidth
@@ -1980,10 +2003,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`{/* Solid */}\n<div className="h-px bg-[var(--color-border)]" />\n\n{/* Dashed */}\n<div className="border-t border-dashed border-[var(--color-border)]" />\n\n{/* With label */}\n<div className="flex items-center gap-3">\n  <div className="h-px bg-[var(--color-border)] flex-1" />\n  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">OR</span>\n  <div className="h-px bg-[var(--color-border)] flex-1" />\n</div>\n\n{/* Vertical */}\n<div className="w-px h-full bg-[var(--color-border)]" />`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 08 · Loading & Progress */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faSpinner} number="08" title="Loading & Progress States" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock
@@ -2050,10 +2073,10 @@ export default function PlaygroundPage() {
                                         code={`<div className="flex items-center">\n  {['Config', 'Review', 'Deploy', 'Done'].map((step, i) => (\n    <div key={i} className="flex items-center">\n      <div className="flex flex-col items-center gap-1">\n        <div className={\`w-8 h-8 rounded-full text-[9px] font-black flex items-center justify-center\n          \${i < 2 ? 'bg-[var(--color-primary)] text-white'\n            : i === 2 ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-2 border-[var(--color-primary)]'\n            : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]'}\`}>\n          {i < 2 ? <FontAwesomeIcon icon={faCheck} className="text-[8px]" /> : i + 1}\n        </div>\n        <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase whitespace-nowrap">{step}</span>\n      </div>\n      {i < 3 && <div className={\`h-0.5 w-8 mb-4 mx-1 \${i < 2 ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}\`} />}\n    </div>\n  ))}\n</div>`}
                                     />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* 09 · Tooltip & Keyboard */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faLightbulb} number="09" title="Tooltip & Keyboard Hints" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock
@@ -2109,10 +2132,10 @@ export default function PlaygroundPage() {
                                         code={`{[\n  { keys: ['⌘', 'K'],    desc: 'Command palette' },\n  { keys: ['Ctrl', 'S'], desc: 'Save changes' },\n  { keys: ['⌘', 'Z'],    desc: 'Undo last action' },\n  { keys: ['Esc'],       desc: 'Close / cancel' },\n].map(({ keys, desc }) => (\n  <div key={desc} className="flex items-center justify-between">\n    <span className="text-[11px] font-medium text-[var(--color-text-muted)]">{desc}</span>\n    <div className="flex items-center gap-1">\n      {keys.map(k => (\n        <kbd key={k} className="px-2 py-1 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] border-b-[3px] text-[10px] font-mono font-black text-[var(--color-text-muted)] shadow-sm">\n          {k}\n        </kbd>\n      ))}\n    </div>\n  </div>\n))}`}
                                     />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* 10 · Iconography */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faGrip} number="10" title="Iconography Reference" />
                                 <UIBlock
                                     fullWidth
@@ -2135,10 +2158,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`const iconGroups = [\n  { label: 'Navigation', icons: [faChevronRight, faChevronDown, faArrowRight, faSearch, faFilter] },\n  { label: 'Actions',    icons: [faPlus, faTrash, faCopy, faDownload, faGear] },\n  { label: 'Status',     icons: [faCheck, faXmark, faTriangleExclamation, faCircleInfo, faBell] },\n  { label: 'Users',      icons: [faUser, faUserGroup, faShieldHalved, faKey, faLock] },\n  { label: 'Content',    icons: [faFileLines, faChartLine, faCalendar, faGlobe, faCamera] },\n]\n\n{iconGroups.map(({ label, icons }) => (\n  <div key={label}>\n    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 mb-3">{label}</p>\n    <div className="flex flex-wrap gap-3">\n      {icons.map((icon, i) => (\n        <div key={i} className="w-10 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/20 active:scale-90 transition-all cursor-pointer">\n          <FontAwesomeIcon icon={icon} className="text-sm" />\n        </div>\n      ))}\n    </div>\n  </div>\n))}`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 11 · Toggle & Switch */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faCheck} number="11" title="Toggle & Switch" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock
@@ -2184,10 +2207,10 @@ export default function PlaygroundPage() {
                                         code={`{/* Disabled toggle */}\n<button\n  disabled\n  className="w-11 h-6 rounded-full relative bg-[var(--color-primary)] opacity-30 cursor-not-allowed"\n>\n  <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm translate-x-5" />\n</button>`}
                                     />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* 12 · Checkbox & Radio */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faCheckDouble} number="12" title="Checkbox & Radio" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock
@@ -2201,10 +2224,10 @@ export default function PlaygroundPage() {
                                         code={`{plans.map(({ value, label, desc, selected }) => (\n  <label key={value} className={\`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all\n    \${selected ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40'}\`}>\n    <div className={\`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0\n      \${selected ? 'border-[var(--color-primary)]' : 'border-[var(--color-border)]'}\`}>\n      {selected && <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]" />}\n    </div>\n    <div className="flex-1">\n      <span className={\`text-[11px] font-black \${selected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text)]'}\`}>{label}</span>\n      <p className="text-[10px] text-[var(--color-text-muted)] opacity-60">{desc}</p>\n    </div>\n  </label>\n))}`}
                                     />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* 13 · Input States */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faSearch} number="13" title="Input States" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock
@@ -2218,10 +2241,10 @@ export default function PlaygroundPage() {
                                         code={`{/* Input with icon */}\n<div className="relative">\n  <FontAwesomeIcon icon={faSearch} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-xs" />\n  <input placeholder="Cari siswa..." className="w-full h-10 pl-10 pr-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-sm font-medium text-[var(--color-text)] outline-none" />\n</div>\n\n{/* Input with prefix */}\n<div className="flex">\n  <span className="h-10 px-3.5 flex items-center rounded-l-xl bg-[var(--color-surface-alt)] border border-r-0 border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)]">https://</span>\n  <input className="flex-1 h-10 px-3 rounded-r-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-sm font-medium outline-none" />\n</div>`}
                                     />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* 14 · Elevation & Shadow */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faLayerGroup} number="14" title="Elevation & Shadow Scale" />
                                 <UIBlock
                                     fullWidth
@@ -2263,10 +2286,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`{/* Usage guide */}\n<div className="shadow-sm hover:shadow-md transition-shadow rounded-2xl bg-[var(--color-surface)] p-4">\n  Card — hover to elevate\n</div>\n\n<div className="shadow-lg rounded-xl bg-[var(--color-surface)] p-2">\n  Dropdown menu\n</div>\n\n<div className="shadow-2xl rounded-2xl bg-[var(--color-surface)] p-6">\n  Modal dialog\n</div>`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 15 · Opacity Scale */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faEye} number="15" title="Opacity Scale" />
                                 <UIBlock
                                     fullWidth
@@ -2298,10 +2321,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`{/* Opacity usage examples */}\n{/* Muted text */}\n<span className="opacity-60 text-[var(--color-text-muted)]">Helper text</span>\n\n{/* Disabled element */}\n<button className="opacity-40 cursor-not-allowed" disabled>Disabled</button>\n\n{/* Overlay tint */}\n<div className="absolute inset-0 bg-[var(--color-primary)] opacity-5 rounded-2xl pointer-events-none" />`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 16 · Motion & Animation Tokens */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faSpinner} number="16" title="Motion & Animation Tokens" />
                                 <UIBlock
                                     fullWidth
@@ -2347,7 +2370,7 @@ export default function PlaygroundPage() {
                                             <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
                                                 <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-50 mb-3">Tailwind Shorthand</p>
                                                 <div className="flex flex-wrap gap-2">
-                                                    {['transition-all', 'duration-75', 'duration-150', 'duration-300', 'duration-500', 'duration-700', 'ease-in', 'ease-out', 'ease-in-out'].map(cls => (
+                                                    {['transition-colors', 'duration-75', 'duration-150', 'duration-300', 'duration-500', 'duration-700', 'ease-in', 'ease-out', 'ease-in-out'].map(cls => (
                                                         <span key={cls} className="px-2.5 py-1 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[9px] font-mono text-[var(--color-primary)]">{cls}</span>
                                                     ))}
                                                 </div>
@@ -2356,10 +2379,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`{/* Recommended combinations */}\n\n{/* Instant — toggle, checkbox */}\n<div className="transition-all duration-75 ease-in-out" />\n\n{/* Default UI — hover, focus */}\n<div className="transition-all duration-150 ease-out" />\n\n{/* Smooth — expand, slide */}\n<div className="transition-all duration-300 ease-in-out" />\n\n{/* Spring — pop, bounce */}\n<div className="transition-all duration-500 ease-[cubic-bezier(.34,1.56,.64,1)]" />`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 17 · Empty States */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faBoxOpen} number="17" title="Empty States" />
                                 <UIBlock
                                     fullWidth
@@ -2407,10 +2430,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`<div className="flex flex-col items-center text-center p-6 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] gap-3">\n  <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center">\n    <FontAwesomeIcon icon={faFileLines} className="text-lg" />\n  </div>\n  <div>\n    <h4 className="text-[12px] font-black text-[var(--color-text)] mb-1">Belum ada data</h4>\n    <p className="text-[10px] text-[var(--color-text-muted)] leading-relaxed opacity-70">Tambahkan entri pertama untuk memulai.</p>\n  </div>\n  <button className="mt-1 px-4 py-2 rounded-xl text-[10px] font-black bg-[var(--color-primary)] text-white hover:opacity-90 active:scale-95">\n    + Tambah Baru\n  </button>\n</div>`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 18 · Z-Index Scale */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faLayerGroup} number="18" title="Z-Index Scale" />
                                 <UIBlock
                                     fullWidth
@@ -2462,10 +2485,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`{/* Z-index convention */}\n\n{/* Sticky navbar */}\n<header className="sticky top-0 z-20 bg-[var(--color-surface)] border-b border-[var(--color-border)]" />\n\n{/* Modal backdrop */}\n<div className="fixed inset-0 z-40 bg-black/50" />\n\n{/* Modal dialog */}\n<div className="fixed inset-0 z-50 flex items-center justify-center">\n  <div className="bg-[var(--color-surface)] rounded-2xl shadow-2xl p-6">\n    Modal content\n  </div>\n</div>\n\n{/* Toast notification */}\n<div className="fixed bottom-4 right-4 z-[999]">\n  <ToastMessage />\n</div>`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 19 · Select & Textarea */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faFileLines} number="19" title="Select & Textarea" />
                                 <UIBlock fullWidth title="Select & Textarea Variants" children={<SelectTextareaPreview />} code={`{/* Single select dengan grouped options */}\n<div className="relative">\n  <select className="w-full h-10 pl-3.5 pr-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] text-[11px] font-black text-[var(--color-text)] outline-none appearance-none cursor-pointer">\n    <optgroup label="Kelas 6">\n      <option value="kelas-6a">Kelas 6A</option>\n    </optgroup>\n  </select>\n  <FontAwesomeIcon icon={faChevronDown} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none" />\n</div>\n\n{/* Textarea dengan char counter */}\n<textarea\n  value={text}\n  onChange={e => setText(e.target.value.slice(0, 200))}\n  rows={3}\n  className="w-full px-3.5 py-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] text-[11px] outline-none resize-none"\n />`}
                                     dos={['Selalu sertakan label yang jelas di atas select', 'Gunakan optgroup untuk mengelompokkan opsi yang banyak', 'Sertakan counter karakter di sudut kanan bawah textarea']}
@@ -2479,16 +2502,16 @@ export default function PlaygroundPage() {
                                         { prop: 'maxLength', type: 'number', defaultVal: 'undefined', desc: 'Batas karakter untuk textarea' },
                                     ]}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 20 · Range Slider */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faExpand} number="20" title="Range Slider" />
                                 <UIBlock fullWidth title="Slider Variants" children={<RangeSliderPreview />} code={`const [val, setVal] = useState(65)\n\n{/* Custom range slider */}\n<div className="relative h-4 flex items-center">\n  <div className="absolute w-full h-2 rounded-full bg-[var(--color-surface-alt)]" />\n  <div className="absolute h-2 rounded-full bg-[var(--color-primary)]" style={{ width: \`\${val}%\` }} />\n  <input type="range" min="0" max="100" value={val}\n    onChange={e => setVal(+e.target.value)}\n    className="absolute w-full opacity-0 cursor-pointer h-4" />\n  <div className="absolute h-4 w-4 rounded-full bg-white border-2 border-[var(--color-primary)] shadow-md pointer-events-none"\n    style={{ left: \`calc(\${val}% - 8px)\` }} />\n</div>`} />
-                            </section>
+                            </section></LazySection>
 
                             {/* 21 · Color Tokens Grid */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faPalette} number="21" title="Color Tokens Grid" />
                                 <UIBlock fullWidth title="Full Token Reference"
                                     children={
@@ -2545,10 +2568,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`{/* Semua warna pakai CSS variable — auto support dark mode */}\n\n// Penggunaan di Tailwind:\n<div className="bg-[var(--color-surface)] text-[var(--color-text)]">\n  <span className="text-[var(--color-primary)]">Primary</span>\n  <span className="text-[var(--color-text-muted)]">Muted</span>\n</div>\n\n// Di inline style:\n<div style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }} />\n\n// Jangan hardcode hex — pakai token:\n// ❌ className="bg-indigo-600"\n// ✅ className="bg-[var(--color-primary)]"`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 22 · Breadcrumb Variants */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faChevronRight} number="22" title="Breadcrumb Variants" />
                                 <UIBlock fullWidth title="Breadcrumb Patterns"
                                     children={
@@ -2595,10 +2618,10 @@ export default function PlaygroundPage() {
                                     dos={['Tampilkan max 4 level — collapse tengah kalau lebih dari itu', 'Buat semua item kecuali terakhir bisa diklik', 'Gunakan role badge di kiri untuk konteks halaman']}
                                     donts={['Jangan ulangi halaman aktif di breadcrumb dan page title', 'Hindari breadcrumb di halaman top-level (Dashboard, Home)', 'Jangan gunakan slash (/) sebagai separator — pakai chevron >']}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 23 · Micro-interactions */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faSpinner} number="23" title="Micro-interactions" />
                                 <UIBlock fullWidth title="Interaction Patterns"
                                     children={
@@ -2658,10 +2681,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`// Hover lift card\n<div className="hover:-translate-y-1 hover:shadow-lg hover:border-[var(--color-primary)]/30 transition-all duration-200">\n\n// Press scale button\n<button className="active:scale-95 hover:opacity-90 transition-all duration-150">\n\n// Skeleton pulse\n<div className="h-4 rounded-full bg-[var(--color-surface-alt)] animate-pulse" />\n\n// Spin loader\n<FontAwesomeIcon icon={faSpinner} className="animate-spin" />\n\n// Animate in (tailwindcss-animate)\n<div className="animate-in fade-in slide-in-from-bottom-4 duration-500">\n\n// Bounce dots (typing indicator)\n{[0,150,300].map(d => (\n  <div key={d} className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-bounce"\n    style={{ animationDelay: \`\${d}ms\` }} />\n))}`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 24 · Scrollbar Styling */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faExpand} number="24" title="Scrollbar Styling" />
                                 <UIBlock fullWidth title="Custom Scrollbar Variants"
                                     children={
@@ -2691,10 +2714,10 @@ export default function PlaygroundPage() {
                                     }
                                     code={`/* CSS Global — index.css */\n\n/* Hide scrollbar tapi tetap scrollable */\n.scrollbar-hide {\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n}\n.scrollbar-hide::-webkit-scrollbar { display: none; }\n\n/* Thin scrollbar dengan warna primary */\n.scrollbar-thin {\n  scrollbar-width: thin;\n  scrollbar-color: var(--color-primary) transparent;\n}\n.scrollbar-thin::-webkit-scrollbar { width: 4px; }\n.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }\n.scrollbar-thin::-webkit-scrollbar-thumb {\n  background: var(--color-primary);\n  border-radius: 999px;\n}\n\n// JSX:\n<div className="overflow-y-auto scrollbar-hide">  {/* tak terlihat */}\n<div className="overflow-y-auto scrollbar-thin">   {/* halus */}`}
                                 />
-                            </section>
+                            </section></LazySection>
 
                             {/* 25 · Focus Ring / A11Y */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faEye} number="25" title="Focus Ring & A11Y" />
                                 <UIBlock fullWidth title="Accessibility Patterns"
                                     children={
@@ -2756,15 +2779,15 @@ export default function PlaygroundPage() {
                                     dos={['Selalu test navigasi keyboard — Tab, Enter, Escape, Arrow keys', 'Gunakan focus-visible bukan focus untuk ring — hanya muncul saat keyboard', 'Pastikan semua icon-only button punya aria-label']}
                                     donts={['Jangan hilangkan focus outline dengan outline-none tanpa gantinya', 'Hindari warna teks yang kontrasnya di bawah 4.5:1 (WCAG AA)', 'Jangan andalkan warna saja untuk menyampaikan informasi']}
                                 />
-                            </section>
+                            </section></LazySection>
 
                         </div>
                     )}
                     {activeTab === 'library' && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                        <div className="space-y-10">
 
                             {/* A · Data & Tables */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faFileLines} number="A" title="Data & Tables" />
                                 <div className="space-y-8">
                                     <UIBlock fullWidth title="01 · Data Table" children={<DataTablePreview />} code={`const [selected, setSelected] = useState(new Set())\nconst [sortField, setSortField] = useState('name')\nconst [sortDir, setSortDir] = useState('asc')\n\nconst toggleRow = id => {\n  const s = new Set(selected)\n  s.has(id) ? s.delete(id) : s.add(id)\n  setSelected(s)\n}\n\n// Sort logic\nconst sorted = [...data].sort((a, b) => {\n  const v = sortDir === 'asc' ? 1 : -1\n  return a[sortField] > b[sortField] ? v : -v\n})`}
@@ -2788,7 +2811,7 @@ export default function PlaygroundPage() {
                                                     <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-50 mb-2">Format</p>
                                                     <div className="flex gap-2">
                                                         {[{ f: 'PDF', icon: faFilePdf, active: true }, { f: 'Excel', icon: faTable, active: false }, { f: 'CSV', icon: faFileLines, active: false }].map(({ f, icon, active }) => (
-                                                            <div key={f} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer text-[10px] font-black transition-all ${active ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]'}`}><FontAwesomeIcon icon={icon} className="text-[9px]" />{f}</div>
+                                                            <div key={f} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer text-[10px] font-black transition-colors ${active ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]'}`}><FontAwesomeIcon icon={icon} className="text-[9px]" />{f}</div>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -2805,7 +2828,7 @@ export default function PlaygroundPage() {
                                             <div className="space-y-4">
                                                 <div className="flex items-center justify-center gap-1">
                                                     <button className="w-8 h-8 rounded-lg border border-[var(--color-border)] text-[10px] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] transition-all">‹</button>
-                                                    {[1, 2, 3, '…', 12].map((p, i) => <button key={i} className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${p === 2 ? 'bg-[var(--color-primary)] text-white' : 'border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]'}`}>{p}</button>)}
+                                                    {[1, 2, 3, '…', 12].map((p, i) => <button key={i} className={`w-8 h-8 rounded-lg text-[10px] font-black transition-colors ${p === 2 ? 'bg-[var(--color-primary)] text-white' : 'border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]'}`}>{p}</button>)}
                                                     <button className="w-8 h-8 rounded-lg border border-[var(--color-border)] text-[10px] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] transition-all">›</button>
                                                 </div>
                                                 <button className="w-full py-2 rounded-xl border border-dashed border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all">Muat lebih banyak (248 item)</button>
@@ -2813,10 +2836,10 @@ export default function PlaygroundPage() {
                                         } code={`// Numbered pagination\n<div className="flex items-center gap-1">\n  <button className="w-8 h-8 rounded-lg border border-[var(--color-border)]">‹</button>\n  {pages.map(p => (\n    <button key={p} onClick={() => setPage(p)}\n      className={\`w-8 h-8 rounded-lg font-black \${currentPage===p ? 'bg-[var(--color-primary)] text-white' : 'border border-[var(--color-border)]'}\`}>\n      {p}\n    </button>\n  ))}\n  <button className="w-8 h-8 rounded-lg border border-[var(--color-border)]">›</button>\n</div>`} />
                                     </div>
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* B · Navigation & Discovery */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faSearch} number="B" title="Navigation & Discovery" />
                                 <div className="space-y-8">
                                     <UIBlock fullWidth title="05 · Command Palette" children={<CommandPalettePreview />} code={`const [q, setQ] = useState('')\nconst [open, setOpen] = useState(false)\n\n// Open with ⌘K\nuseEffect(() => {\n  const handler = e => {\n    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {\n      e.preventDefault()\n      setOpen(p => !p)\n    }\n  }\n  window.addEventListener('keydown', handler)\n  return () => window.removeEventListener('keydown', handler)\n}, [])`} />
@@ -2843,10 +2866,10 @@ export default function PlaygroundPage() {
                                         />
                                     </div>
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* C · Cards & Profiles */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faUser} number="C" title="Cards & Profiles" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="08 · Stat Cards" children={
@@ -2906,10 +2929,10 @@ export default function PlaygroundPage() {
                                     <UIBlock title="10 · Onboarding Checklist" children={<OnboardingPreview />} code={`const [steps, setSteps] = useState([\n  { id: 0, label: 'Buat akun admin',   done: true  },\n  { id: 1, label: 'Upload logo',       done: true  },\n  { id: 2, label: 'Atur tahun ajaran', done: false },\n  { id: 3, label: 'Import siswa',      done: false },\n])\n\nconst complete = id =>\n  setSteps(prev => prev.map(s => s.id===id ? {...s, done:true} : s))\n\nconst pct = Math.round((steps.filter(s=>s.done).length / steps.length) * 100)`} />
                                     <UIBlock title="11 · Multi-step Wizard" children={<WizardPreview />} code={`const [step, setStep] = useState(0)\nconst steps = ['Profil', 'Sekolah', 'Akademik', 'Review']\n\n<div className="flex justify-between">\n  <button onClick={() => setStep(p => Math.max(0, p-1))}\n    disabled={step === 0}\n    className="px-4 h-9 rounded-xl border border-[var(--color-border)] text-[10px] font-black disabled:opacity-30">\n    ← Kembali\n  </button>\n  <button onClick={() => setStep(p => Math.min(steps.length-1, p+1))}\n    disabled={step === steps.length - 1}\n    className="px-4 h-9 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black disabled:opacity-40">\n    Lanjut →\n  </button>\n</div>`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* D · Overlays & Feedback */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faBell} number="D" title="Overlays & Feedback" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="12 · Toast & Snackbar" children={
@@ -2952,7 +2975,7 @@ export default function PlaygroundPage() {
                                                 { dot: 'bg-amber-500', title: 'Jadwal diperbarui', desc: 'Semester 2 jadwal baru', time: '3h', unread: true },
                                                 { dot: 'bg-[var(--color-border)]', title: 'Komentar baru', desc: 'Di laporan Q3', time: '1d', unread: false },
                                             ].map((n, i) => (
-                                                <div key={i} className={`flex items-start gap-3 p-3 rounded-xl transition-all cursor-pointer ${n.unread ? 'bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/8' : 'hover:bg-[var(--color-surface-alt)]'}`}>
+                                                <div key={i} className={`flex items-start gap-3 p-3 rounded-xl transition-colors cursor-pointer ${n.unread ? 'bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/8' : 'hover:bg-[var(--color-surface-alt)]'}`}>
                                                     <div className={`w-2 h-2 rounded-full ${n.dot} mt-1.5 shrink-0`} />
                                                     <div className="flex-1 min-w-0">
                                                         <p className={`text-[10px] font-black ${n.unread ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>{n.title}</p>
@@ -2988,10 +3011,10 @@ export default function PlaygroundPage() {
                                         </div>
                                     } code={`const [isOpen, setIsOpen] = useState(false)\n\n{isOpen && (\n  <>\n    <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setIsOpen(false)} />\n    <div className="fixed right-0 top-0 h-full w-80 z-50 bg-[var(--color-surface)] border-l border-[var(--color-border)] shadow-2xl overflow-y-auto animate-in slide-in-from-right">\n      <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center">\n        <h3 className="text-[12px] font-black text-[var(--color-text)]">Detail Siswa</h3>\n        <button onClick={() => setIsOpen(false)}>\n          <FontAwesomeIcon icon={faXmark} />\n        </button>\n      </div>\n      {/* content */}\n    </div>\n  </>\n)}`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* E · Content Components */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faLayerGroup} number="E" title="Content Components" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="16 · Accordion" children={<AccordionPreview />} code={`const [open, setOpen] = useState(0)\n\n{items.map((item, i) => (\n  <div key={i} className={\`rounded-xl border overflow-hidden transition-all\n    \${open===i ? 'border-[var(--color-primary)]' : 'border-[var(--color-border)]'}\`}>\n    <button onClick={() => setOpen(open===i ? -1 : i)}\n      className="w-full flex items-center justify-between px-4 py-3">\n      <span className={\`text-[11px] font-black \${open===i ? 'text-[var(--color-primary)]' : 'text-[var(--color-text)]'}\`}>\n        {item.q}\n      </span>\n      <FontAwesomeIcon icon={faChevronDown}\n        className={\`text-[9px] transition-transform \${open===i ? 'rotate-180' : ''}\`} />\n    </button>\n    {open===i && <div className="px-4 pb-3 text-[11px] text-[var(--color-text-muted)]">{item.a}</div>}\n  </div>\n))}`}
@@ -3061,10 +3084,10 @@ export default function PlaygroundPage() {
                                         </div>
                                     } code={`<div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden">\n  <div className="flex items-center gap-1 p-2 border-b border-[var(--color-border)]">\n    <button onClick={() => document.execCommand('bold')} className="w-7 h-7 rounded-lg font-black text-[10px] hover:bg-[var(--color-primary)]/10">B</button>\n    <button onClick={() => document.execCommand('italic')} className="w-7 h-7 rounded-lg italic text-[10px] hover:bg-[var(--color-primary)]/10">I</button>\n  </div>\n  <div\n    contentEditable\n    className="p-4 min-h-24 text-[11px] outline-none"\n    onInput={e => setContent(e.currentTarget.innerHTML)}\n  />\n</div>`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* F · Advanced Patterns */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faGear} number="F" title="Advanced Patterns" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="20 · Date Picker" children={
@@ -3081,7 +3104,7 @@ export default function PlaygroundPage() {
                                                     </div>
                                                     <div className="grid grid-cols-7 gap-1">
                                                         {[null, null, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31].map((d, i) => (
-                                                            <button key={i} className={`h-7 rounded-lg text-[9px] font-black transition-all ${!d ? '' : 'cursor-pointer'} ${d === 13 ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : d === 16 ? 'bg-[var(--color-primary)] text-white' : d && d >= 13 && d <= 16 ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : d ? 'hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]' : ''}`}>{d || ''}</button>
+                                                            <button key={i} className={`h-7 rounded-lg text-[9px] font-black transition-colors ${!d ? '' : 'cursor-pointer'} ${d === 13 ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : d === 16 ? 'bg-[var(--color-primary)] text-white' : d && d >= 13 && d <= 16 ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : d ? 'hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]' : ''}`}>{d || ''}</button>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -3142,25 +3165,25 @@ export default function PlaygroundPage() {
                                     <UIBlock title="24 · Inline Editable" children={<InlineEditPreview />} code={`const [editing, setEditing] = useState(null)\nconst [values, setValues] = useState({\n  nama: 'Andi Setiawan',\n  kelas: '6A',\n  email: 'andi@gmail.com',\n})\n\nconst save = field => {\n  setEditing(null)\n  addToast('Autosaved', 'success')\n}`} />
                                     <UIBlock title="25 · Confirm Dialog" children={<ConfirmDialogPreview />} code={`const [input, setInput] = useState('')\nconst confirmed = input === 'HAPUS'\n\n<button disabled={!confirmed} onClick={handleDelete}\n  className={\`\${confirmed ? 'bg-rose-500 text-white' : 'bg-rose-500/20 text-rose-300 cursor-not-allowed'}\`}>\n  Hapus Permanen\n</button>`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* G · Input Extras */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faSearch} number="G" title="Input Extras" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="OTP / PIN Input" children={<OTPInputPreview />} code={`const [otp, setOtp] = useState(['','','','','',''])\n\nconst handleChange = (i, v) => {\n  const d = v.replace(/\\D/g,'').slice(-1)\n  const next = [...otp]; next[i] = d; setOtp(next)\n  // auto-advance\n  if (d && i < 5) document.getElementById(\`otp-\${i+1}\`).focus()\n}\n\n<div className="flex gap-2">\n  {otp.map((v, i) => (\n    <input key={i} id={\`otp-\${i}\`}\n      maxLength={1} value={v}\n      onChange={e => handleChange(i, e.target.value)}\n      className="w-11 h-13 text-center text-[20px] font-black rounded-xl border-2 outline-none"\n    />\n  ))}\n</div>`} />
                                     <UIBlock title="Tag Input (Tokenizer)" children={<TagInputPreview />} code={`const [tags, setTags] = useState(['React','TypeScript'])\nconst [input, setInput] = useState('')\n\nconst addTag = () => {\n  const t = input.trim()\n  if (t && !tags.includes(t) && tags.length < 8) {\n    setTags(p => [...p, t])\n    setInput('')\n  }\n}\n\n<input\n  value={input}\n  onChange={e => setInput(e.target.value)}\n  onKeyDown={e => {\n    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag() }\n    if (e.key === 'Backspace' && !input) setTags(p => p.slice(0,-1))\n  }}\n  placeholder="Tambah tag…"\n/>`} />
                                     <UIBlock fullWidth title="Multi-select Combobox" children={<ComboboxPreview />} code={`const [q, setQ] = useState('')\nconst [selected, setSelected] = useState([])\nconst [open, setOpen] = useState(false)\n\nconst toggle = name =>\n  setSelected(p => p.includes(name) ? p.filter(x=>x!==name) : [...p, name])\n\nconst filtered = options\n  .filter(n => n.toLowerCase().includes(q.toLowerCase()) && !selected.includes(n))`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                         </div>
                     )}
 
                     {/* ── FORMS ── */}
                     {activeTab === 'forms' && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                            <section>
+                        <div className="space-y-10">
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faFileLines} number="A" title="Authentication Forms" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="01 · Login Form" children={<LoginFormPreview />} code={`const [email, setEmail] = useState('')\nconst [pass, setPass] = useState('')\nconst [showPass, setShowPass] = useState(false)\nconst valid = email.includes('@') && pass.length >= 6\n\n<button onClick={submit} disabled={!valid}\n  className={\`w-full h-10 rounded-xl text-[11px] font-black transition-all\n    \${valid ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-alt)] cursor-not-allowed'}\`}>\n  Masuk →\n</button>`}
@@ -3186,8 +3209,8 @@ export default function PlaygroundPage() {
                                         </div>
                                     } code={`{/* Register form pattern */}\n<div className="space-y-3">\n  <div className="grid grid-cols-2 gap-2">\n    <input name="firstName" placeholder="Nama Depan" className="h-9 px-3 rounded-xl border border-[var(--color-border)] focus:border-[var(--color-primary)]" />\n    <input name="lastName" placeholder="Nama Belakang" className="h-9 px-3 rounded-xl border border-[var(--color-border)] focus:border-[var(--color-primary)]" />\n  </div>\n  <input name="email" type="email" placeholder="Email Sekolah" className="w-full h-9 px-3 rounded-xl border" />\n  <input name="password" type="password" placeholder="Password" className="w-full h-9 px-3 rounded-xl border" />\n  {/* Terms checkbox */}\n  <button type="submit" className="w-full h-9 rounded-xl bg-[var(--color-primary)] text-white font-black">\n    Buat Akun →\n  </button>\n</div>`} />
                                 </div>
-                            </section>
-                            <section>
+                            </section></LazySection>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faSearch} number="B" title="Data Forms" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock fullWidth title="03 · Search & Filter Form" children={<SearchFilterFormPreview />} code={`const [q, setQ] = useState('')\nconst [kelas, setKelas] = useState('semua')\nconst [status, setStatus] = useState('semua')\n\nconst filtered = data\n  .filter(d =>\n    (q === '' || d.nama.toLowerCase().includes(q.toLowerCase())) &&\n    (kelas === 'semua' || d.kelas === kelas) &&\n    (status === 'semua' || d.status === status)\n  )`} />
@@ -3218,14 +3241,14 @@ export default function PlaygroundPage() {
                                     <UIBlock title="07 · Tag Input" children={<TagInputPreview />} code={`const [tags, setTags] = useState(['React'])\nconst [input, setInput] = useState('')\n\nconst addTag = () => {\n  const t = input.trim()\n  if (t && !tags.includes(t) && tags.length < 8) {\n    setTags(p => [...p, t])\n    setInput('')\n  }\n}`} />
                                     <UIBlock title="08 · Multi-select Combobox" children={<ComboboxPreview />} code={`const [selected, setSelected] = useState([])\nconst [q, setQ] = useState('')\nconst [open, setOpen] = useState(false)\n\nconst filtered = options.filter(n =>\n  n.toLowerCase().includes(q.toLowerCase()) &&\n  !selected.includes(n)\n)`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
                         </div>
                     )}
 
                     {/* ── DATA VIZ ── */}
                     {activeTab === 'dataviz' && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                            <section>
+                        <div className="space-y-10">
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faChartLine} number="A" title="Trend & Comparison" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="01 · Bar Chart" children={<BarChartPreview />} code={`const data = [\n  { l:'Jan', v:82 }, { l:'Feb', v:91 },\n  { l:'Mar', v:75 }, { l:'Apr', v:88 },\n]\nconst max = Math.max(...data.map(d => d.v))\n\n{data.map(({ l, v }) => (\n  <div key={l} className="flex-1 flex flex-col items-center gap-1 group">\n    <div\n      className="w-full rounded-t-lg bg-[var(--color-primary)]/20 group-hover:bg-[var(--color-primary)] transition-all"\n      style={{ height: \`\${(v/max)*80}px\` }}\n    />\n    <span className="text-[8px] font-black text-[var(--color-text-muted)] opacity-60">{l}</span>\n  </div>\n))}`}
@@ -3242,8 +3265,8 @@ export default function PlaygroundPage() {
                                     <UIBlock title="03 · Donut Chart" children={<DonutChartPreview />} code={`// Buat arc dari persentase\nconst makeArc = (startPct, endPct, r=36, cx=50, cy=50) => {\n  const s = startPct * 2 * Math.PI\n  const e = endPct * 2 * Math.PI\n  const x1 = cx + r * Math.sin(s), y1 = cy - r * Math.cos(s)\n  const x2 = cx + r * Math.sin(e), y2 = cy - r * Math.cos(e)\n  const large = (endPct - startPct) > 0.5 ? 1 : 0\n  return \`M\${cx},\${cy} L\${x1},\${y1} A\${r},\${r} 0 \${large},1 \${x2},\${y2} Z\`\n}`} />
                                     <UIBlock title="04 · Sparkline KPI Cards" children={<SparklinePreview />} code={`// Mini line chart inside KPI card\nconst W=80, H=28\nconst max=Math.max(...data), min=Math.min(...data)\n\nconst pts = data.map((v,i) =>\n  \`\${(i/(data.length-1))*W},\${H-((v-min)/(max-min||1))*H}\`\n).join(' ')\n\n<svg viewBox={\`0 0 \${W} \${H}\`} style={{width:'100%',height:28}}>\n  <polyline points={pts}\n    fill="none"\n    stroke={up ? '#22c55e' : '#ef4444'}\n    strokeWidth="1.5"\n    strokeLinecap="round"\n    strokeLinejoin="round"\n  />\n</svg>`} />
                                 </div>
-                            </section>
-                            <section>
+                            </section></LazySection>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faGrip} number="B" title="Distribution & Patterns" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="05 · Heatmap" children={<HeatmapPreview />} code={`const days = ['Sen','Sel','Rab','Kam','Jum']\nconst hours = ['07','08','09','10','11','12','13','14']\n\nconst getColor = v =>\n  v === 0 ? 'var(--color-border)' :\n  v <= 25 ? '#c7d2fe' :\n  v <= 50 ? '#818cf8' :\n  v <= 75 ? '#6366f1' : '#4338ca'\n\n{hours.map(h => (\n  <div key={h} className="flex gap-1 items-center">\n    <span className="w-8 text-[7px] font-mono opacity-50">{h}:00</span>\n    {days.map((_, di) => (\n      <div key={di}\n        className="flex-1 aspect-square rounded cursor-pointer hover:ring-2 hover:ring-[var(--color-primary)]"\n        style={{ background: getColor(getValue(di, hours.indexOf(h))) }}\n      />\n    ))}\n  </div>\n))}`} />
@@ -3259,14 +3282,14 @@ export default function PlaygroundPage() {
                                         </div>
                                     } code={`{subjects.map(({ label, value, color }) => (\n  <div key={label} className="space-y-1">\n    <div className="flex items-center justify-between">\n      <span className="text-[10px] font-black text-[var(--color-text)]">{label}</span>\n      <span className="text-[10px] font-black text-[var(--color-text-muted)]">{value}</span>\n    </div>\n    <div className="h-2 rounded-full bg-[var(--color-surface-alt)] overflow-hidden">\n      <div className={\`h-full \${color} rounded-full transition-all\`}\n        style={{ width: \`\${value}%\` }} />\n    </div>\n  </div>\n))}`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
                         </div>
                     )}
 
                     {/* ── TOKENS ── */}
                     {activeTab === 'tokens' && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                            <section>
+                        <div className="space-y-10">
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faPalette} number="A" title="Color Tokens" />
                                 <UIBlock fullWidth title="CSS Variable Colors" children={
                                     <div className="space-y-4">
@@ -3291,8 +3314,8 @@ export default function PlaygroundPage() {
                                         </div>
                                     </div>
                                 } code={`{/* Gunakan CSS variables di Tailwind */}\n\n{/* Di tailwind.config.js: */}\ntheme: {\n  extend: {\n    colors: {\n      primary: 'var(--color-primary)',\n      surface: 'var(--color-surface)',\n    }\n  }\n}\n\n{/* Penggunaan: */}\n<div className="bg-[var(--color-surface)] text-[var(--color-text)]">\n  <button className="bg-[var(--color-primary)] text-white">\n    Primary Action\n  </button>\n</div>`} />
-                            </section>
-                            <section>
+                            </section></LazySection>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faExpand} number="B" title="Spacing & Sizing Tokens" />
                                 <UIBlock fullWidth title="Tailwind Spacing Scale" children={
                                     <div className="space-y-6">
@@ -3335,8 +3358,8 @@ export default function PlaygroundPage() {
                                         </div>
                                     </div>
                                 } code={`{/* Semua token tersedia di className Tailwind */}\n\n{/* Spacing: p-1=4px, p-2=8px, p-4=16px, p-8=32px */}\n<div className="p-4 gap-6 m-2">\n\n{/* Typography: */}\n<h1 className="text-3xl font-black tracking-tight">\n<p className="text-sm font-medium leading-relaxed">\n<span className="text-[9px] uppercase tracking-widest">\n\n{/* Border radius: */}\n<div className="rounded-xl"> {/* 12px */}\n<div className="rounded-2xl"> {/* 16px */}\n<div className="rounded-full"> {/* 9999px */}`} />
-                            </section>
-                            <section>
+                            </section></LazySection>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faLayerGroup} number="C" title="Shadow & Motion Tokens" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="Shadow Scale" children={
@@ -3363,16 +3386,16 @@ export default function PlaygroundPage() {
                                         </div>
                                     } code={`{/* Recommended combos */}\n\n{/* Button hover */}\n<button className="transition-all duration-75 ease-in-out hover:scale-[1.02]">\n\n{/* Dropdown open */}\n<div className="transition-all duration-150 ease-out">\n\n{/* Modal entry */}\n<div className="animate-in fade-in slide-in-from-bottom-4 duration-300">\n\n{/* Spring-like bounce */}\n<div className="transition-all duration-500 ease-[cubic-bezier(.34,1.56,.64,1)]">`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
                         </div>
                     )}
 
                     {/* ── LAYOUT ── */}
                     {activeTab === 'layout' && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                        <div className="space-y-10">
 
                             {/* A · Navigation */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faGrip} number="A" title="Navigation" />
                                 <div className="space-y-8">
                                     <UIBlock fullWidth title="01 · Sidebar Navigation" children={<SidebarNavPreview />} code={`const [active, setActive] = useState('dashboard')\nconst [collapsed, setCollapsed] = useState(false)\n\n<div className={\`\${collapsed ? 'w-14' : 'w-52'} transition-all duration-300\`}>\n  {groups.map(g => (\n    <div key={g.label}>\n      {!collapsed && <p className="text-[7px] font-black uppercase tracking-widest opacity-50 px-2 mb-1">{g.label}</p>}\n      {g.items.map(item => (\n        <button key={item.key} onClick={() => setActive(item.key)}\n          className={\`w-full flex items-center gap-2.5 px-2 py-2 rounded-xl\n            \${active===item.key ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'\n            : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}\`}>\n          <FontAwesomeIcon icon={item.icon} className="text-xs" />\n          {!collapsed && <span className="text-[10px] font-black">{item.label}</span>}\n        </button>\n      ))}\n    </div>\n  ))}\n</div>`}
@@ -3392,10 +3415,10 @@ export default function PlaygroundPage() {
                                         <UIBlock title="04 · Floating Action Button" children={<FABPreview />} code={`const [open, setOpen] = useState(false)\nconst actions = [\n  { icon:faArrowUpFromBracket, label:'Import' },\n  { icon:faDownload,           label:'Export' },\n  { icon:faFileLines,          label:'Laporan' },\n]\n\n<div className="absolute bottom-4 right-4 flex flex-col items-end gap-2.5">\n  {open && actions.map((a, i) => (\n    <div key={i} className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">\n      <span className="px-2.5 py-1 bg-[var(--color-surface)] rounded-xl text-[9px] font-black shadow-sm">{a.label}</span>\n      <button className="w-9 h-9 rounded-full border flex items-center justify-center">\n        <FontAwesomeIcon icon={a.icon} className="text-xs" />\n      </button>\n    </div>\n  ))}\n  <button onClick={() => setOpen(p => !p)}\n    className={\`w-12 h-12 rounded-full shadow-xl flex items-center justify-center\n      \${open ? 'bg-slate-700 text-white' : 'bg-[var(--color-primary)] text-white'}\`}>\n    <FontAwesomeIcon icon={faPlus} className={\`text-lg transition-transform \${open ? 'rotate-45' : ''}\`} />\n  </button>\n</div>`} />
                                     </div>
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* B · Page Templates */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faLayerGroup} number="B" title="Page Templates" />
                                 <div className="space-y-8">
                                     <UIBlock fullWidth title="05 · Dashboard Shell" children={
@@ -3482,7 +3505,7 @@ export default function PlaygroundPage() {
                                                 <div className="w-44 bg-[var(--color-surface)] border-r border-[var(--color-border)] overflow-y-auto shrink-0">
                                                     <div className="p-2 border-b border-[var(--color-border)]"><div className="h-7 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] px-2 flex items-center gap-1.5"><FontAwesomeIcon icon={faSearch} className="text-[8px] text-[var(--color-text-muted)]" /><span className="text-[9px] text-[var(--color-text-muted)]">Cari siswa…</span></div></div>
                                                     {[{ init: 'AS', name: 'Andi Setiawan', kelas: '6A', active: true }, { init: 'BP', name: 'Budi Pratama', kelas: '5B' }, { init: 'CD', name: 'Citra Dewi', kelas: '6A' }, { init: 'DK', name: 'Dian Kusuma', kelas: '4C' }, { init: 'ER', name: 'Eka Rahmawati', kelas: '5A' }].map(s => (
-                                                        <div key={s.init} className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-l-2 transition-all ${s.active ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-transparent hover:bg-[var(--color-surface-alt)]'}`}>
+                                                        <div key={s.init} className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-l-2 transition-colors ${s.active ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-transparent hover:bg-[var(--color-surface-alt)]'}`}>
                                                             <div className={`w-7 h-7 rounded-full text-[8px] font-black flex items-center justify-center shrink-0 ${s.active ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>{s.init}</div>
                                                             <div className="min-w-0"><p className={`text-[9px] font-black truncate ${s.active ? 'text-[var(--color-primary)]' : 'text-[var(--color-text)]'}`}>{s.name}</p><p className="text-[7px] text-[var(--color-text-muted)] opacity-60">{s.kelas}</p></div>
                                                         </div>
@@ -3500,10 +3523,10 @@ export default function PlaygroundPage() {
                                         <UIBlock title="09 · Chat & Messaging" children={<ChatPreview />} code={`const [messages, setMessages] = useState(initialMessages)\nconst [msg, setMsg] = useState('')\n\nconst send = () => {\n  if (!msg.trim()) return\n  setMessages(prev => [...prev, { from:'me', text:msg, time:'Baru saja' }])\n  setMsg('')\n}\n\n{messages.map((m, i) => (\n  <div key={i} className={\`flex gap-2 items-end \${m.from==='me' ? 'flex-row-reverse' : ''}\`}>\n    <div className={\`max-w-[70%] px-3 py-2 rounded-2xl text-[10px]\n      \${m.from==='me' ? 'bg-[var(--color-primary)] text-white rounded-br-sm'\n      : 'bg-[var(--color-surface)] border border-[var(--color-border)] rounded-bl-sm'}\`}>\n      {m.text}\n    </div>\n  </div>\n))}`} />
                                     </div>
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* C · Content Layouts */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faGrip} number="C" title="Content Layouts" />
                                 <div className="space-y-8">
                                     <UIBlock fullWidth title="10 · Breakpoint Visualizer" children={<BreakpointPreview />} code={`// Tailwind breakpoints\n// xs:  0px   — 1 col\n// sm:  640px — 1 col\n// md:  768px — 2 col  (md:grid-cols-2)\n// lg:  1024px — 3 col (lg:grid-cols-3)\n// xl:  1280px — 4 col (xl:grid-cols-4)\n// 2xl: 1536px — 4+ col\n\n<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">\n  {items.map(item => <Card key={item.id} {...item} />)}\n</div>`} />
@@ -3591,10 +3614,10 @@ export default function PlaygroundPage() {
                                         } code={`{/* Gallery grid with masonry-ish featured */}\n<div className="grid grid-cols-4 gap-1.5">\n  <div className="col-span-2 row-span-2 bg-indigo-200 rounded-xl aspect-square relative group">\n    <img src={photo.url} className="w-full h-full object-cover rounded-xl" />\n    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all rounded-xl" />\n  </div>\n  {otherPhotos.map(photo => (\n    <div key={photo.id} className="rounded-xl aspect-square overflow-hidden">\n      <img src={photo.url} className="w-full h-full object-cover" />\n    </div>\n  ))}\n  <div className="rounded-xl aspect-square border-2 border-dashed flex items-center justify-center cursor-pointer">\n    <span className="text-[9px] font-black text-[var(--color-text-muted)]">+{remaining}</span>\n  </div>\n</div>`} />
                                     </div>
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* D · Overlay & State */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faLayerGroup} number="D" title="Overlays & States" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="15 · Modal Variants" children={
@@ -3682,10 +3705,10 @@ export default function PlaygroundPage() {
                                         </div>
                                     } code={`{/* Sticky header inside scrollable container */}\n<div className="h-96 overflow-y-auto">\n  <div className="sticky top-0 z-10 bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 py-2.5 shadow-sm">\n    <h3 className="text-[10px] font-black text-[var(--color-text)]">Daftar Siswa</h3>\n  </div>\n  <div>\n    {items.map(item => (\n      <div key={item.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]">\n        {/* item */}\n      </div>\n    ))}\n  </div>\n</div>`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* E · Utility Layouts */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faCode} number="E" title="Utility & Structural" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="19 · Page Header & Hero" children={
@@ -3792,10 +3815,10 @@ export default function PlaygroundPage() {
                                         </div>
                                     } code={`{/* Skeleton states menggunakan <Skeleton /> component */}\n<div className="flex items-center justify-between">\n  <Skeleton className="h-6 w-32 rounded-xl" />\n  <Skeleton className="h-9 w-24 rounded-xl" />\n</div>\n\n<div className="grid grid-cols-3 gap-3">\n  {[0, 1, 2].map(i => (\n    <div key={i} className="p-4 rounded-2xl border border-[var(--color-border)] space-y-2">\n      <Skeleton className="h-5 w-16 rounded-lg" />\n      <Skeleton className="h-3 w-24 rounded-lg" />\n    </div>\n  ))}\n</div>`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* F · Special States */}
-                            <section>
+                            <LazySection><section className="space-y-10">
                                 <SectionHeader icon={faFileLines} number="F" title="Special Page States" />
                                 <div className="grid lg:grid-cols-2 gap-8">
                                     <UIBlock title="23 · Full Page Empty State" children={
@@ -3844,10 +3867,10 @@ export default function PlaygroundPage() {
                                         </div>
                                     } code={`// Print-optimized — tambahkan ke CSS global:\n// @media print {\n//   .no-print { display: none; }\n//   .print-only { display: block; }\n// }\n\n<div className="bg-white p-8 print:shadow-none">\n  {/* Header sekolah */}\n  <div className="flex justify-between border-b pb-4 mb-6">\n    <div>\n      <h1 className="text-sm font-black">SD NEGERI 01 BANYUWANGI</h1>\n      <p className="text-xs text-gray-500">Jl. Veteran No.1</p>\n    </div>\n    <img src={logo} className="w-12 h-12" />\n  </div>\n  {/* Tabel nilai */}\n  {/* Tanda tangan */}\n</div>`} />
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                             {/* Developer Notes */}
-                            <section className="space-y-4">
+                            <LazySection><section className="space-y-4">
                                 <SectionHeader icon={faCode} number="G" title="Developer Cheat Sheet" />
                                 <div className="grid md:grid-cols-3 gap-4">
                                     {[
@@ -3866,10 +3889,11 @@ export default function PlaygroundPage() {
                                         </div>
                                     ))}
                                 </div>
-                            </section>
+                            </section></LazySection>
 
                         </div>
                     )}
+
                 </div>
 
                 {/* Floating TOC — pill navigator */}
