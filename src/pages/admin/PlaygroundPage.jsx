@@ -1283,6 +1283,11 @@ export default function PlaygroundPage() {
             { id: 'sec-z-index-scale', label: 'Z-Index' },
             { id: 'sec-select-textarea', label: 'Select & Textarea' },
             { id: 'sec-range-slider', label: 'Range Slider' },
+            { id: 'sec-color-tokens-grid', label: 'Color Tokens Grid' },
+            { id: 'sec-breadcrumb-variants', label: 'Breadcrumb' },
+            { id: 'sec-micro-interactions', label: 'Micro-interactions' },
+            { id: 'sec-scrollbar-styling', label: 'Scrollbar' },
+            { id: 'sec-focus-ring-a11y', label: 'Focus & A11Y' },
         ],
         library: [
             { id: 'sec-data-tables', label: 'Data & Tables' },
@@ -1338,7 +1343,7 @@ export default function PlaygroundPage() {
         return () => window.removeEventListener('scroll', handleScroll)
     }, [activeTab])
 
-    const tabCounts = { atoms: 20, library: 28, layout: 25, forms: 8, dataviz: 6, tokens: 4 }
+    const tabCounts = { atoms: 25, library: 28, layout: 25, forms: 8, dataviz: 6, tokens: 4 }
 
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text)
@@ -1529,9 +1534,26 @@ export default function PlaygroundPage() {
                                 Design system sandbox & panduan komponen Laporanmu Ecosystem. Semua komponen interaktif dengan preview dan kode siap pakai.
                             </p>
                         </div>
-                        {/* Tab row — edge-to-edge scroll on mobile */}
-                        <div className="relative lg:hidden">
-                            <div className="-mx-4 px-4 md:-mx-6 md:px-6 overflow-x-auto scrollbar-hide">
+
+                        {/* Desktop tab nav — shrink-0 so it never gets clipped */}
+                        <div className="hidden lg:flex items-center gap-1 p-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-sm shrink-0">
+                            {[['atoms', 'Atoms'], ['library', 'Library'], ['layout', 'Layout'], ['forms', 'Forms'], ['dataviz', 'Viz'], ['tokens', 'Tokens']].map(([key, label]) => (
+                                <button key={key} onClick={() => setActiveTab(key)} className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 whitespace-nowrap ${activeTab === key ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                    {label}
+                                    <span className={`text-[7px] px-1 rounded-sm font-black ${activeTab === key ? 'bg-white/20 text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>{tabCounts[key]}</span>
+                                </button>
+                            ))}
+                            <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
+                            <button onClick={() => setShowSearch(p => !p)} className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${showSearch ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'}`}>
+                                <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Mobile tab nav — scrollable + fade + dot indicator */}
+                    <div className="lg:hidden space-y-2">
+                        <div className="relative">
+                            <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide" id="tab-scroll-container">
                                 <div className="flex items-center gap-1 p-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-sm w-max">
                                     {[['atoms', 'Atoms'], ['library', 'Library'], ['layout', 'Layout'], ['forms', 'Forms'], ['dataviz', 'Viz'], ['tokens', 'Tokens']].map(([key, label]) => (
                                         <button key={key} onClick={() => setActiveTab(key)} className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 whitespace-nowrap ${activeTab === key ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
@@ -1545,23 +1567,18 @@ export default function PlaygroundPage() {
                                     </button>
                                 </div>
                             </div>
-                            {/* Fade gradient — scroll indicator */}
-                            <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--color-app-bg)] to-transparent pointer-events-none" />
+                            {/* Fade gradient right edge */}
+                            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--color-app-bg)] to-transparent pointer-events-none rounded-r-xl" />
                         </div>
-                        {/* Desktop — normal no scroll needed */}
-                        <div className="hidden lg:block overflow-x-auto scrollbar-hide">
-                            <div className="flex items-center gap-1 p-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-sm w-max">
-                                {[['atoms', 'Atoms'], ['library', 'Library'], ['layout', 'Layout'], ['forms', 'Forms'], ['dataviz', 'Viz'], ['tokens', 'Tokens']].map(([key, label]) => (
-                                    <button key={key} onClick={() => setActiveTab(key)} className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 whitespace-nowrap ${activeTab === key ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
-                                        {label}
-                                        <span className={`text-[7px] px-1 rounded-sm font-black ${activeTab === key ? 'bg-white/20 text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>{tabCounts[key]}</span>
-                                    </button>
-                                ))}
-                                <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
-                                <button onClick={() => setShowSearch(p => !p)} className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${showSearch ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'}`}>
-                                    <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
-                                </button>
-                            </div>
+                        {/* Dot scroll indicator */}
+                        <div className="flex justify-center items-center gap-1.5">
+                            {[['atoms', 'Atoms'], ['library', 'Library'], ['layout', 'Layout'], ['forms', 'Forms'], ['dataviz', 'Viz'], ['tokens', 'Tokens']].map(([key]) => (
+                                <button
+                                    key={key}
+                                    onClick={() => setActiveTab(key)}
+                                    className={`rounded-full transition-all duration-200 ${activeTab === key ? 'w-4 h-1.5 bg-[var(--color-primary)]' : 'w-1.5 h-1.5 bg-[var(--color-border)] hover:bg-[var(--color-text-muted)]'}`}
+                                />
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -2409,10 +2426,279 @@ export default function PlaygroundPage() {
                             <UIBlock fullWidth title="Slider Variants" children={<RangeSliderPreview />} code={`const [val, setVal] = useState(65)\n\n{/* Custom range slider */}\n<div className="relative h-4 flex items-center">\n  <div className="absolute w-full h-2 rounded-full bg-[var(--color-surface-alt)]" />\n  <div className="absolute h-2 rounded-full bg-[var(--color-primary)]" style={{ width: \`\${val}%\` }} />\n  <input type="range" min="0" max="100" value={val}\n    onChange={e => setVal(+e.target.value)}\n    className="absolute w-full opacity-0 cursor-pointer h-4" />\n  <div className="absolute h-4 w-4 rounded-full bg-white border-2 border-[var(--color-primary)] shadow-md pointer-events-none"\n    style={{ left: \`calc(\${val}% - 8px)\` }} />\n</div>`} />
                         </section>
 
+                        {/* 21 · Color Tokens Grid */}
+                        <section>
+                            <SectionHeader icon={faPalette} number="21" title="Color Tokens Grid" />
+                            <UIBlock fullWidth title="Full Token Reference"
+                                children={
+                                    <div className="space-y-6">
+                                        {[
+                                            {
+                                                group: 'Brand', tokens: [
+                                                    { name: 'primary', var: '--color-primary', desc: 'Main CTA, active states' },
+                                                    { name: 'secondary', var: '--color-secondary', desc: 'Supporting accent' },
+                                                    { name: 'accent', var: '--color-accent', desc: 'Highlight, gradient pair' },
+                                                ]
+                                            },
+                                            {
+                                                group: 'Semantic', tokens: [
+                                                    { name: 'success', var: '--color-success', desc: 'Positive, saved, online' },
+                                                    { name: 'warning', var: '--color-warning', desc: 'Caution, pending' },
+                                                    { name: 'danger', var: '--color-danger', desc: 'Error, destructive' },
+                                                ]
+                                            },
+                                            {
+                                                group: 'Surface', tokens: [
+                                                    { name: 'app-bg', var: '--color-app-bg', desc: 'Page background' },
+                                                    { name: 'surface', var: '--color-surface', desc: 'Card, panel background' },
+                                                    { name: 'surface-alt', var: '--color-surface-alt', desc: 'Subtle bg, hover state' },
+                                                    { name: 'border', var: '--color-border', desc: 'Dividers, outlines' },
+                                                ]
+                                            },
+                                            {
+                                                group: 'Text', tokens: [
+                                                    { name: 'text', var: '--color-text', desc: 'Primary body text' },
+                                                    { name: 'text-muted', var: '--color-text-muted', desc: 'Secondary, labels, hints' },
+                                                ]
+                                            },
+                                        ].map(({ group, tokens }) => (
+                                            <div key={group}>
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 mb-3">{group}</p>
+                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                    {tokens.map(({ name, var: v, desc }) => (
+                                                        <div key={name} onClick={() => { navigator.clipboard.writeText(`var(${v})`); addToast(`Copied var(${v})`, 'success') }}
+                                                            className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] cursor-pointer hover:border-[var(--color-primary)] transition-all group">
+                                                            <div className="w-10 h-10 rounded-xl border border-[var(--color-border)] shrink-0 shadow-sm" style={{ background: `var(${v})` }} />
+                                                            <div className="min-w-0">
+                                                                <p className="text-[10px] font-black text-[var(--color-text)] truncate">{name}</p>
+                                                                <p className="text-[8px] font-mono text-[var(--color-text-muted)] opacity-50 truncate">{v}</p>
+                                                                <p className="text-[8px] text-[var(--color-text-muted)] opacity-40 truncate">{desc}</p>
+                                                            </div>
+                                                            <FontAwesomeIcon icon={faCopy} className="text-[8px] text-[var(--color-text-muted)] opacity-0 group-hover:opacity-60 ml-auto shrink-0" />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                }
+                                code={`{/* Semua warna pakai CSS variable — auto support dark mode */}\n\n// Penggunaan di Tailwind:\n<div className="bg-[var(--color-surface)] text-[var(--color-text)]">\n  <span className="text-[var(--color-primary)]">Primary</span>\n  <span className="text-[var(--color-text-muted)]">Muted</span>\n</div>\n\n// Di inline style:\n<div style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }} />\n\n// Jangan hardcode hex — pakai token:\n// ❌ className="bg-indigo-600"\n// ✅ className="bg-[var(--color-primary)]"`}
+                            />
+                        </section>
+
+                        {/* 22 · Breadcrumb Variants */}
+                        <section>
+                            <SectionHeader icon={faChevronRight} number="22" title="Breadcrumb Variants" />
+                            <UIBlock fullWidth title="Breadcrumb Patterns"
+                                children={
+                                    <div className="space-y-6">
+                                        {/* Default */}
+                                        <div className="space-y-1.5">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Default</p>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                {['Dashboard', 'Master Data', 'Data Siswa'].map((item, i, arr) => (
+                                                    <span key={item} className="flex items-center gap-1.5">
+                                                        <span className={`text-[10px] font-black ${i === arr.length - 1 ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-50 hover:opacity-100 cursor-pointer hover:text-[var(--color-primary)] transition-colors'}`}>{item}</span>
+                                                        {i < arr.length - 1 && <FontAwesomeIcon icon={faChevronRight} className="text-[7px] text-[var(--color-text-muted)] opacity-30" />}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {/* With badge */}
+                                        <div className="space-y-1.5">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">With Role Badge</p>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="px-2 py-0.5 rounded-md bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-[8px] font-black uppercase tracking-widest">Admin</span>
+                                                {['Laporan', 'Raport Bulanan'].map((item, i, arr) => (
+                                                    <span key={item} className="flex items-center gap-2">
+                                                        <FontAwesomeIcon icon={faChevronRight} className="text-[7px] text-[var(--color-text-muted)] opacity-30" />
+                                                        <span className={`text-[10px] font-black ${i === arr.length - 1 ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-50'}`}>{item}</span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {/* Collapsed */}
+                                        <div className="space-y-1.5">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Collapsed (long path)</p>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className="text-[10px] font-black text-[var(--color-text-muted)] opacity-50 hover:opacity-100 cursor-pointer hover:text-[var(--color-primary)] transition-colors">Dashboard</span>
+                                                <FontAwesomeIcon icon={faChevronRight} className="text-[7px] text-[var(--color-text-muted)] opacity-30" />
+                                                <span className="px-2 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black cursor-pointer hover:border-[var(--color-primary)] transition-all">···</span>
+                                                <FontAwesomeIcon icon={faChevronRight} className="text-[7px] text-[var(--color-text-muted)] opacity-30" />
+                                                <span className="text-[10px] font-black text-[var(--color-text)]">Detail Siswa</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                code={`// Breadcrumb component\n<Breadcrumb badge="Admin" items={['Master Data', 'Data Siswa']} />\n\n// Manual:\n<div className="flex items-center gap-1.5">\n  {items.map((item, i) => (\n    <span key={item} className="flex items-center gap-1.5">\n      <span className={\`text-[10px] font-black\n        \${i === items.length - 1\n          ? 'text-[var(--color-text)]'\n          : 'text-[var(--color-text-muted)] opacity-50 cursor-pointer hover:text-[var(--color-primary)]'\n        }\`}>\n        {item}\n      </span>\n      {i < items.length - 1 &&\n        <FontAwesomeIcon icon={faChevronRight} className="text-[7px] opacity-30" />}\n    </span>\n  ))}\n</div>`}
+                                dos={['Tampilkan max 4 level — collapse tengah kalau lebih dari itu', 'Buat semua item kecuali terakhir bisa diklik', 'Gunakan role badge di kiri untuk konteks halaman']}
+                                donts={['Jangan ulangi halaman aktif di breadcrumb dan page title', 'Hindari breadcrumb di halaman top-level (Dashboard, Home)', 'Jangan gunakan slash (/) sebagai separator — pakai chevron >']}
+                            />
+                        </section>
+
+                        {/* 23 · Micro-interactions */}
+                        <section>
+                            <SectionHeader icon={faSpinner} number="23" title="Micro-interactions" />
+                            <UIBlock fullWidth title="Interaction Patterns"
+                                children={
+                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {/* Hover lift */}
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Hover Lift</p>
+                                            <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:-translate-y-1 hover:shadow-lg hover:shadow-black/10 hover:border-[var(--color-primary)]/30 transition-all duration-200 cursor-pointer">
+                                                <p className="text-[10px] font-black text-[var(--color-text)]">Hover kartu ini</p>
+                                                <p className="text-[9px] text-[var(--color-text-muted)] opacity-60">Naik + shadow</p>
+                                            </div>
+                                        </div>
+                                        {/* Press scale */}
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Press Scale</p>
+                                            <button className="w-full p-4 rounded-2xl bg-[var(--color-primary)] text-white active:scale-95 hover:opacity-90 transition-all duration-150 cursor-pointer">
+                                                <p className="text-[10px] font-black">Klik / Tap</p>
+                                                <p className="text-[9px] opacity-70">Scale down saat ditekan</p>
+                                            </button>
+                                        </div>
+                                        {/* Skeleton pulse */}
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Skeleton Pulse</p>
+                                            <div className="space-y-2 p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                                                <div className="h-3 rounded-full bg-[var(--color-surface-alt)] animate-pulse w-3/4" />
+                                                <div className="h-3 rounded-full bg-[var(--color-surface-alt)] animate-pulse w-full" />
+                                                <div className="h-3 rounded-full bg-[var(--color-surface-alt)] animate-pulse w-1/2" />
+                                            </div>
+                                        </div>
+                                        {/* Spin loader */}
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Spin Loader</p>
+                                            <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center gap-3">
+                                                <FontAwesomeIcon icon={faSpinner} className="text-[var(--color-primary)] animate-spin text-lg" />
+                                                <span className="text-[10px] font-black text-[var(--color-text-muted)]">Memuat data…</span>
+                                            </div>
+                                        </div>
+                                        {/* Fade in */}
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Animate In</p>
+                                            <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                                <p className="text-[10px] font-black text-[var(--color-text)]">Slide + Fade</p>
+                                                <p className="text-[9px] text-[var(--color-text-muted)] opacity-60">animate-in dari bawah</p>
+                                            </div>
+                                        </div>
+                                        {/* Bounce dot */}
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Bounce Dots</p>
+                                            <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center gap-1.5">
+                                                {[0, 150, 300].map(delay => (
+                                                    <div key={delay} className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+                                                ))}
+                                                <span className="text-[9px] text-[var(--color-text-muted)] ml-2">Typing…</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                code={`// Hover lift card\n<div className="hover:-translate-y-1 hover:shadow-lg hover:border-[var(--color-primary)]/30 transition-all duration-200">\n\n// Press scale button\n<button className="active:scale-95 hover:opacity-90 transition-all duration-150">\n\n// Skeleton pulse\n<div className="h-4 rounded-full bg-[var(--color-surface-alt)] animate-pulse" />\n\n// Spin loader\n<FontAwesomeIcon icon={faSpinner} className="animate-spin" />\n\n// Animate in (tailwindcss-animate)\n<div className="animate-in fade-in slide-in-from-bottom-4 duration-500">\n\n// Bounce dots (typing indicator)\n{[0,150,300].map(d => (\n  <div key={d} className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-bounce"\n    style={{ animationDelay: \`\${d}ms\` }} />\n))}`}
+                            />
+                        </section>
+
+                        {/* 24 · Scrollbar Styling */}
+                        <section>
+                            <SectionHeader icon={faExpand} number="24" title="Scrollbar Styling" />
+                            <UIBlock fullWidth title="Custom Scrollbar Variants"
+                                children={
+                                    <div className="grid md:grid-cols-3 gap-6">
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Default (hidden)</p>
+                                            <div className="h-32 overflow-y-auto rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] p-3 space-y-2" style={{ scrollbarWidth: 'none' }}>
+                                                {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-6 rounded bg-[var(--color-surface)] border border-[var(--color-border)]" />)}
+                                            </div>
+                                            <p className="text-[8px] text-[var(--color-text-muted)] opacity-50">scrollbar-hide · overflow-y-auto</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Thin custom</p>
+                                            <div className="h-32 overflow-y-auto rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] p-3 space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--color-primary) transparent' }}>
+                                                {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-6 rounded bg-[var(--color-surface)] border border-[var(--color-border)]" />)}
+                                            </div>
+                                            <p className="text-[8px] text-[var(--color-text-muted)] opacity-50">scrollbar-width: thin + primary color</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Auto (OS default)</p>
+                                            <div className="h-32 overflow-y-auto rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] p-3 space-y-2">
+                                                {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-6 rounded bg-[var(--color-surface)] border border-[var(--color-border)]" />)}
+                                            </div>
+                                            <p className="text-[8px] text-[var(--color-text-muted)] opacity-50">Default browser scrollbar</p>
+                                        </div>
+                                    </div>
+                                }
+                                code={`/* CSS Global — index.css */\n\n/* Hide scrollbar tapi tetap scrollable */\n.scrollbar-hide {\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n}\n.scrollbar-hide::-webkit-scrollbar { display: none; }\n\n/* Thin scrollbar dengan warna primary */\n.scrollbar-thin {\n  scrollbar-width: thin;\n  scrollbar-color: var(--color-primary) transparent;\n}\n.scrollbar-thin::-webkit-scrollbar { width: 4px; }\n.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }\n.scrollbar-thin::-webkit-scrollbar-thumb {\n  background: var(--color-primary);\n  border-radius: 999px;\n}\n\n// JSX:\n<div className="overflow-y-auto scrollbar-hide">  {/* tak terlihat */}\n<div className="overflow-y-auto scrollbar-thin">   {/* halus */}`}
+                            />
+                        </section>
+
+                        {/* 25 · Focus Ring / A11Y */}
+                        <section>
+                            <SectionHeader icon={faEye} number="25" title="Focus Ring & A11Y" />
+                            <UIBlock fullWidth title="Accessibility Patterns"
+                                children={
+                                    <div className="space-y-8">
+                                        {/* Focus rings */}
+                                        <div>
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 mb-4">Focus Ring Variants (Tab untuk lihat)</p>
+                                            <div className="flex flex-wrap gap-4">
+                                                <button className="px-4 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 focus:ring-offset-[var(--color-surface-alt)] transition-all">
+                                                    Primary Ring
+                                                </button>
+                                                <button className="px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 focus:ring-offset-[var(--color-surface-alt)] transition-all">
+                                                    Primary Button
+                                                </button>
+                                                <button className="px-4 py-2 rounded-xl bg-rose-500 text-white text-[10px] font-black focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-[var(--color-surface-alt)] transition-all">
+                                                    Danger Button
+                                                </button>
+                                                <input className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] text-[var(--color-text)] outline-none focus:ring-2 focus:ring-[var(--color-primary)]/40 focus:border-[var(--color-primary)] transition-all" placeholder="Input focus ring" />
+                                            </div>
+                                        </div>
+                                        {/* ARIA patterns */}
+                                        <div>
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 mb-4">ARIA & Semantic Patterns</p>
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                {[
+                                                    { label: 'aria-label', example: '<button aria-label="Tutup dialog"><FontAwesomeIcon icon={faXmark} /></button>', desc: 'Wajib untuk tombol icon-only tanpa teks' },
+                                                    { label: 'aria-live', example: '<div aria-live="polite">{statusMessage}</div>', desc: 'Announce perubahan dinamis ke screen reader' },
+                                                    { label: 'aria-disabled', example: '<button aria-disabled={!valid} onClick={...}>', desc: 'Tetap focusable tapi announce sebagai disabled' },
+                                                    { label: 'role="alert"', example: '<div role="alert" className="...">{errorMsg}</div>', desc: 'Error message langsung dibaca screen reader' },
+                                                ].map(({ label, example, desc }) => (
+                                                    <div key={label} className="p-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] space-y-2">
+                                                        <span className="inline-block px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-700 text-[8px] font-black font-mono">{label}</span>
+                                                        <p className="text-[9px] font-mono text-[var(--color-text-muted)] opacity-70 bg-[var(--color-surface)] rounded-lg px-2 py-1.5 leading-relaxed">{example}</p>
+                                                        <p className="text-[9px] text-[var(--color-text-muted)] opacity-60">{desc}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {/* Color contrast */}
+                                        <div>
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 mb-4">Color Contrast (WCAG AA)</p>
+                                            <div className="flex flex-wrap gap-3">
+                                                {[
+                                                    { bg: 'bg-[var(--color-primary)]', text: 'text-white', label: 'Primary on White', pass: true },
+                                                    { bg: 'bg-[var(--color-surface)]', text: 'text-[var(--color-text)]', label: 'Text on Surface', pass: true },
+                                                    { bg: 'bg-amber-400', text: 'text-white', label: 'White on Yellow', pass: false },
+                                                    { bg: 'bg-[var(--color-surface-alt)]', text: 'text-[var(--color-text-muted)]', label: 'Muted on Alt', pass: true },
+                                                ].map(({ bg, text, label, pass }) => (
+                                                    <div key={label} className={`px-4 py-3 rounded-xl ${bg} flex items-center gap-2`}>
+                                                        <span className={`text-[9px] font-black ${text}`}>{label}</span>
+                                                        <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md ${pass ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>{pass ? 'AA ✓' : 'FAIL ✗'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                code={`// Focus ring — selalu gunakan focus-visible, bukan focus\n// focus-visible hanya aktif saat keyboard navigation\n<button className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2">\n\n// Skip navigation link (untuk keyboard users)\n<a href="#main-content"\n  className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-[var(--color-primary)] focus:text-white focus:rounded-xl">\n  Langsung ke konten\n</a>\n\n// Accessible icon button\n<button aria-label="Hapus item" className="...">\n  <FontAwesomeIcon icon={faTrash} />\n</button>\n\n// Live region untuk dynamic content\n<div aria-live="polite" aria-atomic="true" className="sr-only">\n  {announcement}\n</div>`}
+                                dos={['Selalu test navigasi keyboard — Tab, Enter, Escape, Arrow keys', 'Gunakan focus-visible bukan focus untuk ring — hanya muncul saat keyboard', 'Pastikan semua icon-only button punya aria-label']}
+                                donts={['Jangan hilangkan focus outline dengan outline-none tanpa gantinya', 'Hindari warna teks yang kontrasnya di bawah 4.5:1 (WCAG AA)', 'Jangan andalkan warna saja untuk menyampaikan informasi']}
+                            />
+                        </section>
+
                     </div>
                 )}
-
-                {/* ── LIBRARY ── */}
                 {activeTab === 'library' && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
 
