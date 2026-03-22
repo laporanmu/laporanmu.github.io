@@ -507,7 +507,7 @@ export default function StudentsPage() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
-                        <Breadcrumb badge="Master Data" items={['Master', 'Siswa']} className="mb-1" />
+                        <Breadcrumb badge="Master Data" items={['Student Directory']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Data Siswa</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">
                             Kelola {globalStats.total} data siswa aktif dalam sistem laporan.

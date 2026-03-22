@@ -26,7 +26,7 @@ const TABLE_CONFIG = [
     { key: 'classes', label: 'Kelas', icon: faSchool, color: 'text-blue-500', bg: 'bg-blue-500/10', softDelete: false, dateCol: 'created_at' },
     { key: 'student_monthly_reports', label: 'Raport Bulanan', icon: faClipboardList, color: 'text-purple-500', bg: 'bg-purple-500/10', softDelete: false, dateCol: 'created_at' },
     { key: 'reports', label: 'Poin Siswa', icon: faShield, color: 'text-orange-500', bg: 'bg-orange-500/10', softDelete: false, dateCol: 'reported_at' },
-    { key: 'violation_types', label: 'Jenis Pelanggaran', icon: faExclamationTriangle, color: 'text-red-500', bg: 'bg-red-500/10', softDelete: false, dateCol: 'created_at' },
+    { key: 'violation_types', label: 'Konfigurasi Poin', icon: faExclamationTriangle, color: 'text-red-500', bg: 'bg-red-500/10', softDelete: false, dateCol: 'created_at' },
     { key: 'academic_years', label: 'Tahun Pelajaran', icon: faCalendarAlt, color: 'text-teal-500', bg: 'bg-teal-500/10', softDelete: true, dateCol: 'created_at' },
     { key: 'gate_logs', label: 'Log Gerbang', icon: faPersonWalkingArrowRight, color: 'text-rose-500', bg: 'bg-rose-500/10', softDelete: false, dateCol: 'created_at' },
     { key: 'profiles', label: 'Profil Akun', icon: faUserShield, color: 'text-violet-500', bg: 'bg-violet-500/10', softDelete: false, dateCol: 'created_at' },
@@ -738,7 +738,7 @@ export default function DatabasePage() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <Breadcrumb badge="Admin" items={['Admin', 'Database Health']} className="mb-1" />
+                        <Breadcrumb badge="Admin" items={['Engine Health']} className="mb-1" />
                         <div className="flex items-center gap-2.5 mb-1">
                             <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Database Health</h1>
                             {integrityScore && (

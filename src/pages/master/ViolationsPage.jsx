@@ -354,9 +354,9 @@ export default function ViolationsPage() {
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
-                        <Breadcrumb badge="Master Data" items={['Master', 'Konfigurasi Poin']} className="mb-1" />
+                        <Breadcrumb badge="Master Data" items={['Rules Configuration']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Konfigurasi Poin</h1>
-                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola bobot poin untuk {stats.violations} jenis pelanggaran & {stats.achievements} prestasi.</p>
+                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola bobot poin untuk {stats.violations} Konfigurasi Poin & {stats.achievements} prestasi.</p>
                     </div>
                     <div className="flex gap-2 items-center">
                         <div className="relative" ref={headerMenuRef}>
@@ -456,8 +456,8 @@ export default function ViolationsPage() {
                                     el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
                                 }}
                                 className={`rounded-full transition-all duration-300 ${activeStatIdx === i
-                                        ? 'w-5 h-1.5 bg-[var(--color-primary)]'
-                                        : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
+                                    ? 'w-5 h-1.5 bg-[var(--color-primary)]'
+                                    : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
                                     }`}
                             />
                         ))}

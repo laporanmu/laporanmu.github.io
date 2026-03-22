@@ -1151,7 +1151,7 @@ export default function GatePage() {
                 {/* PAGE HEADER */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
-                        <Breadcrumb badge="Reports" items={['Reports', 'Portal Keluar Masuk']} className="mb-1" />
+                        <Breadcrumb badge="Reports" items={['Access Monitor']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Portal Keluar Masuk</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium opacity-70">Pencatatan izin keluar guru/karyawan dan kunjungan tamu.</p>
                         <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">

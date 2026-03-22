@@ -29,7 +29,7 @@ const LS_COLS = 'reports_columns'
 const LS_PAGE_SIZE = 'reports_page_size'
 
 
-export default function PoinPage() {
+export default function PerilakuPage() {
     const { profile } = useAuth()
     const { addToast } = useToast()
 
@@ -226,7 +226,7 @@ export default function PoinPage() {
                     date: r.tanggal || r.date || new Date().toISOString(),
                     student_id: student?.id,
                     violation_type_id: vt?.id,
-                    error: !student ? 'Siswa tidak ditemukan' : !vt ? 'Jenis pelanggaran tidak ditemukan' : null
+                    error: !student ? 'Siswa tidak ditemukan' : !vt ? 'Konfigurasi Poin tidak ditemukan' : null
                 }
             })
             setImportPreview(preview)
@@ -718,7 +718,7 @@ export default function PoinPage() {
                 {/* ── PAGE HEADER ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
-                        <Breadcrumb badge="Reports" items={['Reports', 'Perilaku']} className="mb-1" />
+                        <Breadcrumb badge="Reports" items={['Behavior Analytics']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Laporan Perilaku</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">
                             Rekam dan pantau perkembangan karakter siswa.

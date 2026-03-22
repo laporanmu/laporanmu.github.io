@@ -1,4 +1,15 @@
 /**
+ * Basic Skeleton Pulse component
+ * 
+ * @param {string} className - Tailwind classes for size and shape
+ */
+export default function Skeleton({ className = "" }) {
+    return (
+        <div className={`bg-[var(--color-border)] animate-pulse ${className}`} />
+    )
+}
+
+/**
  * Skeleton loading untuk table
  * Digunakan untuk better UX saat loading data
  * 
@@ -78,4 +89,4 @@ export function CardSkeleton({ count = 3 }) {
             ))}
         </div>
     )
-}
+}

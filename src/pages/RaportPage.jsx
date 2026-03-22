@@ -3875,7 +3875,7 @@ export default function RaportPage() {
                 {/* ── PAGE HEADER ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
-                        <Breadcrumb badge="Reports" items={['Reports', 'Raport Bulanan']} className="mb-1" />
+                        <Breadcrumb badge="Reports" items={['Grade Reports']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Raport Bulanan</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas.</p>
                         <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">

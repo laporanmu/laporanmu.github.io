@@ -89,7 +89,7 @@ export default function StoragePage() {
 
     const handleDeleteFile = async (bucketName, fileName) => {
         if (!confirm(`Yakin ingin menghapus ${fileName} secara permanen dari bucket ${bucketName}?`)) return
-        
+
         try {
             const { error } = await supabase.storage.from(bucketName).remove([fileName])
             if (error) throw error
@@ -107,13 +107,13 @@ export default function StoragePage() {
     const handleScan = async () => {
         setScanning(true)
         setScanResults(null)
-        
+
         try {
             // 1. Gather all files in our current state (which we just fetched from buckets)
             // Note: Since listBuckets doesn't give us multi-level depth easily without a recursive func,
             // we will use the files we already fetched in `fetchBuckets` state as our scan baseline.
             // A more robust backend cron would do this better, but this works for root files.
-            
+
             // Re-fetch everything if empty to ensure accuracy
             let allStorageFiles = []
             for (const b of buckets) {
@@ -156,7 +156,7 @@ export default function StoragePage() {
                 // We extract the pure file path from the dbUrl to compare cleanly (ignoring domains, queries, etc)
 
                 const storagePath = `${file.bucketName}/${file.name}`
-                
+
                 let isUsed = false
                 for (const url of dbUrls) {
                     try {
@@ -188,7 +188,7 @@ export default function StoragePage() {
                 totalScanned: allStorageFiles.length,
                 filesToDelete: orphanFiles // store array of objects {bucketName, name}
             })
-            
+
             addToast(`Ditemukan ${orphanFiles.length} file sampah`, 'info')
 
         } catch (error) {
@@ -202,7 +202,7 @@ export default function StoragePage() {
     const handleDeleteOrphans = async () => {
         if (!scanResults || scanResults.filesToDelete.length === 0) return
         if (!confirm(`SANGAT BERBAHAYA: Anda yakin ingin menghapus ${scanResults.orphanCount} file ini secara permanen? \n\nTindakan ini tidak dapat dibatalkan.`)) return
-        
+
         setScanning(true)
         let deletedCount = 0
 
@@ -239,7 +239,7 @@ export default function StoragePage() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <Breadcrumb badge="Admin" items={['Admin', 'Storage Manager']} className="mb-1" />
+                        <Breadcrumb badge="Admin" items={['Storage Analysis']} className="mb-1" />
                         <div className="flex items-center gap-2.5 mb-1">
                             <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Storage Manager</h1>
                             <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 uppercase tracking-widest">Admin Only</span>

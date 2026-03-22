@@ -35,14 +35,14 @@ const REPORTS_ITEMS = [
     { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Izin keluar guru & kunjungan tamu", color: "bg-red-50 dark:bg-red-900/20 text-red-500" },
     { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
     { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekap kehadiran per bulan", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" },
-    { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-500" },
+    { to: "/perilaku", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-500" },
 ]
 
 const MASTER_ITEMS = [
     { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Kelola data santri aktif", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
     { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Daftar musyrif & pengajar", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
     { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Manajemen kelas & kamar", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
-    { to: "/master/violations", label: "Jenis Pelanggaran", icon: faExclamationTriangle, desc: "Kategori & bobot pelanggaran", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
+    { to: "/master/violations", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Kategori & bobot pelanggaran", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
     { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Periode tahun ajaran aktif", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
 ]
 
@@ -115,7 +115,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
         if (it.to === '/gate') return flags['nav.gate'] !== false
         if (it.to === '/raport') return flags['nav.raport'] !== false
         if (it.to === '/absensi') return flags['nav.absensi'] !== false
-        if (it.to === '/poin') return flags['nav.poin'] !== false
+        if (it.to === '/perilaku') return flags['nav.poin'] !== false
         return true
     })
     const visibleReports = isSatpam

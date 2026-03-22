@@ -56,7 +56,7 @@ const MASTER_ITEMS = [
     { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Pusat database seluruh santri aktif dalam sistem" },
     { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Data akun pengajar, musyrif, dan staf sekolah" },
     { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Pengaturan struktur kelas dan pembagian asrama" },
-    { to: "/master/violations", label: "Jenis Pelanggaran", icon: faExclamationTriangle, desc: "Konfigurasi kategori poin prestasi & pelanggaran" },
+    { to: "/master/violations", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Konfigurasi kategori poin prestasi & pelanggaran" },
     { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Manajemen semester dan periode kalender akademik" },
 ]
 
@@ -64,7 +64,7 @@ const REPORTS_ITEMS = [
     { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen izin keluar masuk area santri", color: "bg-red-500/10 text-red-500" },
     { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Laporan perkembangan poin & prestasi bulanan", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
-    { to: "/poin", label: "Poin Siswa", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
+    { to: "/perilaku", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
 ]
 
 // Admin-only items — hanya tampil untuk developer & admin
@@ -247,7 +247,7 @@ export default function TopNav({ title, subtitle }) {
         if (it.to === '/gate') return flags['nav.gate'] !== false
         if (it.to === '/raport') return flags['nav.raport'] !== false
         if (it.to === '/absensi') return flags['nav.absensi'] !== false
-        if (it.to === '/poin') return flags['nav.poin'] !== false
+        if (it.to === '/perilaku') return flags['nav.poin'] !== false
         return true
     })
     // Satpam: only show gate

@@ -19,7 +19,7 @@ const ParentCheckPage = lazy(() => import('./pages/auth/ParentCheckPage'))
 // Core
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const RaportPage = lazy(() => import('./pages/RaportPage'))
-const PoinPage = lazy(() => import('./pages/PoinPage'))
+const PerilakuPage = lazy(() => import('./pages/PerilakuPage'))
 const AbsensiPage = lazy(() => import('./pages/AbsensiPage'))
 const GatePage = lazy(() => import('./pages/GatePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
@@ -56,7 +56,7 @@ const ROUTE_ALIASES = [
   { from: '/portal', to: '/gate' },
   { from: '/report', to: '/raport' },
   { from: '/reports', to: '/raports' },
-  { from: '/points', to: '/poin' },
+  { from: '/points', to: '/perilaku' },
 
   // Master data aliases
   { from: '/master/student', to: '/master/students' },
@@ -376,7 +376,7 @@ function AppRoutes() {
             {/* Core — module flag guarded */}
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Bulanan"><RaportPage /></FlagRoute>} />
-            <Route path="/poin" element={<FlagRoute flag="module.poin" label="Poin Siswa"><PoinPage /></FlagRoute>} />
+            <Route path="/perilaku" element={<FlagRoute flag="module.poin" label="Laporan Perilaku"><PerilakuPage /></FlagRoute>} />
             <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AbsensiPage /></FlagRoute>} />
             <Route path="/settings" element={<SettingsPage />} />
 
@@ -444,7 +444,7 @@ function AppRoutes() {
               </RoleFlagRoute>
             } />
             <Route path="/master/violations" element={
-              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.violations" label="Jenis Pelanggaran">
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.violations" label="Konfigurasi Poin">
                 <ViolationsTypePage />
               </RoleFlagRoute>
             } />

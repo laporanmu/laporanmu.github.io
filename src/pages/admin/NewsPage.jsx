@@ -4,7 +4,8 @@ import {
     faPlus, faSearch, faNewspaper, faCalendar,
     faUser, faTag, faChevronDown, faPen,
     faTrash, faEye, faEyeSlash, faSpinner,
-    faXmark, faCheck, faTriangleExclamation
+    faXmark, faCheck, faTriangleExclamation,
+    faClock, faGlobe, faCloudArrowUp, faRobot
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
@@ -94,19 +95,32 @@ const NewsModal = function NewsModal({ isOpen, onClose, news, onSave, isSaving }
         content: news?.content || '',
         tag: news?.tag || 'Berita',
         image_url: news?.image_url || '',
-        is_published: news?.is_published ?? true
+        is_published: news?.is_published ?? true,
+        scheduled_at: news?.scheduled_at ? new Date(news.scheduled_at).toISOString().slice(0, 16) : '',
+        meta_title: news?.meta_title || '',
+        meta_description: news?.meta_description || ''
     })
+
+    const [imageFile, setImageFile] = useState(null)
+    const [imagePreview, setImagePreview] = useState(news?.image_url || null)
+    const fileInputRef = useRef(null)
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            setImageFile(file)
+            const reader = new FileReader()
+            reader.onloadend = () => setImagePreview(reader.result)
+            reader.readAsDataURL(file)
+        }
+    }
 
     // Reset form only when modal opens/closes to handle 'Add New' case
     // but the 'key' prop in parent actually handles most of the reset logic
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        const finalForm = {
-            ...form,
-            image_url: form.image_url?.trim() === '' ? null : form.image_url.trim()
-        }
-        onSave(finalForm)
+        onSave(form, imageFile)
     }
 
     if (!isOpen) return null
@@ -116,6 +130,7 @@ const NewsModal = function NewsModal({ isOpen, onClose, news, onSave, isSaving }
             isOpen={isOpen}
             onClose={onClose}
             title={news ? 'Edit Berita' : 'Tambah Berita Baru'}
+            size="xl"
         >
             <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[90vh] sm:max-h-[660px] overflow-hidden relative">
                 <style>{`
@@ -180,104 +195,159 @@ const NewsModal = function NewsModal({ isOpen, onClose, news, onSave, isSaving }
                 `}</style>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto min-h-0 pr-1 -mr-1 custom-scrollbar pb-4 space-y-6">
-                    <div className="grid grid-cols-12 gap-x-5 gap-y-5 py-2">
-                        {/* Judul Berita */}
-                        <div className="col-span-12 group">
-                            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-2 ml-1 opacity-60 group-focus-within:text-[var(--color-primary)] group-focus-within:opacity-100 transition-all">
-                                <FontAwesomeIcon icon={faNewspaper} className="text-[8px]" />
-                                Judul Berita <span className="text-red-500 font-bold">*</span>
-                            </label>
-                            <input
-                                required
-                                type="text"
-                                value={form.title}
-                                onChange={e => setForm({ ...form, title: e.target.value })}
-                                placeholder="Tulis judul berita yang menarik..."
-                                className="w-full px-5 h-12 input-premium text-sm font-bold placeholder:font-medium placeholder:opacity-30"
-                            />
-                        </div>
-
-                        {/* Kategori Berita */}
-                        <div className="col-span-12 sm:col-span-5 group">
-                            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-2 ml-1 opacity-60 group-focus-within:text-[var(--color-primary)] group-focus-within:opacity-100 transition-all">
-                                <FontAwesomeIcon icon={faTag} className="text-[8px]" />
-                                Kategori
-                            </label>
-                            <div className="relative">
-                                <select
-                                    value={form.tag}
-                                    onChange={e => setForm({ ...form, tag: e.target.value })}
-                                    className="w-full px-4 h-12 input-premium text-sm font-bold appearance-none cursor-pointer pr-10"
-                                >
-                                    <option value="Berita">Berita Umum</option>
-                                    <option value="Kegiatan">Kegiatan Siswa</option>
-                                    <option value="Prestasi">Prestasi</option>
-                                    <option value="Pengumuman">Pengumuman</option>
-                                </select>
-                                <FontAwesomeIcon icon={faChevronDown} className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] opacity-30 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        {/* Image URL */}
-                        <div className="col-span-12 sm:col-span-7 group">
-                            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-2 ml-1 opacity-60 group-focus-within:text-[var(--color-primary)] group-focus-within:opacity-100 transition-all">
-                                <FontAwesomeIcon icon={faPlus} className="text-[8px]" />
-                                Thumbnail URL <span className="text-[8px] opacity-40 lowercase ml-1">(opsional)</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={form.image_url || ''}
-                                onChange={e => setForm({ ...form, image_url: e.target.value })}
-                                placeholder="https://source.unsplash.com/..."
-                                className="w-full px-5 h-12 input-premium text-xs font-medium placeholder:opacity-30"
-                            />
-                        </div>
-
-                        {/* Rich Text Editor */}
-                        <div className="col-span-12 group">
-                            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-2 ml-1 opacity-60 group-focus-within:text-[var(--color-primary)] group-focus-within:opacity-100 transition-all">
-                                <FontAwesomeIcon icon={faPen} className="text-[8px]" />
-                                Konten Berita <span className="text-red-500 font-bold">*</span>
-                            </label>
-                            <div className="quill-modern transition-all duration-300 group-focus-within:ring-4 group-focus-within:ring-[var(--color-primary)]/5 rounded-[20px]">
-                                <ReactQuill 
-                                    theme="snow"
-                                    value={form.content}
-                                    onChange={val => setForm({ ...form, content: val })}
-                                    placeholder="Ceritakan detail berita secara lengkap di sini..."
-                                    modules={{
-                                        toolbar: [
-                                            ['bold', 'italic', 'underline'],
-                                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                            ['link', 'clean']
-                                        ],
-                                    }}
+                <div className="flex-1 overflow-y-auto min-h-0 pr-1 -mr-1 custom-scrollbar pb-2 px-1">
+                    <div className="space-y-6 py-2">
+                        {/* ── Main Content Section ── */}
+                        <div className="space-y-6">
+                            {/* Judul Berita */}
+                            <div className="group">
+                                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-2 ml-1 opacity-60 group-focus-within:text-[var(--color-primary)] group-focus-within:opacity-100 transition-all">
+                                    <FontAwesomeIcon icon={faNewspaper} className="text-[8px]" />
+                                    Judul Berita <span className="text-red-500 font-bold">*</span>
+                                </label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={form.title}
+                                    onChange={e => setForm({ ...form, title: e.target.value })}
+                                    placeholder="Tulis judul berita yang menarik..."
+                                    className="w-full px-5 h-12 input-premium text-sm font-bold placeholder:font-medium placeholder:opacity-30"
                                 />
                             </div>
-                        </div>
 
-                        {/* Status Toggle */}
-                        <div className="col-span-12">
-                            <label className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] cursor-pointer group hover:border-[var(--color-primary)]/50 transition-all shadow-sm hover:shadow-md">
-                                <div className="relative flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={form.is_published}
-                                        onChange={e => setForm({ ...form, is_published: e.target.checked })}
-                                        className="w-5 h-5 rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] transition-all cursor-pointer"
+                            {/* Kategori Berita */}
+                            <div className="group">
+                                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-2 ml-1 opacity-60 group-focus-within:text-[var(--color-primary)] group-focus-within:opacity-100 transition-all">
+                                    <FontAwesomeIcon icon={faTag} className="text-[8px]" />
+                                    Kategori
+                                </label>
+                                <div className="relative max-w-sm">
+                                    <select
+                                        value={form.tag}
+                                        onChange={e => setForm({ ...form, tag: e.target.value })}
+                                        className="w-full px-4 h-11 input-premium text-xs font-bold appearance-none cursor-pointer pr-10"
+                                    >
+                                        <option value="Berita">Berita Umum</option>
+                                        <option value="Kegiatan">Kegiatan Siswa</option>
+                                        <option value="Prestasi">Prestasi</option>
+                                        <option value="Pengumuman">Pengumuman</option>
+                                    </select>
+                                    <FontAwesomeIcon icon={faChevronDown} className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] opacity-30 pointer-events-none" />
+                                </div>
+                            </div>
+
+                            {/* Rich Text Editor */}
+                            <div className="group">
+                                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-2 ml-1 opacity-60 group-focus-within:text-[var(--color-primary)] group-focus-within:opacity-100 transition-all">
+                                    <FontAwesomeIcon icon={faPen} className="text-[8px]" />
+                                    Isi Berita Lengkap <span className="text-red-500 font-bold">*</span>
+                                </label>
+                                <div className="quill-modern transition-all duration-300 group-focus-within:ring-4 group-focus-within:ring-[var(--color-primary)]/5 rounded-[20px]">
+                                    <ReactQuill
+                                        theme="snow"
+                                        value={form.content}
+                                        onChange={val => setForm({ ...form, content: val })}
+                                        placeholder="Ceritakan detail berita secara lengkap di sini..."
+                                        style={{ height: '280px', marginBottom: '10px' }}
+                                        modules={{
+                                            toolbar: [
+                                                ['bold', 'italic', 'underline'],
+                                                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                                                ['link', 'clean']
+                                            ],
+                                        }}
                                     />
                                 </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-[11px] font-black text-[var(--color-text)] uppercase tracking-wider">Publish Berita</p>
-                                        <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${form.is_published ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                            {form.is_published ? 'Aktif' : 'Draft'}
-                                        </span>
+                            </div>
+                        </div>
+
+                        {/* ── Settings Grid Section (Bottom) ── */}
+                        <div className="pt-2 border-t border-[var(--color-border)]">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2 opacity-40">Pengaturan Tambahan</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {/* Thumbnail Column */}
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">
+                                        <FontAwesomeIcon icon={faCloudArrowUp} /> Thumbnail Utama
+                                    </label>
+                                    <div
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="relative h-36 rounded-2xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)] overflow-hidden group/upload cursor-pointer hover:border-[var(--color-primary)]/50 transition-all"
+                                    >
+                                        {imagePreview ? (
+                                            <>
+                                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/upload:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                                                    <span className="px-3 py-1.5 rounded-lg bg-white text-black text-[8px] font-black uppercase">Ganti</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--color-text-muted)] opacity-40 group-hover/upload:opacity-100 group-hover/upload:text-[var(--color-primary)] transition-all">
+                                                <FontAwesomeIcon icon={faCloudArrowUp} className="text-xl" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">Upload Foto</span>
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                            accept="image/*"
+                                        />
                                     </div>
-                                    <p className="text-[9px] text-[var(--color-text-muted)] font-medium mt-0.5">Aktifkan agar berita ini bisa dibaca oleh publik di Landing Page.</p>
                                 </div>
-                            </label>
+
+                                {/* SEO Column */}
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">
+                                        <FontAwesomeIcon icon={faGlobe} /> SEO Metadata
+                                    </label>
+                                    <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 space-y-3">
+                                        <input
+                                            type="text"
+                                            value={form.meta_title}
+                                            onChange={e => setForm({ ...form, meta_title: e.target.value })}
+                                            placeholder="Meta Title"
+                                            className="w-full px-3 h-8 bg-white border border-[var(--color-border)] rounded-lg text-[10px] font-bold focus:border-[var(--color-primary)] outline-none"
+                                        />
+                                        <textarea
+                                            value={form.meta_description}
+                                            onChange={e => setForm({ ...form, meta_description: e.target.value })}
+                                            placeholder="Meta Description..."
+                                            className="w-full px-3 py-2 min-h-[60px] bg-white border border-[var(--color-border)] rounded-lg text-[10px] focus:border-[var(--color-primary)] outline-none resize-none leading-normal"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Publishing Column */}
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">
+                                        <FontAwesomeIcon icon={faClock} /> Status & Jadwal
+                                    </label>
+                                    <div className="space-y-3">
+                                        <div className="p-3 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                            <input
+                                                type="datetime-local"
+                                                value={form.scheduled_at}
+                                                onChange={e => setForm({ ...form, scheduled_at: e.target.value })}
+                                                className="w-full bg-transparent text-[10px] font-black text-[var(--color-text)] outline-none cursor-pointer uppercase"
+                                            />
+                                        </div>
+                                        <label className="flex items-center gap-3 p-3 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] cursor-pointer group hover:border-[var(--color-primary)]/50 transition-all">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.is_published}
+                                                onChange={e => setForm({ ...form, is_published: e.target.checked })}
+                                                className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] transition-all cursor-pointer"
+                                            />
+                                            <div className="flex-1">
+                                                <p className="text-[10px] font-black text-[var(--color-text)] uppercase tracking-wider">Publish Berita</p>
+                                                <p className="text-[8px] text-[var(--color-text-muted)] opacity-60">Tampilkan ke publik sekarang.</p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -329,12 +399,44 @@ export default function AdminNewsPage() {
 
     useEffect(() => { fetchNews() }, [fetchNews])
 
-    const handleSave = async (form) => {
+    const handleSave = async (form, file) => {
         setIsSaving(true)
         const user = (await supabase.auth.getUser()).data.user
 
+        let imageUrl = form.image_url
+
+        // Handle Image Upload to Supabase Storage
+        if (file) {
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${Math.random()}.${fileExt}`
+            const filePath = `thumbnails/${fileName}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('news')
+                .upload(filePath, file)
+
+            if (uploadError) {
+                addToast('Upload gagal: ' + uploadError.message, 'error')
+                setIsSaving(false)
+                return
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('news')
+                .getPublicUrl(filePath)
+
+            imageUrl = publicUrl
+        }
+
         const payload = {
-            ...form,
+            title: form.title,
+            content: form.content,
+            tag: form.tag,
+            image_url: imageUrl,
+            is_published: form.is_published,
+            scheduled_at: form.scheduled_at || null,
+            meta_title: form.meta_title,
+            meta_description: form.meta_description,
             author: user?.email || 'Admin',
             updated_at: new Date().toISOString()
         }
@@ -416,10 +518,12 @@ export default function AdminNewsPage() {
             <div className="p-4 md:p-6 space-y-6 max-w-[1200px] mx-auto">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <Breadcrumb badge="Admin" items={['Admin', 'News Management']} className="mb-1" />
-                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">
-                            Manajemen Berita
-                        </h1>
+                        <Breadcrumb badge="Admin" items={['CMS Management']} className="mb-2" />
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">
+                                Manajemen Berita
+                            </h1>
+                        </div>
                         <p className="text-[12px] text-[var(--color-text-muted)] font-medium">
                             Kelola konten berita dan pengumuman untuk Landing Page.
                         </p>
@@ -485,8 +589,8 @@ export default function AdminNewsPage() {
                                         <button
                                             onClick={() => handleToggleStatus(news)}
                                             className={`w-9 h-9 rounded-2xl flex items-center justify-center backdrop-blur-md shadow-lg transition-all border duration-300 ${news.is_published
-                                                    ? 'bg-white/90 border-emerald-500/20 text-emerald-600 hover:bg-emerald-50'
-                                                    : 'bg-white/60 border-rose-500/10 text-rose-400 hover:bg-rose-50'
+                                                ? 'bg-white/90 border-emerald-500/20 text-emerald-600 hover:bg-emerald-50'
+                                                : 'bg-white/60 border-rose-500/10 text-rose-400 hover:bg-rose-50'
                                                 }`}
                                             title={news.is_published ? 'Klik untuk Arsipkan' : 'Klik untuk Publikasikan'}
                                         >

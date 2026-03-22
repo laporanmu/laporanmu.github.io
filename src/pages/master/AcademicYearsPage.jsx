@@ -374,7 +374,7 @@ export default function AcademicYearsPage() {
                 {/* ── Header ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
-                        <Breadcrumb badge="Master Data" items={['Master', 'Tahun Pelajaran']} className="mb-1" />
+                        <Breadcrumb badge="Master Data" items={['Academic Cycle']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Tahun Pelajaran</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} tahun pelajaran dan semester aktif dalam sistem.</p>
                     </div>

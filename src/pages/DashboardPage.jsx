@@ -185,7 +185,7 @@ export default function DashboardPage() {
                     }
                 })
 
-                // 5) Pie data (top jenis pelanggaran minggu ini)
+                // 5) Pie data (top Konfigurasi Poin minggu ini)
                 // Ambil violation type name untuk minggu ini (join)
                 let pie = []
                 if (rThisWeek.length > 0) {
@@ -467,7 +467,7 @@ export default function DashboardPage() {
                     {/* Pie Chart */}
                     <div className="glass rounded-[1.5rem] p-5 flex flex-col">
                         <div className="mb-5">
-                            <p className="text-[13px] font-black text-[var(--color-text)]">Jenis Pelanggaran</p>
+                            <p className="text-[13px] font-black text-[var(--color-text)]">Konfigurasi Poin</p>
                             <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Minggu ini</p>
                         </div>
                         <div className="h-44">

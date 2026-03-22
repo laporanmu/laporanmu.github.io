@@ -30,7 +30,7 @@ const MENU_ITEMS = [
             { path: '/master/students', icon: faUsers, label: 'Data Siswa' },
             { path: '/master/teachers', icon: faChalkboardTeacher, label: 'Data Guru' },
             { path: '/master/classes', icon: faSchool, label: 'Data Kelas' },
-            { path: '/master/violations', icon: faExclamationTriangle, label: 'Jenis Pelanggaran' },
+            { path: '/master/violations', icon: faExclamationTriangle, label: 'Konfigurasi Poin' },
             { path: '/master/academic-years', icon: faCalendarAlt, label: 'Tahun Pelajaran' },
         ],
     },
