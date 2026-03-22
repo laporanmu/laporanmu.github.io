@@ -9,7 +9,7 @@ import {
     faClipboardList, faCalendarWeek, faShieldHalved,
     faUsers, faChalkboardTeacher, faSchool, faExclamationTriangle, faCalendarAlt,
     faPersonWalkingArrowRight, faUserGear, faClockRotateLeft, faScrewdriverWrench,
-    faDatabase, faBoxArchive, faServer, faPalette,
+    faDatabase, faBoxArchive, faServer, faPalette, faNewspaper,
 } from "@fortawesome/free-solid-svg-icons"
 import { useTheme } from "../../context/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
@@ -69,6 +69,7 @@ const REPORTS_ITEMS = [
 
 // Admin-only items — hanya tampil untuk developer & admin
 const ADMIN_ITEMS = [
+    { to: "/admin/news", label: "Manajemen Berita", icon: faNewspaper, desc: "Update berita & info terbaru ke landing page", color: "bg-emerald-500/10 text-emerald-600" },
     { to: "/admin/logs", label: "Audit Logs", icon: faClockRotateLeft, desc: "Log historis aktivitas user dan perubahan data", color: "bg-purple-500/10 text-purple-600" },
     { to: "/admin/users", label: "User Management", icon: faUserGear, desc: "Pengaturan hak akses, role, dan kredensial user", color: "bg-rose-500/10 text-rose-600" },
     { to: "/admin/database", label: "Database Health", icon: faDatabase, desc: "Pemantauan status database & kesehatan tabel", color: "bg-cyan-500/10 text-cyan-600" },

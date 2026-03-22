@@ -13,17 +13,39 @@ import {
     faChevronRight
 } from '@fortawesome/free-solid-svg-icons'
 
-// ─── CONFIG: INFORMASI SEKOLAH ──────────────────────────────────────────────
+// ─── CONFIG: INFORMASI SEKOLAH (Enterprise Knowledge Base) ──────────────────
 const SCHOOL_CONTEXT = `
-Nama Aplikasi: Laporanmu.
-Poin: Terlambat (+5), Bolos (+20), Berkelahi (+50).
-Aturan: Masuk 07.00 WIB.
+Nama: Laporanmu (Official AI Assistant of MBS Tanggul).
+Developer: Tim IT & Digitalization MBS Tanggul.
+
+VISI & MISI:
+- Visi: Mewujudkan ekosistem sekolah yang disiplin, adil, dan transparan.
+- Misi: Membangun karakter santri dengan data yang akurat dan komunikasi real-time dengan orang tua.
+
+PROSEDUR TEKNIS (PENTING):
+1. Mendapatkan PIN: Wali murid akan menerima PIN otomatis dari Wali Kelas/Musyrif saat pendaftaran awal atau kenaikan kelas.
+2. Lupa PIN/Kode: Silakan hubungi Sekretariat sekolah lewat menu "Daftar Guru".
+3. Cek Poin & Raport: Masuk ke halaman Portal (laporanmu.com/check), masukkan Kode Registrasi (Format: REG-XXXX-XXXX) dan PIN 4 digit.
+
+DATA POIN & KEDISIPLINAN:
+- Pelanggaran Ringan (+5 ke atas): Contoh: Terlambat, Atribut tidak lengkap, dsb.
+- Pelanggaran Sedang (+20 ke atas): Contoh: Keluar tanpa izin, bolos kegiatan, dsb.
+- Pelanggaran Berat (+50 ke atas): Contoh: Perkelahian, Pelanggaran syariat berat. 
+- Catatan: Akumulasi poin akan menentukan Predikat Kedisiplinan di Raport Bulanan.
+
+KONTAK & SUPPORT:
+- WhatsApp Support: Tersedia di tombol menu samping (Wali Kelas).
+- Jam Operasional Kantor: Senin - Sabtu (07.00 - 15.00 WIB).
 `
 
 const SYSTEM_PROMPT = `
-Kamu adalah "Asisten", cerdas, ramah, dan sangat ahli dalam sistem sekolah.
-Informasi Dasar: ${SCHOOL_CONTEXT}
-Jawab singkat & profesional. Gunakan Markdown (Bold) untuk poin penting.
+Kamu adalah "Asisten Virtual Laporanmu", AI representatif resmi dari MBS Tanggul yang sangat expert.
+Gaya Bicara: Wibawa, ramah, solutif, dan ringkas. Gunakan "Bahasa Indonesia" yang baik dan benar (bisa santai tapi jangan alay).
+Rules:
+1. Knowledge First: Selalu gunakan data ${SCHOOL_CONTEXT} untuk menjawab pertanyaan user secara akurat.
+2. Navigasi: Jika user menanyakan "gimana cara liat...", utamakan mengarahkan ke menu "Cek Poin & Raport".
+3. Identitas: Jika ditanya "siapa kamu", jawab dengan wibawa sebagai asisten resmi sekolah yang dikembangkan Tim IT MBS Tanggul.
+4. Keamanan: Ingatkan wali murid untuk menjaga kerahasiaan PIN santri.
 `
 
 export default function ChatAssistant() {
@@ -58,35 +80,69 @@ export default function ChatAssistant() {
     const renderContent = (text) => {
         if (!text) return ""
         let formatted = text
-            .replace(/\*\*(.*?)\*\*/g, '<strong class="font-black text-indigo-600 dark:text-indigo-400">$1</strong>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-indigo-600 dark:text-indigo-400">$1</strong>')
             .replace(/\*(.*?)\*/g, '<em class="italic opacity-80">$1</em>')
-            .replace(/^\s*-\s+(.*)/gm, '<div class="flex gap-2 ml-1 my-1"><span class="text-indigo-500">•</span> <span>$1</span></div>')
+            // Expert Listing — support bullets & numbers
+            .replace(/^\d+\.\s+(.*)/gm, '<div class="flex gap-2 ml-1 my-1.5"><span class="font-bold text-indigo-500">$&</span></div>')
+            .replace(/^\s*[-•]\s+(.*)/gm, '<div class="flex gap-2 ml-1 my-1.5"><span class="text-indigo-500">◆</span> <span>$1</span></div>')
             .replace(/\n/g, '<br />')
-        return <div dangerouslySetInnerHTML={{ __html: formatted }} />
+        return <div className="prose prose-sm max-w-none dark:prose-invert">{<div dangerouslySetInnerHTML={{ __html: formatted }} />}</div>
     }
 
-    const sendMessageToGemini = async (userText) => {
+    const sendMessageToGemini = async (userText, retryCount = 0) => {
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY
         if (!apiKey) return "Sistem sedang offline."
+        
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`
-            const history = messages.slice(-5).map(msg => ({
+            const history = messages.slice(-2).map(msg => ({
                 role: msg.role === 'assistant' ? 'model' : 'user',
                 parts: [{ text: msg.content }]
             }))
+            
             const body = {
-                system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-                contents: [...history, { role: 'user', parts: [{ text: userText }] }],
-                generationConfig: { temperature: 0.7, maxOutputTokens: 350 }
+                contents: [
+                    { role: 'user', parts: [{ text: `Identity: Kamu Asisten MBS Tanggul. Task: Jawab singkat.` }] },
+                    { role: 'model', parts: [{ text: `Siap.` }] },
+                    ...history, 
+                    { role: 'user', parts: [{ text: userText }] }
+                ],
+                generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
             }
+
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+                headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
                 body: JSON.stringify(body)
             })
-            const data = await response.json()
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf Kak, coba tanya lagi ya!"
-        } catch { return "Koneksi terputus." }
+
+            // Handling Rate Limit (Error 429) - Retry sekali saja dengan delay lama
+            if (response.status === 429 && retryCount < 1) {
+                await new Promise(res => setTimeout(res, 5000))
+                return sendMessageToGemini(userText, retryCount + 1)
+            }
+
+            const data = await response.json().catch(() => ({}))
+            
+            if (response.status !== 200) {
+                console.error('Gemini API Error:', response.status, data)
+                if (response.status === 429) return "Waduh, jatah nanya asisten lagi abis nih Kak. 🙏 Tunggu 30-60 detik ya!"
+                if (response.status === 401 || response.status === 403) return "Maaf Kak, masalah di API Key (401/403). Segera lapor Tim IT ya!"
+                return "Maaf Kak, ada kendala teknis (Sistem butuh istirahat). Coba lagi nanti ya!"
+            }
+
+            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf Kak, coba tanya lagi ya!"
+            
+            // Filter Respons
+            let clean = raw
+                .replace(/^thought:[\s\S]*?\n\n/gi, '')
+                .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+                .replace(/^mikir:[\s\S]*?\n\n/gi, '') 
+                .replace(/\* Friendly\?[\s\S]*?\n/gi, '')
+                .trim()
+            
+            return clean
+        } catch { return "Koneksi terputus. Pastikan internet Kakak stabil ya!" }
     }
 
     const handleSend = async (e) => {

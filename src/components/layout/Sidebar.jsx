@@ -13,6 +13,7 @@ import {
     faSchool,
     faExclamationTriangle,
     faCalendarAlt,
+    faNewspaper,
 } from '@fortawesome/free-solid-svg-icons'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
@@ -34,6 +35,7 @@ const MENU_ITEMS = [
         ],
     },
     { path: '/settings', icon: faCog, label: 'Pengaturan' },
+    { path: '/admin/news', icon: faNewspaper, label: 'Berita' },
 ]
 
 const ADMIN_MENU = { path: '/developer', icon: faCode, label: 'Developer' }

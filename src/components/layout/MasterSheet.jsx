@@ -7,7 +7,7 @@ import {
     faExclamationTriangle, faCalendarAlt,
     faClipboardList, faCalendarWeek, faShieldHalved,
     faPersonWalkingArrowRight, faClockRotateLeft, faUserGear,
-    faScrewdriverWrench, faDatabase, faBoxArchive, faServer, faPalette
+    faScrewdriverWrench, faDatabase, faBoxArchive, faServer, faPalette, faNewspaper
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "../../context/AuthContext"
 import { useFeatureFlags } from "../../context/FeatureFlagsContext"
@@ -52,6 +52,7 @@ const ADMIN_ITEMS = [
     { to: "/admin/database", label: "Database Health", icon: faDatabase, desc: "Monitoring data & integritas", color: "bg-cyan-500/10 text-cyan-600" },
     { to: "/admin/storage", label: "Storage Manager", icon: faBoxArchive, desc: "Kelola file & bucket storage", color: "bg-amber-500/10 text-amber-600" },
     { to: "/admin/tasks", label: "Background Tasks", icon: faServer, desc: "Monitor edge functions", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/admin/news", label: "Manajemen Berita", icon: faNewspaper, desc: "Update konten berita", color: "bg-emerald-500/10 text-emerald-600" },
     { to: "/admin/settings", label: "Pengaturan", icon: faScrewdriverWrench, desc: "Konfigurasi sistem & aplikasi", color: "bg-slate-500/10 text-slate-600" },
     { to: "/admin/playground", label: "UI Playground", icon: faPalette, desc: "Katalog design system", color: "bg-pink-500/10 text-pink-600" },
 ]

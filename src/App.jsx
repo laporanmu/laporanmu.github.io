@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate } from 'rea
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import { ThemeProvider } from './context/ThemeContext'
-import { SidebarProvider } from './context/SidebarContext'
 import { FeatureFlagsProvider, useFeatureFlags } from './context/FeatureFlagsContext'
 import { useTheme } from './context/ThemeContext'
 import DashboardLayout from './components/layout/DashboardLayout'
@@ -33,6 +32,7 @@ const DatabasePage = lazy(() => import('./pages/admin/DatabasePage'))
 const StoragePage = lazy(() => import('./pages/admin/StoragePage'))
 const TasksPage = lazy(() => import('./pages/admin/TasksPage'))
 const PlaygroundPage = lazy(() => import('./pages/admin/PlaygroundPage'))
+const AdminNewsPage = lazy(() => import('./pages/admin/NewsPage'))
 
 // Master Data
 const StudentsPage = lazy(() => import('./pages/master/StudentsPage'))
@@ -423,6 +423,11 @@ function AppRoutes() {
             } />
 
             {/* Master Data */}
+            <Route path="/admin/news" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <AdminNewsPage />
+              </RoleFlagRoute>
+            } />
             <Route path="/master/students" element={
               <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.students" label="Data Siswa">
                 <StudentsPage />
@@ -467,18 +472,16 @@ function AppRoutes() {
 // ─── App Root ─────────────────────────────────────────────────────────────────
 export default function App() {
   return (
-    <SidebarProvider>
-      <BrowserRouter>
-        <ThemeProvider>
-          <ToastProvider>
-            <AuthProvider>
-              <FeatureFlagsProvider>
-                <AppRoutes />
-              </FeatureFlagsProvider>
-            </AuthProvider>
-          </ToastProvider>
-        </ThemeProvider>
-      </BrowserRouter>
-    </SidebarProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <FeatureFlagsProvider>
+              <AppRoutes />
+            </FeatureFlagsProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   )
 }
