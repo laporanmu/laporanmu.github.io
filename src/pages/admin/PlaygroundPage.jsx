@@ -927,7 +927,7 @@ const LineChartPreview = memo(() => {
                 {pts.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="3" fill="white" stroke="var(--color-primary)" strokeWidth="1.5" />)}
             </svg>
             <div className="flex justify-between px-1">
-                {months.map(m => <span key={m} className="text-[7px] font-black text-[var(--color-text-muted)] opacity-50">{m}</span>)}
+                {months.map((m, i) => <span key={i} className="text-[7px] font-black text-[var(--color-text-muted)] opacity-50">{m}</span>)}
             </div>
             <p className="text-[8px] font-black text-[var(--color-text-muted)] opacity-50 text-center">Tren Kehadiran Siswa 2024</p>
         </div>

@@ -11,7 +11,13 @@ import {
     faBars,
     faTimes,
     faQuoteLeft,
-    faSearch
+    faSearch,
+    faClock,
+    faUser,
+    faStar,
+    faNewspaper,
+    faTag,
+    faCalendar
 } from '@fortawesome/free-solid-svg-icons'
 import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
@@ -67,10 +73,11 @@ export default function LandingPage() {
     const fetchNews = useCallback(async () => {
         const { data, error } = await supabase
             .from('news')
-            .select('*')
+            .select('id, title, excerpt, content, tag, image_url, image_alt, created_at, author, display_name, is_featured, slug, read_time')
             .eq('is_published', true)
+            .order('is_featured', { ascending: false })
             .order('created_at', { ascending: false })
-            .limit(3)
+            .limit(6)
 
         if (!error && data) setNews(data)
         setNewsLoading(false)
@@ -329,60 +336,141 @@ export default function LandingPage() {
             <Reveal>
                 <section id="Berita" className="py-24 relative z-10">
                     <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
+                        {/* Section header */}
                         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
                             <div>
-                                <h2 className="text-3xl font-extrabold text-[var(--color-text)] mb-4">Berita <span className="text-[var(--color-primary)]">Terkini</span></h2>
-                                <p className="text-slate-500 font-medium text-sm sm:text-base">Informasi terbaru seputar kegiatan dan kebijakan sekolah.</p>
+                                <span className="text-[var(--color-primary)] font-bold uppercase tracking-[0.3em] text-[10px] mb-3 block">Informasi Terkini</span>
+                                <h2 className="text-3xl font-extrabold text-[var(--color-text)] mb-3">Berita <span className="text-[var(--color-primary)]">Terkini</span></h2>
+                                <p className="text-slate-500 font-medium text-sm sm:text-base max-w-md">Informasi terbaru seputar kegiatan, prestasi, dan kebijakan sekolah.</p>
                             </div>
-                            <button className="group text-[var(--color-primary)] font-bold flex items-center gap-2 hover:underline text-sm transition-all">
+                            <Link to="/berita" className="group text-[var(--color-primary)] font-bold flex items-center gap-2 hover:gap-3 text-sm transition-all shrink-0">
                                 Lihat Semua Berita
-                                <FontAwesomeIcon icon={faArrowRight} className="text-xs group-hover:translate-x-1 transition-transform" />
-                            </button>
+                                <FontAwesomeIcon icon={faArrowRight} className="text-xs group-hover:translate-x-0.5 transition-transform" />
+                            </Link>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {newsLoading ? (
-                                [1, 2, 3].map(i => (
-                                    <div key={i} className="h-64 rounded-[2rem] bg-[var(--color-surface-alt)] animate-pulse border border-[var(--color-border)]" />
-                                ))
-                            ) : news.length === 0 ? (
-                                <div className="col-span-full py-20 text-center text-[var(--color-text-muted)] font-black bg-[var(--color-surface-alt)]/30 rounded-[3rem] border-2 border-dashed border-[var(--color-border)] uppercase tracking-[0.3em] text-[10px] opacity-50">
-                                    Belum ada Berita
-                                </div>
-                            ) : (
-                                news.map((item, i) => (
-                                    <Reveal key={item.id} delay={0.1 * i}>
-                                        <div className="group bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] overflow-hidden hover:shadow-2xl hover:border-[var(--color-primary)]/30 transition-all duration-500 flex flex-col h-full ring-1 ring-inset ring-transparent hover:ring-[var(--color-primary)]/10">
-                                            {item.image_url && (
-                                                <div className="h-44 w-full overflow-hidden shrink-0">
-                                                    <img src={item.image_url} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                        {newsLoading ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="h-72 rounded-[2rem] bg-[var(--color-surface-alt)] animate-pulse border border-[var(--color-border)]" />
+                                ))}
+                            </div>
+                        ) : news.length === 0 ? (
+                            <div className="col-span-full py-20 text-center text-[var(--color-text-muted)] font-black bg-[var(--color-surface-alt)]/30 rounded-[3rem] border-2 border-dashed border-[var(--color-border)] uppercase tracking-[0.3em] text-[10px] opacity-50">
+                                Belum ada Berita
+                            </div>
+                        ) : (
+                            <div className="space-y-8">
+                                {/* Featured hero card — shown if first article is featured */}
+                                {news[0]?.is_featured && (
+                                    <Reveal>
+                                        <div
+                                            className="group relative rounded-[2.5rem] overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 transition-all duration-500 hover:shadow-2xl cursor-pointer"
+                                            onClick={() => setSelectedNews(news[0])}
+                                        >
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[320px]">
+                                                {/* Image */}
+                                                <div className="relative overflow-hidden lg:order-2 h-64 lg:h-auto">
+                                                    {news[0].image_url ? (
+                                                        <img src={news[0].image_url} alt={news[0].image_alt || news[0].title}
+                                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 flex items-center justify-center">
+                                                            <FontAwesomeIcon icon={faNewspaper} className="text-6xl text-[var(--color-primary)]/30" />
+                                                        </div>
+                                                    )}
+                                                    <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[var(--color-surface)] to-transparent" />
                                                 </div>
-                                            )}
-                                            <div className="p-8 flex flex-col flex-1">
-                                                <div className="flex items-center gap-3 mb-6">
-                                                    <span className="px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-black uppercase tracking-wider border border-[var(--color-primary)]/5">{item.tag}</span>
-                                                    <span className="text-[var(--color-text-muted)] text-[10px] font-bold uppercase tracking-widest opacity-60">{new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                                                </div>
-                                                <h3 className="text-xl font-black text-[var(--color-text)] mb-4 leading-tight group-hover:text-[var(--color-primary)] transition-colors line-clamp-2">{item.title}</h3>
-                                                <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-6 line-clamp-3 font-medium opacity-80">
-                                                    {item.content.replace(/<[^>]*>/g, ' ')}
-                                                </p>
-
-                                                <div className="mt-auto pt-6 border-t border-[var(--color-border)]/50 flex justify-end">
-                                                    <button
-                                                        onClick={() => setSelectedNews(item)}
-                                                        className="group/btn inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--color-primary)] hover:gap-3 transition-all duration-300"
-                                                    >
-                                                        Baca Selengkapnya
-                                                        <FontAwesomeIcon icon={faArrowRight} className="text-[10px] group-hover/btn:translate-x-1 transition-transform" />
-                                                    </button>
+                                                {/* Content */}
+                                                <div className="relative lg:order-1 p-8 sm:p-10 flex flex-col justify-center bg-[var(--color-surface)]">
+                                                    <div className="flex items-center gap-2 mb-4 flex-wrap">
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 text-[9px] font-black uppercase tracking-widest border border-amber-500/20">
+                                                            <FontAwesomeIcon icon={faStar} className="text-[7px]" /> Featured
+                                                        </span>
+                                                        <span className="px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[9px] font-black uppercase tracking-widest border border-[var(--color-primary)]/10">
+                                                            {news[0].tag}
+                                                        </span>
+                                                    </div>
+                                                    <h3 className="text-2xl sm:text-3xl font-black text-[var(--color-text)] leading-tight mb-4 group-hover:text-[var(--color-primary)] transition-colors">
+                                                        {news[0].title}
+                                                    </h3>
+                                                    <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-6 opacity-80 line-clamp-3">
+                                                        {news[0].excerpt || news[0].content?.replace(/<[^>]*>/g, ' ').slice(0, 160).trim() + '…'}
+                                                    </p>
+                                                    <div className="flex items-center gap-4 text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest opacity-60">
+                                                        <span className="flex items-center gap-1.5">
+                                                            <FontAwesomeIcon icon={faCalendar} />
+                                                            {new Date(news[0].created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                        </span>
+                                                        {news[0].read_time && (
+                                                            <span className="flex items-center gap-1.5">
+                                                                <FontAwesomeIcon icon={faClock} />
+                                                                {news[0].read_time} mnt baca
+                                                            </span>
+                                                        )}
+                                                        <span className="flex items-center gap-1.5">
+                                                            <FontAwesomeIcon icon={faUser} />
+                                                            {news[0].display_name || news[0].author?.split('@')[0] || 'Admin'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </Reveal>
-                                ))
-                            )}
-                        </div>
+                                )}
+
+                                {/* Regular cards grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    {news.filter((_, i) => i > 0 || !news[0]?.is_featured).slice(0, 3).map((item, i) => (
+                                        <Reveal key={item.id} delay={0.08 * i}>
+                                            <div
+                                                className="group bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] overflow-hidden hover:shadow-2xl hover:border-[var(--color-primary)]/30 transition-all duration-500 flex flex-col h-full cursor-pointer ring-1 ring-inset ring-transparent hover:ring-[var(--color-primary)]/10"
+                                                onClick={() => setSelectedNews(item)}
+                                            >
+                                                {item.image_url && (
+                                                    <div className="h-44 w-full overflow-hidden shrink-0 relative">
+                                                        <img src={item.image_url} alt={item.image_alt || item.title}
+                                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                                                    </div>
+                                                )}
+                                                <div className="p-7 flex flex-col flex-1">
+                                                    <div className="flex items-center gap-2 mb-4 flex-wrap">
+                                                        <span className="px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[9px] font-black uppercase tracking-wider border border-[var(--color-primary)]/10">
+                                                            {item.tag}
+                                                        </span>
+                                                        <span className="text-[var(--color-text-muted)] text-[9px] font-bold uppercase tracking-widest opacity-50">
+                                                            {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                        </span>
+                                                        {item.read_time && (
+                                                            <span className="text-[var(--color-text-muted)] text-[9px] font-bold opacity-50 flex items-center gap-1">
+                                                                <FontAwesomeIcon icon={faClock} className="text-[8px]" /> {item.read_time} mnt
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <h3 className="text-xl font-black text-[var(--color-text)] mb-3 leading-tight group-hover:text-[var(--color-primary)] transition-colors line-clamp-2">
+                                                        {item.title}
+                                                    </h3>
+                                                    <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-4 line-clamp-3 font-medium opacity-80">
+                                                        {item.excerpt || item.content?.replace(/<[^>]*>/g, ' ').slice(0, 140).trim() + '…'}
+                                                    </p>
+                                                    <div className="mt-auto pt-5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
+                                                        <span className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 uppercase tracking-widest flex items-center gap-1.5">
+                                                            <FontAwesomeIcon icon={faUser} className="text-[8px]" />
+                                                            {item.display_name || item.author?.split('@')[0] || 'Admin'}
+                                                        </span>
+                                                        <button className="group/btn inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-primary)] hover:gap-2.5 transition-all duration-200">
+                                                            Baca
+                                                            <FontAwesomeIcon icon={faArrowRight} className="text-[9px]" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Reveal>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </section>
             </Reveal>
@@ -501,7 +589,7 @@ export default function LandingPage() {
                         {/* Header Image */}
                         {selectedNews.image_url && (
                             <div className="h-64 sm:h-80 w-full shrink-0 relative">
-                                <img src={selectedNews.image_url} alt={selectedNews.title} className="w-full h-full object-cover" />
+                                <img src={selectedNews.image_url} alt={selectedNews.image_alt || selectedNews.title} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-transparent to-transparent" />
                                 <button
                                     onClick={() => setSelectedNews(null)}
@@ -537,13 +625,13 @@ export default function LandingPage() {
                             </h2>
 
                             <div className="prose prose-slate dark:prose-invert max-w-none w-full overflow-hidden">
-                                <div 
+                                <div
                                     className="text-[var(--color-text)] text-base sm:text-lg leading-[1.8] font-medium opacity-90 news-content-html break-words overflow-wrap-anywhere"
                                     dangerouslySetInnerHTML={{ __html: selectedNews.content }}
                                 />
                             </div>
                         </div>
-                        
+
                         <style>{`
                             .news-content-html p { margin-bottom: 1rem; }
                             .news-content-html ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
@@ -559,7 +647,7 @@ export default function LandingPage() {
                             </div>
                             <div>
                                 <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">Diterbitkan Oleh</p>
-                                <p className="text-sm font-bold text-[var(--color-text)]">Admin Sekolah • {selectedNews.author?.split('@')[0] || 'Laporanmu'}</p>
+                                <p className="text-sm font-bold text-[var(--color-text)]">{selectedNews.display_name || selectedNews.author?.split('@')[0] || 'Admin Sekolah'}</p>
                             </div>
                         </div>
                     </div>
