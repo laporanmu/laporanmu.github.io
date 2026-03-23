@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext'
 import { useFlag } from '../context/FeatureFlagsContext'
 import Pagination from '../components/ui/Pagination'
 import { supabase } from '../lib/supabase'
+import { logAudit, logAuditBatch } from '../lib/auditLogger'
 
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
@@ -255,6 +256,10 @@ export default function PerilakuPage() {
                 setImportProgress(p => ({ ...p, done: i + 1 }))
             }
             addToast(`Berhasil mengimpor ${validRows.length} laporan`, 'success')
+            await logAudit({
+                action: 'INSERT', tableName: 'reports', recordId: null,
+                newData: { bulk_import: true, count: validRows.length }
+            })
             setIsImportModalOpen(false)
             fetchReports()
         } catch { addToast('Gagal mengimpor data', 'error') }
@@ -417,10 +422,19 @@ export default function PerilakuPage() {
                 const { error } = await supabase.from('reports').update(payload).eq('id', selectedItem.id)
                 if (error) throw error
                 addToast('Laporan diupdate', 'success')
+                await logAudit({
+                    action: 'UPDATE', tableName: 'reports', recordId: selectedItem.id,
+                    oldData: { student_id: selectedItem.student_id, violation_type_id: selectedItem.violation_type_id, points: selectedItem.points, notes: selectedItem.notes },
+                    newData: { student_id: payload.student_id, violation_type_id: payload.violation_type_id, points: payload.points, notes: payload.notes }
+                })
             } else {
-                const { error } = await supabase.from('reports').insert([payload])
+                const { data: insData, error } = await supabase.from('reports').insert([payload]).select().single()
                 if (error) throw error
                 addToast('Laporan berhasil dibuat', 'success')
+                await logAudit({
+                    action: 'INSERT', tableName: 'reports', recordId: insData?.id,
+                    newData: { student_id: payload.student_id, violation_type_id: payload.violation_type_id, points: payload.points, notes: payload.notes, teacher_name: payload.teacher_name }
+                })
             }
             setIsModalOpen(false); fetchReports(); fetchStats()
         } catch (err) { addToast(err.message || 'Gagal menyimpan', 'error') }
@@ -433,6 +447,10 @@ export default function PerilakuPage() {
             const { error } = await supabase.from('reports').delete().eq('id', itemToDelete.id)
             if (error) throw error
             addToast('Laporan dihapus', 'success')
+            await logAudit({
+                action: 'DELETE', tableName: 'reports', recordId: itemToDelete.id,
+                oldData: { student_id: itemToDelete.student_id, violation_type_id: itemToDelete.violation_type_id, points: itemToDelete.points, notes: itemToDelete.notes }
+            })
             setIsDeleteModalOpen(false); fetchReports(); fetchStats()
         } catch (err) { addToast(err.message || 'Gagal menghapus', 'error') }
         finally { setSubmitting(false); setItemToDelete(null) }
@@ -440,10 +458,15 @@ export default function PerilakuPage() {
     const handleBulkDelete = async () => {
         if (!selectedIds.length) return
         setSubmitting(true)
+        const idsSnap = [...selectedIds]
         try {
-            const { error } = await supabase.from('reports').delete().in('id', selectedIds)
+            const { error } = await supabase.from('reports').delete().in('id', idsSnap)
             if (error) throw error
-            addToast(`${selectedIds.length} laporan dihapus`, 'success')
+            addToast(`${idsSnap.length} laporan dihapus`, 'success')
+            await logAudit({
+                action: 'DELETE', tableName: 'reports', recordId: null,
+                oldData: { bulk: true, count: idsSnap.length, ids: idsSnap }
+            })
             setSelectedIds([]); setIsBulkDeleteOpen(false); fetchReports(); fetchStats()
         } catch (err) { addToast(err.message || 'Gagal hapus massal', 'error') }
         finally { setSubmitting(false) }

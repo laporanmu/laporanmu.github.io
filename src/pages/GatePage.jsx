@@ -17,6 +17,7 @@ import Breadcrumb from '../components/ui/Breadcrumb'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { logAudit } from '../lib/auditLogger'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -869,7 +870,10 @@ export default function GatePage() {
             .update({ check_out: checkOutISO })
             .eq('id', log.id)
         if (error) addToast('Gagal: ' + error.message, 'error')
-        else { addToast(action === 'return' ? 'Kembali dicatat ✓' : 'Tamu keluar dicatat ✓', 'success'); loadTodayLogs() }
+        else {
+            addToast(action === 'return' ? 'Kembali dicatat ✓' : 'Tamu keluar dicatat ✓', 'success')
+            loadTodayLogs()
+        }
     }, [confirmModal, loadTodayLogs, addToast])
 
     const handleSaveEdit = useCallback(async (updates) => {
@@ -877,13 +881,46 @@ export default function GatePage() {
         const { error } = await supabase.from('gate_logs').update(updates).eq('id', editLog.id)
         setEditSaving(false)
         if (error) addToast('Gagal menyimpan: ' + error.message, 'error')
-        else { addToast('Log diperbarui ✓', 'success'); setEditLog(null); loadTodayLogs() }
+        else {
+            addToast('Log diperbarui ✓', 'success')
+            await logAudit({
+                action: 'UPDATE',
+                tableName: 'gate_logs',
+                recordId: editLog.id,
+                oldData: {
+                    visitor_name: editLog.visitor_name,
+                    visitor_type: editLog.visitor_type,
+                    purpose: editLog.purpose,
+                    check_in: editLog.check_in,
+                    check_out: editLog.check_out,
+                },
+                newData: updates,
+            })
+            setEditLog(null)
+            loadTodayLogs()
+        }
     }, [editLog, loadTodayLogs, addToast])
 
     const handleDeleteLog = useCallback(async () => {
         const { error } = await supabase.from('gate_logs').delete().eq('id', editLog.id)
         if (error) addToast('Gagal hapus: ' + error.message, 'error')
-        else { addToast('Log dihapus ✓', 'success'); setEditLog(null); loadTodayLogs() }
+        else {
+            addToast('Log dihapus ✓', 'success')
+            await logAudit({
+                action: 'DELETE',
+                tableName: 'gate_logs',
+                recordId: editLog.id,
+                oldData: {
+                    visitor_name: editLog.visitor_name,
+                    visitor_type: editLog.visitor_type,
+                    purpose: editLog.purpose,
+                    check_in: editLog.check_in,
+                    check_out: editLog.check_out,
+                },
+            })
+            setEditLog(null)
+            loadTodayLogs()
+        }
     }, [editLog, loadTodayLogs, addToast])
 
     // ── Filters ────────────────────────────────────────────────────────────────

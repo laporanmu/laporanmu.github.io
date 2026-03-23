@@ -17,7 +17,8 @@ import {
     faStar,
     faNewspaper,
     faTag,
-    faCalendar
+    faCalendar,
+    faPrint
 } from '@fortawesome/free-solid-svg-icons'
 import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
@@ -73,6 +74,99 @@ function Reveal({ children, className = '', delay = 0 }) {
     )
 }
 
+/* ───────────────────────────── News Detail Modal ───────────────────────────── */
+const NEWS_FONT_SIZES = [
+    { key: 'sm', body: 'text-sm', title: 'text-xl sm:text-2xl' },
+    { key: 'md', body: 'text-base', title: 'text-2xl sm:text-3xl' },
+    { key: 'lg', body: 'text-lg', title: 'text-3xl sm:text-4xl' },
+]
+
+function NewsDetailModal({ news, onClose }) {
+    const [fontSize, setFontSize] = useState('sm')
+    const fs = NEWS_FONT_SIZES.find(f => f.key === fontSize)
+    const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={onClose} />
+            <div className="relative w-full max-w-2xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                {/* Thumbnail */}
+                {news.image_url && (
+                    <div className="h-56 sm:h-64 w-full shrink-0 relative">
+                        <img src={news.image_url} alt={news.image_alt || news.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-transparent to-transparent" />
+                        <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-sm text-white flex items-center justify-center border border-white/10 transition-colors">
+                            <FontAwesomeIcon icon={faTimes} />
+                        </button>
+                    </div>
+                )}
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-10">
+                    {/* Meta + Font Size + Close — always in one row, no overlap */}
+                    <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-3 py-1.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-black uppercase tracking-[0.15em] border border-[var(--color-primary)]/10">{news.tag}</span>
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">{formatDate(news.created_at)}</span>
+                            {news.read_time && (
+                                <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 flex items-center gap-1">
+                                    <FontAwesomeIcon icon={faClock} className="text-[8px]" />{news.read_time} mnt baca
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            {/* Font size controls */}
+                            <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl p-1">
+                                {NEWS_FONT_SIZES.map((f, i) => (
+                                    <button key={f.key} onClick={() => setFontSize(f.key)}
+                                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-black transition-colors ${fontSize === f.key ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                        style={{ fontSize: 10 + i * 2 }}>
+                                        A
+                                    </button>
+                                ))}
+                            </div>
+                            {/* Close button — next to font toggle, never overlaps */}
+                            <button onClick={onClose} className="w-8 h-8 rounded-full bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] border border-[var(--color-border)] text-[var(--color-text-muted)] flex items-center justify-center transition-colors">
+                                <FontAwesomeIcon icon={faTimes} className="text-xs" />
+                            </button>
+                        </div>
+                    </div>
+                    <h2 className={`${fs.title} font-black text-[var(--color-text)] mb-6 leading-tight tracking-tight`}>{news.title}</h2>
+                    <style>{`
+                        .news-modal-body p{margin-bottom:1rem}
+                        .news-modal-body h2{font-size:1.3rem;font-weight:900;margin:1.5rem 0 .5rem;color:var(--color-text)}
+                        .news-modal-body h3{font-size:1.1rem;font-weight:800;margin:1.25rem 0 .4rem;color:var(--color-text)}
+                        .news-modal-body ul{list-style:disc;margin-left:1.5rem;margin-bottom:1rem}
+                        .news-modal-body ol{list-style:decimal;margin-left:1.5rem;margin-bottom:1rem}
+                        .news-modal-body li{margin-bottom:.3rem}
+                        .news-modal-body strong{font-weight:800;color:var(--color-primary)}
+                        .news-modal-body a{color:var(--color-primary);text-decoration:underline}
+                        .news-modal-body blockquote{border-left:3px solid var(--color-primary);padding-left:1rem;margin-bottom:1rem;opacity:.75;font-style:italic}
+                        .news-modal-body img{border-radius:.75rem;max-width:100%;margin:1rem 0}
+                    `}</style>
+                    <div className={`news-modal-body ${fs.body} text-[var(--color-text)] leading-[1.85] font-medium opacity-90`}
+                        style={{ overflowWrap: 'anywhere' }}
+                        dangerouslySetInnerHTML={{ __html: news.content }} />
+                </div>
+                {/* Footer */}
+                <div className="shrink-0 px-6 sm:px-10 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-sm flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white font-black text-base shadow-md shrink-0">
+                        {(news.display_name || news.author || 'A').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 mb-0.5">Diterbitkan oleh</p>
+                        <p className="text-sm font-black text-[var(--color-text)]">{news.display_name || news.author?.split('@')[0] || 'Admin'}</p>
+                    </div>
+                    <div className="ml-auto flex items-center gap-2">
+                        <button onClick={handlePrint} className="px-4 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] transition-colors flex items-center gap-1.5">
+                            <FontAwesomeIcon icon={faPrint} className="text-[9px]" /> Print
+                        </button>
+                        <button onClick={onClose} className="px-4 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] transition-colors">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 /* ───────────────────────────── Landing Page ───────────────────────────── */
 export default function LandingPage() {
     const { isDark, toggleTheme } = useTheme()
@@ -81,6 +175,8 @@ export default function LandingPage() {
     const [news, setNews] = useState([])
     const [newsLoading, setNewsLoading] = useState(true)
     const [selectedNews, setSelectedNews] = useState(null)
+    const [newsBadge, setNewsBadge] = useState(0)
+    const realtimeDebounceRef = useRef(null)
 
     const fetchNews = useCallback(async () => {
         const { data, error } = await supabase
@@ -101,11 +197,17 @@ export default function LandingPage() {
 
         fetchNews()
 
-        // Realtime Listener
+        // Realtime Listener — debounced
         const channel = supabase
             .channel('public:news')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, () => {
-                fetchNews()
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, (payload) => {
+                clearTimeout(realtimeDebounceRef.current)
+                realtimeDebounceRef.current = setTimeout(() => {
+                    if (payload.eventType === 'INSERT' && payload.new?.is_published) {
+                        setNewsBadge(n => n + 1)
+                    }
+                    fetchNews()
+                }, 500)
             })
             .subscribe()
 
@@ -126,7 +228,7 @@ export default function LandingPage() {
             {/* ═══ NAVBAR ═══ */}
             <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'glass py-3' : 'bg-transparent py-5'}`}>
                 <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between relative">
                         {/* Logo */}
                         <Link to="/" className="flex items-center gap-3 group relative z-50">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform duration-300">
@@ -136,10 +238,17 @@ export default function LandingPage() {
                         </Link>
 
                         {/* Desktop Nav */}
-                        <div className="hidden md:flex items-center gap-8 bg-[var(--color-surface)]/50 dark:bg-[var(--color-surface-alt)]/50 backdrop-blur-md px-6 py-2.5 rounded-full border border-[var(--color-border)]">
+                        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-8 bg-[var(--color-surface)]/50 dark:bg-[var(--color-surface-alt)]/50 backdrop-blur-md px-6 py-2.5 rounded-full border border-[var(--color-border)]">
                             <a href="#visi-misi" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Visi</a>
                             <a href="#alur" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Alur</a>
-                            <a href="#Informasi" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Informasi</a>
+                            <a href="#Informasi" onClick={() => setNewsBadge(0)} className="relative text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">
+                                Informasi
+                                {newsBadge > 0 && (
+                                    <span className="absolute -top-2 -right-3.5 min-w-[16px] h-4 px-0.5 rounded-full bg-rose-500 text-white text-[8px] font-black flex items-center justify-center leading-none shadow-sm">
+                                        {newsBadge > 9 ? '9+' : newsBadge}
+                                    </span>
+                                )}
+                            </a>
                         </div>
 
                         {/* Desktop Actions */}
@@ -307,7 +416,7 @@ export default function LandingPage() {
                                 <h2 className="text-3xl sm:text-4xl font-black mb-10 leading-tight">
                                     Mewujudkan Ekosistem Sekolah yang <span className="text-indigo-400">Disiplin, Adil, dan Transparan</span> Melalui Pendekatan Inovatif.
                                 </h2>
-                                <p className="text-slate-400 leading-relaxed text-lg italic border-l-2 border-indigo-500 pl-6">
+                                <p className="text-white/70 leading-relaxed text-lg italic border-l-2 border-indigo-500 pl-6">
                                     "Kedisiplinan bukan tentang hukuman, melainkan tentang pembentukan karakter yang siap menghadapi masa depan."
                                 </p>
                             </div>
@@ -353,7 +462,7 @@ export default function LandingPage() {
                             <div>
                                 <span className="text-[var(--color-primary)] font-bold uppercase tracking-[0.3em] text-[10px] mb-3 block">Informasi Terkini</span>
                                 <h2 className="text-3xl font-extrabold text-[var(--color-text)] mb-3">Informasi & <span className="text-[var(--color-primary)]">Pengumuman</span></h2>
-                                <p className="text-slate-500 font-medium text-sm sm:text-base max-w-md">Update terkini seputar Laporanmu, jadwal, dan pengumuman penting sekolah.</p>
+                                <p className="text-[var(--color-text-muted)] font-medium text-sm sm:text-base max-w-md">Update terkini seputar Laporanmu, jadwal, dan pengumuman penting sekolah.</p>
                             </div>
                             <a href="/informasi" className="group text-[var(--color-primary)] font-bold flex items-center gap-2 hover:gap-3 text-sm transition-all shrink-0">
                                 Lihat Semua Informasi
@@ -384,7 +493,7 @@ export default function LandingPage() {
                                                 {/* Image */}
                                                 <div className="relative overflow-hidden lg:order-2 h-64 lg:h-auto">
                                                     {news[0].image_url ? (
-                                                        <img src={news[0].image_url} alt={news[0].image_alt || news[0].title}
+                                                        <img src={news[0].image_url} alt={news[0].image_alt || news[0].title} loading="lazy"
                                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                                     ) : (
                                                         <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 flex items-center justify-center">
@@ -407,7 +516,7 @@ export default function LandingPage() {
                                                         {news[0].title}
                                                     </h3>
                                                     <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-6 opacity-80 line-clamp-3">
-                                                        {news[0].excerpt || stripHtml(news[0].content).slice(0, 160) + '…'}
+                                                        {stripHtml(news[0].excerpt || news[0].content).slice(0, 160) + '…'}
                                                     </p>
                                                     <div className="flex items-center gap-4 text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest opacity-60">
                                                         <span className="flex items-center gap-1.5">
@@ -441,7 +550,7 @@ export default function LandingPage() {
                                             >
                                                 {item.image_url && (
                                                     <div className="h-44 w-full overflow-hidden shrink-0 relative">
-                                                        <img src={item.image_url} alt={item.image_alt || item.title}
+                                                        <img src={item.image_url} alt={item.image_alt || item.title} loading="lazy"
                                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                                         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                                                     </div>
@@ -464,7 +573,7 @@ export default function LandingPage() {
                                                         {item.title}
                                                     </h3>
                                                     <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-4 line-clamp-3 font-medium opacity-80">
-                                                        {item.excerpt || stripHtml(item.content).slice(0, 140) + '…'}
+                                                        {stripHtml(item.excerpt || item.content).slice(0, 140) + '…'}
                                                     </p>
                                                     <div className="mt-auto pt-5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
                                                         <span className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 uppercase tracking-widest flex items-center gap-1.5">
@@ -591,81 +700,7 @@ export default function LandingPage() {
             </footer>
 
             {/* ═══ NEWS DETAIL MODAL ═══ */}
-            {selectedNews && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-500"
-                        onClick={() => setSelectedNews(null)}
-                    />
-                    <div className="relative w-full max-w-2xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
-                        {/* Header Image */}
-                        {selectedNews.image_url && (
-                            <div className="h-64 sm:h-80 w-full shrink-0 relative">
-                                <img src={selectedNews.image_url} alt={selectedNews.image_alt || selectedNews.title} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-transparent to-transparent" />
-                                <button
-                                    onClick={() => setSelectedNews(null)}
-                                    className="absolute top-6 right-6 w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-sm text-white transition-all flex items-center justify-center border border-white/10"
-                                >
-                                    <FontAwesomeIcon icon={faTimes} />
-                                </button>
-                            </div>
-                        )}
-
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-10">
-                            {/* Floating Close Button for non-image news */}
-                            {!selectedNews.image_url && (
-                                <button
-                                    onClick={() => setSelectedNews(null)}
-                                    className="absolute top-6 right-6 w-10 h-10 rounded-full bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] transition-all flex items-center justify-center z-10"
-                                >
-                                    <FontAwesomeIcon icon={faTimes} />
-                                </button>
-                            )}
-
-                            <div className="flex items-center gap-4 mb-6">
-                                <span className="px-4 py-1.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[11px] font-black uppercase tracking-[0.2em] border border-[var(--color-primary)]/10">
-                                    {selectedNews.tag}
-                                </span>
-                                <span className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">
-                                    {new Date(selectedNews.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                </span>
-                            </div>
-
-                            <h2 className="text-3xl sm:text-4xl font-black text-[var(--color-text)] mb-8 leading-tight tracking-tight">
-                                {selectedNews.title}
-                            </h2>
-
-                            <div className="prose prose-slate dark:prose-invert max-w-none w-full overflow-hidden">
-                                <div
-                                    className="text-[var(--color-text)] text-base sm:text-lg leading-[1.8] font-medium opacity-90 news-content-html"
-                                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                                    dangerouslySetInnerHTML={{ __html: selectedNews.content }}
-                                />
-                            </div>
-                        </div>
-
-                        <style>{`
-                            .news-content-html p { margin-bottom: 1rem; }
-                            .news-content-html ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
-                            .news-content-html ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1rem; }
-                            .news-content-html strong { font-weight: 800; color: var(--color-primary); }
-                            .news-content-html a { color: var(--color-primary); text-decoration: underline; }
-                        `}</style>
-
-                        {/* Sticky Footer Info */}
-                        <div className="shrink-0 p-6 sm:px-10 sm:py-6 border-t border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-md flex items-center gap-4 relative z-20">
-                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-500/20">
-                                {selectedNews.author?.charAt(0).toUpperCase() || 'A'}
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">Diterbitkan Oleh</p>
-                                <p className="text-sm font-bold text-[var(--color-text)]">{selectedNews.display_name || selectedNews.author?.split('@')[0] || 'Admin'}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {selectedNews && <NewsDetailModal news={selectedNews} onClose={() => setSelectedNews(null)} />}
 
             {/* Lazy-loaded Chat Assistant */}
             <Suspense fallback={null}>

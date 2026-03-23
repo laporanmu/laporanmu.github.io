@@ -17,6 +17,7 @@ import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 import { useDebounce } from '../../hooks/useDebounce'
 import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
 
@@ -247,10 +248,12 @@ export default function ViolationsPage() {
                 const { error } = await supabase.from('violation_types').update(payload).eq('id', selectedItem.id)
                 if (error) throw error
                 addToast('Data berhasil diupdate', 'success')
+                await logAudit({ action: 'UPDATE', tableName: 'violation_types', recordId: selectedItem.id, oldData: { name: selectedItem.name, points: selectedItem.points, category: selectedItem.category }, newData: payload })
             } else {
-                const { error } = await supabase.from('violation_types').insert(payload)
+                const { data: insData, error } = await supabase.from('violation_types').insert(payload).select().single()
                 if (error) throw error
                 addToast('Data baru berhasil ditambahkan', 'success')
+                await logAudit({ action: 'INSERT', tableName: 'violation_types', recordId: insData?.id, newData: payload })
             }
             setIsModalOpen(false)
             fetchData()
@@ -265,6 +268,7 @@ export default function ViolationsPage() {
             const { error } = await supabase.from('violation_types').delete().eq('id', itemToDelete.id)
             if (error) throw error
             addToast('Data berhasil dihapus', 'success')
+            await logAudit({ action: 'DELETE', tableName: 'violation_types', recordId: itemToDelete.id, oldData: { name: itemToDelete.name, points: itemToDelete.points, category: itemToDelete.category } })
             setIsDeleteModalOpen(false)
             fetchData()
         } catch { addToast('Gagal menghapus data', 'error') }

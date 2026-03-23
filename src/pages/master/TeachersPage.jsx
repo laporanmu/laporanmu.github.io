@@ -20,6 +20,7 @@ import Breadcrumb from '../../components/ui/Breadcrumb'
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 import { TeacherRow, TeacherMobileCard, STATUS_CONFIG } from '../../components/teachers/TeacherRow'
 import TeacherFormModal from '../../components/teachers/TeacherFormModal'
 import Pagination from '../../components/ui/Pagination'
@@ -298,8 +299,8 @@ export default function TeachersPage() {
     const handleSubmit = async (payload) => {
         setSubmitting(true)
         try {
-            if (selectedItem) { const { error } = await supabase.from('teachers').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data guru berhasil diupdate', 'success') }
-            else { const { error } = await supabase.from('teachers').insert([payload]); if (error) throw error; addToast('Guru baru berhasil ditambahkan', 'success') }
+            if (selectedItem) { const { error } = await supabase.from('teachers').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data guru berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', recordId: selectedItem.id, oldData: { name: selectedItem.name, status: selectedItem.status, type: selectedItem.type }, newData: payload }) }
+            else { const { data: insData, error } = await supabase.from('teachers').insert([payload]).select().single(); if (error) throw error; addToast('Guru baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', tableName: 'teachers', recordId: insData?.id, newData: { name: payload.name, subject: payload.subject, status: payload.status } }) }
             setIsModalOpen(false); fetchData(); fetchStats()
             return null
         } catch (err) { return { error: true, code: err.code, message: 'Gagal menyimpan data.' } }
@@ -307,16 +308,16 @@ export default function TeachersPage() {
     }
     const handleDeleteConfirm = async () => {
         if (!teacherToAction) return; setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').delete().eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" berhasil dihapus`, 'success'); setIsDeleteModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').delete().eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', tableName: 'teachers', recordId: teacherToAction.id, oldData: { name: teacherToAction.name, status: teacherToAction.status } }); setIsDeleteModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
         catch { addToast('Gagal menghapus', 'error') } finally { setSubmitting(false) }
     }
     const handleArchive = async () => {
         if (!teacherToAction) return; setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" diarsipkan`, 'success'); setIsArchiveModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', recordId: teacherToAction.id, oldData: { name: teacherToAction.name, deleted_at: null }, newData: { deleted_at: new Date().toISOString() } }); setIsArchiveModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
         catch { addToast('Gagal mengarsipkan', 'error') } finally { setSubmitting(false) }
     }
     const handleRestore = async teacher => {
-        try { const { error } = await supabase.from('teachers').update({ deleted_at: null }).eq('id', teacher.id); if (error) throw error; addToast(`"${teacher.name}" dipulihkan`, 'success'); setArchivedTeachers(prev => prev.filter(t => t.id !== teacher.id)); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').update({ deleted_at: null }).eq('id', teacher.id); if (error) throw error; addToast(`"${teacher.name}" dipulihkan`, 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', recordId: teacher.id, newData: { deleted_at: null, name: teacher.name, restored: true } }); setArchivedTeachers(prev => prev.filter(t => t.id !== teacher.id)); fetchData(); fetchStats() }
         catch { addToast('Gagal memulihkan', 'error') }
     }
     const fetchArchived = async () => {
@@ -372,7 +373,7 @@ export default function TeachersPage() {
 
     // ── quick status ──────────────────────────────────────────────────────────
     const handleQuickStatus = async (teacher, newStatus) => {
-        try { const { error } = await supabase.from('teachers').update({ status: newStatus }).eq('id', teacher.id); if (error) throw error; addToast(`Status ${teacher.name} → ${STATUS_CONFIG[newStatus].label}`, 'success'); setQuickStatusId(null); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').update({ status: newStatus }).eq('id', teacher.id); if (error) throw error; addToast(`Status ${teacher.name} → ${STATUS_CONFIG[newStatus].label}`, 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', recordId: teacher.id, oldData: { name: teacher.name, status: teacher.status }, newData: { status: newStatus } }); setQuickStatusId(null); fetchData(); fetchStats() }
         catch { addToast('Gagal update status', 'error') }
     }
 
@@ -397,12 +398,12 @@ export default function TeachersPage() {
     const toggleSelect = id => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
     const handleBulkArchive = async () => {
         setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).in('id', selectedIds); if (error) throw error; addToast(`${selectedIds.length} guru diarsipkan`, 'success'); setSelectedIds([]); setIsBulkModalOpen(false); fetchData(); fetchStats() }
+        try { const idsSnap = [...selectedIds]; const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).in('id', idsSnap); if (error) throw error; addToast(`${idsSnap.length} guru diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', newData: { bulk_archive: true, count: idsSnap.length, ids: idsSnap } }); setSelectedIds([]); setIsBulkModalOpen(false); fetchData(); fetchStats() }
         catch { addToast('Gagal arsip massal', 'error') } finally { setSubmitting(false) }
     }
     const handleBulkDelete = async () => {
         setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').delete().in('id', selectedIds); if (error) throw error; addToast(`${selectedIds.length} guru dihapus`, 'success'); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData(); fetchStats() }
+        try { const idsSnap2 = [...selectedIds]; const { error } = await supabase.from('teachers').delete().in('id', idsSnap2); if (error) throw error; addToast(`${idsSnap2.length} guru dihapus`, 'success'); await logAudit({ action: 'DELETE', tableName: 'teachers', newData: { bulk: true, count: idsSnap2.length, ids: idsSnap2 } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData(); fetchStats() }
         catch { addToast('Gagal hapus massal', 'error') } finally { setSubmitting(false) }
     }
     const bulkWATeachers = useMemo(() => teachers.filter(t => selectedIds.includes(t.id) && t.phone), [teachers, selectedIds])
@@ -458,6 +459,7 @@ export default function TeachersPage() {
                 setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
             }
             addToast(`Berhasil import ${validRows.length} guru`, 'success')
+            await logAudit({ action: 'INSERT', tableName: 'teachers', newData: { bulk_import: true, count: validRows.length } })
             setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportDupes([]); setImportFileName(''); setImportTab('panduan')
             fetchData(); fetchStats()
         } catch { addToast('Gagal import (cek constraint DB / duplikat)', 'error') }
@@ -654,11 +656,10 @@ export default function TeachersPage() {
                                     const cardWidth = el.scrollWidth / STAT_CARD_COUNT
                                     el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
                                 }}
-                                className={`rounded-full transition-all duration-300 ${
-                                    activeStatIdx === i
+                                className={`rounded-full transition-all duration-300 ${activeStatIdx === i
                                         ? 'w-5 h-1.5 bg-[var(--color-primary)]'
                                         : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
-                                }`}
+                                    }`}
                             />
                         ))}
                     </div>
@@ -901,16 +902,16 @@ export default function TeachersPage() {
                             ))}
                         </div>
 
-                            <Pagination
-                                totalRows={totalRows}
-                                page={page}
-                                pageSize={pageSize}
-                                setPage={setPage}
-                                setPageSize={setPageSize}
-                                label="guru"
-                                jumpPage={jumpPage}
-                                setJumpPage={setJumpPage}
-                            />
+                        <Pagination
+                            totalRows={totalRows}
+                            page={page}
+                            pageSize={pageSize}
+                            setPage={setPage}
+                            setPageSize={setPageSize}
+                            label="guru"
+                            jumpPage={jumpPage}
+                            setJumpPage={setJumpPage}
+                        />
 
                     </div>
                 )}

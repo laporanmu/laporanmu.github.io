@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef, useDeferredValue } from 'react'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faThumbtack } from '@fortawesome/free-solid-svg-icons'
@@ -468,6 +469,10 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     .update({ deleted_at: new Date().toISOString() })
                     .eq('id', student.id)
                 if (error) throw error
+                await logAudit({
+                    action: 'UPDATE', tableName: 'students', recordId: student.id,
+                    oldData: { name: student.name, deleted_at: null }, newData: { deleted_at: new Date().toISOString() }
+                })
                 fetchData()
                 fetchStats()
             } catch {
@@ -527,22 +532,11 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     }])
                 }
 
-                try {
-                    await supabase.from('audit_logs').insert([{
-                        event_type: 'student_updated',
-                        actor_id: profile?.id,
-                        actor_name: profile?.name || 'Admin',
-                        actor_role: profile?.role || 'admin',
-                        target_id: selectedStudent.id,
-                        target_name: formData.name,
-                        target_email: formData.nisn || null,
-                        metadata: {
-                            old: { name: selectedStudent.name, class_id: selectedStudent.class_id },
-                            new: { name: formData.name, class_id: formData.class_id }
-                        }
-                    }])
-                } catch (auditErr) { console.error('Failed to save audit log:', auditErr) }
-
+                await logAudit({
+                    action: 'UPDATE', tableName: 'students', recordId: selectedStudent.id,
+                    oldData: { name: selectedStudent.name, class_id: selectedStudent.class_id, nisn: selectedStudent.nisn },
+                    newData: { name: formData.name, class_id: formData.class_id, nisn: formData.nisn, status: formData.status }
+                })
                 addToast('Data siswa berhasil diperbarui', 'success')
             } else {
                 const newCode = generateCode()
@@ -562,8 +556,12 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     status: formData.status || 'aktif',
                     tags: formData.tags || [],
                 }
-                const { error } = await supabase.from('students').insert([newStudentData])
+                const { data: insData, error } = await supabase.from('students').insert([newStudentData]).select('id').single()
                 if (error) throw error
+                await logAudit({
+                    action: 'INSERT', tableName: 'students', recordId: insData?.id,
+                    newData: { name: newStudentData.name, class_id: newStudentData.class_id, gender: newStudentData.gender, nisn: newStudentData.nisn }
+                })
 
                 const studentToView = {
                     ...newStudentData,
@@ -609,6 +607,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             setSelectedStudentIds([])
             fetchData()
             fetchStats()
+            await logAudit({ action: 'UPDATE', tableName: 'students', newData: { bulk_promote: true, count, to_class_id: bulkClassId, ids: idsToMove } })
             addUndoToast(`${count} siswa dipindahkan`, async () => {
                 await Promise.all(idsToMove.map(id => supabase.from('students').update({ class_id: prevClassMap[id] }).eq('id', id)))
                 fetchData()
@@ -627,6 +626,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             closeModal()
             setSelectedStudentIds([])
             fetchData()
+            await logAudit({ action: 'UPDATE', tableName: 'students', newData: { bulk_archive: true, count: idsToDelete.length, ids: idsToDelete } })
             addUndoToast(`${idsToDelete.length} siswa diarsipkan`, async () => {
                 await supabase.from('students').update({ deleted_at: null }).in('id', idsToDelete)
                 fetchData()
@@ -685,6 +685,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             const { error } = await supabase.from('students').update({ deleted_at: null }).eq('id', student.id)
             if (error) throw error
             addToast(`${student.name} berhasil dipulihkan`, 'success')
+            await logAudit({ action: 'UPDATE', tableName: 'students', recordId: student.id, newData: { deleted_at: null, name: student.name, restored: true } })
             fetchArchivedStudents(); fetchData(); fetchStats()
         } catch { addToast('Gagal memulihkan', 'error') }
     }
@@ -695,6 +696,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             const { error } = await supabase.from('students').delete().eq('id', student.id)
             if (error) throw error
             addToast(`${student.name} dihapus permanen`, 'success')
+            await logAudit({ action: 'DELETE', tableName: 'students', recordId: student.id, oldData: { name: student.name, permanent_delete: true } })
             fetchArchivedStudents()
         } catch { addToast('Gagal hapus', 'error') }
     }
@@ -939,7 +941,9 @@ Laporanmu System`
             let q = supabase.from('students').update({ total_points: 0 }).is('deleted_at', null)
             if (resetPointsClassId) q = q.eq('class_id', resetPointsClassId)
             await q
-            addToast('Poin direset', 'success'); closeModal(); fetchData(); fetchStats()
+            addToast('Poin direset', 'success')
+            await logAudit({ action: 'UPDATE', tableName: 'students', newData: { batch_reset_points: true, class_id: resetPointsClassId || 'all' } })
+            closeModal(); fetchData(); fetchStats()
         } catch { addToast('Gagal', 'error') } finally { setResettingPoints(false) }
     }
 
@@ -950,6 +954,7 @@ Laporanmu System`
             const pin = String(Math.floor(1000 + Math.random() * 9000))
             await supabase.from('students').update({ pin }).eq('id', student.id)
             addToast(`PIN: ${pin}`, 'success')
+            await logAudit({ action: 'UPDATE', tableName: 'students', recordId: student.id, newData: { pin_reset: true, name: student.name } })
             fetchData()
         } catch { addToast('Gagal', 'error') } finally { setResettingPin(false) }
     }
@@ -992,7 +997,13 @@ Laporanmu System`
         else if (field === 'poin') { payload = { total_points: value }; msg = 'Poin updated' }
         try {
             await supabase.from('students').update(payload).eq('id', id)
-            addToast(msg, 'success'); fetchData(); fetchStats()
+            addToast(msg, 'success')
+            await logAudit({
+                action: 'UPDATE', tableName: 'students', recordId: id,
+                oldData: { [field]: field === 'kelas' ? data?.class_id : data?.[field] },
+                newData: payload
+            })
+            fetchData(); fetchStats()
         } catch { addToast('Gagal', 'error') }
     }
 
@@ -1014,6 +1025,7 @@ Laporanmu System`
             }])
             if (error) throw error
             addToast('Berhasil menambahkan siswa', 'success')
+            await logAudit({ action: 'INSERT', tableName: 'students', newData: { name: payload.name, class_id: payload.class_id, gender: payload.gender, via: 'inline' } })
             if (!payloadOverride) setInlineForm({ name: '', gender: 'L', class_id: inlineForm.class_id, phone: '' })
             fetchData(); fetchStats()
         } catch (err) {

@@ -9,6 +9,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
 import { useToast } from '../../context/ToastContext'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 
 export default function StoragePage() {
     const { addToast } = useToast()
@@ -94,6 +95,7 @@ export default function StoragePage() {
             const { error } = await supabase.storage.from(bucketName).remove([fileName])
             if (error) throw error
             addToast(`File ${fileName} berhasil dihapus`, 'success')
+            await logAudit({ action: 'DELETE', tableName: 'storage', newData: { bucket: bucketName, file: fileName } })
             setLargeFiles(prev => prev.filter(f => !(f.bucketName === bucketName && f.name === fileName)))
         } catch (e) {
             addToast('Gagal menghapus file: ' + e.message, 'error')
@@ -222,6 +224,7 @@ export default function StoragePage() {
             }
 
             addToast(`${deletedCount} file sampah berhasil dibersihkan`, 'success')
+            await logAudit({ action: 'DELETE', tableName: 'storage', newData: { orphan_cleanup: true, count: deletedCount } })
             setScanResults(null)
             fetchBuckets() // reload data
 

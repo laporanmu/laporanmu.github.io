@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faSearch, faNewspaper, faCalendar, faClock,
     faUser, faArrowRight, faXmark, faTimes,
-    faMoon, faSun, faBars, faChevronLeft, faChevronRight
+    faMoon, faSun, faBars, faChevronLeft, faChevronRight, faPrint
 } from '@fortawesome/free-solid-svg-icons'
 import { supabase } from '../lib/supabase'
 import { useTheme } from '../context/ThemeContext'
@@ -33,28 +33,46 @@ const Navbar = memo(() => {
     }, [])
     return (
         <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'glass py-3' : 'bg-transparent py-5'}`}>
-            <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-                <Link to="/" className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center shadow-md">
-                        <span className="text-white font-bold text-lg font-heading">L</span>
+            <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between relative">
+                    {/* Logo */}
+                    <Link to="/" className="flex items-center gap-3 group relative z-50">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform duration-300">
+                            <span className="text-white font-bold text-xl font-heading">L</span>
+                        </div>
+                        <span className="font-heading font-bold text-2xl text-[var(--color-text)] tracking-tight">Laporan<span className="text-[var(--color-primary)]">mu</span></span>
+                    </Link>
+
+                    {/* Desktop Nav - centered */}
+                    <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-8 bg-[var(--color-surface)]/50 dark:bg-[var(--color-surface-alt)]/50 backdrop-blur-md px-6 py-2.5 rounded-full border border-[var(--color-border)]">
+                        <Link to="/" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Beranda</Link>
+                        <Link to="/informasi" className="text-[var(--color-primary)] font-black text-sm">Informasi</Link>
+                        <Link to="/check" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Cek Poin</Link>
                     </div>
-                    <span className="font-heading font-bold text-xl text-[var(--color-text)]">Laporan<span className="text-[var(--color-primary)]">mu</span></span>
-                </Link>
-                <div className="hidden md:flex items-center gap-6 bg-[var(--color-surface)]/60 backdrop-blur-md px-5 py-2 rounded-full border border-[var(--color-border)]">
-                    <Link to="/" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors">Beranda</Link>
-                    <Link to="/informasi" className="text-sm font-black text-[var(--color-primary)]">Informasi</Link>
-                    <Link to="/check" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors">Cek Poin</Link>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={toggleTheme} className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors">
-                        <FontAwesomeIcon icon={isDark ? faSun : faMoon} className="text-sm" />
-                    </button>
-                    <Link to="/login" className="hidden md:flex items-center px-4 py-2 text-[12px] font-black rounded-xl bg-[var(--color-primary)] text-white shadow-md hover:brightness-110 transition-all">Login Staff</Link>
-                    <button onClick={() => setMenuOpen(p => !p)} className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                        <FontAwesomeIcon icon={menuOpen ? faTimes : faBars} className="text-sm text-[var(--color-text)]" />
-                    </button>
+
+                    {/* Desktop Actions */}
+                    <div className="hidden md:flex items-center gap-4 z-50">
+                        <button onClick={toggleTheme} className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 transition-all">
+                            <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
+                        </button>
+                        <Link to="/login" className="inline-flex items-center px-5 py-2 text-[13px] font-black rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all">
+                            Login Staff
+                        </Link>
+                    </div>
+
+                    {/* Mobile Actions */}
+                    <div className="flex items-center gap-3 md:hidden z-50">
+                        <button onClick={toggleTheme} className="w-10 h-10 flex items-center justify-center rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text)]">
+                            <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
+                        </button>
+                        <button onClick={() => setMenuOpen(p => !p)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white shadow-lg shadow-[var(--color-primary)]/30">
+                            <FontAwesomeIcon icon={menuOpen ? faTimes : faBars} />
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            {/* Mobile Menu */}
             {menuOpen && (
                 <div className="md:hidden absolute top-full left-4 right-4 mt-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl p-3 space-y-1 animate-in fade-in duration-200">
                     {[['/', 'Beranda'], ['/informasi', 'Informasi'], ['/check', 'Cek Poin'], ['/login', 'Login Staff']].map(([to, label]) => (
@@ -67,15 +85,47 @@ const Navbar = memo(() => {
 })
 Navbar.displayName = 'Navbar'
 
-// ─── Detail Modal ─────────────────────────────────────────────────────────────
+// ─── Shared News Detail Modal ──────────────────────────────────────────────────
+const FONT_SIZES = [
+    { key: 'sm', body: 'text-sm', title: 'text-xl sm:text-2xl' },
+    { key: 'md', body: 'text-base', title: 'text-2xl sm:text-3xl' },
+    { key: 'lg', body: 'text-lg', title: 'text-3xl sm:text-4xl' },
+]
+
 const DetailModal = memo(({ item, onClose }) => {
+    const [fontSize, setFontSize] = useState('sm')
     if (!item) return null
+    const fs = FONT_SIZES.find(f => f.key === fontSize)
+    const fmt = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    const handlePrint = () => {
+        const w = window.open('', '_blank', 'width=800,height=600')
+        w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${item.title}</title>
+        <style>
+            @page{margin:20mm} body{font-family:system-ui,sans-serif;max-width:100%;margin:0;padding:0;color:#111;line-height:1.75}
+            h1{font-size:1.75rem;font-weight:900;margin-bottom:.5rem;line-height:1.25}
+            .meta{font-size:.7rem;color:#888;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.5rem;border-bottom:1px solid #eee;padding-bottom:.75rem}
+            p{margin-bottom:.9rem}strong{color:#4f46e5}
+            ul,ol{margin-left:1.5rem;margin-bottom:.9rem}li{margin-bottom:.25rem}
+            blockquote{border-left:3px solid #4f46e5;padding-left:1rem;color:#666;font-style:italic;margin-bottom:.9rem}
+            h2{font-size:1.2rem;font-weight:900;margin:1.5rem 0 .4rem}h3{font-size:1rem;font-weight:800;margin:1.2rem 0 .4rem}
+            img{border-radius:.5rem;max-width:100%;margin:1rem 0}
+            .footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #eee;font-size:.7rem;color:#aaa;display:flex;justify-content:space-between}
+        </style></head><body>
+        <div class="meta">${item.tag} · ${fmt(item.created_at)}${item.read_time ? ` · ${item.read_time} mnt baca` : ''}</div>
+        <h1>${item.title}</h1>
+        ${item.content}
+        <div class="footer"><span>Diterbitkan oleh ${item.display_name || (item.author?.split('@')[0] || 'Admin')}</span><span>Laporanmu</span></div>
+        </body></html>`)
+        w.document.close()
+        setTimeout(() => w.print(), 300)
+    }
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={onClose} />
             <div className="relative w-full max-w-2xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                {/* Thumbnail */}
                 {item.image_url && (
-                    <div className="h-56 sm:h-72 w-full shrink-0 relative">
+                    <div className="h-56 sm:h-64 w-full shrink-0 relative">
                         <img src={item.image_url} alt={item.image_alt || item.title} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-transparent to-transparent" />
                         <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-sm text-white flex items-center justify-center border border-white/10 transition-colors">
@@ -83,22 +133,37 @@ const DetailModal = memo(({ item, onClose }) => {
                         </button>
                     </div>
                 )}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-10 relative">
-                    {!item.image_url && (
-                        <button onClick={onClose} className="absolute top-5 right-5 w-9 h-9 rounded-full bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] flex items-center justify-center transition-colors">
-                            <FontAwesomeIcon icon={faTimes} className="text-sm" />
-                        </button>
-                    )}
-                    <div className="flex items-center gap-3 mb-4 flex-wrap">
-                        <span className="px-3 py-1.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-black uppercase tracking-[0.15em] border border-[var(--color-primary)]/10">{item.tag}</span>
-                        <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">{formatDate(item.created_at)}</span>
-                        {item.read_time && (
-                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 flex items-center gap-1">
-                                <FontAwesomeIcon icon={faClock} className="text-[8px]" />{item.read_time} mnt baca
-                            </span>
-                        )}
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-10">
+                    {/* Meta + Font Size + Close — always in one row, no overlap */}
+                    <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-3 py-1.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-black uppercase tracking-[0.15em] border border-[var(--color-primary)]/10">{item.tag}</span>
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">{formatDate(item.created_at)}</span>
+                            {item.read_time && (
+                                <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 flex items-center gap-1">
+                                    <FontAwesomeIcon icon={faClock} className="text-[8px]" />{item.read_time} mnt baca
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            {/* Font size controls */}
+                            <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl p-1">
+                                {FONT_SIZES.map((f, i) => (
+                                    <button key={f.key} onClick={() => setFontSize(f.key)}
+                                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-black transition-colors ${fontSize === f.key ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                        style={{ fontSize: 10 + i * 2 }}>
+                                        A
+                                    </button>
+                                ))}
+                            </div>
+                            {/* Close button — next to font toggle, never overlaps */}
+                            <button onClick={onClose} className="w-8 h-8 rounded-full bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] border border-[var(--color-border)] text-[var(--color-text-muted)] flex items-center justify-center transition-colors">
+                                <FontAwesomeIcon icon={faTimes} className="text-xs" />
+                            </button>
+                        </div>
                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-[var(--color-text)] mb-6 leading-tight tracking-tight">{item.title}</h2>
+                    <h2 className={`${fs.title} font-black text-[var(--color-text)] mb-6 leading-tight tracking-tight`}>{item.title}</h2>
                     <style>{`
                         .news-modal-body p{margin-bottom:1rem}
                         .news-modal-body h2{font-size:1.3rem;font-weight:900;margin:1.5rem 0 .5rem;color:var(--color-text)}
@@ -111,10 +176,11 @@ const DetailModal = memo(({ item, onClose }) => {
                         .news-modal-body blockquote{border-left:3px solid var(--color-primary);padding-left:1rem;margin-bottom:1rem;opacity:.75;font-style:italic}
                         .news-modal-body img{border-radius:.75rem;max-width:100%;margin:1rem 0}
                     `}</style>
-                    <div className="news-modal-body text-[var(--color-text)] text-base leading-[1.85] font-medium opacity-90"
-                        style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                    <div className={`news-modal-body ${fs.body} text-[var(--color-text)] leading-[1.85] font-medium opacity-90`}
+                        style={{ overflowWrap: 'anywhere' }}
                         dangerouslySetInnerHTML={{ __html: item.content }} />
                 </div>
+                {/* Footer */}
                 <div className="shrink-0 px-6 sm:px-10 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-sm flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white font-black text-base shadow-md shrink-0">
                         {(item.display_name || item.author || 'A').charAt(0).toUpperCase()}
@@ -123,7 +189,12 @@ const DetailModal = memo(({ item, onClose }) => {
                         <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 mb-0.5">Diterbitkan oleh</p>
                         <p className="text-sm font-black text-[var(--color-text)]">{item.display_name || item.author?.split('@')[0] || 'Admin'}</p>
                     </div>
-                    <button onClick={onClose} className="ml-auto px-4 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] transition-colors">Tutup</button>
+                    <div className="ml-auto flex items-center gap-2">
+                        <button onClick={handlePrint} className="px-4 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] transition-colors flex items-center gap-1.5">
+                            <FontAwesomeIcon icon={faPrint} className="text-[9px]" /> Print
+                        </button>
+                        <button onClick={onClose} className="px-4 py-2 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] transition-colors">Tutup</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -144,12 +215,12 @@ const SkeletonCard = () => (
 )
 
 const NewsCard = memo(({ item, onClick }) => {
-    const excerpt = item.excerpt || stripHtml(item.content).slice(0, 140) + '…'
+    const excerpt = stripHtml(item.excerpt || item.content).slice(0, 140) + '…'
     return (
         <div onClick={() => onClick(item)} className="group bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] overflow-hidden hover:shadow-xl hover:border-[var(--color-primary)]/30 transition-all duration-300 flex flex-col cursor-pointer">
             <div className="h-44 overflow-hidden shrink-0 bg-[var(--color-surface-alt)]">
                 {item.image_url
-                    ? <img src={item.image_url} alt={item.image_alt || item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    ? <img src={item.image_url} alt={item.image_alt || item.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     : <div className="w-full h-full flex items-center justify-center opacity-15"><FontAwesomeIcon icon={faNewspaper} className="text-4xl" /></div>
                 }
             </div>
@@ -174,7 +245,7 @@ const NewsCard = memo(({ item, onClick }) => {
 NewsCard.displayName = 'NewsCard'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function NewsPublicPage() {
+export default function InformationPage() {
     const [news, setNews] = useState([])
     const [loading, setLoading] = useState(true)
     const [totalCount, setTotalCount] = useState(0)
@@ -183,7 +254,9 @@ export default function NewsPublicPage() {
     const [activeCategory, setActiveCategory] = useState('Semua')
     const [page, setPage] = useState(1)
     const [selectedNews, setSelectedNews] = useState(null)
+    const [newsBadge, setNewsBadge] = useState(0)
     const debounceRef = useRef(null)
+    const realtimeDebounceRef = useRef(null)
 
     const fetchNews = useCallback(async () => {
         setLoading(true)
@@ -204,7 +277,18 @@ export default function NewsPublicPage() {
     useEffect(() => { fetchNews() }, [fetchNews])
 
     useEffect(() => {
-        const ch = supabase.channel('news-pub').on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchNews).subscribe()
+        const ch = supabase.channel('news-pub')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, (payload) => {
+                clearTimeout(realtimeDebounceRef.current)
+                realtimeDebounceRef.current = setTimeout(() => {
+                    if (payload.eventType === 'INSERT' && payload.new?.is_published) {
+                        setNewsBadge(n => n + 1)
+                    } else {
+                        fetchNews()
+                    }
+                }, 500)
+            })
+            .subscribe()
         return () => supabase.removeChannel(ch)
     }, [fetchNews])
 
@@ -225,6 +309,25 @@ export default function NewsPublicPage() {
     return (
         <div className="min-h-screen bg-[var(--color-surface)] transition-colors duration-300">
             <Navbar />
+
+            {/* New news banner */}
+            {newsBadge > 0 && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 animate-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-3 px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-primary)]/30 rounded-2xl shadow-xl shadow-black/10">
+                        <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse shrink-0" />
+                        <p className="text-sm font-bold text-[var(--color-primary)] flex-1">
+                            {newsBadge} berita baru tersedia
+                        </p>
+                        <button onClick={() => { fetchNews(); setNewsBadge(0) }}
+                            className="px-3 py-1.5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all shrink-0">
+                            Muat Ulang
+                        </button>
+                        <button onClick={() => setNewsBadge(0)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+                            <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Hero header */}
             <div className="pt-28 pb-12 px-6 text-center relative overflow-hidden">

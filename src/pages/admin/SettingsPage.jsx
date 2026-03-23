@@ -14,6 +14,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
 import { useToast } from '../../context/ToastContext'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 import { useSchoolSettings, DEFAULT_SETTINGS } from '../../context/SchoolSettingsContext'
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
@@ -305,7 +306,10 @@ export default function AdminSettingsPage() {
         const err = await saveSettings(form)
         setSaving(false)
         if (err) addToast('Gagal: ' + err.message, 'error')
-        else { addToast('Konfigurasi raport disimpan', 'success'); setDirty(false) }
+        else {
+            addToast('Konfigurasi raport disimpan', 'success'); setDirty(false)
+            await logAudit({ action: 'UPDATE', tableName: 'school_settings', newData: { settings_saved: true, keys: Object.keys(form) } })
+        }
     }
 
     const fetchFlags = useCallback(async (quiet = false) => {
@@ -328,6 +332,7 @@ export default function AdminSettingsPage() {
         if (error) {
             setFlags(prev => prev.map(f => f.key === flag.key ? { ...f, enabled: !newVal } : f))
             addToast('Gagal: ' + error.message, 'error')
+            await logAudit({ action: 'UPDATE', tableName: 'feature_flags', newData: { key: flag.key, label: flag.label, enabled: newVal } })
         } else if (flag.key === 'system.maintenance') {
             addToast(newVal ? 'Maintenance mode AKTIF' : 'Maintenance mode dinonaktifkan', newVal ? 'warning' : 'success')
         }

@@ -17,6 +17,7 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import Breadcrumb from '../components/ui/Breadcrumb'
 import { supabase } from '../lib/supabase'
+import { logAudit } from '../lib/auditLogger'
 import { useToast } from '../context/ToastContext'
 import { useSchoolSettings } from '../context/SchoolSettingsContext'
 import { useAuth } from '../context/AuthContext'
@@ -1909,9 +1910,15 @@ export default function RaportPage() {
             else { const { data, error: upsErr } = await supabase.from('student_monthly_reports').upsert(payload, { onConflict: 'student_id,month,year' }).select('id').single(); error = upsErr; if (!upsErr && data) setExistingReportIds(prev => ({ ...prev, [studentId]: data.id })) }
             if (error) throw error
             setSavedIds(prev => new Set([...prev, studentId]))
+            await logAudit({
+                action: existingId ? 'UPDATE' : 'INSERT',
+                tableName: 'student_monthly_reports',
+                recordId: existingId || null,
+                newData: { student_id: studentId, month: selectedMonth, year: selectedYear, student_name: students.find(s => s.id === studentId)?.name },
+            })
         } catch (e) { addToast(`Gagal menyimpan: ${e.message}`, 'error'); console.error('saveStudent error:', e) }
         finally { setSaving(prev => ({ ...prev, [studentId]: false })) }
-    }, [scores, extras, selectedMonth, selectedYear, musyrif, existingReportIds, addToast])
+    }, [scores, extras, selectedMonth, selectedYear, musyrif, existingReportIds, students, addToast])
 
     // ── Reset student — kosongkan state lokal DAN hapus dari DB jika sudah tersimpan
     const resetStudent = useCallback(async (studentId) => {
@@ -1933,7 +1940,12 @@ export default function RaportPage() {
             const { error } = await supabase.from('student_monthly_reports').delete().eq('id', existingId)
             if (error) throw error
             setExistingReportIds(prev => { const n = { ...prev }; delete n[studentId]; return n })
-            addToast(`Data ${students.find(s => s.id === studentId)?.name?.split(' ')[0] ?? ''} berhasil direset`, 'success')
+            const studentName = students.find(s => s.id === studentId)?.name
+            addToast(`Data ${studentName?.split(' ')[0] ?? ''} berhasil direset`, 'success')
+            await logAudit({
+                action: 'DELETE', tableName: 'student_monthly_reports', recordId: existingId,
+                oldData: { student_id: studentId, student_name: studentName, month: selectedMonth, year: selectedYear }
+            })
         } catch (e) {
             addToast(`Gagal hapus dari DB: ${e.message}`, 'error')
             console.error('resetStudent error:', e)
@@ -2433,6 +2445,10 @@ export default function RaportPage() {
             if (delErr) throw delErr
             setArchiveList(prev => prev.filter(a => a.key !== entry.key))
             addToast('Arsip berhasil dihapus', 'success')
+            await logAudit({
+                action: 'DELETE', tableName: 'student_monthly_reports', recordId: null,
+                oldData: { archive_month: entry.month, archive_year: entry.year, class_id: entry.class_id, count: toDelete.length }
+            })
             loadArchive()
         } catch (e) { addToast('Gagal menghapus arsip: ' + e.message, 'error'); console.error('executeDeleteArchive error:', e) }
     }, [loadArchive, addToast])

@@ -1,6 +1,6 @@
 import {
     useState, useEffect, useCallback, useRef,
-    useMemo, memo, useDeferredValue, Component, useTransition,
+    useMemo, memo, useDeferredValue, useTransition,
 } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -12,19 +12,22 @@ import {
     faCalendarDays, faChartSimple, faBolt, faChevronDown,
     faXmark, faLightbulb, faCheck, faTableList, faArrowPointer,
     faFloppyDisk, faArrowsRotate, faListCheck,
-    faRotateRight, faBullseye,
-    // ── New icons for features 1-10 ──
+    faRotateRight, faBullseye, faUsers,
     faCopy, faEye, faEyeSlash, faFilter, faFileImport,
     faPrint, faBell, faStickyNote, faArrowDown, faCrosshairs,
     faArrowTrendUp, faArrowTrendDown, faGear, faUpload,
     faBorderAll, faList, faTableCells,
     faKeyboard, faMagnifyingGlassPlus, faWandMagicSparkles,
+    faSearch, faPerson, faArrowRight, faLinkSlash,
+    faClockRotateLeft, faLink, faClock, faMoneyBillWave
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import Breadcrumb from '../components/ui/Breadcrumb'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { logAudit } from '../lib/auditLogger'
+import * as XLSX from 'xlsx'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -77,31 +80,6 @@ function countWeekdays(y, m) {
 }
 
 const draftKey = (cid, y, m) => `absensi_monthly_${cid}_${y}_${m}`
-
-// ─── Error Boundary ───────────────────────────────────────────────────────────
-
-class AbsensiErrorBoundary extends Component {
-    constructor(props) { super(props); this.state = { error: null } }
-    static getDerivedStateFromError(e) { return { error: e } }
-    render() {
-        if (this.state.error) return (
-            <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center">
-                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-red-500 text-xl" />
-                </div>
-                <div className="text-center">
-                    <p className="text-[13px] font-black text-[var(--color-text)] mb-1">Terjadi kesalahan</p>
-                    <p className="text-[11px] text-[var(--color-text-muted)] opacity-60">{this.state.error?.message}</p>
-                </div>
-                <button onClick={() => this.setState({ error: null })}
-                    className="h-8 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:opacity-90">
-                    Coba Lagi
-                </button>
-            </div>
-        )
-        return this.props.children
-    }
-}
 
 // ─── DayCell ──────────────────────────────────────────────────────────────────
 
@@ -211,16 +189,15 @@ const StudentRow = memo(({ student, idx, days, tahun, bulan, daysInMonth, todayD
                                     : null
                         }
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                        {/* Note button */}
+                    {/* Note button — fixed width agar nama tidak shift */}
+                    <div className="w-5 shrink-0">
                         <button
                             onClick={(e) => { e.stopPropagation(); onNoteClick(e, student) }}
-                            className={`w-5 h-5 rounded flex items-center justify-center transition-all ${hasNote ? 'text-amber-500 opacity-100' : 'text-[var(--color-text-muted)]/0 group-hover:text-[var(--color-text-muted)]/40'}`}
+                            className={`w-5 h-5 rounded flex items-center justify-center transition-all ${hasNote ? 'text-amber-500' : 'opacity-0 group-hover:opacity-40 text-[var(--color-text-muted)]'}`}
                             title={hasNote ? `Catatan: ${note}` : 'Tambah catatan'}
                         >
                             <FontAwesomeIcon icon={faStickyNote} className="text-[8px]" />
                         </button>
-                        <FontAwesomeIcon icon={faBullseye} className="text-[8px] text-[var(--color-text-muted)]/0 group-hover:text-[var(--color-text-muted)]/40 transition-all" />
                     </div>
                 </div>
             </td>
@@ -239,20 +216,38 @@ const StudentRow = memo(({ student, idx, days, tahun, bulan, daysInMonth, todayD
                 />
             ))}
 
-            {/* Summary cols */}
-            {STATUS_LIST.map((s, i) => (
-                <td key={s}
-                    className={`border border-[var(--color-border)] text-center px-0 py-0 ${i === 0 ? 'border-l-2 border-l-[var(--color-border)]' : ''}`}
-                    style={{ width: 28, minWidth: 28 }}
-                >
-                    <span className={`text-[10px] font-black ${STATUS_META[s].color} ${sum[s] === 0 ? 'opacity-20' : ''}`}>
-                        {sum[s]}
-                    </span>
-                </td>
-            ))}
+            {/* Summary cols — STICKY RIGHT */}
+            {STATUS_LIST.map((s, i) => {
+                const rightOffset = 40 + (STATUS_LIST.length - 1 - i) * 28;
+                return (
+                    <td key={s}
+                        style={{
+                            position: 'sticky', right: rightOffset, zIndex: 4,
+                            width: 28, minWidth: 28, textAlign: 'center',
+                            backgroundColor: 'var(--color-surface)',
+                            border: '1px solid var(--color-border)',
+                            borderLeft: i === 0 ? '2px solid var(--color-border)' : '1px solid var(--color-border)',
+                            boxShadow: i === 0 ? '-4px 0 8px -4px rgba(0,0,0,0.08)' : 'none'
+                        }}
+                    >
+                        <span className={`text-[10px] font-black ${STATUS_META[s].color} ${sum[s] === 0 ? 'opacity-20' : ''}`}>
+                            {sum[s]}
+                        </span>
+                    </td>
+                );
+            })}
 
-            {/* % hadir */}
-            <td className="border border-[var(--color-border)] border-l-2 border-l-[var(--color-border)] text-center px-0 py-0" style={{ width: 40, minWidth: 40 }}>
+            {/* % hadir — STICKY RIGHT */}
+            <td
+                style={{
+                    position: 'sticky', right: 0, zIndex: 4,
+                    width: 40, minWidth: 40, textAlign: 'center',
+                    backgroundColor: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderLeft: '2px solid var(--color-border)',
+                    boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.06)'
+                }}
+            >
                 <div className="flex flex-col items-center gap-0.5 py-1">
                     <span className={`text-[10px] font-black tabular-nums ${pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
                         {pct}%
@@ -304,8 +299,27 @@ function RowSkeleton({ colCount = 31 }) {
                     <div className="w-full h-7 bg-[var(--color-border)]/30" />
                 </td>
             ))}
-            {STATUS_LIST.map(s => <td key={s} className="border border-[var(--color-border)]" style={{ width: 28 }} />)}
-            <td className="border border-[var(--color-border)]" style={{ width: 40 }} />
+            {STATUS_LIST.map((s, i) => {
+                const rightOffset = 40 + (STATUS_LIST.length - 1 - i) * 28;
+                return (
+                    <td key={s}
+                        style={{
+                            position: 'sticky', right: rightOffset, zIndex: 4,
+                            width: 28, minWidth: 28,
+                            backgroundColor: 'var(--color-surface)',
+                            border: '1px solid var(--color-border)',
+                            borderLeft: i === 0 ? '2px solid var(--color-border)' : '1px solid var(--color-border)',
+                        }}
+                    />
+                );
+            })}
+            <td style={{
+                position: 'sticky', right: 0, zIndex: 4,
+                width: 40, minWidth: 40,
+                backgroundColor: 'var(--color-surface)',
+                border: '1px solid var(--color-border)',
+                borderLeft: '2px solid var(--color-border)',
+            }} />
         </tr>
     )
 }
@@ -2097,6 +2111,1553 @@ function TutorialModal({ onClose }) {
     )
 }
 
+
+// ─── Guru Attendance Tab ─────────────────────────────────────────────────────
+// (embedded directly — uses AbsensiPage's imports and constants)
+
+// ─── Constants ─────────────────────────────────────────────────────────────────
+
+const HARI_NAMA = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+const HARI_KEY = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu']
+
+const JAM_MASUK = '07:00:00'
+const JAM_KELUAR = '15:30:00'
+// ── Potongan gaji per menit terlambat — sesuaikan kebijakan pesantren ──────────
+const POTONGAN_PER_MENIT = 1000 // Rp 1.000 per menit (default)
+
+const GURU_STATUS_META = {
+    hadir: { label: 'Hadir', color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', dot: 'bg-emerald-500' },
+    terlambat: { label: 'Terlambat', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', dot: 'bg-amber-500' },
+    pulang_awal: { label: 'Pulang Awal', color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-500/20', dot: 'bg-purple-500' },
+    alpha: { label: 'Alpha', color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-500/20', dot: 'bg-red-500' },
+    izin: { label: 'Izin', color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/20', dot: 'bg-blue-500' },
+    sakit: { label: 'Sakit', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20', dot: 'bg-orange-500' },
+    libur: { label: 'Libur', color: 'text-slate-500', bg: 'bg-slate-500/10', border: 'border-slate-500/20', dot: 'bg-slate-400' },
+}
+
+const GURU_LETTER_MAP = {
+    hadir: 'H',
+    terlambat: 'T',
+    pulang_awal: 'P',
+    alpha: 'A',
+    izin: 'I',
+    sakit: 'S',
+    libur: 'L'
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function fmtDateG(d) {
+    if (!d) return '—'
+    const x = new Date(d)
+    return `${x.getDate()} ${BULAN_NAMA[x.getMonth() + 1]} ${x.getFullYear()}`
+}
+
+function fmtTime(t) {
+    if (!t) return '—'
+    return t.slice(0, 5) // HH:MM
+}
+
+function timeToMinutes(t) {
+    if (!t) return null
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+}
+
+
+function calcStatus(scanIn, scanOut, workDays, dateStr) {
+    const dow = new Date(dateStr).getDay()
+    const dayKey = HARI_KEY[dow]
+    if (!workDays.includes(dayKey)) return 'libur'
+    if (!scanIn) return 'alpha'
+    const inMins = timeToMinutes(scanIn)
+    const limitIn = timeToMinutes(JAM_MASUK)  // 420
+    const limitOut = timeToMinutes(JAM_KELUAR) // 930
+    const outMins = scanOut ? timeToMinutes(scanOut) : null
+    const terlambat = inMins > limitIn
+    const pulangAwal = outMins !== null && outMins < limitOut
+    if (terlambat) return 'terlambat'
+    if (pulangAwal) return 'pulang_awal'
+    return 'hadir'
+}
+
+function lateMins(scanIn) {
+    if (!scanIn) return 0
+    const inMins = timeToMinutes(scanIn)
+    const limitIn = timeToMinutes(JAM_MASUK)
+    return Math.max(0, inMins - limitIn)
+}
+
+function earlyLeaveMins(scanOut) {
+    if (!scanOut) return 0
+    const outMins = timeToMinutes(scanOut)
+    const limitOut = timeToMinutes(JAM_KELUAR)
+    return Math.max(0, limitOut - outMins)
+}
+
+// Parse Fingerspot XLS — returns array of { name, date, scan1, scan2, scan3, scan4 }
+function parseFingerspotXLS(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            try {
+                const wb = XLSX.read(e.target.result, { type: 'array' })
+                const ws = wb.Sheets[wb.SheetNames[0]]
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+
+                // Find header row
+                let headerIdx = rows.findIndex(r =>
+                    r.some(c => String(c).toLowerCase().includes('nama')) &&
+                    r.some(c => String(c).toLowerCase().includes('tanggal'))
+                )
+                if (headerIdx === -1) headerIdx = 0
+
+                const headers = rows[headerIdx].map(h => String(h).toLowerCase().trim())
+                const colNama = headers.findIndex(h => h === 'nama')
+                const colTgl = headers.findIndex(h => h === 'tanggal')
+                const colS1 = headers.findIndex(h => h === 'scan 1' || h === 'scan1')
+                const colS2 = headers.findIndex(h => h === 'scan 2' || h === 'scan2')
+                const colS3 = headers.findIndex(h => h === 'scan 3' || h === 'scan3')
+                const colS4 = headers.findIndex(h => h === 'scan 4' || h === 'scan4')
+
+                const result = []
+                let lastNama = ''
+
+                for (let i = headerIdx + 1; i < rows.length; i++) {
+                    const row = rows[i]
+                    if (!row || row.every(c => c === '' || c === null)) continue
+
+                    const nama = String(row[colNama] || '').trim() || lastNama
+                    const tgl = String(row[colTgl] || '').trim()
+                    if (!tgl || tgl.length < 8) continue
+
+                    if (row[colNama]) lastNama = nama
+
+                    // Parse DD-MM-YYYY to YYYY-MM-DD
+                    let dateStr = tgl
+                    if (tgl.includes('-')) {
+                        const parts = tgl.split('-')
+                        if (parts[0].length === 2) { // DD-MM-YYYY
+                            dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`
+                        }
+                    }
+
+                    const getTime = (col) => {
+                        if (col === -1) return null
+                        const v = String(row[col] || '').trim()
+                        return v.length >= 5 ? v.slice(0, 8) : null
+                    }
+
+                    result.push({
+                        name: nama,
+                        date: dateStr,
+                        scan1: getTime(colS1),
+                        scan2: getTime(colS2),
+                        scan3: getTime(colS3),
+                        scan4: getTime(colS4),
+                    })
+                }
+                resolve(result)
+            } catch (err) {
+                reject(err)
+            }
+        }
+        reader.onerror = reject
+        reader.readAsArrayBuffer(file)
+    })
+}
+
+// ─── StatusBadge ───────────────────────────────────────────────────────────────
+
+function StatusBadge({ status, size = 'sm' }) {
+    const meta = GURU_STATUS_META[status] || STATUS_META.alpha
+    const sz = size === 'xs' ? 'text-[8px] px-1.5 py-0.5' : 'text-[9px] px-2 py-0.5'
+    return (
+        <span className={`inline-flex items-center gap-1 font-black rounded-full border ${sz} ${meta.bg} ${meta.border} ${meta.color}`}>
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${meta.dot}`} />
+            {meta.label}
+        </span>
+    )
+}
+
+// ─── AttendanceSettingsModal ──────────────────────────────────────────────────
+
+const DEFAULT_ATTENDANCE_SETTINGS = {
+    jam_masuk: '07:00',
+    jam_keluar: '15:30',
+    standar_jam: 8,
+    standar_menit: 0,
+    potongan_nominal: 1000,
+    potongan_interval: 5,
+    lembur_enabled: true,
+    lembur_nominal: 2000,
+    lembur_interval: 60,
+}
+
+// Helper functions for AttendanceSettingsModal
+const handleTimeChangeStatic = (form, set, key, val) => {
+    let clean = val.replace(/[^0-9:]/g, '')
+    if (clean.length > 5) clean = clean.slice(0, 5)
+    if (clean.length === 2 && !clean.includes(':')) clean += ':'
+    set(key, clean)
+}
+
+const InputRow = ({ label, sub, children, compact = false }) => (
+    <div className={`flex items-center justify-between gap-4 border-b border-[var(--color-border)] last:border-0 ${compact ? 'py-2' : 'py-3'}`}>
+        <div className="min-w-0">
+            <p className="text-[12px] font-black text-[var(--color-text)] leading-none">{label}</p>
+            {sub && <p className="text-[10px] text-[var(--color-text-muted)] mt-1 leading-tight">{sub}</p>}
+        </div>
+        <div className="shrink-0">{children}</div>
+    </div>
+)
+
+function AttendanceSettingsModal({ settings, onSave, onClose }) {
+    const [form, setForm] = useState({ ...DEFAULT_ATTENDANCE_SETTINGS, ...settings })
+    const [saving, setSaving] = useState(false)
+    const { addToast } = useToast()
+
+    const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
+
+    const fmtPotongan = () => {
+        const rp = new Intl.NumberFormat('id-ID').format(form.potongan_nominal)
+        return `Rp ${rp} per ${form.potongan_interval} menit telat`
+    }
+
+    const fmtLembur = () => {
+        const rp = new Intl.NumberFormat('id-ID').format(form.lembur_nominal)
+        return `Rp ${rp} per ${form.lembur_interval} menit lembur`
+    }
+
+    const handleSave = async () => {
+        setSaving(true)
+        const { error } = await supabase.from('attendance_config')
+            .upsert({ id: 1, ...form, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+        setSaving(false)
+        if (error) {
+            addToast('Gagal menyimpan: ' + error.message, 'error')
+        } else {
+            addToast('Pengaturan absensi guru tersimpan ✓', 'success')
+            onSave(form)
+            onClose()
+        }
+    }
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+            <div className="w-full max-w-3xl bg-[var(--color-surface)] rounded-[32px] border border-[var(--color-border)] shadow-2xl flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-border)]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center">
+                            <FontAwesomeIcon icon={faGear} className="text-[var(--color-primary)] text-lg" />
+                        </div>
+                        <div>
+                            <p className="text-[15px] font-black text-[var(--color-text)]">Pengaturan Absensi Guru</p>
+                            <p className="text-[11px] text-[var(--color-text-muted)]">Konfigurasi jam kerja, kebijakan potongan & lembur</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="w-10 h-10 rounded-2xl border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
+                        <FontAwesomeIcon icon={faXmark} className="text-sm" />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto flex-1 bg-[var(--color-surface-alt)]/30">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Kolom Kiri: Jam Kerja */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 px-1">
+                                <FontAwesomeIcon icon={faClock} className="text-[10px] text-[var(--color-primary)]" />
+                                <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--color-text-muted)]">Jadwal Jam Kerja</p>
+                            </div>
+                            <div className="bg-[var(--color-surface)] rounded-[24px] border border-[var(--color-border)] px-5 py-1 shadow-sm">
+                                <InputRow label="Jam Masuk" sub="Waktu kedatangan guru agar tidak dihitung terlambat.">
+                                    <div className="relative group">
+                                        <input type="text" value={form.jam_masuk} placeholder="07:00"
+                                            onChange={e => handleTimeChangeStatic(form, set, 'jam_masuk', e.target.value)}
+                                            className="h-11 px-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[14px] font-black text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] transition-all w-32 text-center shadow-sm" />
+                                        <FontAwesomeIcon icon={faClock} className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors pointer-events-none" />
+                                    </div>
+                                </InputRow>
+                                <InputRow label="Jam Keluar" sub="Waktu minimal pulang agar tidak dihitung pulang awal.">
+                                    <div className="relative group">
+                                        <input type="text" value={form.jam_keluar} placeholder="15:30"
+                                            onChange={e => handleTimeChangeStatic(form, set, 'jam_keluar', e.target.value)}
+                                            className="h-11 px-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[14px] font-black text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] transition-all w-32 text-center shadow-sm" />
+                                        <FontAwesomeIcon icon={faClock} className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors pointer-events-none" />
+                                    </div>
+                                </InputRow>
+                                <InputRow label="Standar Kerja" sub="Durasi minimal kerja harian agar tidak dihitung pulang awal/lembur.">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex flex-col items-center gap-1">
+                                            <input type="text" inputMode="numeric" placeholder="8"
+                                                value={form.standar_jam}
+                                                onChange={e => set('standar_jam', e.target.value.replace(/\D/g, ''))}
+                                                className="h-11 w-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[15px] font-black text-[var(--color-text)] text-center outline-none focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] transition-all shadow-sm" />
+                                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Jam</span>
+                                        </div>
+                                        <div className="flex flex-col items-center gap-1">
+                                            <input type="text" inputMode="numeric" placeholder="0"
+                                                value={form.standar_menit}
+                                                onChange={e => set('standar_menit', e.target.value.replace(/\D/g, ''))}
+                                                className="h-11 w-16 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[15px] font-black text-[var(--color-text)] text-center outline-none focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] transition-all shadow-sm" />
+                                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Menit</span>
+                                        </div>
+                                    </div>
+                                </InputRow>
+                            </div>
+                        </div>
+
+                        {/* Kolom Kanan: Kebijakan Potongan & Lembur */}
+                        <div className="space-y-4">
+                            {/* Potongan */}
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 px-1">
+                                    <FontAwesomeIcon icon={faMoneyBillWave} className="text-[10px] text-amber-500" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--color-text-muted)]">Kebijakan Potongan</p>
+                                </div>
+                                <div className="bg-[var(--color-surface)] rounded-[24px] border border-[var(--color-border)] px-5 py-1 shadow-sm">
+                                    <InputRow label="Potongan Gaji">
+                                        <div className="flex items-center gap-1 bg-[var(--color-surface-alt)] p-1 rounded-2xl border border-[var(--color-border)] h-11 shrink-0">
+                                            <div className="flex items-center gap-1 px-2.5 border-r border-[var(--color-border)] h-full">
+                                                <span className="text-[10px] font-black text-[var(--color-text-muted)] tracking-tighter">RP</span>
+                                                <input type="number" min={0} step={500} value={form.potongan_nominal} onChange={e => set('potongan_nominal', +e.target.value)}
+                                                    className="w-14 bg-transparent text-[14px] font-black text-[var(--color-text)] outline-none text-right" />
+                                            </div>
+                                            <div className="flex items-center gap-1.5 px-2.5 h-full">
+                                                <span className="text-[10px] font-black text-[var(--color-text-muted)] tracking-tighter">PER</span>
+                                                <input type="number" min={1} max={60} value={form.potongan_interval} onChange={e => set('potongan_interval', +e.target.value)}
+                                                    className="w-10 bg-transparent text-[14px] font-black text-[var(--color-text)] outline-none text-center" />
+                                                <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter">MENIT</span>
+                                            </div>
+                                        </div>
+                                    </InputRow>
+                                </div>
+                            </div>
+
+                            {/* Lembur */}
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 px-1">
+                                    <FontAwesomeIcon icon={faArrowTrendUp} className="text-[10px] text-purple-500" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--color-text-muted)]">Lembur & Ekstra</p>
+                                </div>
+                                <div className="bg-[var(--color-surface)] rounded-[24px] border border-[var(--color-border)] px-5 py-1 shadow-sm">
+                                    <div className="flex items-center justify-between py-2.5 border-b border-[var(--color-border)]">
+                                        <div>
+                                            <p className="text-[12px] font-black text-[var(--color-text)]">Status Lembur</p>
+                                            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 leading-none">Aktifkan kalkulasi otomatis</p>
+                                        </div>
+                                        <button onClick={() => set('lembur_enabled', !form.lembur_enabled)}
+                                            className={`w-10 h-5.5 rounded-full transition-all relative ${form.lembur_enabled ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                            <div className={`absolute top-1 w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${form.lembur_enabled ? 'left-[calc(100%-18px)]' : 'left-1'}`} />
+                                        </button>
+                                    </div>
+                                    {form.lembur_enabled && (
+                                        <InputRow label="Biaya Lembur">
+                                            <div className="flex items-center gap-1 bg-[var(--color-surface-alt)] p-1 rounded-2xl border border-[var(--color-border)] h-11 shrink-0">
+                                                <div className="flex items-center gap-1 px-2.5 border-r border-[var(--color-border)] h-full">
+                                                    <span className="text-[10px] font-black text-[var(--color-text-muted)] tracking-tighter">RP</span>
+                                                    <input type="number" min={0} step={500} value={form.lembur_nominal} onChange={e => set('lembur_nominal', +e.target.value)}
+                                                        className="w-14 bg-transparent text-[14px] font-black text-[var(--color-text)] outline-none text-right" />
+                                                </div>
+                                                <div className="flex items-center gap-1.5 px-2.5 h-full">
+                                                    <span className="text-[10px] font-black text-[var(--color-text-muted)] tracking-tighter">PER</span>
+                                                    <input type="number" min={1} max={120} value={form.lembur_interval} onChange={e => set('lembur_interval', +e.target.value)}
+                                                        className="w-10 bg-transparent text-[14px] font-black text-[var(--color-text)] outline-none text-center" />
+                                                    <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter">MENIT</span>
+                                                </div>
+                                            </div>
+                                        </InputRow>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Info Note Full Width */}
+                    <div className="mt-8 flex items-start gap-4 p-4 rounded-[20px] bg-blue-500/5 border border-blue-500/10">
+                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="text-blue-500 text-sm" />
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-black text-blue-700">Informasi Penting</p>
+                            <p className="text-[10px] text-blue-600/80 leading-relaxed mt-0.5">
+                                Parameter ini digunakan sebagai acuan perhitungan otomatis pada dashboard. Jam Masuk & Keluar wajib diisi dalam <strong>Format 24 Jam</strong>. Perubahan tidak akan mengubah data historis yang sudah tersimpan, namun mempengaruhi laporan saat ini.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-5 py-3 border-t border-[var(--color-border)] flex gap-2 justify-end bg-[var(--color-surface)]">
+                    <button onClick={onClose} className="h-9 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">Batal</button>
+                    <button onClick={handleSave} disabled={saving}
+                        className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-60">
+                        {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faSave} />}
+                        Simpan Pengaturan
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    )
+}
+
+// ─── HistoryDrawer ─────────────────────────────────────────────────────────────
+
+function HistoryDrawer({ teacher, onClose, settings = DEFAULT_ATTENDANCE_SETTINGS }) {
+    const [records, setRecords] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [filterMonth, setFilterMonth] = useState('')
+    const now = new Date()
+
+    useEffect(() => {
+        if (!teacher) return
+        setLoading(true)
+        supabase.from('teacher_attendance')
+            .select('*')
+            .eq('teacher_id', teacher.id)
+            .order('date', { ascending: false })
+            .limit(120)
+            .then(({ data }) => { setRecords(data || []); setLoading(false) })
+    }, [teacher])
+
+    const filtered = useMemo(() => {
+        if (!filterMonth) return records
+        return records.filter(r => r.date?.slice(0, 7) === filterMonth)
+    }, [records, filterMonth])
+
+    const months = useMemo(() => {
+        const s = new Set(records.map(r => r.date?.slice(0, 7)).filter(Boolean))
+        return [...s].sort().reverse()
+    }, [records])
+
+    // ── Kalkulasi jam kerja & lembur ──────────────────────────────────────────
+    const calcWorkMinutes = (scanIn, scanOut) => {
+        if (!scanIn || !scanOut) return null
+        const [h1, m1] = scanIn.split(':').map(Number)
+        const [h2, m2] = scanOut.split(':').map(Number)
+        const total = (h2 * 60 + m2) - (h1 * 60 + m1)
+        return total > 0 ? total : null
+    }
+
+    const fmtDuration = (minutes) => {
+        if (!minutes || minutes <= 0) return '—'
+        const h = Math.floor(minutes / 60)
+        const m = minutes % 60
+        return m > 0 ? `${h}j ${m}m` : `${h}j`
+    }
+
+    const STANDARD_WORK_MINUTES = ((settings.standar_jam ?? 8) * 60) + (settings.standar_menit ?? 0)
+
+    const calcPotongan = (lateMinutes) => {
+        if (!lateMinutes || lateMinutes <= 0) return 0
+        const interval = settings.potongan_interval ?? 5
+        const nominal = settings.potongan_nominal ?? 1000
+        return Math.floor(lateMinutes / interval) * nominal
+    }
+
+    const calcLembur = (extraMinutes) => {
+        if (!extraMinutes || extraMinutes <= 0 || !settings.lembur_enabled) return 0
+        const interval = settings.lembur_interval ?? 60
+        const nominal = settings.lembur_nominal ?? 2000
+        return Math.floor(extraMinutes / interval) * nominal
+    }
+
+    const fmtRupiah = (n) => {
+        if (!n) return '—'
+        return 'Rp ' + new Intl.NumberFormat('id-ID').format(n)
+    }
+
+    const stats = useMemo(() => {
+        const src = filtered.filter(r => r.status !== 'libur')
+        let totalWorkMin = 0, totalLemburMin = 0, workDayCount = 0, totalLateMin = 0, totalPotongan = 0, totalLemburPay = 0
+        for (const r of src) {
+            const wm = calcWorkMinutes(r.scan_in, r.scan_out)
+            if (wm !== null) {
+                totalWorkMin += wm
+                workDayCount++
+                if (wm > STANDARD_WORK_MINUTES) {
+                    const extra = wm - STANDARD_WORK_MINUTES
+                    totalLemburMin += extra
+                    totalLemburPay += calcLembur(extra)
+                }
+            }
+            if (r.late_minutes > 0) {
+                totalLateMin += r.late_minutes
+                totalPotongan += calcPotongan(r.late_minutes)
+            }
+        }
+        return {
+            hadir: src.filter(r => r.status === 'hadir').length,
+            terlambat: src.filter(r => r.status === 'terlambat').length,
+            alpha: src.filter(r => r.status === 'alpha').length,
+            total: src.length,
+            totalWorkMin,
+            totalLemburMin,
+            avgWorkMin: workDayCount > 0 ? Math.round(totalWorkMin / workDayCount) : 0,
+            workDayCount,
+            totalLateMin,
+            totalPotongan,
+            totalLemburPay,
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filtered, settings])
+
+    if (!teacher) return null
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+            <div className="w-full max-w-lg bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] shadow-2xl flex flex-col max-h-[88vh] overflow-hidden">
+
+                {/* Header */}
+                <div className="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-border)] px-5 py-4 flex items-center gap-3 z-10 rounded-t-3xl shrink-0">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white font-black text-base shrink-0">
+                        {teacher.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-black text-[var(--color-text)] truncate">{teacher.name}</p>
+                        <p className="text-[10px] text-[var(--color-text-muted)]">{teacher.type ? teacher.type.charAt(0).toUpperCase() + teacher.type.slice(1) : 'Guru'} · Riwayat Kehadiran</p>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-xl border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+                        <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                    </button>
+                </div>
+
+                <div className="p-5 space-y-4 flex-1 overflow-y-auto">
+                    {/* Stats kehadiran */}
+                    <div className="grid grid-cols-3 gap-2">
+                        {[
+                            { label: 'Hadir', val: stats.hadir, color: 'text-emerald-600', bg: 'bg-emerald-500/8', border: 'border-emerald-500/20' },
+                            { label: 'Terlambat', val: stats.terlambat, color: 'text-amber-600', bg: 'bg-amber-500/8', border: 'border-amber-500/20' },
+                            { label: 'Alpha', val: stats.alpha, color: 'text-red-600', bg: 'bg-red-500/8', border: 'border-red-500/20' },
+                        ].map(s => (
+                            <div key={s.label} className={`rounded-2xl border ${s.border} ${s.bg} p-3 text-center`}>
+                                <p className={`text-xl font-black ${s.color}`}>{s.val}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{s.label}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Stats jam kerja & lembur */}
+                    <div className="grid grid-cols-3 gap-2">
+                        {[
+                            { label: 'Total Jam', val: fmtDuration(stats.totalWorkMin), color: 'text-blue-600', bg: 'bg-blue-500/8', border: 'border-blue-500/20', icon: faClockRotateLeft },
+                            { label: 'Rata-rata', val: fmtDuration(stats.avgWorkMin), color: 'text-indigo-600', bg: 'bg-indigo-500/8', border: 'border-indigo-500/20', icon: faChartSimple },
+                            { label: 'Total Lembur', val: settings.lembur_enabled !== false ? fmtDuration(stats.totalLemburMin) : '—', color: stats.totalLemburMin > 0 && settings.lembur_enabled !== false ? 'text-purple-600' : 'text-[var(--color-text-muted)]', bg: stats.totalLemburMin > 0 && settings.lembur_enabled !== false ? 'bg-purple-500/8' : 'bg-[var(--color-surface-alt)]', border: stats.totalLemburMin > 0 && settings.lembur_enabled !== false ? 'border-purple-500/20' : 'border-[var(--color-border)]', icon: faArrowTrendUp },
+                        ].map(s => (
+                            <div key={s.label} className={`rounded-2xl border ${s.border} ${s.bg} p-3 text-center`}>
+                                <p className={`text-[15px] font-black tabular-nums ${s.color}`}>{s.val}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mt-0.5">{s.label}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Potongan & total terlambat */}
+                    {stats.terlambat > 0 && (
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 text-center">
+                                <p className="text-[15px] font-black tabular-nums text-amber-600">{stats.totalLateMin}m</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mt-0.5">Total Terlambat</p>
+                            </div>
+                            <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-3 text-center">
+                                <p className="text-[13px] font-black tabular-nums text-red-600">{fmtRupiah(stats.totalPotongan)}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mt-0.5">Est. Potongan</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {stats.totalLemburMin > 0 && settings.lembur_enabled !== false && (
+                        <div className="px-3 py-2 rounded-xl bg-purple-500/5 border border-purple-500/15 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faArrowTrendUp} className="text-purple-500 text-xs shrink-0" />
+                            <p className="text-[10px] text-purple-700 font-bold">
+                                Lembur dihitung dari kelebihan di atas <strong>{settings.standar_jam ?? 8} jam/hari</strong> standar kerja.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Filter bulan */}
+                    <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]">
+                        <option value="">Semua Bulan</option>
+                        {months.map(m => {
+                            const [y, mo] = m.split('-')
+                            return <option key={m} value={m}>{BULAN_NAMA[parseInt(mo)]} {y}</option>
+                        })}
+                    </select>
+
+                    {/* Records */}
+                    {loading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl text-[var(--color-primary)]" />
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="text-center py-12 text-[var(--color-text-muted)]">
+                            <p className="text-[12px] font-black">Belum ada data</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {filtered.map(r => {
+                                const workMin = calcWorkMinutes(r.scan_in, r.scan_out)
+                                const lemburMin = workMin !== null && workMin > STANDARD_WORK_MINUTES
+                                    ? workMin - STANDARD_WORK_MINUTES : 0
+                                const potonganRec = r.late_minutes > 0 ? calcPotongan(r.late_minutes) : 0
+                                return (
+                                    <div key={r.id} className="rounded-2xl border border-[var(--color-border)] p-3 flex items-center gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <p className="text-[11px] font-black text-[var(--color-text)]">{fmtDateG(r.date)}</p>
+                                                <p className="text-[9px] text-[var(--color-text-muted)]">
+                                                    {HARI_NAMA[new Date(r.date).getDay()]}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <p className="text-[10px] text-[var(--color-text-muted)] tabular-nums">
+                                                    {fmtTime(r.scan_in)} → {fmtTime(r.scan_out)}
+                                                </p>
+                                                {workMin !== null && (
+                                                    <span className="text-[9px] font-black text-blue-600 bg-blue-500/8 px-1.5 py-0.5 rounded-md border border-blue-500/20">
+                                                        {fmtDuration(workMin)}
+                                                    </span>
+                                                )}
+                                                {r.late_minutes > 0 && (
+                                                    <span className="text-[9px] font-black text-amber-600 bg-amber-500/8 px-1.5 py-0.5 rounded-md border border-amber-500/20">
+                                                        terlambat +{r.late_minutes}m
+                                                    </span>
+                                                )}
+                                                {potonganRec > 0 && (
+                                                    <span className="text-[9px] font-black text-red-600 bg-red-500/8 px-1.5 py-0.5 rounded-md border border-red-500/20">
+                                                        −{fmtRupiah(potonganRec)}
+                                                    </span>
+                                                )}
+                                                {lemburMin > 0 && settings.lembur_enabled !== false && (
+                                                    <span className="text-[9px] font-black text-purple-600 bg-purple-500/8 px-1.5 py-0.5 rounded-md border border-purple-500/20">
+                                                        lembur +{fmtDuration(lemburMin)}
+                                                    </span>
+                                                )}
+                                                {r.early_leave_minutes > 0 && (
+                                                    <span className="text-[9px] text-purple-600 font-bold bg-purple-500/8 px-1.5 py-0.5 rounded-md border border-purple-500/20">
+                                                        pulang −{r.early_leave_minutes}m
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {r.notes && <p className="text-[9px] text-[var(--color-text-muted)] italic mt-1">"{r.notes}"</p>}
+                                        </div>
+                                        <StatusBadge status={r.status} size="xs" />
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>,
+        document.body
+    )
+}
+
+// ─── ImportModal ───────────────────────────────────────────────────────────────
+
+function FingerspotImportModal({ teachers, onClose, onImported }) {
+    const { addToast } = useToast()
+    const { profile } = useAuth()
+    const fileRef = useRef(null)
+    const [step, setStep] = useState(1) // 1=upload, 2=mapping, 3=preview, 4=importing
+    const [parsing, setParsing] = useState(false)
+    const [rawRows, setRawRows] = useState([])
+    const [nameMap, setNameMap] = useState({}) // fingerspotName → teacherId
+    const [importing, setImporting] = useState(false)
+    const [progress, setProgress] = useState({ done: 0, total: 0 })
+
+    const fingerspotNames = useMemo(() => [...new Set(rawRows.map(r => r.name))].sort(), [rawRows])
+
+    const unmapped = useMemo(() =>
+        fingerspotNames.filter(n => !nameMap[n]),
+        [fingerspotNames, nameMap]
+    )
+
+    // ── Auto-match by similarity ──────────────────────────────────────────────
+    useEffect(() => {
+        if (!fingerspotNames.length || !teachers.length) return
+
+        // Jaro similarity
+        const jaro = (s1, s2) => {
+            if (s1 === s2) return 1
+            const len1 = s1.length, len2 = s2.length
+            const matchDist = Math.floor(Math.max(len1, len2) / 2) - 1
+            const s1m = new Array(len1).fill(false)
+            const s2m = new Array(len2).fill(false)
+            let matches = 0, transpositions = 0
+            for (let i = 0; i < len1; i++) {
+                const start = Math.max(0, i - matchDist)
+                const end = Math.min(i + matchDist + 1, len2)
+                for (let j = start; j < end; j++) {
+                    if (s2m[j] || s1[i] !== s2[j]) continue
+                    s1m[i] = true; s2m[j] = true; matches++; break
+                }
+            }
+            if (!matches) return 0
+            let k = 0
+            for (let i = 0; i < len1; i++) {
+                if (!s1m[i]) continue
+                while (!s2m[k]) k++
+                if (s1[i] !== s2[k]) transpositions++
+                k++
+            }
+            return (matches / len1 + matches / len2 + (matches - transpositions / 2) / matches) / 3
+        }
+
+        // Jaro-Winkler: boost if prefix matches
+        const jw = (s1, s2) => {
+            const j = jaro(s1, s2)
+            let prefix = 0
+            for (let i = 0; i < Math.min(4, s1.length, s2.length); i++) {
+                if (s1[i] === s2[i]) prefix++; else break
+            }
+            return j + prefix * 0.1 * (1 - j)
+        }
+
+        // Common Indonesian name abbreviation expansions
+        const INITIALS = {
+            m: ['muhammad', 'mohammad', 'moh', 'muhamad', 'mochamad', 'mohamad'],
+            a: ['abdul', 'ahmad', 'achmad', 'agus'],
+            s: ['siti', 'sri', 'slamet', 'sulaiman'],
+            n: ['nur', 'noor', 'nurul'],
+            r: ['raden', 'rizky', 'rizki'],
+            h: ['haji', 'hasan'],
+        }
+
+        // Return all name variants (original + abbreviated expansions)
+        const variants = (name) => {
+            const words = name.toLowerCase().replace(/\s+/g, ' ').trim().split(' ')
+            const result = [words]
+            if (words[0].length === 1 && INITIALS[words[0]]) {
+                INITIALS[words[0]].forEach(exp => result.push([exp, ...words.slice(1)]))
+            }
+            return result
+        }
+
+        // Score a fingerspot name against a teacher name (0-1)
+        const score = (fpName, teacherName) => {
+            const tNorm = teacherName.toLowerCase().replace(/\s+/g, ' ').trim()
+            const tWords = tNorm.split(' ')
+            let best = 0
+            for (const fpWords of variants(fpName)) {
+                if (fpWords.join(' ') === tNorm) return 1.0
+
+                // Single-word fp name: exact match against ANY word in teacher name
+                // e.g. "Rasyidi" → "Ali Rasyidi", "rifandi" → "Muhammad Rifandi"
+                if (fpWords.length === 1) {
+                    const wordMatch = tWords.some(tw => tw === fpWords[0])
+                    if (wordMatch) { best = Math.max(best, 0.90); continue }
+                    // Fuzzy single-word match against each teacher word
+                    const fuzzyWord = Math.max(...tWords.map(tw => jw(fpWords[0], tw)))
+                    if (fuzzyWord > 0.88) { best = Math.max(best, fuzzyWord * 0.92); continue }
+                }
+
+                const firstOk = fpWords[0] === tWords[0] || jw(fpWords[0], tWords[0]) > 0.88
+                const lastOk = fpWords[fpWords.length - 1] === tWords[tWords.length - 1]
+                if (firstOk && lastOk && fpWords.length >= 2) { best = Math.max(best, 0.95); continue }
+                if (lastOk && fpWords.length >= 2) {
+                    const midOk = fpWords.slice(0, -1).some(w => tWords.some(tw => jw(w, tw) > 0.85))
+                    if (midOk) { best = Math.max(best, 0.88); continue }
+                }
+                best = Math.max(best, jw(fpWords.join(' '), tNorm))
+            }
+            return best
+        }
+
+        const THRESHOLD = 0.82
+        const auto = {}
+
+        fingerspotNames.forEach(fn => {
+            // Priority: fingerspot_name field exact match
+            const fpExact = teachers.find(t =>
+                t.fingerspot_name &&
+                t.fingerspot_name.toLowerCase().trim() === fn.toLowerCase().trim()
+            )
+            if (fpExact) { auto[fn] = fpExact.id; return }
+
+            // Pick teacher with highest similarity score
+            let bestScore = 0, bestTeacher = null
+            teachers.forEach(t => {
+                const s = score(fn, t.name)
+                if (s > bestScore) { bestScore = s; bestTeacher = t }
+            })
+            if (bestScore >= THRESHOLD && bestTeacher) auto[fn] = bestTeacher.id
+        })
+
+        setNameMap(prev => ({ ...auto, ...prev }))
+    }, [fingerspotNames, teachers])
+
+
+    const handleFile = async (file) => {
+        if (!file) return
+        if (!file.name.match(/\.(xls|xlsx)$/i)) {
+            addToast('Hanya file .xls atau .xlsx yang didukung', 'error'); return
+        }
+        setParsing(true)
+        try {
+            const rows = await parseFingerspotXLS(file)
+            setRawRows(rows)
+            setStep(2)
+        } catch (e) {
+            addToast('Gagal membaca file: ' + e.message, 'error')
+        } finally {
+            setParsing(false)
+        }
+    }
+
+    // Build preview rows with computed status
+    const previewRows = useMemo(() => {
+        return rawRows.map(r => {
+            const teacherId = nameMap[r.name]
+            const teacher = teachers.find(t => t.id === teacherId)
+            const workDays = teacher?.work_days || ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu']
+            const scanIn = r.scan1
+            const scanOut = r.scan2 || r.scan3 || r.scan4
+            const status = teacherId ? calcStatus(scanIn, scanOut, workDays, r.date) : null
+            return {
+                ...r, teacherId, teacher, scanIn, scanOut, status,
+                lateMinutes: lateMins(scanIn),
+                earlyLeaveMinutes: earlyLeaveMins(scanOut),
+            }
+        }).filter(r => r.teacherId && r.status && r.status !== 'libur')
+    }, [rawRows, nameMap, teachers])
+
+    const handleImport = async () => {
+        if (!previewRows.length) return
+        setImporting(true)
+        setProgress({ done: 0, total: previewRows.length })
+        try {
+            const CHUNK = 50
+            for (let i = 0; i < previewRows.length; i += CHUNK) {
+                const chunk = previewRows.slice(i, i + CHUNK).map(r => ({
+                    teacher_id: r.teacherId,
+                    date: r.date,
+                    scan_in: r.scanIn,
+                    scan_out: r.scanOut,
+                    status: r.status,
+                    late_minutes: r.lateMinutes,
+                    early_leave_minutes: r.earlyLeaveMinutes,
+                    source: 'fingerspot',
+                    imported_by: profile?.id || null,
+                }))
+                const { error } = await supabase.from('teacher_attendance')
+                    .upsert(chunk, { onConflict: 'teacher_id,date' })
+                if (error) throw error
+                setProgress({ done: Math.min(i + CHUNK, previewRows.length), total: previewRows.length })
+            }
+            await logAudit({
+                action: 'INSERT', tableName: 'teacher_attendance',
+                newData: { source: 'fingerspot', count: previewRows.length }
+            })
+            addToast(`${previewRows.length} record absensi berhasil diimpor ✓`, 'success')
+            onImported()
+            onClose()
+        } catch (e) {
+            addToast('Gagal import: ' + e.message, 'error')
+        } finally {
+            setImporting(false)
+        }
+    }
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-2xl max-h-[90vh] bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] shadow-2xl flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
+                    <div>
+                        <p className="text-[13px] font-black text-[var(--color-text)]">Import Fingerspot</p>
+                        <p className="text-[10px] text-[var(--color-text-muted)]">
+                            {step === 1 && 'Upload file XLS export dari Fingerspot Personnel'}
+                            {step === 2 && `${fingerspotNames.length} nama ditemukan · ${unmapped.length} belum dipetakan`}
+                            {step === 3 && `${previewRows.length} record siap diimpor`}
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-xl border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+                        <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                    </button>
+                </div>
+
+                {/* Steps indicator */}
+                <div className="px-6 py-3 border-b border-[var(--color-border)] flex items-center gap-2 shrink-0">
+                    {['Upload', 'Mapping Nama', 'Preview'].map((s, i) => (
+                        <div key={s} className="flex items-center gap-2">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all
+                                ${step > i + 1 ? 'bg-emerald-500 border-emerald-500 text-white' :
+                                    step === i + 1 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' :
+                                        'border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                {step > i + 1 ? <FontAwesomeIcon icon={faCheck} /> : i + 1}
+                            </div>
+                            <span className={`text-[10px] font-black ${step === i + 1 ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>{s}</span>
+                            {i < 2 && <FontAwesomeIcon icon={faArrowRight} className="text-[8px] text-[var(--color-border)]" />}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-6">
+                    {/* Step 1 — Upload */}
+                    {step === 1 && (
+                        <div
+                            className="border-2 border-dashed border-[var(--color-border)] rounded-2xl p-12 text-center cursor-pointer hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all"
+                            onClick={() => fileRef.current?.click()}
+                            onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]) }}
+                            onDragOver={e => e.preventDefault()}
+                        >
+                            <input ref={fileRef} type="file" accept=".xls,.xlsx" className="hidden"
+                                onChange={e => handleFile(e.target.files[0])} />
+                            {parsing ? (
+                                <FontAwesomeIcon icon={faSpinner} className="animate-spin text-3xl text-[var(--color-primary)] mb-4" />
+                            ) : (
+                                <FontAwesomeIcon icon={faUpload} className="text-3xl text-[var(--color-text-muted)] mb-4" />
+                            )}
+                            <p className="text-[13px] font-black text-[var(--color-text)]">{parsing ? 'Membaca file...' : 'Drag & drop atau klik untuk pilih file'}</p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Format: .xls atau .xlsx dari Fingerspot Personnel</p>
+                        </div>
+                    )}
+
+                    {/* Step 2 — Mapping */}
+                    {step === 2 && (
+                        <div className="space-y-3">
+                            <div className="p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                <p className="text-[10px] text-[var(--color-text-muted)]">
+                                    Cocokkan nama di Fingerspot dengan guru di sistem. Nama yang sudah cocok otomatis terpilih.
+                                    Kalau ada nama yang tidak perlu diimpor, biarkan kosong.
+                                </p>
+                            </div>
+                            {fingerspotNames.map(fn => {
+                                const mapped = nameMap[fn]
+                                return (
+                                    <div key={fn} className="glass rounded-2xl border border-[var(--color-border)] p-3 flex items-center gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-black text-[var(--color-text)] truncate">{fn}</p>
+                                            <p className="text-[9px] text-[var(--color-text-muted)]">Fingerspot</p>
+                                        </div>
+                                        <FontAwesomeIcon icon={mapped ? faLink : faLinkSlash}
+                                            className={`text-xs shrink-0 ${mapped ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'}`} />
+                                        <select
+                                            value={nameMap[fn] || ''}
+                                            onChange={e => setNameMap(prev => ({ ...prev, [fn]: e.target.value || null }))}
+                                            className="h-8 px-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] min-w-0 max-w-[180px]"
+                                        >
+                                            <option value="">— Abaikan —</option>
+                                            {teachers.map(t => (
+                                                <option key={t.id} value={t.id}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+
+                    {/* Step 3 — Preview */}
+                    {step === 3 && (
+                        <div className="space-y-2">
+                            {/* Summary stats */}
+                            <div className="grid grid-cols-3 gap-2 mb-4">
+                                {Object.entries(
+                                    previewRows.reduce((acc, r) => { acc[r.status] = (acc[r.status] || 0) + 1; return acc }, {})
+                                ).map(([status, count]) => (
+                                    <div key={status} className="glass rounded-2xl border border-[var(--color-border)] p-2 text-center">
+                                        <p className="text-lg font-black text-[var(--color-text)]">{count}</p>
+                                        <StatusBadge status={status} size="xs" />
+                                    </div>
+                                ))}
+                            </div>
+                            {/* Table preview */}
+                            <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden">
+                                <div className="grid grid-cols-[1fr_100px_80px_80px_90px] gap-2 px-4 py-2 bg-[var(--color-surface-alt)] text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                    {['Nama Guru', 'Tanggal', 'Masuk', 'Keluar', 'Status'].map(h => <div key={h}>{h}</div>)}
+                                </div>
+                                <div className="divide-y divide-[var(--color-border)] max-h-64 overflow-y-auto">
+                                    {previewRows.map((r, i) => (
+                                        <div key={i} className="grid grid-cols-[1fr_100px_80px_80px_90px] gap-2 px-4 py-2.5 hover:bg-[var(--color-surface-alt)]/50">
+                                            <p className="text-[11px] font-bold text-[var(--color-text)] truncate">{r.teacher?.name}</p>
+                                            <p className="text-[10px] text-[var(--color-text-muted)] tabular-nums">{r.date}</p>
+                                            <p className="text-[10px] tabular-nums font-bold text-[var(--color-text)]">{fmtTime(r.scanIn)}</p>
+                                            <p className="text-[10px] tabular-nums font-bold text-[var(--color-text)]">{fmtTime(r.scanOut)}</p>
+                                            <StatusBadge status={r.status} size="xs" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-[var(--color-border)] flex items-center justify-between shrink-0">
+                    <button onClick={() => step > 1 ? setStep(s => s - 1) : onClose()}
+                        className="h-9 px-4 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+                        {step === 1 ? 'Batal' : '← Kembali'}
+                    </button>
+                    {step === 1 && (
+                        <p className="text-[9px] text-[var(--color-text-muted)]">
+                            Export dari Fingerspot Personnel → Report → Excel
+                        </p>
+                    )}
+                    {step === 2 && (
+                        <button onClick={() => setStep(3)}
+                            className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:brightness-110 transition-all">
+                            Preview → ({rawRows.length} baris)
+                        </button>
+                    )}
+                    {step === 3 && (
+                        <button onClick={handleImport} disabled={importing || !previewRows.length}
+                            className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-50">
+                            {importing
+                                ? <><FontAwesomeIcon icon={faSpinner} className="animate-spin text-xs" /> {progress.done}/{progress.total}</>
+                                : <><FontAwesomeIcon icon={faFileImport} className="text-xs" /> Import {previewRows.length} Record</>}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>,
+        document.body
+    )
+}
+
+// ─── Main GuruAttendanceTab ────────────────────────────────────────────────────
+
+function GuruTab() {
+    const { addToast } = useToast()
+    const now = new Date()
+    const [viewMode, setViewMode] = useState('bulanan') // 'harian' | 'mingguan' | 'bulanan'
+    const [tahun, setTahun] = useState(now.getFullYear())
+    const [bulan, setBulan] = useState(now.getMonth() + 1)
+    const [selectedDate, setSelectedDate] = useState(now.toISOString().slice(0, 10))
+    const [teachers, setTeachers] = useState([])
+    const [attendance, setAttendance] = useState([]) // flat records
+    const [loading, setLoading] = useState(false)
+    const [showImport, setShowImport] = useState(false)
+    const [showSettings, setShowSettings] = useState(false)
+    const [historyTeacher, setHistoryTeacher] = useState(null)
+    const [search, setSearch] = useState('')
+    const [filterStatus, setFilterStatus] = useState('')
+    const [settings, setSettings] = useState(DEFAULT_ATTENDANCE_SETTINGS)
+
+    // Load settings from DB
+    useEffect(() => {
+        supabase.from('attendance_config').select('*').eq('id', 1).maybeSingle()
+            .then(({ data }) => {
+                if (data) setSettings({ ...DEFAULT_ATTENDANCE_SETTINGS, ...data })
+            })
+    }, [])
+
+    // Load teachers
+    useEffect(() => {
+        supabase.from('teachers')
+            .select('id, name, type, status, work_days, fingerspot_name')
+            .is('deleted_at', null)
+            .order('name')
+            .then(({ data }) => setTeachers(data || []))
+    }, [])
+
+    // Load attendance data based on viewMode
+    const loadData = useCallback(async () => {
+        setLoading(true)
+        try {
+            let from, to
+            if (viewMode === 'harian') {
+                from = selectedDate; to = selectedDate
+            } else if (viewMode === 'mingguan') {
+                const d = new Date(selectedDate)
+                const dow = d.getDay()
+                const mon = new Date(d); mon.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1))
+                const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+                from = mon.toISOString().slice(0, 10)
+                to = sun.toISOString().slice(0, 10)
+            } else {
+                from = `${tahun}-${String(bulan).padStart(2, '0')}-01`
+                const lastDay = getDaysInMonth(tahun, bulan)
+                to = `${tahun}-${String(bulan).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+            }
+            const { data, error } = await supabase.from('teacher_attendance')
+                .select('*')
+                .gte('date', from)
+                .lte('date', to)
+                .order('date')
+            if (error) throw error
+            setAttendance(data || [])
+        } catch (e) {
+            addToast('Gagal memuat data: ' + e.message, 'error')
+        } finally {
+            setLoading(false)
+        }
+    }, [viewMode, selectedDate, tahun, bulan, addToast])
+
+    useEffect(() => { loadData() }, [loadData])
+
+    // ── Jam kerja helper (shared di GuruTab) ─────────────────────────────────
+    const calcWorkMinutesG = (scanIn, scanOut) => {
+        if (!scanIn || !scanOut) return null
+        const [h1, m1] = scanIn.split(':').map(Number)
+        const [h2, m2] = scanOut.split(':').map(Number)
+        const total = (h2 * 60 + m2) - (h1 * 60 + m1)
+        return total > 0 ? total : null
+    }
+    const fmtDurationG = (minutes) => {
+        if (!minutes || minutes <= 0) return '—'
+        const h = Math.floor(minutes / 60)
+        const m = minutes % 60
+        return m > 0 ? `${h}j ${m}m` : `${h}j`
+    }
+    const STANDARD_MIN = 8 * 60
+
+    // Group attendance by teacher for monthly/weekly view
+    const teacherRows = useMemo(() => {
+        const map = {}
+        attendance.forEach(a => {
+            if (!map[a.teacher_id]) map[a.teacher_id] = []
+            map[a.teacher_id].push(a)
+        })
+        const STANDARD_MIN_DYN = ((settings.standar_jam ?? 8) * 60) + (settings.standar_menit ?? 0)
+
+        const calcLemburInternal = (extraMinutes) => {
+            if (!extraMinutes || extraMinutes <= 0 || !settings.lembur_enabled) return 0
+            const intv = settings.lembur_interval ?? 60
+            const nom = settings.lembur_nominal ?? 2000
+            return Math.floor(extraMinutes / intv) * nom
+        }
+
+        const calcPotonganInternal = (lateMin) => {
+            if (!lateMin || lateMin <= 0) return 0
+            const intv = settings.potongan_interval ?? 5
+            const nom = settings.potongan_nominal ?? 1000
+            return Math.floor(lateMin / intv) * nom
+        }
+        return teachers.map(t => {
+            const recs = map[t.id] || []
+            let totalWorkMin = 0, totalLemburMin = 0, workDayCount = 0, totalLateMin = 0, totalPotongan = 0, totalLemburPay = 0
+            for (const r of recs) {
+                if (r.status === 'hadir' || r.status === 'terlambat' || r.status === 'pulang_awal') {
+                    const wm = calcWorkMinutesG(r.scan_in, r.scan_out)
+                    if (wm !== null) {
+                        totalWorkMin += wm; workDayCount++
+                        if (wm > STANDARD_MIN_DYN) {
+                            const extra = wm - STANDARD_MIN_DYN
+                            totalLemburMin += extra
+                            totalLemburPay += calcLemburInternal(extra)
+                        }
+                    }
+                }
+                if (r.late_minutes > 0) {
+                    totalLateMin += r.late_minutes
+                    totalPotongan += calcPotonganInternal(r.late_minutes)
+                }
+            }
+            return {
+                ...t,
+                records: recs,
+                stats: {
+                    hadir: recs.filter(r => r.status === 'hadir').length,
+                    terlambat: recs.filter(r => r.status === 'terlambat').length,
+                    alpha: recs.filter(r => r.status === 'alpha').length,
+                    pulang_awal: recs.filter(r => r.status === 'pulang_awal').length,
+                    total: recs.filter(r => r.status !== 'libur').length,
+                    totalWorkMin,
+                    totalLemburMin,
+                    totalLateMin,
+                    totalPotongan,
+                    totalLemburPay,
+                    avgWorkMin: workDayCount > 0 ? Math.round(totalWorkMin / workDayCount) : 0,
+                }
+            }
+        })
+    }, [teachers, attendance, settings])
+
+    // Daily view — group by teacher for selected date
+    const dailyRows = useMemo(() => {
+        const dayRecs = attendance.filter(a => a.date === selectedDate)
+        const map = Object.fromEntries(dayRecs.map(a => [a.teacher_id, a]))
+        return teachers
+            .filter(t => {
+                const dow = new Date(selectedDate).getDay()
+                const wd = t.work_days || ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu']
+                return wd.includes(HARI_KEY[dow])
+            })
+            .map(t => ({ ...t, record: map[t.id] || null }))
+    }, [teachers, attendance, selectedDate])
+
+    const filtered = useMemo(() => {
+        const src = viewMode === 'harian' ? dailyRows : teacherRows
+        return src.filter(t => {
+            const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase())
+            const matchStatus = !filterStatus || (
+                viewMode === 'harian'
+                    ? t.record?.status === filterStatus
+                    : t.stats[filterStatus] > 0
+            )
+            return matchSearch && matchStatus
+        })
+    }, [viewMode, dailyRows, teacherRows, search, filterStatus])
+
+    // Nav helpers
+    const prevPeriod = () => {
+        if (viewMode === 'harian') {
+            const d = new Date(selectedDate); d.setDate(d.getDate() - 1)
+            setSelectedDate(d.toISOString().slice(0, 10))
+        } else if (viewMode === 'mingguan') {
+            const d = new Date(selectedDate); d.setDate(d.getDate() - 7)
+            setSelectedDate(d.toISOString().slice(0, 10))
+        } else {
+            if (bulan === 1) { setBulan(12); setTahun(y => y - 1) } else setBulan(m => m - 1)
+        }
+    }
+    const nextPeriod = () => {
+        if (viewMode === 'harian') {
+            const d = new Date(selectedDate); d.setDate(d.getDate() + 1)
+            setSelectedDate(d.toISOString().slice(0, 10))
+        } else if (viewMode === 'mingguan') {
+            const d = new Date(selectedDate); d.setDate(d.getDate() + 7)
+            setSelectedDate(d.toISOString().slice(0, 10))
+        } else {
+            if (bulan === 12) { setBulan(1); setTahun(y => y + 1) } else setBulan(m => m + 1)
+        }
+    }
+
+    const periodLabel = useMemo(() => {
+        if (viewMode === 'harian') {
+            const d = new Date(selectedDate)
+            return `${HARI_NAMA[d.getDay()]}, ${fmtDateG(selectedDate)}`
+        }
+        if (viewMode === 'mingguan') {
+            const d = new Date(selectedDate)
+            const dow = d.getDay()
+            const mon = new Date(d); mon.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1))
+            const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+            return `${mon.getDate()} – ${sun.getDate()} ${BULAN_NAMA[sun.getMonth() + 1]} ${sun.getFullYear()}`
+        }
+        return `${BULAN_NAMA[bulan]} ${tahun}`
+    }, [viewMode, selectedDate, bulan, tahun])
+
+    // Monthly grid days
+    const monthDays = useMemo(() => {
+        if (viewMode !== 'bulanan') return []
+        const days = []
+        const total = getDaysInMonth(tahun, bulan)
+        for (let d = 1; d <= total; d++) {
+            const dow = getDow(tahun, bulan, d)
+            days.push({ d, dow, isWeekend: dow === 0 || dow === 6 })
+        }
+        return days
+    }, [viewMode, tahun, bulan])
+
+    // Summary stats for header
+    const summary = useMemo(() => ({
+        total: teachers.length,
+        hadir: attendance.filter(a => a.status === 'hadir').length,
+        terlambat: attendance.filter(a => a.status === 'terlambat').length,
+        alpha: attendance.filter(a => a.status === 'alpha').length,
+    }), [teachers, attendance])
+
+    return (
+        <div className="space-y-4">
+
+            {/* ── Header controls — mirror pola Siswa: view tabs + period nav di luar card ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                {/* View mode tabs */}
+                <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5">
+                    {[
+                        { key: 'harian', label: 'Harian', icon: faCalendarDays },
+                        { key: 'mingguan', label: 'Mingguan', icon: faCalendarDays },
+                        { key: 'bulanan', label: 'Bulanan', icon: faChartSimple },
+                    ].map(v => (
+                        <button key={v.key} onClick={() => setViewMode(v.key)}
+                            className={`h-8 px-4 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all ${viewMode === v.key ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                            <FontAwesomeIcon icon={v.icon} className="text-[9px]" />
+                            {v.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Period nav */}
+                <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5">
+                    <button onClick={prevPeriod} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all">
+                        <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
+                    </button>
+                    <span className="px-3 text-[12px] font-black text-[var(--color-text)] min-w-[160px] text-center tabular-nums">{periodLabel}</span>
+                    <button onClick={nextPeriod} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all">
+                        <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
+                    </button>
+                </div>
+            </div>
+
+            {/* ── Main card — sama strukturnya dengan Siswa: card + toolbar di dalam ── */}
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+
+                {/* Toolbar di dalam card: search + import + settings */}
+                <div className="px-3 md:px-4 py-2.5 border-b border-[var(--color-border)] flex items-center gap-2">
+                    <div className="relative flex-1 max-w-xs">
+                        <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
+                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama guru..."
+                            className="w-full h-8 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-medium text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)] transition-all" />
+                    </div>
+                    <button onClick={() => setShowSettings(true)}
+                        className="h-8 w-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] hover:border-[var(--color-primary)]/40 transition-all shrink-0 ml-auto"
+                        title="Pengaturan absensi guru">
+                        <FontAwesomeIcon icon={faGear} className="text-[11px]" />
+                    </button>
+                    <button onClick={() => setShowImport(true)}
+                        className="h-8 px-3 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black flex items-center gap-1.5 hover:brightness-110 transition-all shrink-0">
+                        <FontAwesomeIcon icon={faFileImport} className="text-[9px]" />
+                        <span className="hidden sm:inline">Import Fingerspot</span>
+                        <span className="sm:hidden">Import</span>
+                    </button>
+                </div>
+
+
+                {/* Main table content (inside card) */}
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-[var(--color-primary)]" />
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <FontAwesomeIcon icon={faCalendarDays} className="text-3xl text-[var(--color-text-muted)] opacity-30" />
+                        <p className="text-[12px] font-black text-[var(--color-text)]">Belum ada data</p>
+                        <p className="text-[10px] text-[var(--color-text-muted)]">Import data dari Fingerspot untuk mulai</p>
+                        <button onClick={() => setShowImport(true)}
+                            className="h-8 px-4 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-black border border-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/20 transition-all">
+                            Import Sekarang
+                        </button>
+                    </div>
+                ) : viewMode === 'harian' ? (
+                    /* Daily view */
+                    <>
+                        <div className="hidden md:grid grid-cols-[1fr_120px_90px_90px_110px_80px] gap-3 px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                            {['Nama Guru', 'Tipe', 'Jam Masuk', 'Jam Keluar', 'Status', ''].map((h, i) => <div key={i}>{h}</div>)}
+                        </div>
+                        <div className="divide-y divide-[var(--color-border)]">
+                            {filtered.map(t => (
+                                <div key={t.id} className="grid grid-cols-1 md:grid-cols-[1fr_120px_90px_90px_110px_80px] gap-3 px-5 py-3 items-center hover:bg-[var(--color-surface-alt)]/40 transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-primary)] font-black text-sm shrink-0">
+                                            {t.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <p className="text-[12px] font-black text-[var(--color-text)]">{t.name}</p>
+                                    </div>
+                                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] w-fit">
+                                        {t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : 'Guru'}
+                                    </span>
+                                    <p className="text-[11px] font-bold text-[var(--color-text)] tabular-nums">{fmtTime(t.record?.scan_in)}</p>
+                                    <p className="text-[11px] font-bold text-[var(--color-text)] tabular-nums">{fmtTime(t.record?.scan_out)}</p>
+                                    <div>{t.record ? <StatusBadge status={t.record.status} /> : <span className="text-[9px] text-[var(--color-text-muted)]">—</span>}</div>
+                                    <button onClick={() => setHistoryTeacher(t)}
+                                        className="h-7 px-2.5 rounded-lg border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-1 transition-colors">
+                                        <FontAwesomeIcon icon={faClockRotateLeft} className="text-[8px]" /> Riwayat
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                ) : viewMode === 'bulanan' ? (
+                    /* Monthly grid view */
+                    <div className="overflow-x-auto">
+                        <table style={{ borderCollapse: 'collapse', minWidth: 'max-content', width: '100%' }}>
+                            <thead>
+                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                    <th rowSpan={2} style={{
+                                        position: 'sticky', left: 0, zIndex: 6,
+                                        width: W_NO, minWidth: W_NO,
+                                        backgroundColor: 'var(--color-surface-alt)',
+                                        borderRight: '1px solid var(--color-border)',
+                                        borderBottom: '2px solid var(--color-border)',
+                                        padding: '8px 4px', textAlign: 'center',
+                                        verticalAlign: 'middle',
+                                        boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)',
+                                    }}>
+                                        <span className="text-[9px] font-black text-[var(--color-text-muted)]">#</span>
+                                    </th>
+                                    <th rowSpan={2} style={{
+                                        position: 'sticky', left: W_NO, zIndex: 6,
+                                        width: W_NAMA, minWidth: W_NAMA,
+                                        backgroundColor: 'var(--color-surface-alt)',
+                                        borderRight: '2px solid var(--color-border)',
+                                        borderBottom: '2px solid var(--color-border)',
+                                        padding: '8px 12px', textAlign: 'left',
+                                        verticalAlign: 'middle',
+                                        boxShadow: '4px 0 8px -4px rgba(0,0,0,0.08)',
+                                    }}>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Nama Guru</span>
+                                    </th>
+                                    {monthDays.map(({ d, isWeekend }) => (
+                                        <th key={d} style={{
+                                            width: 32, minWidth: 32, padding: '6px 0', textAlign: 'center',
+                                            borderBottom: '2px solid var(--color-border)',
+                                            borderLeft: '1px solid var(--color-border)',
+                                            backgroundColor: 'var(--color-surface-alt)',
+                                        }}>
+                                            <span style={{ fontSize: 10, fontWeight: 900, color: isWeekend ? '#f87171' : 'var(--color-text-muted)' }}>{d}</span>
+                                        </th>
+                                    ))}
+                                    <th rowSpan={2} style={{ minWidth: 100, borderBottom: '2px solid var(--color-border)', borderLeft: '2px solid var(--color-border)', background: 'var(--color-surface-alt)', verticalAlign: 'middle' }}>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Ringkasan</span>
+                                    </th>
+                                    <th rowSpan={2} style={{ width: 60, borderBottom: '2px solid var(--color-border)', borderLeft: '1px solid var(--color-border)', background: 'var(--color-surface-alt)', verticalAlign: 'middle' }}>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-blue-500">Jam Kerja</span>
+                                    </th>
+                                    <th rowSpan={2} style={{ width: 60, borderBottom: '2px solid var(--color-border)', borderLeft: '1px solid var(--color-border)', background: 'var(--color-surface-alt)', verticalAlign: 'middle' }}>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-purple-500">Lembur</span>
+                                    </th>
+                                    <th rowSpan={2} style={{ width: 40, borderBottom: '2px solid var(--color-border)', borderLeft: '1px solid var(--color-border)', background: 'var(--color-surface-alt)', verticalAlign: 'middle' }}></th>
+                                </tr>
+                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                    {monthDays.map(({ d, dow, isWeekend }) => (
+                                        <th key={d} style={{ width: 32, minWidth: 32, padding: '2px 0', textAlign: 'center', borderBottom: '1px solid var(--color-border)', borderLeft: '1px solid var(--color-border)', background: 'var(--color-surface-alt)' }}>
+                                            <span style={{ fontSize: 8, fontWeight: 700, color: isWeekend ? '#fca5a5' : 'var(--color-text-muted)', opacity: isWeekend ? 0.8 : 0.4 }}>{DOW_SHORT[dow]}</span>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[var(--color-border)]">
+                                {filtered.map((t, idx) => {
+                                    const recMap = Object.fromEntries(t.records.map(r => [r.date?.slice(8, 10), r]))
+                                    return (
+                                        <tr key={t.id} className="hover:bg-[var(--color-surface-alt)]/30 transition-colors">
+                                            <td style={{
+                                                position: 'sticky', left: 0, zIndex: 4,
+                                                width: W_NO, minWidth: W_NO,
+                                                backgroundColor: 'var(--color-surface)',
+                                                borderRight: '1px solid var(--color-border)',
+                                                textAlign: 'center',
+                                                boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)',
+                                            }}>
+                                                <div className="w-6 h-6 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center mx-auto text-[10px] font-black text-[var(--color-text-muted)]">
+                                                    {idx + 1}
+                                                </div>
+                                            </td>
+                                            <td style={{
+                                                position: 'sticky', left: W_NO, zIndex: 4,
+                                                width: W_NAMA, minWidth: W_NAMA,
+                                                backgroundColor: 'var(--color-surface)',
+                                                borderRight: '2px solid var(--color-border)',
+                                                padding: '8px 12px',
+                                                boxShadow: '4px 0 8px -4px rgba(0,0,0,0.08)',
+                                            }}>
+                                                <p className="text-[11px] font-black text-[var(--color-text)] truncate max-w-[140px]">{t.name}</p>
+                                                <p className="text-[9px] text-[var(--color-text-muted)]">{t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : 'Guru'}</p>
+                                            </td>
+                                            {monthDays.map(({ d, isWeekend }) => {
+                                                const key = String(d).padStart(2, '0')
+                                                const rec = recMap[key]
+                                                const wd = t.work_days || ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu']
+                                                const dow = getDow(tahun, bulan, d)
+                                                const isLibur = !wd.includes(HARI_KEY[dow])
+                                                const status = rec?.status
+                                                const meta = status ? GURU_STATUS_META[status] : null
+                                                const letter = status ? (GURU_LETTER_MAP[status] || status.charAt(0).toUpperCase()) : (isLibur ? 'L' : isWeekend ? '·' : '')
+
+                                                return (
+                                                    <td key={d} style={{
+                                                        width: 32, minWidth: 32, height: 32,
+                                                        borderLeft: '1px solid var(--color-border)',
+                                                        textAlign: 'center', padding: 0,
+                                                        backgroundColor: meta ? undefined : (isLibur || isWeekend ? 'var(--color-surface-alt)' : undefined)
+                                                    }} className={meta ? `${meta.bg} ${meta.border}` : ''}>
+                                                        <span className={`text-[11px] font-black ${meta ? meta.color : (isLibur ? 'text-slate-400/50' : 'text-slate-300/30')}`}>
+                                                            {letter}
+                                                        </span>
+                                                    </td>
+                                                )
+                                            })}
+                                            <td style={{ padding: '0 12px', borderLeft: '2px solid var(--color-border)' }}>
+                                                <div className="flex gap-1 flex-wrap items-center">
+                                                    {t.stats.hadir > 0 && <span className="text-[8px] font-black text-emerald-600 bg-emerald-500/8 px-1.5 py-0.5 rounded-md border border-emerald-500/20">{t.stats.hadir} H</span>}
+                                                    {t.stats.terlambat > 0 && <span className="text-[8px] font-black text-amber-600 bg-amber-500/8 px-1.5 py-0.5 rounded-md border border-amber-500/20">{t.stats.terlambat} T</span>}
+                                                    {t.stats.alpha > 0 && <span className="text-[8px] font-black text-red-600 bg-red-500/8 px-1.5 py-0.5 rounded-md border border-red-500/20">{t.stats.alpha} A</span>}
+                                                </div>
+                                            </td>
+                                            <td style={{ textAlign: 'center', borderLeft: '1px solid var(--color-border)' }}>
+                                                <span className="text-[10px] font-black text-blue-600 tabular-nums">{fmtDurationG(t.stats.totalWorkMin)}</span>
+                                            </td>
+                                            <td style={{ textAlign: 'center', borderLeft: '1px solid var(--color-border)' }}>
+                                                <span className="text-[10px] font-black text-purple-600 tabular-nums">{t.stats.totalLemburMin > 0 ? fmtDurationG(t.stats.totalLemburMin) : '—'}</span>
+                                            </td>
+                                            <td style={{ textAlign: 'center', borderLeft: '1px solid var(--color-border)' }}>
+                                                <button onClick={() => setHistoryTeacher(t)}
+                                                    className="w-7 h-7 rounded-lg border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors mx-auto">
+                                                    <FontAwesomeIcon icon={faEye} className="text-[9px]" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    /* Weekly view — same as monthly but filtered to 7 days */
+                    <div className="divide-y divide-[var(--color-border)]">
+                        {filtered.map(t => (
+                            <div key={t.id} className="px-5 py-3 flex items-center gap-4">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[12px] font-black text-[var(--color-text)] truncate">{t.name}</p>
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                        {t.records.map(r => (
+                                            <div key={r.id} className="flex items-center gap-1">
+                                                <span className="text-[9px] text-[var(--color-text-muted)]">{HARI_NAMA[new Date(r.date).getDay()].slice(0, 3)}</span>
+                                                <StatusBadge status={r.status} size="xs" />
+                                            </div>
+                                        ))}
+                                        {t.records.length === 0 && <span className="text-[9px] text-[var(--color-text-muted)]">Tidak ada data minggu ini</span>}
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <p className="text-[10px] font-black text-[var(--color-text)]">{t.stats.hadir + t.stats.terlambat}/{t.stats.total} hari</p>
+                                    <p className="text-[9px] text-[var(--color-text-muted)]">kehadiran</p>
+                                </div>
+                                <button onClick={() => setHistoryTeacher(t)}
+                                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors shrink-0">
+                                    <FontAwesomeIcon icon={faEye} className="text-xs" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>{/* end main card */}
+
+            {/* Import modal */}
+            {
+                showImport && (
+                    <FingerspotImportModal
+                        teachers={teachers}
+                        onClose={() => setShowImport(false)}
+                        onImported={loadData}
+                    />
+                )
+            }
+
+            {/* Settings modal */}
+            {showSettings && (
+                <AttendanceSettingsModal
+                    settings={settings}
+                    onSave={(s) => setSettings(s)}
+                    onClose={() => setShowSettings(false)}
+                />
+            )}
+
+            {/* History drawer */}
+            {
+                historyTeacher && (
+                    <HistoryDrawer
+                        teacher={historyTeacher}
+                        onClose={() => setHistoryTeacher(null)}
+                        settings={settings}
+                    />
+                )
+            }
+        </div>
+    )
+}
+
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AbsensiPage() {
@@ -2115,6 +3676,7 @@ export default function AbsensiPage() {
     const [loadingData, setLoadingData] = useState(false)
     const [saving, setSaving] = useState(false)
     const [isDirty, setIsDirty] = useState(false)
+    const [mainTab, setMainTab] = useState('siswa')
     const [activeTab, setActiveTab] = useState('input')
     const [isOnline, setIsOnline] = useState(() => typeof navigator !== 'undefined' ? navigator.onLine : true)
     const [draftAvail, setDraftAvail] = useState(false)
@@ -2737,51 +4299,75 @@ export default function AbsensiPage() {
 
     // ─── Render ───────────────────────────────────────────────────────────────
     return (
-        <AbsensiErrorBoundary>
-            <DashboardLayout>
-                <div className="p-4 md:p-6 max-w-[1800px] mx-auto">
+        <DashboardLayout>
+            <div className="p-4 md:p-6 max-w-[1800px] mx-auto">
 
-                    {/* Page header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                        <div>
-                            <Breadcrumb badge="Reports" items={['Attendance Analytics']} className="mb-1" />
-                            <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Absensi Bulanan</h1>
-                            <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">
-                                <span className="sm:hidden">Input &amp; rekap absensi siswa per bulan.</span>
-                                <span className="hidden sm:inline">Klik sel untuk ganti status · Tahan &amp; geser untuk isi banyak · Klik nama/tanggal untuk isi cepat</span>
-                            </p>
-                            <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
-                                Mulai dari filter kelas &amp; bulan, lalu gunakan shortcut dan drag untuk mempercepat input harian.
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            {/* ⌘K Command palette button */}
-                            <button
-                                onClick={() => { setShowCommandPalette(true); haptic('light') }}
-                                className="h-8 px-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black flex items-center gap-1.5 hover:bg-[var(--color-border)] hover:text-[var(--color-text)] active:scale-95 transition-all"
-                                title="Command Palette (Ctrl+K)"
-                            >
-                                <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" />
-                                <span>⌘ K</span>
-                            </button>
-                            {/* Tutorial button — amber/kuning */}
-                            <button
-                                onClick={() => setShowTutorial(true)}
-                                className="h-8 px-3 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center gap-1.5 hover:bg-amber-500/15 active:scale-95 transition-all"
-                                title="Panduan & Tutorial"
-                            >
-                                <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
-                                <span>Tutorial</span>
-                            </button>
-                            {/* Online indicator — hanya tampil kalau offline */}
-                            {!isOnline && (
-                                <div className="flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-full border text-red-500 border-red-500/20 bg-red-500/5 transition-colors">
-                                    <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-red-500" />
-                                    <span className="hidden sm:inline">Offline</span>
-                                </div>
-                            )}
-                        </div>
+                {/* Page header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <Breadcrumb badge="Reports" items={['Attendance Analytics']} className="mb-1" />
+                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Absensi Bulanan</h1>
+                        <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">
+                            <span className="sm:hidden">Input &amp; rekap absensi siswa per bulan.</span>
+                            <span className="hidden sm:inline">Klik sel untuk ganti status · Tahan &amp; geser untuk isi banyak · Klik nama/tanggal untuk isi cepat</span>
+                        </p>
+                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                            Mulai dari filter kelas &amp; bulan, lalu gunakan shortcut dan drag untuk mempercepat input harian.
+                        </p>
                     </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        {/* ⌘K + Tutorial — hanya tampil di tab Siswa */}
+                        {mainTab === 'siswa' && (
+                            <>
+                                <button
+                                    onClick={() => { setShowCommandPalette(true); haptic('light') }}
+                                    className="h-8 px-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black flex items-center gap-1.5 hover:bg-[var(--color-border)] hover:text-[var(--color-text)] active:scale-95 transition-all"
+                                    title="Command Palette (Ctrl+K)"
+                                >
+                                    <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" />
+                                    <span>⌘ K</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowTutorial(true)}
+                                    className="h-8 px-3 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center gap-1.5 hover:bg-amber-500/15 active:scale-95 transition-all"
+                                    title="Panduan & Tutorial"
+                                >
+                                    <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
+                                    <span>Tutorial</span>
+                                </button>
+                            </>
+                        )}
+                        {/* Online indicator — hanya tampil kalau offline */}
+                        {!isOnline && (
+                            <div className="flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-full border text-red-500 border-red-500/20 bg-red-500/5 transition-colors">
+                                <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-red-500" />
+                                <span className="hidden sm:inline">Offline</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── Main Tab: Siswa / Guru ── */}
+                <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 w-fit mb-5">
+                    {[
+                        { key: 'siswa', label: 'Absensi Siswa', icon: faChalkboardTeacher },
+                        { key: 'guru', label: 'Absensi Guru', icon: faUsers },
+                    ].map(t => (
+                        <button key={t.key} onClick={() => setMainTab(t.key)}
+                            className={`h-8 px-4 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all ${mainTab === t.key
+                                ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm'
+                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                            <FontAwesomeIcon icon={t.icon} className="text-[10px]" />
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* ── Guru Tab ── */}
+                {mainTab === 'guru' && <GuruTab />}
+
+                {/* ── Siswa Tab ── */}
+                {mainTab === 'siswa' && <>
 
                     {/* Controls bar */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
@@ -2850,7 +4436,7 @@ export default function AbsensiPage() {
 
                     {/* Draft banner */}
                     {draftAvail && !isDirty && (
-                        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+                        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-amber-500/20 bg-amber-500/5 mb-4">
                             <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-500 shrink-0" />
                             <p className="text-[11px] text-amber-600 font-medium flex-1">Ada draft dari sesi sebelumnya</p>
                             <button onClick={() => {
@@ -2867,19 +4453,18 @@ export default function AbsensiPage() {
                     )}
 
                     {/* Main card */}
-                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
 
                         {/* ══ TAB INPUT ══════════════════════════════════════════ */}
                         {activeTab === 'input' && (
                             <>
                                 {/* ── Toolbar ── */}
-                                <div className="px-3 md:px-4 py-2 border-b border-[var(--color-border)] space-y-1.5">
+                                <div className="px-3 md:px-4 py-3 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-y-3 gap-x-4">
 
-                                    {/* ── Baris 1: Actions utama ── */}
-                                    <div className="flex items-center gap-1.5">
-                                        {/* scrollable area — gear button sengaja di LUAR ini */}
-                                        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 flex-1" style={{ scrollbarWidth: 'none' }}>
-                                            {/* Aksi Massal */}
+                                    {/* Left Side: Actions & Controls */}
+                                    <div className="flex items-center gap-2.5 flex-wrap">
+                                        {/* Group: Data Actions */}
+                                        <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shadow-sm">
                                             <MassActionDropdown
                                                 studentList={studentList}
                                                 dataMap={dataMap}
@@ -2890,95 +4475,95 @@ export default function AbsensiPage() {
                                                 onDirty={markDirty}
                                                 addToast={addToast}
                                             />
-
-                                            {/* Copy Bln Lalu */}
-                                            <button
-                                                onClick={handleCopyLastMonth}
-                                                disabled={copyingLastMonth || loadingData}
-                                                className="h-8 px-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-40"
-                                                title="Copy bulan lalu"
-                                            >
+                                            <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
+                                            <button onClick={handleCopyLastMonth} disabled={copyingLastMonth || loadingData}
+                                                className="h-8 px-2.5 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all flex items-center gap-1.5 disabled:opacity-40"
+                                                title="Salin data dari bulan lalu">
                                                 {copyingLastMonth ? <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[9px]" /> : <FontAwesomeIcon icon={faCopy} className="text-[9px]" />}
-                                                <span className="hidden sm:inline">Copy Bln Lalu</span>
-                                                <span className="sm:hidden">Copy</span>
+                                                <span className="hidden lg:inline">Salin Bulan Lalu</span>
+                                                <span className="lg:hidden sm:inline">Salin</span>
                                             </button>
-
-                                            {/* Import */}
-                                            <button
-                                                onClick={() => setShowImport(true)}
-                                                className="h-8 px-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
-                                                title="Import Excel/CSV"
-                                            >
+                                            <button onClick={() => setShowImport(true)}
+                                                className="h-8 px-2.5 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all flex items-center gap-1.5"
+                                                title="Import data">
                                                 <FontAwesomeIcon icon={faFileImport} className="text-[9px]" />
                                                 <span className="hidden sm:inline">Import</span>
                                             </button>
+                                        </div>
 
-                                            {/* Divider */}
-                                            <div className="w-px h-5 bg-[var(--color-border)] mx-0.5 shrink-0" />
+                                        {/* Group: History & Navigation */}
+                                        <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shadow-sm">
+                                            <button onClick={applyUndo} disabled={!canUndo} title="Batalkan (Ctrl+Z)"
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30">
+                                                <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
+                                            </button>
+                                            <button onClick={applyRedo} disabled={!canRedo} title="Ulangi (Ctrl+Y)"
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30">
+                                                <FontAwesomeIcon icon={faRotateRight} className="text-[10px]" />
+                                            </button>
+                                            <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
+                                            <button onClick={handleScrollToToday} disabled={!todayDate}
+                                                className="h-8 px-3 rounded-lg text-[10px] font-black text-indigo-600 hover:bg-indigo-500/10 transition-all flex items-center gap-1.5 disabled:opacity-40"
+                                                title="Scroll ke kolom hari ini">
+                                                <FontAwesomeIcon icon={faCrosshairs} className="text-[9px]" />
+                                                <span className="hidden sm:inline text-indigo-700">HARI INI</span>
+                                            </button>
+                                        </div>
 
-                                            {/* Undo / Redo */}
-                                            <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shrink-0">
-                                                <button onClick={applyUndo} disabled={!canUndo} title="Batalkan (Ctrl+Z)"
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
-                                                </button>
-                                                <button onClick={applyRedo} disabled={!canRedo} title="Ulangi (Ctrl+Y)"
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                                                    <FontAwesomeIcon icon={faRotateRight} className="text-[10px]" />
-                                                </button>
+                                        {/* Group: View Settings (Desktop) */}
+                                        <div className="hidden sm:flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shadow-sm">
+                                            <button onClick={() => setHideWeekend(v => !v)}
+                                                className={`h-8 px-3 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 ${hideWeekend ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'}`}
+                                                title="Toggle akhir pekan">
+                                                <FontAwesomeIcon icon={hideWeekend ? faEyeSlash : faEye} className="text-[9px]" />
+                                                <span className="hidden lg:inline">{hideWeekend ? 'Tampilkan Weekend' : 'Sembunyikan Weekend'}</span>
+                                            </button>
+                                            <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
+                                            <select value={filterMode} onChange={e => setFilterMode(e.target.value)}
+                                                className={`h-8 px-2 rounded-lg text-[10px] font-black outline-none cursor-pointer bg-transparent transition-all ${filterMode !== 'all' ? 'text-amber-600' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                                <option value="all">Semua Siswa</option>
+                                                <option value="alpa">Alpa ≥ {alertThreshold.alpa}</option>
+                                                <option value="belum">Belum diisi</option>
+                                            </select>
+                                            <button onClick={() => setShowAlertConfig(true)}
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all"
+                                                title="Konfigurasi alert">
+                                                <FontAwesomeIcon icon={faBell} className="text-[10px]" />
+                                            </button>
+                                        </div>
+
+                                        {/* Legend — Compact (Desktop Only) */}
+                                        <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 bg-[var(--color-surface-alt)]/50 rounded-xl border border-[var(--color-border)]">
+                                            {STATUS_LIST.map(s => (
+                                                <div key={s}
+                                                    className={`w-6 h-6 rounded-md border flex items-center justify-center text-[10px] font-black cursor-help transition-all hover:scale-110 shadow-sm ${STATUS_META[s].cellBg} ${STATUS_META[s].color} ${STATUS_META[s].cellBorder}`}
+                                                    title={STATUS_META[s].label}>
+                                                    {s}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Right Side: Search & Progress */}
+                                    <div className="flex items-center gap-4 ml-auto">
+                                        {/* Desktop Progress - Vertical alignment fixed */}
+                                        <div className="hidden lg:flex flex-col items-end gap-1 min-w-[100px]">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">Penyelesaian</span>
+                                                <span className={`text-[10px] font-black tabular-nums ${completionPct === 100 ? 'text-emerald-600' : completionPct >= 60 ? 'text-indigo-600' : 'text-amber-600'}`}>{completionPct}%</span>
                                             </div>
-
-                                            {/* Desktop-only: separator + Hide Weekend + Filter */}
-                                            <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-                                                <div className="w-px h-5 bg-[var(--color-border)] mx-0.5" />
-                                                <button
-                                                    onClick={() => setHideWeekend(v => !v)}
-                                                    className={`h-8 px-2.5 rounded-xl border text-[10px] font-black active:scale-95 transition-all flex items-center gap-1.5 shrink-0 ${hideWeekend
-                                                        ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600'
-                                                        : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                                                >
-                                                    <FontAwesomeIcon icon={hideWeekend ? faEyeSlash : faEye} className="text-[9px]" />
-                                                    {hideWeekend ? 'Tampilkan Weekend' : 'Sembunyikan Weekend'}
-                                                </button>
-                                                <select
-                                                    value={filterMode}
-                                                    onChange={e => setFilterMode(e.target.value)}
-                                                    className={`h-8 pl-3 pr-3 rounded-xl border text-[10px] font-black appearance-none cursor-pointer transition-all focus:outline-none focus:border-[var(--color-primary)] ${filterMode !== 'all'
-                                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
-                                                        : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}
-                                                    style={{ backgroundImage: 'none' }}
-                                                >
-                                                    <option value="all">Semua Siswa</option>
-                                                    <option value="alpa">Alpa ≥ {alertThreshold.alpa} hari</option>
-                                                    <option value="belum">Belum diisi</option>
-                                                </select>
-                                            </div>
-
-                                            {/* Legend — xl only */}
-                                            <div className="hidden xl:flex items-center gap-1.5 ml-1 shrink-0">
-                                                {STATUS_LIST.map(s => (
-                                                    <span key={s} className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${STATUS_META[s].cellBg} ${STATUS_META[s].color} ${STATUS_META[s].cellBorder}`}>
-                                                        {s} = {STATUS_META[s].label}
-                                                    </span>
-                                                ))}
+                                            <div className="w-full h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
+                                                <div className="h-full transition-all duration-700 ease-out"
+                                                    style={{
+                                                        width: `${completionPct}%`,
+                                                        backgroundColor: completionPct === 100 ? '#059669' : completionPct >= 60 ? '#6366f1' : '#d97706',
+                                                        boxShadow: '0 0 4px rgba(0,0,0,0.1)'
+                                                    }}
+                                                />
                                             </div>
                                         </div>
 
-                                        {/* More/Settings — mobile only, STICKY kanan, di luar scroll */}
-                                        <button
-                                            onClick={() => setShowMobileSheet(true)}
-                                            className={`sm:hidden h-8 px-2.5 rounded-xl border text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0 ${(hideWeekend || filterMode !== 'all')
-                                                ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
-                                                : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}
-                                        >
-                                            <FontAwesomeIcon icon={faGear} className="text-[10px]" />
-                                            {(hideWeekend || filterMode !== 'all') && <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />}
-                                        </button>
-                                    </div>
-
-                                    {/* ── Baris 2: Konteks & Search ── */}
-                                    <div className="flex items-center gap-2">
-                                        {/* View switcher — mobile only */}
+                                        {/* View switcher — mobile only (Tighter) */}
                                         <div className="sm:hidden flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shrink-0">
                                             {[
                                                 { key: 'table', icon: faTableCells, label: 'Tabel' },
@@ -2987,54 +4572,16 @@ export default function AbsensiPage() {
                                             ].map(v => (
                                                 <button key={v.key}
                                                     onClick={() => { setMobileView(v.key); try { localStorage.setItem('absensi_mobile_view', v.key) } catch { } }}
-                                                    title={v.label}
-                                                    className={`w-8 h-7 rounded-lg flex items-center justify-center text-[10px] transition-all ${mobileView === v.key ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                                    className={`w-8 h-7 rounded-lg flex items-center justify-center text-[10px] transition-all ${mobileView === v.key ? 'bg-white shadow-sm text-indigo-600' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                                                     <FontAwesomeIcon icon={v.icon} />
                                                 </button>
                                             ))}
                                         </div>
 
-                                        {/* Hari Ini */}
-                                        {todayDate && (
-                                            <button
-                                                onClick={handleScrollToToday}
-                                                className="h-7 px-2.5 rounded-lg border border-indigo-500/30 bg-indigo-500/8 text-indigo-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-indigo-500/15 active:scale-95 transition-all shrink-0"
-                                            >
-                                                <FontAwesomeIcon icon={faCrosshairs} className="text-[9px]" />
-                                                Hari Ini
-                                            </button>
-                                        )}
-
-                                        {/* Alert config — desktop only */}
-                                        <button
-                                            onClick={() => setShowAlertConfig(true)}
-                                            className="hidden sm:flex h-7 px-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-all items-center gap-1.5 shrink-0"
-                                        >
-                                            <FontAwesomeIcon icon={faBell} className="text-[9px]" />
-                                            Alert
-                                        </button>
-
-                                        {/* Spacer */}
-                                        <div className="flex-1" />
-
-                                        {/* Completion progress — desktop */}
+                                        {/* Mobile completion compact */}
                                         {studentList.length > 0 && (
-                                            <div className="hidden sm:flex items-center gap-2 shrink-0">
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Terisi</span>
-                                                <div className="w-20 h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
-                                                    <div className="h-full rounded-full transition-all duration-300"
-                                                        style={{ width: `${completionPct}%`, background: completionPct === 100 ? '#059669' : completionPct >= 60 ? '#6366f1' : '#d97706' }} />
-                                                </div>
-                                                <span className={`text-[10px] font-black tabular-nums min-w-[28px] ${completionPct === 100 ? 'text-emerald-600' : completionPct >= 60 ? 'text-indigo-500' : 'text-amber-600'}`}>
-                                                    {completionPct}%
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* Completion mobile compact */}
-                                        {studentList.length > 0 && (
-                                            <div className="sm:hidden flex items-center gap-1.5 shrink-0">
-                                                <div className="w-14 h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
+                                            <div className="sm:hidden flex items-center gap-2 px-2 py-1 bg-[var(--color-surface-alt)] rounded-lg border border-[var(--color-border)] shrink-0">
+                                                <div className="w-10 h-1 rounded-full bg-[var(--color-border)] overflow-hidden">
                                                     <div className="h-full rounded-full transition-all duration-300"
                                                         style={{ width: `${completionPct}%`, background: completionPct === 100 ? '#059669' : completionPct >= 60 ? '#6366f1' : '#d97706' }} />
                                                 </div>
@@ -3044,39 +4591,29 @@ export default function AbsensiPage() {
                                             </div>
                                         )}
 
-                                        {/* Search — desktop inline */}
-                                        {studentList.length > 5 && (
-                                            <div className="hidden sm:flex items-center gap-2 h-7 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 w-52 shrink-0">
-                                                <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[var(--color-text-muted)] text-[10px] shrink-0" />
-                                                <input type="text" placeholder="Cari nama / NISN..."
-                                                    value={searchRaw} onChange={e => setSearchRaw(e.target.value)}
-                                                    className="flex-1 text-[11px] bg-transparent border-none outline-none text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/50 min-w-0" />
-                                                {searchRaw && (
-                                                    <button onClick={() => setSearchRaw('')} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-[10px]">&times;</button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* ── Baris 3: Search full-width — mobile only ── */}
-                                    {studentList.length > 5 && (
-                                        <div className="sm:hidden flex items-center gap-2 h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50">
-                                            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[var(--color-text-muted)] text-[10px] shrink-0" />
-                                            <input type="text" placeholder="Cari nama atau NISN..."
-                                                value={searchRaw} onChange={e => setSearchRaw(e.target.value)}
-                                                className="flex-1 text-[12px] bg-transparent border-none outline-none text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/50 min-w-0" />
+                                        {/* Search Input — Refined */}
+                                        <div className="relative group min-w-[160px] lg:min-w-[240px]">
+                                            <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
+                                            <input value={searchRaw} onChange={e => setSearchRaw(e.target.value)} placeholder="Cari nama / NISN..."
+                                                className="w-full h-8 pl-8 pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[11px] font-medium text-[var(--color-text)] outline-none focus:border-indigo-500 focus:bg-[var(--color-surface)] focus:shadow-md transition-all placeholder:opacity-50" />
                                             {searchRaw && (
-                                                <button onClick={() => setSearchRaw('')} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-[11px] shrink-0">&times;</button>
+                                                <button onClick={() => setSearchRaw('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 text-[12px] transition-colors">&times;</button>
                                             )}
                                         </div>
-                                    )}
-                                </div>{/* end toolbar */}
+
+                                        <button onClick={() => setShowMobileSheet(true)}
+                                            className="sm:hidden w-8 h-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] shadow-sm text-indigo-600 flex items-center justify-center active:scale-95 transition-transform">
+                                            <FontAwesomeIcon icon={faGear} className="text-xs" />
+                                        </button>
+                                    </div>
+
+                                </div>
 
                                 {/* ── Mobile toolbar sheet ── */}
                                 <MobileToolbarSheet open={showMobileSheet} onClose={() => setShowMobileSheet(false)}>
                                     {/* Hide Weekend */}
                                     <button
-                                        onClick={() => { setHideWeekend(v => !v) }}
+                                        onClick={() => setHideWeekend(v => !v)}
                                         className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${hideWeekend
                                             ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600'
                                             : 'border-[var(--color-border)] text-[var(--color-text)]'}`}
@@ -3183,7 +4720,7 @@ export default function AbsensiPage() {
                                                             backgroundColor: 'var(--color-surface-alt)',
                                                             borderRight: '1px solid var(--color-border)',
                                                             borderBottom: '2px solid var(--color-border)',
-                                                            padding: '8px 4px', textAlign: 'center',
+                                                            padding: '0 4px', textAlign: 'center',
                                                             boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)',
                                                             verticalAlign: 'middle',
                                                         }}
@@ -3199,8 +4736,8 @@ export default function AbsensiPage() {
                                                             backgroundColor: 'var(--color-surface-alt)',
                                                             borderRight: '2px solid var(--color-border)',
                                                             borderBottom: '2px solid var(--color-border)',
-                                                            padding: '8px 12px', textAlign: 'left',
-                                                            boxShadow: '4px 0 8px -4px rgba(0,0,0,0.08)',
+                                                            padding: '0 12px', textAlign: 'left',
+                                                            boxShadow: '4px 0 10px -4px rgba(0,0,0,0.12)',
                                                             verticalAlign: 'middle',
                                                         }}
                                                     >
@@ -3218,71 +4755,77 @@ export default function AbsensiPage() {
                                                                 : undefined
                                                             }
                                                             style={{
-                                                                width: 32, minWidth: 32,
-                                                                padding: '6px 0',
+                                                                width: 36, minWidth: 36,
+                                                                padding: '8px 0',
                                                                 textAlign: 'center',
                                                                 borderBottom: '2px solid var(--color-border)',
-                                                                borderLeft: d === todayDate ? '1px solid #6366f180' : '1px solid var(--color-border)',
-                                                                backgroundColor: d === todayDate ? '#6366f108' : 'var(--color-surface-alt)',
+                                                                borderLeft: d === todayDate ? '1px solid #6366f130' : '1px solid var(--color-border)',
+                                                                backgroundColor: d === todayDate ? '#6366f108' : weekend ? '#fee2e240' : 'var(--color-surface-alt)',
                                                                 cursor: 'pointer',
+                                                                transition: 'background-color 0.2s',
                                                             }}
                                                             title={`Klik untuk isi semua siswa — tgl ${d}`}
-                                                            className="hover:brightness-95"
+                                                            className="group hover:bg-indigo-50/50"
                                                         >
-                                                            <span style={{
-                                                                fontSize: 10, fontWeight: 900,
-                                                                color: d === todayDate ? '#6366f1' : weekend ? '#f87171' : 'var(--color-text-muted)',
-                                                            }}>
+                                                            <span className={`text-[11px] font-black transition-transform group-active:scale-90 inline-block`}
+                                                                style={{ color: d === todayDate ? '#6366f1' : weekend ? '#ef4444' : 'var(--color-text-muted)' }}>
                                                                 {d}
                                                             </span>
                                                         </th>
                                                     ))}
-                                                    {/* Summary headers — rowSpan 2, merge vertikal */}
-                                                    {STATUS_LIST.map((s, i) => (
-                                                        <th key={s}
-                                                            rowSpan={2}
-                                                            style={{
-                                                                width: 28, minWidth: 28,
-                                                                padding: '6px 2px', textAlign: 'center',
-                                                                borderBottom: '2px solid var(--color-border)',
-                                                                borderLeft: i === 0 ? '2px solid var(--color-border)' : '1px solid var(--color-border)',
-                                                                background: 'var(--color-surface-alt)',
-                                                                verticalAlign: 'middle',
-                                                            }}
-                                                        >
-                                                            <span className={`text-[9px] font-black ${STATUS_META[s].color}`}>{s}</span>
-                                                        </th>
-                                                    ))}
+                                                    {/* Summary headers — STICKY RIGHT */}
+                                                    {STATUS_LIST.map((s, i) => {
+                                                        const rightOffset = 40 + (STATUS_LIST.length - 1 - i) * 28;
+                                                        return (
+                                                            <th key={s}
+                                                                rowSpan={2}
+                                                                style={{
+                                                                    position: 'sticky', right: rightOffset, zIndex: 6,
+                                                                    width: 28, minWidth: 28,
+                                                                    padding: '6px 2px', textAlign: 'center',
+                                                                    borderBottom: '2px solid var(--color-border)',
+                                                                    borderLeft: i === 0 ? '2px solid var(--color-border)' : '1px solid var(--color-border)',
+                                                                    background: 'var(--color-surface-alt)',
+                                                                    verticalAlign: 'middle',
+                                                                    boxShadow: i === 0 ? '-4px 0 8px -4px rgba(0,0,0,0.08)' : 'none'
+                                                                }}
+                                                            >
+                                                                <span className={`text-[9px] font-black ${STATUS_META[s].color}`}>{s}</span>
+                                                            </th>
+                                                        );
+                                                    })}
                                                     <th rowSpan={2} style={{
+                                                        position: 'sticky', right: 0, zIndex: 6,
                                                         width: 40, minWidth: 40,
                                                         padding: '6px 2px', textAlign: 'center',
                                                         borderBottom: '2px solid var(--color-border)',
                                                         borderLeft: '2px solid var(--color-border)',
                                                         background: 'var(--color-surface-alt)',
                                                         verticalAlign: 'middle',
+                                                        boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.06)'
                                                     }}>
                                                         <span className="text-[9px] font-black text-[var(--color-text-muted)]">%</span>
                                                     </th>
                                                 </tr>
 
                                                 {/* Row 2: nama hari */}
-                                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                                <tr className="bg-[var(--color-surface-alt)]">
                                                     {/* # dan Nama sudah di-rowSpan dari Row 1, tidak perlu placeholder */}
                                                     {dayMeta.filter(dm => !(hideWeekend && dm.weekend) && !dm.invalid).map(({ d, weekend, dow }) => (
                                                         <th key={d}
                                                             style={{
-                                                                width: 32, minWidth: 32, padding: '2px 0', textAlign: 'center',
+                                                                width: 36, minWidth: 36, padding: '4px 0', textAlign: 'center',
                                                                 borderBottom: '1px solid var(--color-border)',
-                                                                borderLeft: '1px solid var(--color-border)',
-                                                                background: 'var(--color-surface-alt)',
+                                                                borderLeft: d === todayDate ? '1px solid #6366f130' : '1px solid var(--color-border)',
+                                                                backgroundColor: d === todayDate ? '#6366f108' : weekend ? '#fee2e240' : 'var(--color-surface-alt)',
                                                             }}
                                                         >
-                                                            <span style={{ fontSize: 8, fontWeight: 700, color: weekend ? '#fca5a5' : 'var(--color-text-muted)', opacity: weekend ? 0.8 : 0.4 }}>
+                                                            <span className={`text-[8px] font-bold uppercase tracking-tighter`}
+                                                                style={{ color: weekend ? '#f87171' : 'var(--color-text-muted)', opacity: d === todayDate ? 1 : 0.6 }}>
                                                                 {DOW_SHORT[dow]}
                                                             </span>
                                                         </th>
                                                     ))}
-                                                    {/* H/S/I/A/P dan % sudah di-rowSpan dari Row 1, tidak perlu placeholder */}
                                                 </tr>
                                             </thead>
 
@@ -3389,7 +4932,7 @@ export default function AbsensiPage() {
                                             {/* Footer total per kolom */}
                                             {!loadingData && studentList.length > 0 && (
                                                 <tfoot>
-                                                    <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                                    <tr className="bg-[var(--color-surface-alt)]">
                                                         <td
                                                             style={{ position: 'sticky', left: 0, zIndex: 4, width: W_NO, minWidth: W_NO, backgroundColor: 'var(--color-surface-alt)', borderTop: '2px solid var(--color-border)', borderRight: '1px solid var(--color-border)', boxShadow: '2px 0 4px -2px rgba(0,0,0,0.06)' }}
                                                         />
@@ -3416,20 +4959,30 @@ export default function AbsensiPage() {
                                                             )
                                                         })}
                                                         {STATUS_LIST.map((s, i) => {
+                                                            const rightOffset = 40 + (STATUS_LIST.length - 1 - i) * 28;
                                                             const total = studentList.reduce((acc, st) =>
                                                                 acc + Object.values(dataMap[st.id] || {}).filter(v => v === s).length, 0)
                                                             return (
                                                                 <td key={s} style={{
+                                                                    position: 'sticky', right: rightOffset, zIndex: 4,
                                                                     width: 28, minWidth: 28, textAlign: 'center',
                                                                     borderTop: '2px solid var(--color-border)',
                                                                     borderLeft: i === 0 ? '2px solid var(--color-border)' : '1px solid var(--color-border)',
                                                                     background: 'var(--color-surface-alt)',
+                                                                    boxShadow: i === 0 ? '-4px 0 8px -4px rgba(0,0,0,0.08)' : 'none'
                                                                 }}>
                                                                     <span className={`text-[10px] font-black ${STATUS_META[s].color} ${total === 0 ? 'opacity-20' : ''}`}>{total}</span>
                                                                 </td>
                                                             )
                                                         })}
-                                                        <td style={{ width: 40, minWidth: 40, borderTop: '2px solid var(--color-border)', borderLeft: '2px solid var(--color-border)', background: 'var(--color-surface-alt)' }} />
+                                                        <td style={{
+                                                            position: 'sticky', right: 0, zIndex: 4,
+                                                            width: 40, minWidth: 40,
+                                                            borderTop: '2px solid var(--color-border)',
+                                                            borderLeft: '2px solid var(--color-border)',
+                                                            background: 'var(--color-surface-alt)',
+                                                            boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.06)'
+                                                        }} />
                                                     </tr>
                                                 </tfoot>
                                             )}
@@ -3468,120 +5021,123 @@ export default function AbsensiPage() {
                         )}
 
                     </div>
-                </div>
 
-                {/* Floating save bar */}
-                <div className={`fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 px-4 w-full sm:w-auto ${isDirty && activeTab === 'input'
-                    ? 'opacity-100 translate-y-0 pointer-events-auto'
-                    : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-                    <div className="flex items-center gap-2 sm:gap-3 px-4 py-2.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-2xl">
-                        <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400 shrink-0" />
-                        <span className="text-[11px] text-[var(--color-text-muted)] font-medium flex-1 sm:flex-none">
-                            <span className="hidden sm:inline">Ada perubahan belum disimpan</span>
-                            <span className="sm:hidden">Belum disimpan</span>
-                        </span>
-                        <button onClick={handleReset}
-                            className="h-8 px-3 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 shrink-0">
-                            <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
-                            <span className="hidden sm:inline">Reset</span>
-                        </button>
-                        <button onClick={handleSave} disabled={saving}
-                            className="h-8 px-4 rounded-xl bg-[var(--color-primary)] hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-60 shrink-0">
-                            {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faSave} />}
-                            Simpan
-                        </button>
+                    {/* Floating save bar */}
+                    <div className={`fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 px-4 w-full sm:w-auto ${isDirty && activeTab === 'input'
+                        ? 'opacity-100 translate-y-0 pointer-events-auto'
+                        : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                        <div className="flex items-center gap-2 sm:gap-3 px-4 py-2.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-2xl">
+                            <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400 shrink-0" />
+                            <span className="text-[11px] text-[var(--color-text-muted)] font-medium flex-1 sm:flex-none">
+                                <span className="hidden sm:inline">Ada perubahan belum disimpan</span>
+                                <span className="sm:hidden">Belum disimpan</span>
+                            </span>
+                            <button onClick={handleReset}
+                                className="h-8 px-3 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 shrink-0">
+                                <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
+                                <span className="hidden sm:inline">Reset</span>
+                            </button>
+                            <button onClick={handleSave} disabled={saving}
+                                className="h-8 px-4 rounded-xl bg-[var(--color-primary)] hover:opacity-90 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-60 shrink-0">
+                                {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faSave} />}
+                                Simpan
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                <div className="h-8" />
+                    <div className="h-8" />
 
-                {/* Tutorial modal */}
-                {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
+                    {/* Confirm Modal — ganti kelas/bulan saat ada perubahan */}
+                    {confirmModal && (
+                        <ConfirmModal
+                            message={confirmModal.message}
+                            confirmLabel={confirmModal.confirmLabel}
+                            onConfirm={confirmModal.onConfirm}
+                            onCancel={() => setConfirmModal(null)}
+                        />
+                    )}
 
-                {/* Confirm Modal — ganti kelas/bulan saat ada perubahan */}
-                {confirmModal && (
-                    <ConfirmModal
-                        message={confirmModal.message}
-                        confirmLabel={confirmModal.confirmLabel}
-                        onConfirm={confirmModal.onConfirm}
-                        onCancel={() => setConfirmModal(null)}
-                    />
-                )}
+                    {/* Feature 6: Note popup */}
+                    {noteTarget && (
+                        <NotePopup
+                            student={noteTarget.student}
+                            note={notesMap[noteTarget.student.id]}
+                            x={noteTarget.x}
+                            y={noteTarget.y}
+                            onSave={(text) => handleSaveNote(noteTarget.student.id, text)}
+                            onClose={() => setNoteTarget(null)}
+                        />
+                    )}
 
-                {/* Command Palette */}
-                <CommandPalette
-                    open={showCommandPalette}
-                    onClose={() => setShowCommandPalette(false)}
-                    onAction={handleCommandAction}
-                    studentCount={studentList.length}
-                    bulan={bulan} tahun={tahun}
-                    completionPct={completionPct}
-                    isDirty={isDirty}
-                    filterMode={filterMode}
-                    hideWeekend={hideWeekend}
-                    mobileView={mobileView}
-                />
+                    {/* Feature 7: Import modal */}
+                    {showImport && (
+                        <ImportModal
+                            studentList={studentList}
+                            tahun={tahun}
+                            bulan={bulan}
+                            daysInMonth={daysInMonth}
+                            onImport={handleImport}
+                            onClose={() => setShowImport(false)}
+                        />
+                    )}
 
-                {/* Feature 6: Note popup */}
-                {noteTarget && (
-                    <NotePopup
-                        student={noteTarget.student}
-                        note={notesMap[noteTarget.student.id]}
-                        x={noteTarget.x}
-                        y={noteTarget.y}
-                        onSave={(text) => handleSaveNote(noteTarget.student.id, text)}
-                        onClose={() => setNoteTarget(null)}
-                    />
-                )}
+                    {/* Feature 10: Alert threshold modal */}
+                    {showAlertConfig && (
+                        <AlertThresholdModal
+                            threshold={alertThreshold}
+                            onSave={handleSaveThreshold}
+                            onClose={() => setShowAlertConfig(false)}
+                        />
+                    )}
 
-                {/* Feature 7: Import modal */}
-                {showImport && (
-                    <ImportModal
-                        studentList={studentList}
-                        tahun={tahun}
-                        bulan={bulan}
-                        daysInMonth={daysInMonth}
-                        onImport={handleImport}
-                        onClose={() => setShowImport(false)}
-                    />
-                )}
+                    {/* ColFill popup */}
+                    {colFillTarget && (
+                        <ColFillPopup
+                            day={colFillTarget.d}
+                            dow={colFillTarget.dow}
+                            x={colFillTarget.x}
+                            y={colFillTarget.y}
+                            studentCount={studentList.length}
+                            onFill={(status) => handleColFill(colFillTarget.d, status)}
+                            onClear={() => handleColClear(colFillTarget.d)}
+                            onClose={() => setColFillTarget(null)}
+                        />
+                    )}
 
-                {/* Feature 10: Alert threshold modal */}
-                {showAlertConfig && (
-                    <AlertThresholdModal
-                        threshold={alertThreshold}
-                        onSave={handleSaveThreshold}
-                        onClose={() => setShowAlertConfig(false)}
-                    />
-                )}
+                    {/* RowFill popup */}
+                    {rowFillTarget && (
+                        <RowFillPopup
+                            student={rowFillTarget.student}
+                            x={rowFillTarget.x}
+                            y={rowFillTarget.y}
+                            weekdays={countWeekdays(tahun, bulan)}
+                            onFill={(status) => handleRowFill(rowFillTarget.student.id, status)}
+                            onClear={() => handleRowClear(rowFillTarget.student.id)}
+                            onClose={() => setRowFillTarget(null)}
+                        />
+                    )}
+                </> /* end siswa */}
+            </div>
 
-                {/* ColFill popup */}
-                {colFillTarget && (
-                    <ColFillPopup
-                        day={colFillTarget.d}
-                        dow={colFillTarget.dow}
-                        x={colFillTarget.x}
-                        y={colFillTarget.y}
-                        studentCount={studentList.length}
-                        onFill={(status) => handleColFill(colFillTarget.d, status)}
-                        onClear={() => handleColClear(colFillTarget.d)}
-                        onClose={() => setColFillTarget(null)}
-                    />
-                )}
+            {/* ── Global modals — aktif di kedua tab siswa & guru ── */}
 
-                {/* RowFill popup */}
-                {rowFillTarget && (
-                    <RowFillPopup
-                        student={rowFillTarget.student}
-                        x={rowFillTarget.x}
-                        y={rowFillTarget.y}
-                        weekdays={countWeekdays(tahun, bulan)}
-                        onFill={(status) => handleRowFill(rowFillTarget.student.id, status)}
-                        onClear={() => handleRowClear(rowFillTarget.student.id)}
-                        onClose={() => setRowFillTarget(null)}
-                    />
-                )}
-            </DashboardLayout>
-        </AbsensiErrorBoundary>
+            {/* Tutorial modal */}
+            {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
+
+            {/* Command Palette */}
+            <CommandPalette
+                open={showCommandPalette}
+                onClose={() => setShowCommandPalette(false)}
+                onAction={handleCommandAction}
+                studentCount={studentList.length}
+                bulan={bulan} tahun={tahun}
+                completionPct={completionPct}
+                isDirty={isDirty}
+                filterMode={filterMode}
+                hideWeekend={hideWeekend}
+                mobileView={mobileView}
+            />
+
+        </DashboardLayout>
     )
 }

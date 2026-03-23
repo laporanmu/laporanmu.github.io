@@ -9,6 +9,7 @@ import {
     faUserPlus, faUserSlash, faKey, faLink, faLinkSlash,
     faRightFromBracket, faShield, faListCheck, faArrowsRotate,
     faChevronDown, faChevronUp, faEraser,
+    faUserClock, faArrowRight, faUsers, faDotCircle, faPenToSquare,
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
@@ -39,18 +40,31 @@ const EVENT_TYPES = {
     poin_exported: { label: 'Poin Diekspor', color: '#06b6d4', bg: '#06b6d415', icon: faFileExport },
 }
 
-const SYSTEM_EVENT_TYPES = {
-    user_created: { label: 'Akun Dibuat', color: '#10b981', bg: '#10b98115', icon: faUserPlus },
-    user_deleted: { label: 'Akun Dihapus', color: '#ef4444', bg: '#ef444415', icon: faUserSlash },
-    password_reset: { label: 'Password Direset', color: '#f59e0b', bg: '#f59e0b15', icon: faKey },
-    session_revoked: { label: 'Sesi Dicabut', color: '#6366f1', bg: '#6366f115', icon: faRightFromBracket },
-    session_revoke_all: { label: 'Semua Sesi Dicabut', color: '#8b5cf6', bg: '#8b5cf615', icon: faShield },
-    teacher_linked: { label: 'Teacher Di-link', color: '#10b981', bg: '#10b98115', icon: faLink },
-    teacher_unlinked: { label: 'Teacher Di-unlink', color: '#6b7280', bg: '#6b728015', icon: faLinkSlash },
-    role_changed: { label: 'Role Diubah', color: '#3b82f6', bg: '#3b82f615', icon: faUserPen },
-    student_updated: { label: 'Data Siswa Diubah', color: '#8b5cf6', bg: '#8b5cf615', icon: faUserPen },
-    settings_changed: { label: 'Settings Diubah', color: '#f59e0b', bg: '#f59e0b15', icon: faFloppyDisk },
-    flag_toggled: { label: 'Feature Flag Diubah', color: '#06b6d4', bg: '#06b6d415', icon: faBolt },
+// Action styles berdasarkan schema audit_logs yang asli
+// Kolom: id, user_id, action, table_name, record_id, old_data, new_data, ip_address, created_at
+const ACTION_STYLES = {
+    INSERT: { label: 'Dibuat', color: '#10b981', bg: '#10b98115', icon: faPlus },
+    UPDATE: { label: 'Diubah', color: '#3b82f6', bg: '#3b82f615', icon: faUserPen },
+    DELETE: { label: 'Dihapus', color: '#ef4444', bg: '#ef444415', icon: faTrash },
+    default: { label: 'Aksi', color: '#6b7280', bg: '#6b728015', icon: faDatabase },
+}
+
+// Nama tampilan per tabel
+const TABLE_LABELS = {
+    students: 'Siswa', teachers: 'Guru', classes: 'Kelas',
+    reports: 'Poin Siswa', student_monthly_reports: 'Raport',
+    violation_types: 'Konfigurasi Poin', academic_years: 'Tahun Pelajaran',
+    profiles: 'Profil/Akun', news: 'Informasi', audit_logs: 'Audit Log',
+    gate_logs: 'Log Gerbang', attendance_weekly: 'Absensi Mingguan',
+    attendance_monthly: 'Absensi Bulanan', feature_flags: 'Feature Flag',
+}
+
+const AUDIT_ACTION_STYLES = {
+    update: { label: 'Diubah', color: '#3b82f6', bg: '#3b82f615', icon: faPenToSquare },
+    create: { label: 'Dibuat', color: '#10b981', bg: '#10b98115', icon: faPlus },
+    delete: { label: 'Dihapus', color: '#ef4444', bg: '#ef444415', icon: faTrash },
+    import: { label: 'Diimpor', color: '#f59e0b', bg: '#f59e0b115', icon: faFileImport },
+    default: { label: 'Diubah', color: '#6b7280', bg: '#6b728015', icon: faDotCircle },
 }
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100]
@@ -58,6 +72,7 @@ const PAGE_SIZE_OPTIONS = [20, 50, 100]
 const TABS = [
     { id: 'activity', label: 'Aktivitas Siswa', icon: faGraduationCap },
     { id: 'system', label: 'Sistem', icon: faShield },
+    { id: 'audit', label: 'Jejak Siswa', icon: faUserClock },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -85,30 +100,30 @@ const fmtRelative = (d) => {
 
 // ─── SQL Setup Banner ─────────────────────────────────────────────────────────
 
-const AUDIT_SQL = `-- Buat tabel audit_logs untuk log aktivitas sistem
+const AUDIT_SQL = `-- Schema audit_logs yang digunakan aplikasi ini
+-- id, user_id, action, table_name, record_id, old_data, new_data, ip_address, created_at
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  event_type text NOT NULL,
-  actor_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
-  actor_name text,
-  actor_role text,
-  target_id text,
-  target_name text,
-  target_email text,
-  metadata jsonb DEFAULT '{}',
+  user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  action text NOT NULL,         -- INSERT | UPDATE | DELETE
+  table_name text NOT NULL,
+  record_id uuid,
+  old_data jsonb,
+  new_data jsonb,
+  ip_address text,
   created_at timestamptz DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_event_type ON audit_logs(event_type);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_id ON audit_logs(actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_table_name ON audit_logs(table_name);
 
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "admin_read_audit_logs" ON audit_logs FOR SELECT TO authenticated
 USING ((SELECT role FROM profiles WHERE id = auth.uid()) IN ('admin', 'developer'));
 
-CREATE POLICY "service_insert_audit_logs" ON audit_logs FOR INSERT TO authenticated
+CREATE POLICY "any_insert_audit_logs" ON audit_logs FOR INSERT TO authenticated
 WITH CHECK (true);`
 
 function SqlSetupBanner({ onDismiss }) {
@@ -142,8 +157,9 @@ function SqlSetupBanner({ onDismiss }) {
 // ─── Log Row ──────────────────────────────────────────────────────────────────
 
 function LogRow({ entry, isExpanded, onToggle, isSystem }) {
-    const evMap = isSystem ? SYSTEM_EVENT_TYPES : EVENT_TYPES
-    const evType = evMap[entry._type] || { label: entry._type, color: '#6b7280', bg: '#6b728015', icon: faDatabase }
+    const evType = isSystem
+        ? (ACTION_STYLES[entry._type?.toUpperCase()] || ACTION_STYLES.default)
+        : (EVENT_TYPES[entry._type] || { label: entry._type, color: '#6b7280', bg: '#6b728015', icon: faDatabase })
     return (
         <div className={`transition-colors ${isExpanded ? 'bg-[var(--color-primary)]/[0.02]' : 'hover:bg-[var(--color-surface-alt)]/50'}`}>
             <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_140px_120px_40px] gap-3 px-5 py-3.5 items-center cursor-pointer" onClick={onToggle}>
@@ -164,6 +180,11 @@ function LogRow({ entry, isExpanded, onToggle, isSystem }) {
                                 style={{ background: evType.bg, color: evType.color, borderColor: evType.color + '40' }}>
                                 {evType.label}
                             </span>
+                            {isSystem && entry._tableName && (
+                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full border border-slate-500/20 bg-slate-500/10 text-slate-500 shrink-0">
+                                    {TABLE_LABELS[entry._tableName] || entry._tableName}
+                                </span>
+                            )}
                         </div>
                         <p className="text-[10px] text-[var(--color-text-muted)] truncate">{entry._detail}</p>
                     </div>
@@ -209,6 +230,284 @@ function LogRow({ entry, isExpanded, onToggle, isSystem }) {
     )
 }
 
+
+// ─── Audit Trail Tab ──────────────────────────────────────────────────────────
+
+function AuditTrailTab() {
+    const { addToast } = useToast()
+    const [searchVal, setSearchVal] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
+    const [students, setStudents] = useState([])
+    const [searchLoading, setSearchLoading] = useState(false)
+    const [selectedStudent, setSelectedStudent] = useState(null)
+    const [auditLogs, setAuditLogs] = useState([])
+    const [auditLoading, setAuditLoading] = useState(false)
+    const [showDropdown, setShowDropdown] = useState(false)
+    const searchRef = useRef(null)
+
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchVal.trim()), 350)
+        return () => clearTimeout(t)
+    }, [searchVal])
+
+    useEffect(() => {
+        if (!debouncedSearch || selectedStudent) return
+        setSearchLoading(true)
+        supabase.from('students')
+            .select('id, name, nis, classes(name)')
+            .ilike('name', `%${debouncedSearch}%`)
+            .is('deleted_at', null)
+            .limit(10)
+            .then(({ data }) => {
+                setStudents(data || [])
+                setShowDropdown(true)
+                setSearchLoading(false)
+            })
+    }, [debouncedSearch, selectedStudent])
+
+    const selectStudent = async (s) => {
+        setSelectedStudent(s)
+        setSearchVal(s.name)
+        setShowDropdown(false)
+        setStudents([])
+        setAuditLoading(true)
+        try {
+            const { data, error } = await supabase
+                .from('student_audit_log')
+                .select('*')
+                .eq('student_id', s.id)
+                .order('created_at', { ascending: false })
+                .limit(200)
+            if (error) throw error
+            setAuditLogs(data || [])
+        } catch (e) {
+            addToast('Gagal memuat jejak: ' + e.message, 'error')
+        } finally {
+            setAuditLoading(false)
+        }
+    }
+
+    const clearStudent = () => {
+        setSelectedStudent(null)
+        setAuditLogs([])
+        setSearchVal('')
+        setDebouncedSearch('')
+        setTimeout(() => searchRef.current?.focus(), 50)
+    }
+
+    const exportAudit = () => {
+        if (!auditLogs.length || !selectedStudent) return
+        const rows = [['Waktu', 'Aksi', 'Field', 'Nilai Lama', 'Nilai Baru', 'Diubah Oleh', 'Catatan'],
+        ...auditLogs.map(l => [fmtDateTime(l.created_at), l.action, l.field || '—', l.old_value || '—', l.new_value || '—', l.changed_by || '—', l.note || '—'])]
+        const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }))
+        a.download = `audit_${selectedStudent.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`
+        a.click()
+        addToast('Jejak diekspor ✓', 'success')
+    }
+
+    // Group logs by date
+    const groupedLogs = useMemo(() => {
+        const groups = {}
+        auditLogs.forEach(l => {
+            const day = l.created_at?.slice(0, 10) || 'unknown'
+            if (!groups[day]) groups[day] = []
+            groups[day].push(l)
+        })
+        return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]))
+    }, [auditLogs])
+
+    return (
+        <div className="space-y-4">
+            {/* Search bar */}
+            <div className="glass rounded-[1.5rem] border border-[var(--color-border)] p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">Cari Siswa</p>
+                <div className="relative">
+                    <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm pointer-events-none" />
+                    {searchLoading && <FontAwesomeIcon icon={faSpinner} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm animate-spin" />}
+                    <input
+                        ref={searchRef}
+                        type="text"
+                        value={searchVal}
+                        onChange={e => { setSearchVal(e.target.value); setSelectedStudent(null) }}
+                        onFocus={() => students.length > 0 && setShowDropdown(true)}
+                        placeholder="Ketik nama siswa..."
+                        className="w-full h-10 pl-9 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-sm font-medium text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)] transition-all"
+                    />
+                    {searchVal && (
+                        <button onClick={clearStudent} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+                            <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                        </button>
+                    )}
+                    {/* Dropdown */}
+                    {showDropdown && students.length > 0 && !selectedStudent && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-xl overflow-hidden z-20">
+                            {students.map(s => (
+                                <button key={s.id} onClick={() => selectStudent(s)}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--color-surface-alt)] transition-colors text-left">
+                                    <div className="w-8 h-8 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
+                                        <FontAwesomeIcon icon={faUsers} className="text-[10px] text-[var(--color-primary)]" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[12px] font-black text-[var(--color-text)] truncate">{s.name}</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">{s.classes?.name || 'Tanpa kelas'} {s.nis ? `· ${s.nis}` : ''}</p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {showDropdown && students.length === 0 && debouncedSearch && !searchLoading && !selectedStudent && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-xl p-4 z-20 text-center">
+                            <p className="text-[11px] text-[var(--color-text-muted)] font-medium">Siswa tidak ditemukan</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Empty state */}
+            {!selectedStudent && (
+                <div className="glass rounded-[1.5rem] border border-[var(--color-border)] flex flex-col items-center justify-center py-24 gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faUserClock} className="text-2xl text-[var(--color-primary)]" />
+                    </div>
+                    <div className="text-center">
+                        <p className="text-[13px] font-black text-[var(--color-text)] mb-1">Jejak Perubahan Siswa</p>
+                        <p className="text-[11px] text-[var(--color-text-muted)] opacity-70 max-w-xs">Cari nama siswa di atas untuk melihat seluruh riwayat perubahan data mereka.</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Student header + timeline */}
+            {selectedStudent && (
+                <div className="space-y-3">
+                    {/* Student info bar */}
+                    <div className="glass rounded-2xl border border-[var(--color-border)] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white font-black text-base shrink-0">
+                                {selectedStudent.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <p className="text-[13px] font-black text-[var(--color-text)]">{selectedStudent.name}</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)]">
+                                    {selectedStudent.classes?.name || 'Tanpa kelas'}
+                                    {selectedStudent.nis ? ` · NIS: ${selectedStudent.nis}` : ''}
+                                    {' · '}<span className="font-bold">{auditLogs.length} perubahan tercatat</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {auditLogs.length > 0 && (
+                                <button onClick={exportAudit}
+                                    className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-1.5 transition-colors">
+                                    <FontAwesomeIcon icon={faDownload} className="text-[9px]" /> Export CSV
+                                </button>
+                            )}
+                            <button onClick={clearStudent}
+                                className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-1.5 transition-colors">
+                                <FontAwesomeIcon icon={faXmark} className="text-[9px]" /> Ganti Siswa
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Timeline */}
+                    {auditLoading ? (
+                        <div className="glass rounded-[1.5rem] border border-[var(--color-border)] flex items-center justify-center py-20">
+                            <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-[var(--color-primary)]" />
+                        </div>
+                    ) : auditLogs.length === 0 ? (
+                        <div className="glass rounded-[1.5rem] border border-[var(--color-border)] flex flex-col items-center justify-center py-20 gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center">
+                                <FontAwesomeIcon icon={faDatabase} className="text-xl text-[var(--color-text-muted)] opacity-30" />
+                            </div>
+                            <p className="text-[12px] font-black text-[var(--color-text)]">Tidak ada jejak perubahan</p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] opacity-60">Belum ada perubahan data yang tercatat untuk siswa ini.</p>
+                        </div>
+                    ) : (
+                        <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
+                            {groupedLogs.map(([day, entries]) => (
+                                <div key={day}>
+                                    {/* Date group header */}
+                                    <div className="px-5 py-2.5 bg-[var(--color-surface-alt)]/60 border-b border-[var(--color-border)] flex items-center gap-2">
+                                        <div className="h-px flex-1 bg-[var(--color-border)]" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] shrink-0">
+                                            {fmtDate(day + 'T00:00:00')}
+                                        </span>
+                                        <div className="h-px flex-1 bg-[var(--color-border)]" />
+                                    </div>
+                                    {/* Entries */}
+                                    <div className="divide-y divide-[var(--color-border)]/50">
+                                        {entries.map(log => {
+                                            const actionKey = log.action?.toLowerCase() || 'default'
+                                            const style = AUDIT_ACTION_STYLES[actionKey] || AUDIT_ACTION_STYLES.default
+                                            return (
+                                                <div key={log.id} className="px-5 py-3.5 flex items-start gap-4 hover:bg-[var(--color-surface-alt)]/30 transition-colors">
+                                                    {/* Icon */}
+                                                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: style.bg }}>
+                                                        <FontAwesomeIcon icon={style.icon} style={{ color: style.color, fontSize: 11 }} />
+                                                    </div>
+                                                    {/* Content */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded border"
+                                                                style={{ background: style.bg, color: style.color, borderColor: style.color + '40' }}>
+                                                                {style.label}
+                                                            </span>
+                                                            {log.field && (
+                                                                <span className="text-[11px] font-black text-[var(--color-text)]">{log.field}</span>
+                                                            )}
+                                                        </div>
+                                                        {/* Old → New value */}
+                                                        {(log.old_value || log.new_value) && (
+                                                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                                {log.old_value && (
+                                                                    <span className="text-[10px] px-2 py-0.5 rounded-lg bg-red-500/10 text-red-500 font-mono line-through">
+                                                                        {log.old_value}
+                                                                    </span>
+                                                                )}
+                                                                {log.old_value && log.new_value && (
+                                                                    <FontAwesomeIcon icon={faArrowRight} className="text-[8px] text-[var(--color-text-muted)] shrink-0" />
+                                                                )}
+                                                                {log.new_value && (
+                                                                    <span className="text-[10px] px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 font-mono font-bold">
+                                                                        {log.new_value}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        {/* Meta */}
+                                                        <div className="flex items-center gap-3 flex-wrap">
+                                                            {log.changed_by && (
+                                                                <span className="text-[9px] text-[var(--color-text-muted)] font-medium flex items-center gap-1">
+                                                                    <FontAwesomeIcon icon={faUserPen} className="text-[8px]" />
+                                                                    {log.changed_by}
+                                                                </span>
+                                                            )}
+                                                            {log.note && (
+                                                                <span className="text-[9px] text-[var(--color-text-muted)] opacity-70 italic">"{log.note}"</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {/* Time */}
+                                                    <div className="text-right shrink-0">
+                                                        <p className="text-[10px] font-black text-[var(--color-text-muted)] tabular-nums" title={fmtDateTime(log.created_at)}>
+                                                            {fmtRelative(log.created_at)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function LogsPage() {
@@ -248,11 +547,12 @@ export default function LogsPage() {
     const [filterTeacher, setFilterTeacher] = useState('')
 
     // System filters
-    const [filterEventType, setFilterEventType] = useState('')
+    const [filterAction, setFilterAction] = useState('')
+    const [filterTable, setFilterTable] = useState('')
 
     // UI
     const [expandedId, setExpandedId] = useState(null)
-    const [autoRefresh, setAutoRefresh] = useState(false)
+    const [autoRefresh, setAutoRefresh] = useState(() => localStorage.getItem('logs_autorefresh') === 'true')
     const autoRefreshRef = useRef(null)
     const searchRef = useRef(null)
 
@@ -261,7 +561,7 @@ export default function LogsPage() {
         return () => clearTimeout(t)
     }, [search])
 
-    useEffect(() => { setPage(1) }, [filterSource, filterTeacher, filterDateFrom, filterDateTo, sortDir, filterEventType, activeTab])
+    useEffect(() => { setPage(1) }, [filterSource, filterTeacher, filterDateFrom, filterDateTo, sortDir, filterAction, filterTable, activeTab])
 
     useEffect(() => {
         const h = (e) => {
@@ -375,8 +675,9 @@ export default function LogsPage() {
                 .order('created_at', { ascending: sortDir === 'asc' })
             if (filterDateFrom) q = q.gte('created_at', filterDateFrom)
             if (filterDateTo) q = q.lte('created_at', filterDateTo + 'T23:59:59')
-            if (filterEventType) q = q.eq('event_type', filterEventType)
-            if (debouncedSearch) q = q.or(`actor_name.ilike.%${debouncedSearch}%,target_name.ilike.%${debouncedSearch}%,target_email.ilike.%${debouncedSearch}%`)
+            if (filterAction) q = q.eq('action', filterAction)
+            if (filterTable) q = q.eq('table_name', filterTable)
+            if (debouncedSearch) q = q.or(`table_name.ilike.%${debouncedSearch}%,action.ilike.%${debouncedSearch}%`)
             q = q.range((page - 1) * pageSize, page * pageSize - 1)
 
             const { data, error, count } = await q
@@ -389,29 +690,42 @@ export default function LogsPage() {
             }
 
             setSystemTableExists(true)
-            const normalized = (data || []).map(r => ({
-                _id: r.id, _source: 'system', _type: r.event_type,
-                _ts: r.created_at,
-                _actor: r.actor_name || '—', _actorRole: r.actor_role || '—',
-                _subject: r.target_name || r.target_email || '—',
-                _detail: SYSTEM_EVENT_TYPES[r.event_type]?.label || r.event_type,
-                _details: [
-                    { label: 'Waktu', val: fmtDateTime(r.created_at) },
-                    { label: 'Event', val: SYSTEM_EVENT_TYPES[r.event_type]?.label || r.event_type },
-                    { label: 'Oleh', val: r.actor_name || '—' },
-                    { label: 'Role Aktor', val: r.actor_role || '—' },
-                    { label: 'Target', val: r.target_name || '—' },
-                    { label: 'Email Target', val: r.target_email || '—' },
-                    ...(r.metadata && Object.keys(r.metadata).length ? [{ label: 'Metadata', val: JSON.stringify(r.metadata) }] : []),
-                ],
-            }))
+            const normalized = (data || []).map(r => {
+                const actionStyle = ACTION_STYLES[r.action?.toUpperCase()] || ACTION_STYLES.default
+                const tableLabel = TABLE_LABELS[r.table_name] || r.table_name || '—'
+                // Try to get a readable subject from new_data or old_data
+                const dataObj = r.new_data || r.old_data || {}
+                const subject = dataObj.name || dataObj.title || dataObj.email || dataObj.slug || r.record_id?.slice(0, 8) + '...' || '—'
+                return {
+                    _id: r.id,
+                    _source: 'system',
+                    _type: r.action?.toUpperCase() || 'UNKNOWN',
+                    _ts: r.created_at,
+                    _actor: r.user_id ? r.user_id.slice(0, 8) + '...' : '—',
+                    _actorRole: '—',
+                    _subject: subject,
+                    _detail: `${tableLabel}`,
+                    _tableName: r.table_name || '—',
+                    _action: r.action || '—',
+                    _details: [
+                        { label: 'Waktu', val: fmtDateTime(r.created_at) },
+                        { label: 'Aksi', val: r.action || '—' },
+                        { label: 'Tabel', val: tableLabel },
+                        { label: 'Record ID', val: r.record_id || '—' },
+                        { label: 'User ID', val: r.user_id || '—' },
+                        { label: 'IP Address', val: r.ip_address || '—' },
+                        ...(r.old_data ? [{ label: 'Data Lama', val: JSON.stringify(r.old_data, null, 2) }] : []),
+                        ...(r.new_data ? [{ label: 'Data Baru', val: JSON.stringify(r.new_data, null, 2) }] : []),
+                    ],
+                }
+            })
 
             const todayStr = new Date().toISOString().slice(0, 10)
             setSystemStats({
                 total: count || 0,
                 today: normalized.filter(e => (e._ts || '').slice(0, 10) === todayStr).length,
-                users: normalized.filter(e => ['user_created', 'user_deleted', 'role_changed'].includes(e._type)).length,
-                security: normalized.filter(e => ['session_revoked', 'session_revoke_all', 'password_reset'].includes(e._type)).length,
+                inserts: (data || []).filter(r => r.action === 'INSERT').length,
+                deletes: (data || []).filter(r => r.action === 'DELETE').length,
             })
             setSystemTotal(count || 0)
             setSystemLogs(normalized)
@@ -420,7 +734,7 @@ export default function LogsPage() {
         } finally {
             if (!quiet) setSystemLoading(false)
         }
-    }, [isAllowed, page, pageSize, debouncedSearch, filterEventType, filterDateFrom, filterDateTo, sortDir, addToast])
+    }, [isAllowed, page, pageSize, debouncedSearch, filterAction, filterTable, filterDateFrom, filterDateTo, sortDir, addToast])
 
     useEffect(() => {
         if (activeTab === 'activity') fetchActivityLogs()
@@ -450,9 +764,9 @@ export default function LogsPage() {
     const toRow = Math.min(page * pageSize, totalRows)
     const activeFilterCount = isActivity
         ? [filterSource, filterTeacher, filterDateFrom, filterDateTo].filter(Boolean).length
-        : [filterEventType, filterDateFrom, filterDateTo].filter(Boolean).length
+        : [filterAction, filterTable, filterDateFrom, filterDateTo].filter(Boolean).length
 
-    const resetFilters = () => { setSearch(''); setFilterSource(''); setFilterTeacher(''); setFilterDateFrom(''); setFilterDateTo(''); setFilterEventType(''); setPage(1) }
+    const resetFilters = () => { setSearch(''); setFilterSource(''); setFilterTeacher(''); setFilterDateFrom(''); setFilterDateTo(''); setFilterAction(''); setFilterTable(''); setPage(1) }
 
     // ── Clear system logs
     const [clearConfirm, setClearConfirm] = useState(false)
@@ -465,9 +779,10 @@ export default function LogsPage() {
             let q = supabase.from('audit_logs').delete()
             if (filterDateFrom) q = q.gte('created_at', filterDateFrom)
             if (filterDateTo) q = q.lte('created_at', filterDateTo + 'T23:59:59')
-            if (filterEventType) q = q.eq('event_type', filterEventType)
+            if (filterAction) q = q.eq('action', filterAction)
+            if (filterTable) q = q.eq('table_name', filterTable)
             // Supabase requires a filter for delete — use created_at >= epoch if no filter
-            if (!filterDateFrom && !filterDateTo && !filterEventType) {
+            if (!filterDateFrom && !filterDateTo && !filterAction && !filterTable) {
                 q = q.gte('created_at', '2000-01-01')
             }
             const { error } = await q
@@ -513,23 +828,23 @@ export default function LogsPage() {
                         </p>
                     </div>
                     <div className="flex gap-2 items-center">
-                        <button onClick={() => setAutoRefresh(v => !v)}
+                        <button onClick={() => { const next = !autoRefresh; setAutoRefresh(next); localStorage.setItem('logs_autorefresh', next) }}
                             className={`h-9 px-3 rounded-xl border text-[10px] font-black flex items-center gap-2 transition-all ${autoRefresh ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             title="Auto-refresh 30 detik">
                             <FontAwesomeIcon icon={faArrowsRotate} className={autoRefresh ? 'animate-spin' : ''} style={{ animationDuration: '3s' }} />
                             <span className="hidden sm:inline">{autoRefresh ? 'Auto On' : 'Auto-refresh'}</span>
                         </button>
-                        <button onClick={() => isActivity ? fetchActivityLogs() : fetchSystemLogs()} disabled={loading}
+                        {activeTab !== 'audit' && <button onClick={() => isActivity ? fetchActivityLogs() : fetchSystemLogs()} disabled={loading}
                             className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] transition-all disabled:opacity-50" title="Refresh (R)">
                             <FontAwesomeIcon icon={faRotateRight} className={`text-sm ${loading ? 'animate-spin' : ''}`} />
-                        </button>
-                        <button onClick={exportCSV} disabled={!logs.length}
+                        </button>}
+                        {activeTab !== 'audit' && <button onClick={exportCSV} disabled={!logs.length}
                             className="h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black flex items-center gap-1.5 hover:text-[var(--color-text)] transition-all disabled:opacity-40">
                             <FontAwesomeIcon icon={faDownload} className="text-[10px]" />
                             <span className="hidden sm:inline">Export CSV</span>
-                        </button>
+                        </button>}
                         {/* Clear — hanya di tab sistem, hanya developer */}
-                        {!isActivity && profile?.role === 'developer' && (
+                        {activeTab === 'system' && profile?.role === 'developer' && (
                             clearConfirm ? (
                                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10">
                                     <span className="text-[10px] font-bold text-red-600 hidden sm:inline">Yakin hapus?</span>
@@ -557,7 +872,7 @@ export default function LogsPage() {
                 {/* Tab bar */}
                 <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 w-fit">
                     {TABS.map(t => (
-                        <button key={t.id} onClick={() => { setActiveTab(t.id); setSearch(''); setExpandedId(null) }}
+                        <button key={t.id} onClick={() => { setActiveTab(t.id); setSearch(''); setExpandedId(null); setPage(1) }}
                             className={`relative h-8 px-4 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all ${activeTab === t.id ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                             <FontAwesomeIcon icon={t.icon} className="text-[10px]" />
                             {t.label}
@@ -573,8 +888,8 @@ export default function LogsPage() {
                     <SqlSetupBanner onDismiss={() => setShowSqlBanner(false)} />
                 )}
 
-                {/* Stats */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Stats — hanya tampil di tab activity & system */}
+                {activeTab !== 'audit' && <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {(isActivity ? [
                         { label: 'Total Aktivitas', value: stats.total, icon: faDatabase, color: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10' },
                         { label: 'Hari Ini', value: stats.today, icon: faBolt, color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -583,8 +898,8 @@ export default function LogsPage() {
                     ] : [
                         { label: 'Total Log', value: stats.total, icon: faDatabase, color: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10' },
                         { label: 'Hari Ini', value: stats.today, icon: faBolt, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                        { label: 'Aktivitas User', value: stats.users, icon: faUserPen, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                        { label: 'Keamanan', value: stats.security, icon: faShield, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                        { label: 'Insert', value: stats.inserts ?? 0, icon: faPlus, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                        { label: 'Delete', value: stats.deletes ?? 0, icon: faTrash, color: 'text-rose-500', bg: 'bg-rose-500/10' },
                     ]).map((s, i) => (
                         <div key={i} className="glass rounded-[1.5rem] p-4 flex items-center gap-3 border border-[var(--color-border)]">
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>
@@ -596,15 +911,15 @@ export default function LogsPage() {
                             </div>
                         </div>
                     ))}
-                </div>
+                </div>}
 
-                {/* Search + Filter bar */}
-                <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
+                {/* Search + Filter bar — hanya activity & system */}
+                {activeTab !== 'audit' && <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
                     <div className="flex items-center gap-2 p-3">
                         <div className="flex-1 relative">
                             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm pointer-events-none" />
                             <input ref={searchRef} type="text" value={search} onChange={e => setSearch(e.target.value)}
-                                placeholder={isActivity ? 'Cari santri, guru, aktivitas...' : 'Cari nama, email user...'}
+                                placeholder={isActivity ? 'Cari santri, guru, aktivitas...' : 'Cari nama tabel atau aksi...'}
                                 className="w-full h-9 pl-9 pr-8 rounded-xl border border-[var(--color-border)] bg-transparent text-xs font-medium text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)] transition-all" />
                             {search && <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><FontAwesomeIcon icon={faXmark} className="text-xs" /></button>}
                         </div>
@@ -644,14 +959,27 @@ export default function LogsPage() {
                                 </>
                             )}
                             {!isActivity && (
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tipe Event</label>
-                                    <select value={filterEventType} onChange={e => setFilterEventType(e.target.value)}
-                                        className="h-7 px-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[9px] font-black outline-none focus:border-[var(--color-primary)]">
-                                        <option value="">Semua Event</option>
-                                        {Object.entries(SYSTEM_EVENT_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                                    </select>
-                                </div>
+                                <>
+                                    <div className="space-y-1">
+                                        <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Aksi</label>
+                                        <div className="flex gap-1">
+                                            {[{ v: '', l: 'Semua' }, { v: 'INSERT', l: 'Insert' }, { v: 'UPDATE', l: 'Update' }, { v: 'DELETE', l: 'Delete' }].map(opt => (
+                                                <button key={opt.v} onClick={() => setFilterAction(opt.v)}
+                                                    className={`h-7 px-2.5 rounded-lg text-[9px] font-black border transition-all ${filterAction === opt.v ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
+                                                    {opt.l}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tabel</label>
+                                        <select value={filterTable} onChange={e => setFilterTable(e.target.value)}
+                                            className="h-7 px-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[9px] font-black outline-none focus:border-[var(--color-primary)]">
+                                            <option value="">Semua Tabel</option>
+                                            {Object.entries(TABLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                        </select>
+                                    </div>
+                                </>
                             )}
                             <div className="space-y-1">
                                 <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Dari</label>
@@ -670,66 +998,71 @@ export default function LogsPage() {
                             )}
                         </div>
                     )}
-                </div>
+                </div>}
 
-                {/* Log table */}
-                <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
-                    <div className="hidden md:grid grid-cols-[140px_1fr_140px_120px_40px] gap-3 px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                        {['Waktu', isActivity ? 'Santri & Aktivitas' : 'Target & Event', 'Oleh', 'Kategori', ''].map((h, i) => (
-                            <div key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{h}</div>
-                        ))}
+                {activeTab !== 'audit' && <>{/* Log table */}
+                    <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
+                        <div className="hidden md:grid grid-cols-[140px_1fr_140px_120px_40px] gap-3 px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                            {['Waktu', isActivity ? 'Santri & Aktivitas' : 'Target & Event', 'Oleh', 'Kategori', ''].map((h, i) => (
+                                <div key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{h}</div>
+                            ))}
+                        </div>
+
+                        {loading ? (
+                            <div className="divide-y divide-[var(--color-border)]">
+                                {Array.from({ length: 8 }).map((_, i) => (
+                                    <div key={i} className="px-5 py-3.5 flex items-center gap-3 animate-pulse">
+                                        <div className="w-8 h-8 rounded-xl bg-[var(--color-border)] shrink-0" />
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-3 w-1/3 bg-[var(--color-border)] rounded" />
+                                            <div className="h-2.5 w-1/2 bg-[var(--color-border)] rounded opacity-60" />
+                                        </div>
+                                        <div className="h-3 w-20 bg-[var(--color-border)] rounded hidden md:block" />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : logs.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center">
+                                    <FontAwesomeIcon icon={faDatabase} className="text-2xl text-[var(--color-text-muted)] opacity-30" />
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-[13px] font-black text-[var(--color-text)] mb-1">Tidak ada log</p>
+                                    <p className="text-[11px] text-[var(--color-text-muted)] opacity-60">
+                                        {!systemTableExists && !isActivity ? 'Buat tabel audit_logs terlebih dahulu.' : debouncedSearch || activeFilterCount > 0 ? 'Coba ubah filter.' : 'Belum ada data tercatat.'}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-[var(--color-border)]">
+                                {logs.map(entry => (
+                                    <LogRow key={entry._id} entry={entry}
+                                        isExpanded={expandedId === entry._id}
+                                        onToggle={() => setExpandedId(expandedId === entry._id ? null : entry._id)}
+                                        isSystem={!isActivity} />
+                                ))}
+                            </div>
+                        )}
+
+                        <Pagination
+                            totalRows={totalRows}
+                            page={page}
+                            pageSize={pageSize}
+                            setPage={setPage}
+                            setPageSize={setPageSize}
+                            label="log"
+                            jumpPage={jumpPage}
+                            setJumpPage={setJumpPage}
+                        />
                     </div>
 
-                    {loading ? (
-                        <div className="divide-y divide-[var(--color-border)]">
-                            {Array.from({ length: 8 }).map((_, i) => (
-                                <div key={i} className="px-5 py-3.5 flex items-center gap-3 animate-pulse">
-                                    <div className="w-8 h-8 rounded-xl bg-[var(--color-border)] shrink-0" />
-                                    <div className="flex-1 space-y-2">
-                                        <div className="h-3 w-1/3 bg-[var(--color-border)] rounded" />
-                                        <div className="h-2.5 w-1/2 bg-[var(--color-border)] rounded opacity-60" />
-                                    </div>
-                                    <div className="h-3 w-20 bg-[var(--color-border)] rounded hidden md:block" />
-                                </div>
-                            ))}
-                        </div>
-                    ) : logs.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center">
-                                <FontAwesomeIcon icon={faDatabase} className="text-2xl text-[var(--color-text-muted)] opacity-30" />
-                            </div>
-                            <div className="text-center">
-                                <p className="text-[13px] font-black text-[var(--color-text)] mb-1">Tidak ada log</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] opacity-60">
-                                    {!systemTableExists && !isActivity ? 'Buat tabel audit_logs terlebih dahulu.' : debouncedSearch || activeFilterCount > 0 ? 'Coba ubah filter.' : 'Belum ada data tercatat.'}
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-[var(--color-border)]">
-                            {logs.map(entry => (
-                                <LogRow key={entry._id} entry={entry}
-                                    isExpanded={expandedId === entry._id}
-                                    onToggle={() => setExpandedId(expandedId === entry._id ? null : entry._id)}
-                                    isSystem={!isActivity} />
-                            ))}
-                        </div>
-                    )}
+                </>}
 
-                    <Pagination
-                        totalRows={totalRows}
-                        page={page}
-                        pageSize={pageSize}
-                        setPage={setPage}
-                        setPageSize={setPageSize}
-                        label="log"
-                        jumpPage={jumpPage}
-                        setJumpPage={setJumpPage}
-                    />
-                </div>
+                {/* Audit Trail Tab */}
+                {activeTab === 'audit' && <AuditTrailTab />}
 
                 {/* Info note */}
-                <div className="p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-start gap-2.5">
+                {activeTab !== 'audit' && <div className="p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-start gap-2.5">
                     <FontAwesomeIcon icon={faCircleInfo} className="text-[var(--color-text-muted)] text-xs mt-0.5 shrink-0" />
                     <p className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
                         {isActivity
@@ -737,7 +1070,7 @@ export default function LogsPage() {
                             : <>Log dari tabel <code className="bg-[var(--color-surface)] px-1 rounded font-mono text-[9px]">audit_logs</code>. Tulis ke tabel ini dari edge functions untuk mencatat aktivitas admin secara otomatis.</>
                         }
                     </p>
-                </div>
+                </div>}
 
                 <div className="h-8" />
             </div>

@@ -29,6 +29,7 @@ import Breadcrumb from '../../components/ui/Breadcrumb'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 import ReactQuill from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 
@@ -47,8 +48,19 @@ const getReadTime = (html) => {
     return Math.max(1, Math.ceil(words / 200))
 }
 
+const decodeEntities = (html = '') => html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+
 const getExcerpt = (html, maxLen = 160) => {
-    const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    const text = decodeEntities(html)
     return text.length > maxLen ? text.slice(0, maxLen).trimEnd() + '…' : text
 }
 
@@ -576,7 +588,7 @@ const NewsCard = memo(({ news, isSelected, onSelect, onEdit, onDelete, onToggleS
                 </div>
                 <h3 className="text-sm font-black text-[var(--color-text)] leading-tight line-clamp-2 mb-2">{news.title}</h3>
                 {news.excerpt && (
-                    <p className="text-[10px] text-[var(--color-text-muted)] line-clamp-2 leading-relaxed mb-3 opacity-70">{news.excerpt}</p>
+                    <p className="text-[10px] text-[var(--color-text-muted)] line-clamp-2 leading-relaxed mb-3 opacity-70">{decodeEntities(news.excerpt)}</p>
                 )}
                 <p className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-50 mb-4">
                     <FontAwesomeIcon icon={faUser} className="mr-1" />
@@ -777,6 +789,10 @@ export default function AdminNewsPage() {
             setNewsList(prev => [data[0], ...prev])
         }
         addToast(isEdit ? 'Informasi diperbarui' : 'Informasi ditambahkan', 'success')
+        await logAudit({
+            action: isEdit ? 'UPDATE' : 'INSERT', tableName: 'news', recordId: data[0].id,
+            newData: { title: payload.title, is_published: payload.is_published, tag: payload.tag, slug: payload.slug }
+        })
         setModalData({ isOpen: false, current: null })
     }
 
@@ -788,7 +804,11 @@ export default function AdminNewsPage() {
         const { error } = await supabase.from('news').delete().eq('id', deleteModal.data.id)
         setDeleteModal({ isOpen: false, data: null, isDeleting: false })
         if (error) { addToast('Gagal hapus: ' + error.message, 'error'); return }
-        setNewsList(prev => prev.filter(n => n.id !== deleteModal.data.id)) // optimistic
+        setNewsList(prev => prev.filter(n => n.id !== deleteModal.data.id))
+        await logAudit({
+            action: 'DELETE', tableName: 'news', recordId: deleteModal.data.id,
+            oldData: { title: deleteModal.data.title, is_published: deleteModal.data.is_published }
+        })
         addToast('Informasi dihapus', 'success')
     }
 
@@ -808,6 +828,10 @@ export default function AdminNewsPage() {
         }
 
         // Show toast with undo option for unpublish
+        await logAudit({
+            action: 'UPDATE', tableName: 'news', recordId: item.id,
+            oldData: { title: item.title, is_published: item.is_published }, newData: { is_published: newStatus }
+        })
         if (!newStatus) {
             addToast(`Informasi diarsipkan`, 'warning')
         } else {
@@ -835,6 +859,10 @@ export default function AdminNewsPage() {
         }]).select()
         if (error) { addToast('Gagal duplikat: ' + error.message, 'error'); return }
         setNewsList(prev => [data[0], ...prev])
+        await logAudit({
+            action: 'INSERT', tableName: 'news', recordId: data[0].id,
+            newData: { title: 'Salinan — ' + title, duplicated_from: item.id, is_published: false }
+        })
         addToast('Artikel diduplikat sebagai draft', 'success')
     }, [addToast])
 
@@ -858,6 +886,7 @@ export default function AdminNewsPage() {
         const { error } = await supabase.from('news').update(update).in('id', ids)
         if (error) { addToast('Gagal: ' + error.message, 'error'); return }
         setNewsList(prev => prev.map(n => ids.includes(n.id) ? { ...n, ...update } : n))
+        await logAudit({ action: 'UPDATE', tableName: 'news', newData: { bulk: true, count: ids.length, ids, ...update } })
         addToast(successMsg, 'success')
         clearSelection()
     }
@@ -867,6 +896,7 @@ export default function AdminNewsPage() {
         const { error } = await supabase.from('news').delete().in('id', ids)
         if (error) { addToast('Gagal hapus: ' + error.message, 'error'); return }
         setNewsList(prev => prev.filter(n => !ids.includes(n.id)))
+        await logAudit({ action: 'DELETE', tableName: 'news', newData: { bulk: true, count: ids.length, ids } })
         addToast(`${ids.length} Informasi dihapus`, 'success')
         clearSelection()
     }

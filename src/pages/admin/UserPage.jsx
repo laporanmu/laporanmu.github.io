@@ -17,6 +17,7 @@ import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 import Pagination from '../../components/ui/Pagination'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -285,6 +286,7 @@ export default function UserManagementPage() {
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error)
             addToast('Session dicabut ✓', 'success')
+            await logAudit({ action: 'DELETE', tableName: 'sessions', newData: { session_id: sessionId, revoked: true } })
             fetchSessions(true)
         } catch (err) {
             addToast('Gagal revoke: ' + err.message, 'error')
@@ -306,6 +308,7 @@ export default function UserManagementPage() {
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error)
             addToast(`Semua session ${userName} dicabut ✓`, 'success')
+            await logAudit({ action: 'DELETE', tableName: 'sessions', newData: { revoke_all: true, user_id: userId, user_name: userName } })
             setConfirmRevokeAll(null)
             fetchSessions(true)
         } catch (err) {
@@ -378,6 +381,10 @@ export default function UserManagementPage() {
             if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`)
 
             addToast(`Akun berhasil dibuat untuk ${createName}`, 'success')
+            await logAudit({
+                action: 'INSERT', tableName: 'profiles',
+                newData: { name: createName.trim(), email: createEmail.trim(), role: createRole, teacher_id: createTeacherId || null }
+            })
             setCreateModal(false)
             setCreateEmail(''); setCreateName(''); setCreateRole(createRole)
             setCreateTeacherId(''); setCreatePassword('')
@@ -418,6 +425,10 @@ export default function UserManagementPage() {
             if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`)
 
             addToast(`Password ${resetModal.name} berhasil diubah ✓`, 'success')
+            await logAudit({
+                action: 'UPDATE', tableName: 'profiles', recordId: resetModal.id,
+                newData: { password_reset: true, name: resetModal.name, email: resetModal.email }
+            })
             setResetModal(null)
             setResetPassword('')
         } catch (err) {
@@ -439,6 +450,10 @@ export default function UserManagementPage() {
             const { error } = await supabase.from('profiles').update(updates).eq('id', editModal.id)
             if (error) throw error
             addToast('Profil user diperbarui ✓', 'success')
+            await logAudit({
+                action: 'UPDATE', tableName: 'profiles', recordId: editModal.id,
+                oldData: { name: editModal.name, role: editModal.role }, newData: updates
+            })
             setEditModal(null)
             fetchUsers()
         } catch (err) {
@@ -458,6 +473,10 @@ export default function UserManagementPage() {
                 .eq('id', linkTeacherId)
             if (error) throw error
             addToast('Teacher berhasil di-link ke akun ini ✓', 'success')
+            await logAudit({
+                action: 'UPDATE', tableName: 'teachers', recordId: linkTeacherId,
+                newData: { profile_id: linkModal.id, linked_to: linkModal.name }
+            })
             setLinkModal(null); setLinkTeacherId('')
             fetchUsers(); fetchUnlinked()
         } catch (err) {
@@ -477,6 +496,10 @@ export default function UserManagementPage() {
                 .eq('id', user.linkedTeacher.id)
             if (error) throw error
             addToast('Teacher berhasil di-unlink ✓', 'success')
+            await logAudit({
+                action: 'UPDATE', tableName: 'teachers', recordId: user.linkedTeacher.id,
+                oldData: { profile_id: user.id, name: user.linkedTeacher.name }, newData: { profile_id: null }
+            })
             fetchUsers(); fetchUnlinked()
         } catch (err) {
             addToast('Gagal unlink: ' + err.message, 'error')
@@ -507,6 +530,10 @@ export default function UserManagementPage() {
             if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`)
 
             addToast(`Akun ${deleteModal.name} dihapus permanen ✓`, 'success')
+            await logAudit({
+                action: 'DELETE', tableName: 'profiles', recordId: deleteModal.id,
+                oldData: { name: deleteModal.name, email: deleteModal.email, role: deleteModal.role }
+            })
             setDeleteModal(null)
             fetchUsers(); fetchUnlinked()
         } catch (err) {

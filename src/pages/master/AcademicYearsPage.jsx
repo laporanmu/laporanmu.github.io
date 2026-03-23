@@ -14,6 +14,7 @@ import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 import Breadcrumb from '../../components/ui/Breadcrumb'
 import Pagination from '../../components/ui/Pagination'
 import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
@@ -183,11 +184,13 @@ export default function AcademicYearsPage() {
                 if (error) throw error
                 if (!data || data.length === 0) throw new Error('Gagal mengupdate: tidak ada data yang berubah (periksa RLS policy)')
                 addToast('Tahun pelajaran berhasil diupdate', 'success')
+                await logAudit({ action: 'UPDATE', tableName: 'academic_years', recordId: selectedItem.id, oldData: { name: selectedItem.name, semester: selectedItem.semester }, newData: payload })
             } else {
                 const { data, error } = await supabase.from('academic_years').insert({ ...payload, is_active: false }).select()
                 if (error) throw error
                 if (!data || data.length === 0) throw new Error('Gagal menambahkan: tidak ada data yang tersimpan (periksa RLS policy)')
                 addToast('Tahun pelajaran berhasil ditambahkan', 'success')
+                await logAudit({ action: 'INSERT', tableName: 'academic_years', recordId: data?.[0]?.id, newData: { ...payload, is_active: false } })
             }
             setIsModalOpen(false)
             fetchData()
@@ -205,6 +208,7 @@ export default function AcademicYearsPage() {
             if (e2) throw e2
             if (!data || data.length === 0) throw new Error('Gagal mengaktifkan: periksa RLS policy di Supabase')
             addToast(`${item.name} ${item.semester} diaktifkan`, 'success')
+            await logAudit({ action: 'UPDATE', tableName: 'academic_years', recordId: item.id, oldData: { is_active: false, name: item.name }, newData: { is_active: true } })
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal mengaktifkan', 'error') }
         finally { setSubmitting(false) }
@@ -218,6 +222,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal menonaktifkan: periksa RLS policy di Supabase')
             addToast(`${item.name} ${item.semester} dinonaktifkan`, 'success')
+            await logAudit({ action: 'UPDATE', tableName: 'academic_years', recordId: item.id, oldData: { is_active: true, name: item.name }, newData: { is_active: false } })
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal menonaktifkan', 'error') }
         finally { setSubmitting(false) }
@@ -234,6 +239,7 @@ export default function AcademicYearsPage() {
             })
             if (error) throw error
             addToast(`Berhasil menduplikasi ${item.name}`, 'success')
+            await logAudit({ action: 'INSERT', tableName: 'academic_years', newData: { name: item.name + ' (Salinan)', semester: item.semester, duplicated_from: item.id } })
             fetchData()
         } catch { addToast('Gagal menduplikasi', 'error') }
     }
@@ -255,6 +261,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal mengarsipkan: periksa RLS policy di Supabase')
             addToast('Tahun pelajaran diarsipkan', 'success')
+            await logAudit({ action: 'UPDATE', tableName: 'academic_years', recordId: itemToDelete.id, oldData: { deleted_at: null, name: itemToDelete.name }, newData: { deleted_at: new Date().toISOString() } })
             setIsDeleteModalOpen(false)
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal menghapus', 'error') }
@@ -267,6 +274,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal memulihkan: periksa RLS policy di Supabase')
             addToast('Berhasil dipulihkan', 'success')
+            await logAudit({ action: 'UPDATE', tableName: 'academic_years', recordId: id, newData: { deleted_at: null, restored: true } })
             fetchArchived(); fetchData()
         } catch (err) { addToast(err.message || 'Gagal memulihkan', 'error') }
     }
@@ -276,6 +284,7 @@ export default function AcademicYearsPage() {
             const { error } = await supabase.from('academic_years').delete().eq('id', id)
             if (error) throw error
             addToast('Data dihapus permanen', 'success')
+            await logAudit({ action: 'DELETE', tableName: 'academic_years', recordId: id, oldData: { permanent_delete: true } })
             setIsPermanentDeleteOpen(false)
             setItemToPermanentDelete(null)
             fetchArchived()
@@ -289,6 +298,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal mengarsipkan massal: periksa RLS policy di Supabase')
             addToast(`${data.length} data diarsipkan`, 'success')
+            await logAudit({ action: 'UPDATE', tableName: 'academic_years', newData: { bulk_archive: true, count: data.length, ids: selectedIds } })
             setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData()
         } catch { addToast('Gagal menghapus massal', 'error') }
         finally { setSubmitting(false) }
@@ -481,11 +491,10 @@ export default function AcademicYearsPage() {
                                     const cardWidth = el.scrollWidth / STAT_CARD_COUNT
                                     el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
                                 }}
-                                className={`rounded-full transition-all duration-300 ${
-                                    activeStatIdx === i
+                                className={`rounded-full transition-all duration-300 ${activeStatIdx === i
                                         ? 'w-5 h-1.5 bg-[var(--color-primary)]'
                                         : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
-                                }`}
+                                    }`}
                             />
                         ))}
                     </div>

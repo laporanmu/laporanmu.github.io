@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 import { RiskThreshold, calculateCompleteness } from '../../utils/students/studentsConstants'
 
 export const SYSTEM_COLS = [
@@ -571,6 +572,7 @@ export function useStudentsImportExport({
 
             if (importReadyRows.length > 0) {
                 addToast(`Berhasil import ${importReadyRows.length} siswa`, 'success')
+                await logAudit({ action: 'INSERT', tableName: 'students', newData: { bulk_import: true, count: importReadyRows.length } })
             } else {
                 addToast('Tidak ada siswa yang diimport', 'info')
             }

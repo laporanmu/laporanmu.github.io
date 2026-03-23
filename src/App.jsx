@@ -8,14 +8,14 @@ import { useTheme } from './context/ThemeContext'
 import DashboardLayout from './components/layout/DashboardLayout'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLock, faSpinner, faTools, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
-
+import GlobalErrorBoundary from './components/ui/GlobalErrorBoundary'
 
 // ─── Lazy-loaded Pages ────────────────────────────────────────────────────────
 // Public
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
 const ParentCheckPage = lazy(() => import('./pages/auth/ParentCheckPage'))
-const NewsPublicPage = lazy(() => import('./pages/NewsPublicPage'))
+const InformationPage = lazy(() => import('./pages/InformationPage'))
 
 // Core
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -380,7 +380,7 @@ function AppRoutes() {
             <Route path="/perilaku" element={<FlagRoute flag="module.poin" label="Laporan Perilaku"><PerilakuPage /></FlagRoute>} />
             <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AbsensiPage /></FlagRoute>} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/informasi" element={<NewsPublicPage />} />
+            <Route path="/informasi" element={<InformationPage />} />
 
             {/* Role + flag guarded */}
             <Route path="/gate" element={
@@ -475,16 +475,18 @@ function AppRoutes() {
 // ─── App Root ─────────────────────────────────────────────────────────────────
 export default function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <FeatureFlagsProvider>
-              <AppRoutes />
-            </FeatureFlagsProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <GlobalErrorBoundary>
+      <BrowserRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <FeatureFlagsProvider>
+                <AppRoutes />
+              </FeatureFlagsProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </GlobalErrorBoundary>
   )
 }
