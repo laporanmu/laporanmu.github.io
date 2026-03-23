@@ -35,7 +35,7 @@ const MENU_ITEMS = [
         ],
     },
     { path: '/settings', icon: faCog, label: 'Pengaturan' },
-    { path: '/admin/news', icon: faNewspaper, label: 'Berita' },
+    { path: '/admin/news', icon: faNewspaper, label: 'Informasi' },
 ]
 
 const ADMIN_MENU = { path: '/developer', icon: faCode, label: 'Developer' }

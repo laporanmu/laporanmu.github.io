@@ -1,5 +1,5 @@
 /*
- * NewsPage.jsx — Admin CMS Berita (Enterprise Edition)
+ * NewsPage.jsx — Admin CMS Informasi (Enterprise Edition)
  *
  * Supabase schema additions required:
  * ALTER TABLE news ADD COLUMN IF NOT EXISTS excerpt text;
@@ -82,7 +82,7 @@ const ConfirmDeleteModal = memo(({ isOpen, onClose, onConfirm, title, isDeleting
                         <FontAwesomeIcon icon={faTriangleExclamation} />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black text-[var(--color-text)]">Hapus Berita?</h3>
+                        <h3 className="text-lg font-black text-[var(--color-text)]">Hapus Informasi?</h3>
                         <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 font-medium leading-relaxed">
                             "<span className="font-black">{title}</span>" akan dihapus permanen dan tidak bisa dikembalikan.
                         </p>
@@ -143,12 +143,12 @@ const quillModules = {
     ]
 }
 
-const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
+const NewsModal = ({ isOpen, onClose, news, onSave, isSaving, defaultDisplayName = '' }) => {
     const [form, setForm] = useState({
         title: news?.title || '',
         excerpt: news?.excerpt || '',
         content: news?.content || '',
-        tag: news?.tag || 'Berita',
+        tag: news?.tag || 'Informasi',
         image_url: news?.image_url || '',
         image_alt: news?.image_alt || '',
         is_published: news?.is_published ?? false,
@@ -157,7 +157,7 @@ const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
         meta_title: news?.meta_title || '',
         meta_description: news?.meta_description || '',
         slug: news?.slug || '',
-        display_name: news?.display_name || '',
+        display_name: news?.display_name || defaultDisplayName,
     })
     const [imageFile, setImageFile] = useState(null)
     const [imagePreview, setImagePreview] = useState(news?.image_url || null)
@@ -207,7 +207,7 @@ const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
     const readTime = getReadTime(form.content)
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={news ? 'Edit Berita' : 'Buat Berita Baru'} size="xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={news ? 'Edit Informasi' : 'Buat Informasi Baru'} size="xl">
             {/* Quill global styles scoped to this modal */}
             <style>{`
                 .ql-toolbar.ql-snow { border: 1px solid var(--color-border) !important; border-radius: 12px 12px 0 0; background: var(--color-surface-alt); padding: 8px 12px; }
@@ -245,11 +245,11 @@ const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
                             {/* Judul */}
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5 opacity-70">
-                                    <FontAwesomeIcon icon={faNewspaper} className="mr-1.5 text-[8px]" />Judul Berita <span className="text-rose-500">*</span>
+                                    <FontAwesomeIcon icon={faNewspaper} className="mr-1.5 text-[8px]" />Judul Informasi <span className="text-rose-500">*</span>
                                 </label>
                                 <input required type="text" value={form.title}
                                     onChange={e => handleTitleChange(e.target.value)}
-                                    placeholder="Tulis judul berita yang menarik..."
+                                    placeholder="Tulis judul Informasi yang menarik..."
                                     className="w-full px-4 h-12 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 text-sm font-bold outline-none transition-all"
                                 />
                             </div>
@@ -276,7 +276,7 @@ const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
                             <div>
                                 <div className="flex items-center justify-between mb-1.5">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-70">
-                                        <FontAwesomeIcon icon={faBookOpen} className="mr-1.5 text-[8px]" />Isi Berita <span className="text-rose-500">*</span>
+                                        <FontAwesomeIcon icon={faBookOpen} className="mr-1.5 text-[8px]" />Isi Informasi <span className="text-rose-500">*</span>
                                     </label>
                                     {form.content && (
                                         <div className="flex items-center gap-2">
@@ -301,7 +301,7 @@ const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
                                 ) : (
                                     <ReactQuill theme="snow" value={form.content}
                                         onChange={handleContentChange}
-                                        placeholder="Ceritakan detail berita secara lengkap..."
+                                        placeholder="Ceritakan detail Informasi secara lengkap..."
                                         modules={quillModules}
                                     />
                                 )}
@@ -321,7 +321,7 @@ const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
                                     <div className="relative">
                                         <select value={form.tag} onChange={e => setForm(f => ({ ...f, tag: e.target.value }))}
                                             className="w-full px-4 h-11 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] text-xs font-bold appearance-none cursor-pointer pr-9 outline-none transition-all">
-                                            <option value="Berita">Berita Umum</option>
+                                            <option value="Informasi">Informasi Umum</option>
                                             <option value="Kegiatan">Kegiatan Siswa</option>
                                             <option value="Prestasi">Prestasi</option>
                                             <option value="Pengumuman">Pengumuman</option>
@@ -348,7 +348,7 @@ const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
                                         <FontAwesomeIcon icon={faHashtag} className="mr-1.5 text-[8px]" />Slug URL
                                     </label>
                                     <div className="flex items-center gap-0">
-                                        <span className="h-11 px-3 flex items-center text-[10px] text-[var(--color-text-muted)] bg-[var(--color-surface)] border border-r-0 border-[var(--color-border)] rounded-l-2xl opacity-60 whitespace-nowrap">/berita/</span>
+                                        <span className="h-11 px-3 flex items-center text-[10px] text-[var(--color-text-muted)] bg-[var(--color-surface)] border border-r-0 border-[var(--color-border)] rounded-l-2xl opacity-60 whitespace-nowrap">/informasi/</span>
                                         <input type="text" value={form.slug}
                                             onChange={e => setForm(f => ({ ...f, slug: slugify(e.target.value) }))}
                                             placeholder="auto-dari-judul"
@@ -435,7 +435,7 @@ const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
                                 <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 mb-3">Tampilan di Google</p>
                                 <div className="space-y-1">
                                     <p className="text-base font-bold text-blue-600 truncate">{form.meta_title || form.title || 'Judul artikel...'}</p>
-                                    <p className="text-[11px] text-green-700 font-mono">laporanmu.com/berita/{form.slug || 'slug-artikel'}</p>
+                                    <p className="text-[11px] text-green-700 font-mono">laporanmu.com/informasi/{form.slug || 'slug-artikel'}</p>
                                     <p className="text-[12px] text-[var(--color-text-muted)] line-clamp-2 leading-relaxed">{form.meta_description || form.excerpt || 'Deskripsi artikel akan muncul di sini...'}</p>
                                 </div>
                             </div>
@@ -507,7 +507,7 @@ const NewsModal = ({ isOpen, onClose, news, onSave, isSaving }) => {
                         <button type="submit" disabled={isSaving || !form.title.trim() || !form.content.trim()}
                             className="h-11 px-8 rounded-2xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 hover:shadow-lg hover:shadow-[var(--color-primary)]/30 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none">
                             {isSaving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faCheck} />}
-                            {news ? 'Simpan Perubahan' : 'Terbitkan Berita'}
+                            {news ? 'Simpan Perubahan' : 'Terbitkan Informasi'}
                         </button>
                     </div>
                 </div>
@@ -646,13 +646,26 @@ export default function AdminNewsPage() {
     const [newsList, setNewsList] = useState([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
-    const [filterStatus, setFilterStatus] = useState('all') // all | published | draft | scheduled | featured
-    const [sortBy, setSortBy] = useState('newest') // newest | oldest | az | featured
+    const [filterStatus, setFilterStatus] = useState('all')
+    const [sortBy, setSortBy] = useState('newest')
     const [isSaving, setIsSaving] = useState(false)
     const [page, setPage] = useState(0)
     const [modalData, setModalData] = useState({ isOpen: false, current: null })
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, data: null, isDeleting: false })
     const [selectedIds, setSelectedIds] = useState(new Set())
+    const [currentUserName, setCurrentUserName] = useState('')
+
+    // ── Fetch current user name from profiles ──────────────────────────────────
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
+            const { data } = await supabase
+                .from('profiles').select('name').eq('id', user.id).single()
+            setCurrentUserName(data?.name || user.email?.split('@')[0] || 'Admin')
+        }
+        fetchProfile()
+    }, [])
 
     // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -660,7 +673,7 @@ export default function AdminNewsPage() {
         setLoading(true)
         const { data, error } = await supabase
             .from('news').select('*').order('created_at', { ascending: false })
-        if (error) addToast('Gagal memuat berita: ' + error.message, 'error')
+        if (error) addToast('Gagal memuat Informasi: ' + error.message, 'error')
         else setNewsList(data || [])
         setLoading(false)
     }, [addToast])
@@ -763,7 +776,7 @@ export default function AdminNewsPage() {
         } else {
             setNewsList(prev => [data[0], ...prev])
         }
-        addToast(isEdit ? 'Berita diperbarui' : 'Berita ditambahkan', 'success')
+        addToast(isEdit ? 'Informasi diperbarui' : 'Informasi ditambahkan', 'success')
         setModalData({ isOpen: false, current: null })
     }
 
@@ -776,7 +789,7 @@ export default function AdminNewsPage() {
         setDeleteModal({ isOpen: false, data: null, isDeleting: false })
         if (error) { addToast('Gagal hapus: ' + error.message, 'error'); return }
         setNewsList(prev => prev.filter(n => n.id !== deleteModal.data.id)) // optimistic
-        addToast('Berita dihapus', 'success')
+        addToast('Informasi dihapus', 'success')
     }
 
     // ── Toggle Status ───────────────────────────────────────────────────────────
@@ -796,9 +809,9 @@ export default function AdminNewsPage() {
 
         // Show toast with undo option for unpublish
         if (!newStatus) {
-            addToast(`Berita diarsipkan`, 'warning')
+            addToast(`Informasi diarsipkan`, 'warning')
         } else {
-            addToast(`Berita dipublikasikan`, 'success')
+            addToast(`Informasi dipublikasikan`, 'success')
         }
     }, [addToast])
 
@@ -854,7 +867,7 @@ export default function AdminNewsPage() {
         const { error } = await supabase.from('news').delete().in('id', ids)
         if (error) { addToast('Gagal hapus: ' + error.message, 'error'); return }
         setNewsList(prev => prev.filter(n => !ids.includes(n.id)))
-        addToast(`${ids.length} berita dihapus`, 'success')
+        addToast(`${ids.length} Informasi dihapus`, 'success')
         clearSelection()
     }
 
@@ -868,14 +881,14 @@ export default function AdminNewsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <Breadcrumb badge="Admin" items={['CMS Management']} />
-                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)] mt-1.5">Manajemen Berita</h1>
+                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)] mt-1.5">Manajemen Informasi</h1>
                         <p className="text-[11px] text-[var(--color-text-muted)] font-medium mt-0.5">
                             {newsList.length} total artikel · {statusCounts.published} published · {statusCounts.draft} draft
                         </p>
                     </div>
                     <button onClick={() => setModalData({ isOpen: true, current: null })}
                         className="h-11 px-6 rounded-2xl bg-[var(--color-primary)] text-white font-bold text-sm shadow-lg shadow-[var(--color-primary)]/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 shrink-0">
-                        <FontAwesomeIcon icon={faPlus} /> Buat Berita
+                        <FontAwesomeIcon icon={faPlus} /> Buat Informasi
                     </button>
                 </div>
 
@@ -930,8 +943,8 @@ export default function AdminNewsPage() {
                 {selectedIds.size > 0 && (
                     <BulkActionBar
                         count={selectedIds.size}
-                        onPublish={() => bulkUpdate({ is_published: true }, `${selectedIds.size} berita dipublikasikan`)}
-                        onArchive={() => bulkUpdate({ is_published: false }, `${selectedIds.size} berita diarsipkan`)}
+                        onPublish={() => bulkUpdate({ is_published: true }, `${selectedIds.size} Informasi dipublikasikan`)}
+                        onArchive={() => bulkUpdate({ is_published: false }, `${selectedIds.size} Informasi diarsipkan`)}
                         onDelete={bulkDelete}
                         onClear={clearSelection}
                     />
@@ -950,15 +963,15 @@ export default function AdminNewsPage() {
                             <FontAwesomeIcon icon={faNewspaper} className="text-3xl text-[var(--color-text-muted)] opacity-40" />
                         </div>
                         <h3 className="text-lg font-black text-[var(--color-text)] mb-2">
-                            {search ? 'Tidak ada hasil' : filterStatus !== 'all' ? `Tidak ada artikel ${filterStatus}` : 'Belum ada berita'}
+                            {search ? 'Tidak ada hasil' : filterStatus !== 'all' ? `Tidak ada artikel ${filterStatus}` : 'Belum ada Informasi'}
                         </h3>
                         <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">
-                            {search ? `Tidak ada berita yang cocok dengan "${search}".` : 'Mulai buat artikel pertama.'}
+                            {search ? `Tidak ada Informasi yang cocok dengan "${search}".` : 'Mulai buat artikel pertama.'}
                         </p>
                         {!search && (
                             <button onClick={() => setModalData({ isOpen: true, current: null })}
                                 className="mt-6 h-11 px-6 rounded-2xl bg-[var(--color-primary)] text-white font-bold text-sm flex items-center gap-2 hover:brightness-110 transition-all">
-                                <FontAwesomeIcon icon={faPlus} /> Buat Berita Pertama
+                                <FontAwesomeIcon icon={faPlus} /> Buat Informasi Pertama
                             </button>
                         )}
                     </div>
@@ -1012,6 +1025,7 @@ export default function AdminNewsPage() {
                     news={modalData.current}
                     onSave={handleSave}
                     isSaving={isSaving}
+                    defaultDisplayName={currentUserName}
                 />
                 <ConfirmDeleteModal
                     isOpen={deleteModal.isOpen}

@@ -15,6 +15,7 @@ import { faLock, faSpinner, faTools, faTriangleExclamation } from '@fortawesome/
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
 const ParentCheckPage = lazy(() => import('./pages/auth/ParentCheckPage'))
+const NewsPublicPage = lazy(() => import('./pages/NewsPublicPage'))
 
 // Core
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -379,6 +380,7 @@ function AppRoutes() {
             <Route path="/perilaku" element={<FlagRoute flag="module.poin" label="Laporan Perilaku"><PerilakuPage /></FlagRoute>} />
             <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AbsensiPage /></FlagRoute>} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/informasi" element={<NewsPublicPage />} />
 
             {/* Role + flag guarded */}
             <Route path="/gate" element={
@@ -428,6 +430,7 @@ function AppRoutes() {
                 <AdminNewsPage />
               </RoleFlagRoute>
             } />
+
             <Route path="/master/students" element={
               <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.students" label="Data Siswa">
                 <StudentsPage />

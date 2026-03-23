@@ -12,7 +12,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const { profile } = useAuth()
 
     const [searchParams, setSearchParams] = useSearchParams()
-    
+
     // ---- STATE: CORE DATA ----
     const [students, setStudents] = useState([])
     const [classesList, setClassesList] = useState([])
@@ -84,13 +84,13 @@ export function useStudentsCore({ addToast, addUndoToast }) {
         const g = searchParams.get('g') || ''
         const s = searchParams.get('s') || ''
         const t = searchParams.get('t') || ''
-        
+
         if (q) setSearchQuery(q)
         if (c) setFilterClass(c)
         if (g) setFilterGender(g)
         if (s) setFilterStatus(s)
         if (t) setFilterTag(t)
-        
+
         const sortByParam = searchParams.get('sort')
         if (sortByParam) setSortBy(sortByParam)
     }, [])
@@ -103,14 +103,14 @@ export function useStudentsCore({ addToast, addUndoToast }) {
         if (filterStatus) params.s = filterStatus
         if (filterTag) params.t = filterTag
         if (sortBy !== 'name_asc') params.sort = sortBy
-        
+
         // Clean URL by removing empty params
         Object.keys(params).forEach(key => !params[key] && delete params[key])
-        
+
         // Only update if something changed to avoid infinity loops
         const current = Object.fromEntries(searchParams.entries())
         if (JSON.stringify(current) !== JSON.stringify(params)) {
-             setSearchParams(params, { replace: true })
+            setSearchParams(params, { replace: true })
         }
     }, [searchQuery, filterClass, filterGender, filterStatus, filterTag, sortBy])
 
@@ -305,7 +305,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     .order('created_at', { ascending: false })
 
                 const newLastReportMap = { ...lastReportMapRef.current };
-                
+
                 // Group points by student
                 const studentPointsMap = {};
                 (reportsData || []).forEach(r => {
@@ -321,16 +321,16 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     }
                 })
 
-                // Get latest report timestamps
-                (reportsData || []).forEach(r => {
-                    if (!newLastReportMap[r.student_id]) newLastReportMap[r.student_id] = r.created_at
-                })
+                    // Get latest report timestamps
+                    (reportsData || []).forEach(r => {
+                        if (!newLastReportMap[r.student_id]) newLastReportMap[r.student_id] = r.created_at
+                    })
 
                 // Siswa tanpa report = neutral
                 uncachedIds.forEach(id => {
                     if (!(id in trendMapRef.current)) trendMapRef.current[id] = { trend: 'neutral', history: [] }
                 })
-                
+
                 lastReportMapRef.current = newLastReportMap
                 setLastReportMap(newLastReportMap)
             } catch { }
@@ -793,7 +793,7 @@ Laporanmu System`
     const buildWAMessage = (student, templateId) => {
         let template = waTemplate
         if (templateId === 'points') template = `*Laporan Poin Perilaku Ananda {nama}*\n\nSaat ini Ananda memiliki total *{poin} poin* di sistem Laporanmu.\n\n_Terus semangatkan kedisiplinan dan prestasi ananda._\n\nWassalam.`
-        else if (templateId === 'security') template = `*PEMBERITAHUAN KEAMANAN*\n\nInformasi akses Portal Orang Tua untuk ananda {nama}:\nID Reg : {kode}\nPIN    : {pin}\nPortal : [URL]\n\n_Mohon jaga kerahasiaan PIN anda._`
+        else if (templateId === 'security') template = `*PEMInformasiHUAN KEAMANAN*\n\nInformasi akses Portal Orang Tua untuk ananda {nama}:\nID Reg : {kode}\nPIN    : {pin}\nPortal : [URL]\n\n_Mohon jaga kerahasiaan PIN anda._`
         else if (templateId === 'custom') template = customWaMsg || 'Halo Bapak/Ibu wali dari {nama}.'
 
         return template
@@ -865,16 +865,16 @@ Laporanmu System`
     const handleBulkPhotoMatch = async (files, method = 'nisn') => {
         setMatchingPhotos(true)
         const normalize = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim()
-        
+
         const matches = Array.from(files).map(file => {
             const fileName = file.name.split('.')[0].trim().toLowerCase()
             const normalizedFileName = normalize(fileName)
-            
+
             const s = students.find(std => {
                 if (method === 'name') {
                     const normalizedStdName = normalize(std.name)
                     return normalizedStdName === normalizedFileName || normalizedStdName.includes(normalizedFileName) || normalizedFileName.includes(normalizedStdName)
-                } 
+                }
                 if (method === 'code') {
                     return normalize(std.registration_code) === normalizedFileName || normalize(std.id) === normalizedFileName
                 }
@@ -882,11 +882,11 @@ Laporanmu System`
                 return normalize(std.nisn) === normalizedFileName
             })
 
-            return { 
-                file, 
-                studentId: s?.id || null, 
-                studentName: s?.name || '?', 
-                preview: URL.createObjectURL(file), 
+            return {
+                file,
+                studentId: s?.id || null,
+                studentName: s?.name || '?',
+                preview: URL.createObjectURL(file),
                 status: s ? 'matched' : 'unmatched',
                 matchMethod: method
             }
@@ -1001,26 +1001,26 @@ Laporanmu System`
         if (!payload.name || !payload.class_id) return
         setSubmittingInline(true)
         try {
-            const { error } = await supabase.from('students').insert([{ 
+            const { error } = await supabase.from('students').insert([{
                 name: payload.name,
                 gender: payload.gender || 'L',
                 class_id: payload.class_id,
                 phone: payload.phone || null,
                 status: 'aktif',
                 tags: [],
-                registration_code: generateCode(), 
-                pin: String(Math.floor(1000 + Math.random() * 9000)), 
-                total_points: 0 
+                registration_code: generateCode(),
+                pin: String(Math.floor(1000 + Math.random() * 9000)),
+                total_points: 0
             }])
             if (error) throw error
             addToast('Berhasil menambahkan siswa', 'success')
             if (!payloadOverride) setInlineForm({ name: '', gender: 'L', class_id: inlineForm.class_id, phone: '' })
             fetchData(); fetchStats()
-        } catch (err) { 
+        } catch (err) {
             console.error('Inline Add Error:', err)
-            addToast('Gagal menambahkan siswa', 'error') 
-        } finally { 
-            setSubmittingInline(false) 
+            addToast('Gagal menambahkan siswa', 'error')
+        } finally {
+            setSubmittingInline(false)
         }
     }
 

@@ -24,6 +24,18 @@ import { supabase } from '../lib/supabase'
 
 const ChatAssistant = lazy(() => import('../components/ui/ChatAssistant'))
 
+// Strip HTML tags + decode common entities for clean excerpt display
+const stripHtml = (html = '') => html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+
 /* ───────────────────────────── Hook: Scroll Reveal ───────────────────────────── */
 function useReveal(threshold = 0.15) {
     const ref = useRef(null)
@@ -127,7 +139,7 @@ export default function LandingPage() {
                         <div className="hidden md:flex items-center gap-8 bg-[var(--color-surface)]/50 dark:bg-[var(--color-surface-alt)]/50 backdrop-blur-md px-6 py-2.5 rounded-full border border-[var(--color-border)]">
                             <a href="#visi-misi" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Visi</a>
                             <a href="#alur" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Alur</a>
-                            <a href="#Berita" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Berita</a>
+                            <a href="#Informasi" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Informasi</a>
                         </div>
 
                         {/* Desktop Actions */}
@@ -163,7 +175,7 @@ export default function LandingPage() {
                             {[
                                 { name: 'Visi & Misi', id: 'visi-misi' },
                                 { name: 'Alur Kerja', id: 'alur' },
-                                { name: 'Berita', id: 'Berita' }
+                                { name: 'Informasi', id: 'Informasi' }
                             ].map((item, i) => (
                                 <a key={i} href={`#${item.id}`} className="flex items-center px-4 py-3.5 rounded-xl text-sm font-semibold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-primary)] transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                                     {item.name}
@@ -332,21 +344,21 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ═══ Berita ═══ */}
+            {/* ═══ Informasi ═══ */}
             <Reveal>
-                <section id="Berita" className="py-24 relative z-10">
+                <section id="Informasi" className="py-24 relative z-10">
                     <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
                         {/* Section header */}
                         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
                             <div>
                                 <span className="text-[var(--color-primary)] font-bold uppercase tracking-[0.3em] text-[10px] mb-3 block">Informasi Terkini</span>
-                                <h2 className="text-3xl font-extrabold text-[var(--color-text)] mb-3">Berita <span className="text-[var(--color-primary)]">Terkini</span></h2>
-                                <p className="text-slate-500 font-medium text-sm sm:text-base max-w-md">Informasi terbaru seputar kegiatan, prestasi, dan kebijakan sekolah.</p>
+                                <h2 className="text-3xl font-extrabold text-[var(--color-text)] mb-3">Informasi & <span className="text-[var(--color-primary)]">Pengumuman</span></h2>
+                                <p className="text-slate-500 font-medium text-sm sm:text-base max-w-md">Update terkini seputar Laporanmu, jadwal, dan pengumuman penting sekolah.</p>
                             </div>
-                            <Link to="/berita" className="group text-[var(--color-primary)] font-bold flex items-center gap-2 hover:gap-3 text-sm transition-all shrink-0">
-                                Lihat Semua Berita
+                            <a href="/informasi" className="group text-[var(--color-primary)] font-bold flex items-center gap-2 hover:gap-3 text-sm transition-all shrink-0">
+                                Lihat Semua Informasi
                                 <FontAwesomeIcon icon={faArrowRight} className="text-xs group-hover:translate-x-0.5 transition-transform" />
-                            </Link>
+                            </a>
                         </div>
 
                         {newsLoading ? (
@@ -357,7 +369,7 @@ export default function LandingPage() {
                             </div>
                         ) : news.length === 0 ? (
                             <div className="col-span-full py-20 text-center text-[var(--color-text-muted)] font-black bg-[var(--color-surface-alt)]/30 rounded-[3rem] border-2 border-dashed border-[var(--color-border)] uppercase tracking-[0.3em] text-[10px] opacity-50">
-                                Belum ada Berita
+                                Belum ada Informasi
                             </div>
                         ) : (
                             <div className="space-y-8">
@@ -395,7 +407,7 @@ export default function LandingPage() {
                                                         {news[0].title}
                                                     </h3>
                                                     <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-6 opacity-80 line-clamp-3">
-                                                        {news[0].excerpt || news[0].content?.replace(/<[^>]*>/g, ' ').slice(0, 160).trim() + '…'}
+                                                        {news[0].excerpt || stripHtml(news[0].content).slice(0, 160) + '…'}
                                                     </p>
                                                     <div className="flex items-center gap-4 text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest opacity-60">
                                                         <span className="flex items-center gap-1.5">
@@ -452,7 +464,7 @@ export default function LandingPage() {
                                                         {item.title}
                                                     </h3>
                                                     <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-4 line-clamp-3 font-medium opacity-80">
-                                                        {item.excerpt || item.content?.replace(/<[^>]*>/g, ' ').slice(0, 140).trim() + '…'}
+                                                        {item.excerpt || stripHtml(item.content).slice(0, 140) + '…'}
                                                     </p>
                                                     <div className="mt-auto pt-5 border-t border-[var(--color-border)]/50 flex items-center justify-between">
                                                         <span className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 uppercase tracking-widest flex items-center gap-1.5">
@@ -557,7 +569,7 @@ export default function LandingPage() {
                                 {[
                                     { name: 'Visi', id: 'visi-misi' },
                                     { name: 'Alur', id: 'alur' },
-                                    { name: 'Berita', id: 'Berita' }
+                                    { name: 'Informasi', id: 'Informasi' }
                                 ].map((item, idx) => (
                                     <a key={idx} href={`#${item.id}`} className="hover:text-[var(--color-primary)] transition-colors">
                                         {item.name}
@@ -626,7 +638,8 @@ export default function LandingPage() {
 
                             <div className="prose prose-slate dark:prose-invert max-w-none w-full overflow-hidden">
                                 <div
-                                    className="text-[var(--color-text)] text-base sm:text-lg leading-[1.8] font-medium opacity-90 news-content-html break-words overflow-wrap-anywhere"
+                                    className="text-[var(--color-text)] text-base sm:text-lg leading-[1.8] font-medium opacity-90 news-content-html"
+                                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                                     dangerouslySetInnerHTML={{ __html: selectedNews.content }}
                                 />
                             </div>
@@ -647,7 +660,7 @@ export default function LandingPage() {
                             </div>
                             <div>
                                 <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">Diterbitkan Oleh</p>
-                                <p className="text-sm font-bold text-[var(--color-text)]">{selectedNews.display_name || selectedNews.author?.split('@')[0] || 'Admin Sekolah'}</p>
+                                <p className="text-sm font-bold text-[var(--color-text)]">{selectedNews.display_name || selectedNews.author?.split('@')[0] || 'Admin'}</p>
                             </div>
                         </div>
                     </div>
