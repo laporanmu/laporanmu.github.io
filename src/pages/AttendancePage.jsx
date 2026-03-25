@@ -2951,7 +2951,7 @@ function FingerspotImportModal({ teachers, onClose, onImported }) {
                 setProgress({ done: Math.min(i + CHUNK, previewRows.length), total: previewRows.length })
             }
             await logAudit({
-                action: 'INSERT', tableName: 'teacher_attendance',
+                action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'teacher_attendance', recordId: null,
                 newData: { source: 'fingerspot', count: previewRows.length }
             })
             addToast(`${previewRows.length} record absensi berhasil diimpor ✓`, 'success')
@@ -4125,6 +4125,10 @@ export default function AttendancePage() {
             try { localStorage.removeItem(draftKey(classId, tahun, bulan)) } catch { }
             setDraftAvail(false)
             addToast(`Absensi ${BULAN_NAMA[bulan]} ${tahun} tersimpan ✓`, 'success')
+            await logAudit({
+                action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'attendance_monthly', recordId: null,
+                newData: { class_id: classId, year: tahun, month: bulan, count: studentList.length }
+            })
             haptic('success')
         }
     }, [saving, isDirty, classId, tahun, bulan, studentList, dataMap, originalMap, profile, isOnline, addToast])

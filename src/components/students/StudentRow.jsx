@@ -26,7 +26,8 @@ import {
     faCheckDouble,
     faStar,
     faFire,
-    faPaperPlane
+    faPaperPlane,
+    faShieldHalved
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import useLongPress from '../../hooks/useLongPress'
@@ -651,8 +652,11 @@ const StudentRow = memo(({
                         <button onClick={() => onViewTags(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-violet-500 hover:bg-violet-500/10 transition-all text-sm" title="Label">
                             <FontAwesomeIcon icon={faTags} />
                         </button>
-                        <button onClick={() => onViewClassHistory(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-purple-500 hover:bg-purple-500/10 transition-all text-sm" title="Riwayat">
+                        <button onClick={() => onViewClassHistory(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-purple-500 hover:bg-purple-500/10 transition-all text-sm" title="Riwayat Perilaku">
                             <FontAwesomeIcon icon={faClockRotateLeft} />
+                        </button>
+                        <button onClick={() => onViewProfile(student, 'audit')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-indigo-500/10 transition-all text-sm" title="Audit Forensik">
+                            <FontAwesomeIcon icon={faShieldHalved} />
                         </button>
                         {onConfirmDelete && (
                             <button onClick={() => onConfirmDelete(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Hapus">

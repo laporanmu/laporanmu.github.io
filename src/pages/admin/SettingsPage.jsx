@@ -16,6 +16,7 @@ import { useToast } from '../../context/ToastContext'
 import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
 import { useSchoolSettings, DEFAULT_SETTINGS } from '../../context/SchoolSettingsContext'
+import { useAuth } from '../../context/AuthContext'
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -282,6 +283,7 @@ function CategoryNavCard({ cat, flags, isActive, onClick }) {
 export default function AdminSettingsPage() {
     const { addToast } = useToast()
     const { settings, loading: settingsLoading, saveSettings } = useSchoolSettings()
+    const { profile } = useAuth()
 
     const [activeTab, setActiveTab] = useState('flags')
     const [activeCategory, setActiveCategory] = useState('module')

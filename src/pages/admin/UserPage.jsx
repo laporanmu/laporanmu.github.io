@@ -286,7 +286,7 @@ export default function UserManagementPage() {
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error)
             addToast('Session dicabut ✓', 'success')
-            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'sessions', newData: { session_id: sessionId, revoked: true } })
+            await logAudit({ action: 'DELETE', source: currentUser?.id || 'SYSTEM', tableName: 'sessions', newData: { session_id: sessionId, revoked: true } })
             fetchSessions(true)
         } catch (err) {
             addToast('Gagal revoke: ' + err.message, 'error')
@@ -308,7 +308,7 @@ export default function UserManagementPage() {
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error)
             addToast(`Semua session ${userName} dicabut ✓`, 'success')
-            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'sessions', newData: { revoke_all: true, user_id: userId, user_name: userName } })
+            await logAudit({ action: 'DELETE', source: currentUser?.id || 'SYSTEM', tableName: 'sessions', newData: { revoke_all: true, user_id: userId, user_name: userName } })
             setConfirmRevokeAll(null)
             fetchSessions(true)
         } catch (err) {
@@ -382,7 +382,7 @@ export default function UserManagementPage() {
 
             addToast(`Akun berhasil dibuat untuk ${createName}`, 'success')
             await logAudit({
-                action: 'INSERT', source: 'SYSTEM', tableName: 'profiles',
+                action: 'INSERT', source: currentUser?.id || 'SYSTEM', tableName: 'profiles',
                 newData: { name: createName.trim(), email: createEmail.trim(), role: createRole, teacher_id: createTeacherId || null }
             })
             setCreateModal(false)
@@ -426,7 +426,8 @@ export default function UserManagementPage() {
 
             addToast(`Password ${resetModal.name} berhasil diubah ✓`, 'success')
             await logAudit({
-                action: 'UPDATE', source: 'SYSTEM', tableName: 'profiles', recordId: resetModal.id,
+                action: 'UPDATE', source: currentUser?.id || 'SYSTEM', tableName: 'profiles', recordId: resetModal.id,
+                oldData: { name: resetModal.name, email: resetModal.email, password_reset: false },
                 newData: { password_reset: true, name: resetModal.name, email: resetModal.email }
             })
             setResetModal(null)
@@ -451,7 +452,7 @@ export default function UserManagementPage() {
             if (error) throw error
             addToast('Profil user diperbarui ✓', 'success')
             await logAudit({
-                action: 'UPDATE', source: 'SYSTEM', tableName: 'profiles', recordId: editModal.id,
+                action: 'UPDATE', source: currentUser?.id || 'SYSTEM', tableName: 'profiles', recordId: editModal.id,
                 oldData: { name: editModal.name, role: editModal.role }, newData: updates
             })
             setEditModal(null)
@@ -474,7 +475,8 @@ export default function UserManagementPage() {
             if (error) throw error
             addToast('Teacher berhasil di-link ke akun ini ✓', 'success')
             await logAudit({
-                action: 'UPDATE', source: 'SYSTEM', tableName: 'teachers', recordId: linkTeacherId,
+                action: 'UPDATE', source: currentUser?.id || 'SYSTEM', tableName: 'teachers', recordId: linkTeacherId,
+                oldData: { id: linkTeacherId, profile_id: null },
                 newData: { profile_id: linkModal.id, linked_to: linkModal.name }
             })
             setLinkModal(null); setLinkTeacherId('')
@@ -497,7 +499,7 @@ export default function UserManagementPage() {
             if (error) throw error
             addToast('Teacher berhasil di-unlink ✓', 'success')
             await logAudit({
-                action: 'UPDATE', source: 'SYSTEM', tableName: 'teachers', recordId: user.linkedTeacher.id,
+                action: 'UPDATE', source: currentUser?.id || 'SYSTEM', tableName: 'teachers', recordId: user.linkedTeacher.id,
                 oldData: { profile_id: user.id, name: user.linkedTeacher.name }, newData: { profile_id: null }
             })
             fetchUsers(); fetchUnlinked()
@@ -531,7 +533,7 @@ export default function UserManagementPage() {
 
             addToast(`Akun ${deleteModal.name} dihapus permanen ✓`, 'success')
             await logAudit({
-                action: 'DELETE', source: 'SYSTEM', tableName: 'profiles', recordId: deleteModal.id,
+                action: 'DELETE', source: currentUser?.id || 'SYSTEM', tableName: 'profiles', recordId: deleteModal.id,
                 oldData: { name: deleteModal.name, email: deleteModal.email, role: deleteModal.role }
             })
             setDeleteModal(null)

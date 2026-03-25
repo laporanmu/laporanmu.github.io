@@ -15,6 +15,7 @@ import Breadcrumb from '../../components/ui/Breadcrumb'
 import Pagination from '../../components/ui/Pagination'
 
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
@@ -33,6 +34,7 @@ const LS_PAGE_SIZE = 'violations_page_size'
 
 export default function ViolationsPage() {
     const { addToast } = useToast()
+    const { profile } = useAuth()
     const { enabled: canEdit } = useFlag('access.teacher_violations')
     const [violations, setViolations] = useState([])
     const [loading, setLoading] = useState(true)
@@ -248,12 +250,12 @@ export default function ViolationsPage() {
                 const { error } = await supabase.from('violation_types').update(payload).eq('id', selectedItem.id)
                 if (error) throw error
                 addToast('Data berhasil diupdate', 'success')
-                await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'violation_types', recordId: selectedItem.id, oldData: { name: selectedItem.name, points: selectedItem.points, category: selectedItem.category }, newData: payload })
+                await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'violation_types', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } })
             } else {
                 const { data: insData, error } = await supabase.from('violation_types').insert(payload).select().single()
                 if (error) throw error
                 addToast('Data baru berhasil ditambahkan', 'success')
-                await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'violation_types', recordId: insData?.id, newData: payload })
+                await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'violation_types', recordId: insData?.id, newData: payload })
             }
             setIsModalOpen(false)
             fetchData()
@@ -268,7 +270,7 @@ export default function ViolationsPage() {
             const { error } = await supabase.from('violation_types').delete().eq('id', itemToDelete.id)
             if (error) throw error
             addToast('Data berhasil dihapus', 'success')
-            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'violation_types', recordId: itemToDelete.id, oldData: { name: itemToDelete.name, points: itemToDelete.points, category: itemToDelete.category } })
+            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'violation_types', recordId: itemToDelete.id, oldData: itemToDelete })
             setIsDeleteModalOpen(false)
             fetchData()
         } catch { addToast('Gagal menghapus data', 'error') }
@@ -278,9 +280,11 @@ export default function ViolationsPage() {
     const handleBulkDelete = async () => {
         setSubmitting(true)
         try {
-            const { error } = await supabase.from('violation_types').delete().in('id', selectedIds)
+            const idsSnap = [...selectedIds]
+            const { error } = await supabase.from('violation_types').delete().in('id', idsSnap)
             if (error) throw error
-            addToast(`${selectedIds.length} data berhasil dihapus`, 'success')
+            addToast(`${idsSnap.length} data berhasil dihapus`, 'success')
+            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'violation_types', newData: { bulk: true, count: idsSnap.length, ids: idsSnap } })
             setSelectedIds([])
             setIsBulkDeleteOpen(false)
             fetchData()

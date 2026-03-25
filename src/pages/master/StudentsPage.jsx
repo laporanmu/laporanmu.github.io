@@ -287,7 +287,7 @@ export default function StudentsPage() {
         students, classesList, fetchData, fetchStats, addToast, closeModal, importFileInputRef, generateCode,
         filterClasses, filterClass, filterGender, filterStatus, filterTag, filterMissing, debouncedSearch,
         filterPointMode, filterPointMin, filterPointMax, sortBy, selectedStudentIds, selectedStudents, gSheetsUrl,
-        setFetchingGSheets, fetchingGSheets
+        setFetchingGSheets, fetchingGSheets, profile: core.profile
     })
 
     const handleViewTags = useCallback((s) => {

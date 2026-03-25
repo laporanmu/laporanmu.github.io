@@ -2,7 +2,7 @@ import React, { memo, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faEdit, faTrash, faMars, faVenus, faBoxArchive,
-    faEye, faThumbtack,
+    faEye, faThumbtack, faShieldHalved
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 
@@ -107,6 +107,7 @@ const TeacherRow = memo(({
                     <button onClick={() => handleTogglePin(teacher)} title={teacher.is_pinned ? 'Lepas Sematkan' : 'Sematkan'} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all text-xs ${teacher.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10'}`}><FontAwesomeIcon icon={faThumbtack} /></button>
                     <button onClick={() => openProfile(teacher)} title="Profil" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-xs"><FontAwesomeIcon icon={faEye} /></button>
                     {handleEdit && <button onClick={() => handleEdit(teacher)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-xs"><FontAwesomeIcon icon={faEdit} /></button>}
+                    <button onClick={() => openProfile(teacher, 'audit')} title="Forensic Audit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-xs"><FontAwesomeIcon icon={faShieldHalved} /></button>
                     {setIsArchiveModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} title="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 transition-all text-xs"><FontAwesomeIcon icon={faBoxArchive} /></button>}
                     {setIsDeleteModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsDeleteModalOpen(true) }} title="Hapus" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-xs"><FontAwesomeIcon icon={faTrash} /></button>}
                 </div>
@@ -151,6 +152,7 @@ const TeacherMobileCard = memo(({
                             </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
+                            <button onClick={() => openProfile(teacher, 'audit')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 text-xs transition-all"><FontAwesomeIcon icon={faShieldHalved} /></button>
                             <button onClick={() => handleTogglePin(teacher)} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all ${teacher.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:text-amber-500'}`}><FontAwesomeIcon icon={faThumbtack} /></button>
                             {handleEdit && <button onClick={() => handleEdit(teacher)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 text-xs transition-all"><FontAwesomeIcon icon={faEdit} /></button>}
                             {setIsArchiveModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 text-xs transition-all"><FontAwesomeIcon icon={faBoxArchive} /></button>}

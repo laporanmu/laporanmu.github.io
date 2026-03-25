@@ -627,6 +627,12 @@ export default function DatabasePage() {
                 ? `${itemsToDelete.length} data ${table} berhasil dibersihkan`
                 : `${itemsToDelete.length} siswa berhasil diperbaiki (kelas dikosongkan)`
             addToast(msg, 'success')
+            await logAudit({
+                action: action === 'delete' ? 'DELETE' : 'UPDATE',
+                source: profile?.id || 'SYSTEM',
+                tableName: table,
+                newData: { repair: true, id: id, count: itemsToDelete.length, ids: itemsToDelete }
+            })
             fetchIntegrity()
             fetchTableCounts(true)
         } catch (err) {

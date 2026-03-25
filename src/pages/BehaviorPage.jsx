@@ -258,8 +258,8 @@ export default function BehaviorPage() {
             }
             addToast(`Berhasil mengimpor ${validRows.length} laporan`, 'success')
             await logAudit({
-                action: 'INSERT', source: 'OPERATIONAL', tableName: 'reports', recordId: null,
-                newData: { bulk_import: true, count: validRows.length }
+                action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: null,
+                newData: { bulk_import: true, count: validRows.length, data: validRows }
             })
             setIsImportModalOpen(false)
             fetchReports()
@@ -424,17 +424,17 @@ export default function BehaviorPage() {
                 if (error) throw error
                 addToast('Laporan diupdate', 'success')
                 await logAudit({
-                    action: 'UPDATE', source: 'OPERATIONAL', tableName: 'reports', recordId: selectedItem.id,
-                    oldData: { student_id: selectedItem.student_id, violation_type_id: selectedItem.violation_type_id, points: selectedItem.points, notes: selectedItem.notes },
-                    newData: { student_id: payload.student_id, violation_type_id: payload.violation_type_id, points: payload.points, notes: payload.notes }
+                    action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: selectedItem.id,
+                    oldData: selectedItem,
+                    newData: { ...selectedItem, ...payload }
                 })
             } else {
                 const { data: insData, error } = await supabase.from('reports').insert([payload]).select().single()
                 if (error) throw error
                 addToast('Laporan berhasil dibuat', 'success')
                 await logAudit({
-                    action: 'INSERT', source: 'OPERATIONAL', tableName: 'reports', recordId: insData?.id,
-                    newData: { student_id: payload.student_id, violation_type_id: payload.violation_type_id, points: payload.points, notes: payload.notes, teacher_name: payload.teacher_name }
+                    action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: insData?.id,
+                    newData: insData || payload
                 })
             }
             setIsModalOpen(false); fetchReports(); fetchStats()
@@ -449,8 +449,8 @@ export default function BehaviorPage() {
             if (error) throw error
             addToast('Laporan dihapus', 'success')
             await logAudit({
-                action: 'DELETE', source: 'OPERATIONAL', tableName: 'reports', recordId: itemToDelete.id,
-                oldData: { student_id: itemToDelete.student_id, violation_type_id: itemToDelete.violation_type_id, points: itemToDelete.points, notes: itemToDelete.notes }
+                action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: itemToDelete.id,
+                oldData: itemToDelete
             })
             setIsDeleteModalOpen(false); fetchReports(); fetchStats()
         } catch (err) { addToast(err.message || 'Gagal menghapus', 'error') }
@@ -465,7 +465,7 @@ export default function BehaviorPage() {
             if (error) throw error
             addToast(`${idsSnap.length} laporan dihapus`, 'success')
             await logAudit({
-                action: 'DELETE', source: 'OPERATIONAL', tableName: 'reports', recordId: null,
+                action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: null,
                 oldData: { bulk: true, count: idsSnap.length, ids: idsSnap }
             })
             setSelectedIds([]); setIsBulkDeleteOpen(false); fetchReports(); fetchStats()

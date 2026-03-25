@@ -13,6 +13,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import Breadcrumb from '../../components/ui/Breadcrumb'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
@@ -38,6 +39,7 @@ const LS_PAGE_SIZE = 'classes_page_size'
 
 export default function ClassesPage() {
     const { addToast } = useToast()
+    const { profile } = useAuth()
     const { enabled: canEdit } = useFlag('access.teacher_classes')
     const [classes, setClasses] = useState([])
     const [archivedClasses, setArchivedClasses] = useState([])
@@ -157,7 +159,7 @@ export default function ClassesPage() {
         try {
             const { error } = await supabase.from('classes').update({ deleted_at: null }).eq('id', id)
             if (error) throw error
-            addToast('Kelas berhasil dipulihkan', 'success'); await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'classes', recordId: id, newData: { deleted_at: null, restored: true } }); fetchArchived(); fetchData()
+            addToast('Kelas berhasil dipulihkan', 'success'); await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'classes', recordId: id, oldData: { id, restored: false }, newData: { deleted_at: null, restored: true } }); fetchArchived(); fetchData()
         } catch { addToast('Gagal memulihkan kelas', 'error') }
     }
 
@@ -166,7 +168,7 @@ export default function ClassesPage() {
         try {
             const { error } = await supabase.from('classes').delete().eq('id', id)
             if (error) throw error
-            addToast('Kelas dihapus permanen', 'success'); await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'classes', recordId: id, oldData: { permanent_delete: true } }); fetchArchived()
+            addToast('Kelas dihapus permanen', 'success'); await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'classes', recordId: id, oldData: { permanent_delete: true } }); fetchArchived()
         } catch { addToast('Gagal menghapus permanen', 'error') }
     }
 
@@ -284,8 +286,8 @@ export default function ClassesPage() {
         const finalMajor = [formData.program, formData.gender_type].filter(Boolean).join(' ')
         const payload = { name: formData.name, grade: formData.level, major: finalMajor, homeroom_teacher_id: formData.homeroom_teacher_id || null, academic_year_id: formData.academic_year_id || null }
         try {
-            if (selectedItem) { const { error } = await supabase.from('classes').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data kelas berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'classes', recordId: selectedItem.id, oldData: { name: selectedItem.name, grade: selectedItem.grade, major: selectedItem.major }, newData: payload }) }
-            else { const { data: insData, error } = await supabase.from('classes').insert(payload).select().single(); if (error) throw error; addToast('Kelas baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'classes', recordId: insData?.id, newData: payload }) }
+            if (selectedItem) { const { error } = await supabase.from('classes').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data kelas berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'classes', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } }) }
+            else { const { data: insData, error } = await supabase.from('classes').insert(payload).select().single(); if (error) throw error; addToast('Kelas baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'classes', recordId: insData?.id, newData: payload }) }
             setIsModalOpen(false); fetchData()
         } catch (err) { addToast(err.message || 'Gagal menyimpan data', 'error') }
         finally { setSubmitting(false) }
@@ -296,7 +298,7 @@ export default function ClassesPage() {
         try {
             const { error } = await supabase.from('classes').delete().eq('id', itemToDelete.id)
             if (error) throw error
-            addToast('Kelas berhasil dihapus', 'success'); await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'classes', recordId: itemToDelete.id, oldData: { name: itemToDelete.name, grade: itemToDelete.grade } }); setIsDeleteModalOpen(false); fetchData()
+            addToast('Kelas berhasil dihapus', 'success'); await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'classes', recordId: itemToDelete.id, oldData: itemToDelete }); setIsDeleteModalOpen(false); fetchData()
         } catch { addToast('Gagal mengarsipkan kelas', 'error') }
         finally { setSubmitting(false) }
     }
@@ -306,7 +308,7 @@ export default function ClassesPage() {
         try {
             const { error } = await supabase.from('classes').delete().in('id', selectedIds)
             if (error) throw error
-            addToast(`${selectedIds.length} kelas berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'classes', newData: { bulk: true, count: selectedIds.length, ids: selectedIds } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData()
+            addToast(`${selectedIds.length} kelas berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'classes', newData: { bulk: true, count: selectedIds.length, ids: selectedIds } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData()
         } catch { addToast('Gagal menghapus kelas', 'error') }
         finally { setSubmitting(false) }
     }

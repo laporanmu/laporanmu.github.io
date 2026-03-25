@@ -862,17 +862,10 @@ export default function GatePage() {
                 // Audit log untuk INSERT
                 await logAudit({
                     action: 'INSERT',
-                    source: 'OPERATIONAL',
+                    source: profile?.id || 'SYSTEM',
                     tableName: 'gate_logs',
                     recordId: insertedRow?.id || null,
-                    newData: {
-                        visitor_name: payload.visitor_name,
-                        visitor_type: payload.visitor_type,
-                        visitor_nip: payload.visitor_nip,
-                        purpose: payload.purpose,
-                        check_in: payload.check_in,
-                        check_out: payload.check_out,
-                    },
+                    newData: insertedRow || payload,
                 })
 
                 await loadTodayLogs()
@@ -909,11 +902,11 @@ export default function GatePage() {
             // Audit log untuk UPDATE (Check-out/Return)
             await logAudit({
                 action: 'UPDATE',
-                source: 'OPERATIONAL',
+                source: profile?.id || 'SYSTEM',
                 tableName: 'gate_logs',
                 recordId: log.id,
-                oldData: { check_out: log.check_out },
-                newData: { check_out: checkOutISO }
+                oldData: log,
+                newData: { ...log, check_out: checkOutISO }
             })
 
             loadTodayLogs()
@@ -930,17 +923,11 @@ export default function GatePage() {
             addToast('Log diperbarui', 'success')
             await logAudit({
                 action: 'UPDATE',
-                source: 'OPERATIONAL',
+                source: profile?.id || 'SYSTEM',
                 tableName: 'gate_logs',
                 recordId: editLog.id,
-                oldData: {
-                    visitor_name: editLog.visitor_name,
-                    visitor_type: editLog.visitor_type,
-                    purpose: editLog.purpose,
-                    check_in: editLog.check_in,
-                    check_out: editLog.check_out,
-                },
-                newData: updates,
+                oldData: editLog,
+                newData: { ...editLog, ...updates },
             })
             setEditLog(null)
             loadTodayLogs()
@@ -955,16 +942,10 @@ export default function GatePage() {
             addToast('Log dihapus', 'success')
             await logAudit({
                 action: 'DELETE',
-                source: 'OPERATIONAL',
+                source: profile?.id || 'SYSTEM',
                 tableName: 'gate_logs',
                 recordId: editLog.id,
-                oldData: {
-                    visitor_name: editLog.visitor_name,
-                    visitor_type: editLog.visitor_type,
-                    purpose: editLog.purpose,
-                    check_in: editLog.check_in,
-                    check_out: editLog.check_out,
-                },
+                oldData: editLog,
             })
             setEditLog(null)
             loadTodayLogs()

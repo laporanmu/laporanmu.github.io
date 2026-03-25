@@ -470,8 +470,8 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     .eq('id', student.id)
                 if (error) throw error
                 await logAudit({
-                    action: 'UPDATE', source: 'SYSTEM', tableName: 'students', recordId: student.id,
-                    oldData: { name: student.name, deleted_at: null }, newData: { deleted_at: new Date().toISOString() }
+                    action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'students', recordId: student.id,
+                    oldData: student, newData: { ...student, deleted_at: new Date().toISOString() }
                 })
                 fetchData()
                 fetchStats()
@@ -533,9 +533,9 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 }
 
                 await logAudit({
-                    action: 'UPDATE', source: 'SYSTEM', tableName: 'students', recordId: selectedStudent.id,
-                    oldData: { name: selectedStudent.name, class_id: selectedStudent.class_id, nisn: selectedStudent.nisn },
-                    newData: { name: formData.name, class_id: formData.class_id, nisn: formData.nisn, status: formData.status }
+                    action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'students', recordId: selectedStudent.id,
+                    oldData: selectedStudent,
+                    newData: { ...selectedStudent, ...formData }
                 })
                 addToast('Data siswa berhasil diperbarui', 'success')
             } else {
@@ -559,8 +559,8 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 const { data: insData, error } = await supabase.from('students').insert([newStudentData]).select('id').single()
                 if (error) throw error
                 await logAudit({
-                    action: 'INSERT', source: 'SYSTEM', tableName: 'students', recordId: insData?.id,
-                    newData: { name: newStudentData.name, class_id: newStudentData.class_id, gender: newStudentData.gender, nisn: newStudentData.nisn }
+                    action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'students', recordId: insData?.id,
+                    newData: newStudentData
                 })
 
                 const studentToView = {
@@ -607,7 +607,18 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             setSelectedStudentIds([])
             fetchData()
             fetchStats()
-            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'students', newData: { bulk_promote: true, count, to_class_id: bulkClassId, ids: idsToMove } })
+            await logAudit({
+                action: 'UPDATE',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'students',
+                newData: {
+                    bulk_promote: true,
+                    count,
+                    to_class_id: bulkClassId,
+                    ids: idsToMove,
+                    prev_classes: prevClassMap
+                }
+            })
             addUndoToast(`${count} siswa dipindahkan`, async () => {
                 await Promise.all(idsToMove.map(id => supabase.from('students').update({ class_id: prevClassMap[id] }).eq('id', id)))
                 fetchData()
@@ -626,7 +637,16 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             closeModal()
             setSelectedStudentIds([])
             fetchData()
-            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'students', newData: { bulk_archive: true, count: idsToDelete.length, ids: idsToDelete } })
+            await logAudit({
+                action: 'UPDATE',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'students',
+                newData: {
+                    bulk_archive: true,
+                    count: idsToDelete.length,
+                    ids: idsToDelete
+                }
+            })
             addUndoToast(`${idsToDelete.length} siswa diarsipkan`, async () => {
                 await supabase.from('students').update({ deleted_at: null }).in('id', idsToDelete)
                 fetchData()
@@ -685,7 +705,14 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             const { error } = await supabase.from('students').update({ deleted_at: null }).eq('id', student.id)
             if (error) throw error
             addToast(`${student.name} berhasil dipulihkan`, 'success')
-            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'students', recordId: student.id, newData: { deleted_at: null, name: student.name, restored: true } })
+            await logAudit({
+                action: 'UPDATE',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'students',
+                recordId: student.id,
+                oldData: student,
+                newData: { ...student, deleted_at: null, restored: true }
+            })
             fetchArchivedStudents(); fetchData(); fetchStats()
         } catch { addToast('Gagal memulihkan', 'error') }
     }
@@ -696,7 +723,13 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             const { error } = await supabase.from('students').delete().eq('id', student.id)
             if (error) throw error
             addToast(`${student.name} dihapus permanen`, 'success')
-            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'students', recordId: student.id, oldData: { name: student.name, permanent_delete: true } })
+            await logAudit({
+                action: 'DELETE',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'students',
+                recordId: student.id,
+                oldData: student
+            })
             fetchArchivedStudents()
         } catch { addToast('Gagal hapus', 'error') }
     }
@@ -768,9 +801,9 @@ export function useStudentsCore({ addToast, addUndoToast }) {
         } catch { setRaportHistory([]) }
     }, [])
 
-    const handleViewProfile = (student) => {
+    const handleViewProfile = (student, tab = 'info') => {
         setSelectedStudent(student); setBehaviorHistory([]); setRaportHistory([])
-        setTimelineFilter('all'); setTimelineVisible(8); setProfileTab('info')
+        setTimelineFilter('all'); setTimelineVisible(8); setProfileTab(tab)
         setActiveModal('profile')
         fetchBehaviorHistory(student.id); fetchRaportHistory(student.id)
     }

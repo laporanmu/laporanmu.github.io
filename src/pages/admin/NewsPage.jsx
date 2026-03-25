@@ -790,8 +790,12 @@ export default function AdminNewsPage() {
         }
         addToast(isEdit ? 'Informasi diperbarui' : 'Informasi ditambahkan', 'success')
         await logAudit({
-            action: isEdit ? 'UPDATE' : 'INSERT', source: 'SYSTEM', tableName: 'news', recordId: data[0].id,
-            newData: { title: payload.title, is_published: payload.is_published, tag: payload.tag, slug: payload.slug }
+            action: isEdit ? 'UPDATE' : 'INSERT',
+            source: user?.id || 'SYSTEM',
+            tableName: 'news',
+            recordId: data[0].id,
+            oldData: isEdit ? modalData.current : null,
+            newData: data[0]
         })
         setModalData({ isOpen: false, current: null })
     }
@@ -806,8 +810,11 @@ export default function AdminNewsPage() {
         if (error) { addToast('Gagal hapus: ' + error.message, 'error'); return }
         setNewsList(prev => prev.filter(n => n.id !== deleteModal.data.id))
         await logAudit({
-            action: 'DELETE', source: 'SYSTEM', tableName: 'news', recordId: deleteModal.data.id,
-            oldData: { title: deleteModal.data.title, is_published: deleteModal.data.is_published }
+            action: 'DELETE',
+            source: profile?.id || 'SYSTEM',
+            tableName: 'news',
+            recordId: deleteModal.data.id,
+            oldData: deleteModal.data
         })
         addToast('Informasi dihapus', 'success')
     }
@@ -829,8 +836,12 @@ export default function AdminNewsPage() {
 
         // Show toast with undo option for unpublish
         await logAudit({
-            action: 'UPDATE', source: 'SYSTEM', tableName: 'news', recordId: item.id,
-            oldData: { title: item.title, is_published: item.is_published }, newData: { is_published: newStatus }
+            action: 'UPDATE',
+            source: profile?.id || 'SYSTEM',
+            tableName: 'news',
+            recordId: item.id,
+            oldData: item,
+            newData: { ...item, is_published: newStatus }
         })
         if (!newStatus) {
             addToast(`Informasi diarsipkan`, 'warning')
@@ -860,8 +871,11 @@ export default function AdminNewsPage() {
         if (error) { addToast('Gagal duplikat: ' + error.message, 'error'); return }
         setNewsList(prev => [data[0], ...prev])
         await logAudit({
-            action: 'INSERT', source: 'SYSTEM', tableName: 'news', recordId: data[0].id,
-            newData: { title: 'Salinan — ' + title, duplicated_from: item.id, is_published: false }
+            action: 'INSERT',
+            source: profile?.id || 'SYSTEM',
+            tableName: 'news',
+            recordId: data[0].id,
+            newData: data[0]
         })
         addToast('Artikel diduplikat sebagai draft', 'success')
     }, [addToast])
@@ -886,7 +900,12 @@ export default function AdminNewsPage() {
         const { error } = await supabase.from('news').update(update).in('id', ids)
         if (error) { addToast('Gagal: ' + error.message, 'error'); return }
         setNewsList(prev => prev.map(n => ids.includes(n.id) ? { ...n, ...update } : n))
-        await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'news', newData: { bulk: true, count: ids.length, ids, ...update } })
+        await logAudit({
+            action: 'UPDATE',
+            source: profile?.id || 'SYSTEM',
+            tableName: 'news',
+            newData: { bulk: true, count: ids.length, ids, ...update }
+        })
         addToast(successMsg, 'success')
         clearSelection()
     }
@@ -896,7 +915,12 @@ export default function AdminNewsPage() {
         const { error } = await supabase.from('news').delete().in('id', ids)
         if (error) { addToast('Gagal hapus: ' + error.message, 'error'); return }
         setNewsList(prev => prev.filter(n => !ids.includes(n.id)))
-        await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'news', newData: { bulk: true, count: ids.length, ids } })
+        await logAudit({
+            action: 'DELETE',
+            source: profile?.id || 'SYSTEM',
+            tableName: 'news',
+            newData: { bulk: true, count: ids.length, ids }
+        })
         addToast(`${ids.length} Informasi dihapus`, 'success')
         clearSelection()
     }

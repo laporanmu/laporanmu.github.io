@@ -4,17 +4,30 @@ import { supabase } from './supabase'
 /**
  * Tulis satu entry ke audit_logs
  * @param {Object} params
- * @param {'INSERT'|'UPDATE'|'DELETE'} params.action  - Jenis aksi
- * @param {string}  params.tableName                  - Nama tabel yang dimodifikasi
- * @param {'OPERATIONAL'|'SYSTEM'} [params.source]    - Sumber kategori (OPERATIONAL: Akademik/Gerbang, SYSTEM: Master/Settings/User)
- * @param {string}  [params.recordId]                 - UUID record yang dimodifikasi
- * @param {Object}  [params.oldData]                  - Data sebelum perubahan (UPDATE/DELETE)
- * @param {Object}  [params.newData]                  - Data setelah perubahan (INSERT/UPDATE)
+ * @param {'INSERT'|'UPDATE'|'DELETE'|'LOGIN'|'LOGOUT'|'RESTORE'} params.action
+ * @param {string}  params.tableName
+ * @param {'OPERATIONAL'|'SYSTEM'|'MASTER'|'SECURITY'|'AUTH'} [params.source]
+ * @param {string}  [params.recordId]
+ * @param {Object}  [params.oldData]
+ * @param {Object}  [params.newData]
  */
 export async function logAudit({ action, tableName, source = 'SYSTEM', recordId = null, oldData = null, newData = null }) {
     try {
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return // tidak log kalau tidak ada sesi
+        if (!user) return
+
+        // Capture forensic context
+        const userAgent = navigator.userAgent
+        const url = window.location.href
+        
+        let ipAddress = '0.0.0.0'
+        try {
+            const ipRes = await fetch('https://api64.ipify.org?format=json')
+            const ipJson = await ipRes.json()
+            ipAddress = ipJson.ip
+        } catch (e) {
+            console.debug('[auditLogger] Failed to fetch IP:', e.message)
+        }
 
         // Bersihkan data — hapus field sensitif sebelum disimpan
         const sanitize = (obj) => {
@@ -35,6 +48,9 @@ export async function logAudit({ action, tableName, source = 'SYSTEM', recordId 
             record_id: recordId || null,
             old_data: sanitize(oldData),
             new_data: sanitize(newData),
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            url: url
         })
         // Sengaja tidak throw error — audit log gagal tidak boleh block aksi utama
     } catch (err) {
@@ -59,6 +75,15 @@ export async function logAuditBatch(entries) {
             return clean
         }
 
+        const userAgent = navigator.userAgent
+        const url = window.location.href
+        let ipAddress = '0.0.0.0'
+        try {
+            const ipRes = await fetch('https://api64.ipify.org?format=json')
+            const ipJson = await ipRes.json()
+            ipAddress = ipJson.ip
+        } catch (e) {}
+
         const rows = entries.map(e => ({
             user_id: user.id,
             action: e.action,
@@ -67,6 +92,9 @@ export async function logAuditBatch(entries) {
             record_id: e.recordId || null,
             old_data: sanitize(e.oldData),
             new_data: sanitize(e.newData),
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            url: url
         }))
 
         await supabase.from('audit_logs').insert(rows)

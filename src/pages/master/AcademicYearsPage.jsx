@@ -12,6 +12,7 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
@@ -27,6 +28,7 @@ const LS_PAGE_SIZE = 'academic_years_page_size'
 
 export default function AcademicYearsPage() {
     const { addToast } = useToast()
+    const { profile } = useAuth()
     const { enabled: canEdit } = useFlag('access.teacher_academic')
 
     const [years, setYears] = useState([])
@@ -184,13 +186,13 @@ export default function AcademicYearsPage() {
                 if (error) throw error
                 if (!data || data.length === 0) throw new Error('Gagal mengupdate: tidak ada data yang berubah (periksa RLS policy)')
                 addToast('Tahun pelajaran berhasil diupdate', 'success')
-                await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'academic_years', recordId: selectedItem.id, oldData: { name: selectedItem.name, semester: selectedItem.semester }, newData: payload })
+                await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } })
             } else {
                 const { data, error } = await supabase.from('academic_years').insert({ ...payload, is_active: false }).select()
                 if (error) throw error
                 if (!data || data.length === 0) throw new Error('Gagal menambahkan: tidak ada data yang tersimpan (periksa RLS policy)')
                 addToast('Tahun pelajaran berhasil ditambahkan', 'success')
-                await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'academic_years', recordId: data?.[0]?.id, newData: { ...payload, is_active: false } })
+                await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: data?.[0]?.id, newData: { ...payload, is_active: false } })
             }
             setIsModalOpen(false)
             fetchData()
@@ -208,7 +210,7 @@ export default function AcademicYearsPage() {
             if (e2) throw e2
             if (!data || data.length === 0) throw new Error('Gagal mengaktifkan: periksa RLS policy di Supabase')
             addToast(`${item.name} ${item.semester} diaktifkan`, 'success')
-            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'academic_years', recordId: item.id, oldData: { is_active: false, name: item.name }, newData: { is_active: true } })
+            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_active: true } })
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal mengaktifkan', 'error') }
         finally { setSubmitting(false) }
@@ -222,7 +224,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal menonaktifkan: periksa RLS policy di Supabase')
             addToast(`${item.name} ${item.semester} dinonaktifkan`, 'success')
-            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'academic_years', recordId: item.id, oldData: { is_active: true, name: item.name }, newData: { is_active: false } })
+            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_active: false } })
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal menonaktifkan', 'error') }
         finally { setSubmitting(false) }
@@ -239,7 +241,7 @@ export default function AcademicYearsPage() {
             })
             if (error) throw error
             addToast(`Berhasil menduplikasi ${item.name}`, 'success')
-            await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'academic_years', newData: { name: item.name + ' (Salinan)', semester: item.semester, duplicated_from: item.id } })
+            await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'academic_years', newData: { name: item.name + ' (Salinan)', semester: item.semester, duplicated_from: item.id } })
             fetchData()
         } catch { addToast('Gagal menduplikasi', 'error') }
     }
@@ -261,7 +263,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal mengarsipkan: periksa RLS policy di Supabase')
             addToast('Tahun pelajaran diarsipkan', 'success')
-            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'academic_years', recordId: itemToDelete.id, oldData: { deleted_at: null, name: itemToDelete.name }, newData: { deleted_at: new Date().toISOString() } })
+            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: itemToDelete.id, oldData: itemToDelete, newData: { ...itemToDelete, deleted_at: new Date().toISOString() } })
             setIsDeleteModalOpen(false)
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal menghapus', 'error') }
@@ -274,7 +276,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal memulihkan: periksa RLS policy di Supabase')
             addToast('Berhasil dipulihkan', 'success')
-            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'academic_years', recordId: id, newData: { deleted_at: null, restored: true } })
+            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: id, newData: { deleted_at: null, restored: true } })
             fetchArchived(); fetchData()
         } catch (err) { addToast(err.message || 'Gagal memulihkan', 'error') }
     }
@@ -284,7 +286,7 @@ export default function AcademicYearsPage() {
             const { error } = await supabase.from('academic_years').delete().eq('id', id)
             if (error) throw error
             addToast('Data dihapus permanen', 'success')
-            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'academic_years', recordId: id, oldData: { permanent_delete: true } })
+            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: id, oldData: { permanent_delete: true } })
             setIsPermanentDeleteOpen(false)
             setItemToPermanentDelete(null)
             fetchArchived()
@@ -298,7 +300,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal mengarsipkan massal: periksa RLS policy di Supabase')
             addToast(`${data.length} data diarsipkan`, 'success')
-            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'academic_years', newData: { bulk_archive: true, count: data.length, ids: selectedIds } })
+            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', newData: { bulk_archive: true, count: data.length, ids: selectedIds } })
             setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData()
         } catch { addToast('Gagal menghapus massal', 'error') }
         finally { setSubmitting(false) }

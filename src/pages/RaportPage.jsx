@@ -1912,10 +1912,10 @@ export default function RaportPage() {
             setSavedIds(prev => new Set([...prev, studentId]))
             await logAudit({
                 action: existingId ? 'UPDATE' : 'INSERT',
-                source: 'OPERATIONAL',
+                source: profile?.id || 'OPERATIONAL',
                 tableName: 'student_monthly_reports',
                 recordId: existingId || null,
-                newData: { student_id: studentId, month: selectedMonth, year: selectedYear, student_name: students.find(s => s.id === studentId)?.name },
+                newData: payload,
             })
         } catch (e) { addToast(`Gagal menyimpan: ${e.message}`, 'error'); console.error('saveStudent error:', e) }
         finally { setSaving(prev => ({ ...prev, [studentId]: false })) }
@@ -1944,7 +1944,7 @@ export default function RaportPage() {
             const studentName = students.find(s => s.id === studentId)?.name
             addToast(`Data ${studentName?.split(' ')[0] ?? ''} berhasil direset`, 'success')
             await logAudit({
-                action: 'DELETE', source: 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: existingId,
+                action: 'DELETE', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: existingId,
                 oldData: { student_id: studentId, student_name: studentName, month: selectedMonth, year: selectedYear }
             })
         } catch (e) {
@@ -2405,6 +2405,10 @@ export default function RaportPage() {
             setArchiveEditExtras({})
             setArchiveEditMode(false)
             addToast(`${pStu.length} raport arsip berhasil diperbarui`, 'success')
+            await logAudit({
+                action: 'UPDATE', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { bulk_archive_edit: true, count: pStu.length, class_name: archivePreview.className, month: entry.month, year: entry.year }
+            })
         } catch (e) { addToast('Gagal menyimpan: ' + e.message, 'error') }
         finally { setArchiveEditSaving(false) }
     }, [archivePreview, archiveEditScores, archiveEditExtras, addToast])
@@ -2447,7 +2451,7 @@ export default function RaportPage() {
             setArchiveList(prev => prev.filter(a => a.key !== entry.key))
             addToast('Arsip berhasil dihapus', 'success')
             await logAudit({
-                action: 'DELETE', tableName: 'student_monthly_reports', recordId: null,
+                action: 'DELETE', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: null,
                 oldData: { archive_month: entry.month, archive_year: entry.year, class_id: entry.class_id, count: toDelete.length }
             })
             loadArchive()

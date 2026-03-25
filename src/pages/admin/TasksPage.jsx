@@ -10,7 +10,9 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -192,6 +194,7 @@ function ConfirmModal({ task, onConfirm, onCancel }) {
 
 export default function TasksPage() {
     const { addToast } = useToast()
+    const { profile } = useAuth()
     const [tasks, setTasks] = useState(INITIAL_TASKS)
     const [logs, setLogs] = useState(() => loadLogs())
     const [searchLog, setSearchLog] = useState('')
@@ -231,11 +234,25 @@ export default function TasksPage() {
             setTaskState(id, { status: 'success', progress: 100, lastRun: now, duration })
             setLogs(prev => [{ id: Date.now(), task: id, status: 'success', timestamp: now, msg: resultMsg, duration }, ...prev])
             addToast(`"${tObj.name}" selesai!`, 'success')
+            await logAudit({
+                action: 'EXECUTE',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'tasks',
+                recordId: id,
+                newData: { task: id, status: 'success', msg: resultMsg, duration }
+            })
         } catch (err) {
             const now = new Date().toISOString()
             setTaskState(id, { status: 'error', progress: 0, lastRun: now })
             setLogs(prev => [{ id: Date.now(), task: id, status: 'error', timestamp: now, msg: err?.message || 'Error tidak diketahui', duration: '—' }, ...prev])
             if (!cancelledRef.current) addToast(`Task gagal: ${err?.message}`, 'error')
+            await logAudit({
+                action: 'EXECUTE',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'tasks',
+                recordId: id,
+                newData: { task: id, status: 'error', msg: err?.message }
+            })
         }
     }, [tasks, isAnyRunning, setTaskState, addToast])
 

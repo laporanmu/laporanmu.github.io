@@ -8,6 +8,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
+import AuditTimeline from '../ui/AuditTimeline'
+import { faShieldHalved } from '@fortawesome/free-solid-svg-icons'
 
 export default memo(function StudentProfileModal({
     isOpen,
@@ -191,8 +193,11 @@ END:VCARD`
                             { key: 'info', label: 'Info', icon: faIdCard },
                             { key: 'statistik', label: 'Statistik', icon: faArrowTrendUp },
                             {
-                                key: 'laporan', label: 'Laporan', icon: faHistory,
+                                key: 'laporan', label: 'Perilaku', icon: faHistory,
                                 badge: !loadingHistory && behaviorHistory.length > 0 ? behaviorHistory.length : null
+                            },
+                            {
+                                key: 'audit', label: 'Audit', icon: faShieldHalved,
                             },
                             {
                                 key: 'raport', label: 'Raport', icon: faTableList,
@@ -451,6 +456,17 @@ END:VCARD`
                             </div>
                         )}
 
+                        {profileTab === 'audit' && (
+                            <div className="space-y-4">
+                                <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-1 flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faShieldHalved} className="text-indigo-500" />
+                                    Jejak Audit Forensik
+                                </h3>
+                                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/10 p-4">
+                                    <AuditTimeline tableName="students" recordId={selectedStudent.id} showSearch={true} />
+                                </div>
+                            </div>
+                        )}
                         {profileTab === 'raport' && (() => {
                             const BULAN_STR = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
                             const KRITERIA = [
