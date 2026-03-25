@@ -1378,8 +1378,13 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
                 .select('student_id, hari_sakit, hari_izin, hari_alpa, hari_pulang')
                 .in('student_id', ids).eq('month', bulan).eq('year', tahun)
             if (data) { const m = {}; for (const r of data) m[r.student_id] = r; setRaportMap(m) }
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { bulk_sync: true, count: studentList.length, month: bulan, year: tahun, classId }
+            })
         }
     }
+
 
     // Feature 8: Cetak rekap
     const handlePrint = useCallback(() => {
@@ -1463,7 +1468,13 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
         window.XLSX.utils.book_append_sheet(wb, ws, `${BULAN_NAMA[bulan]} ${tahun}`)
         window.XLSX.writeFile(wb, `Absensi_${BULAN_NAMA[bulan]}_${tahun}.xlsx`)
         addToast('Export Excel berhasil ✓', 'success')
+
+        logAudit({
+            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_attendance',
+            newData: { format: 'XLSX', count: studentList.length, month: bulan, year: tahun, classId }
+        })
     }
+
 
     return (
         <div>

@@ -1093,6 +1093,11 @@ export default function GatePage() {
         if (!win) return
         win.document.write(buildPrintHTMLDetail(src, title))
         win.document.close()
+
+        logAudit({
+            action: 'PRINT', source: 'OPERATIONAL', tableName: 'gate_logs',
+            newData: { tab: activeTab, view: rekapView, count: src.length, period: periodLabel }
+        })
     }, [activeTab, rekapView, rekapRingkasan, filteredRekapData, todayLogs, rekapMode, rekapDate, rekapLabel, buildPrintHTMLDetail, buildPrintHTMLRingkasan])
 
     // ── Export CSV ─────────────────────────────────────────────────────────────
@@ -1126,7 +1131,13 @@ export default function GatePage() {
             a.href = url; a.download = `ringkasan_${label}.csv`; a.click()
             URL.revokeObjectURL(url)
             addToast(`CSV Ringkasan berhasil diunduh (${rekapRingkasan.length} orang)`, 'success')
+
+            logAudit({
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'gate_logs',
+                newData: { format: 'CSV', source, view: 'ringkasan', count: rekapRingkasan.length, period: label }
+            })
             return
+
         }
 
         // Export format detail log (default)
@@ -1154,6 +1165,11 @@ export default function GatePage() {
         a.href = url; a.download = `gate_log_${label}.csv`; a.click()
         URL.revokeObjectURL(url)
         addToast(`CSV berhasil diunduh (${src.length} baris)`, 'success')
+
+        logAudit({
+            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'gate_logs',
+            newData: { format: 'CSV', source, view: rekapView, count: src.length, period: label }
+        })
     }, [rekapView, rekapRingkasan, filteredRekapData, filteredLogs, rekapMode, rekapDate, rekapLabel, addToast])
 
     // FIX: handleExportPDF — aware of rekapView, fix deps
@@ -1166,7 +1182,13 @@ export default function GatePage() {
             if (!win) return
             win.document.write(buildPrintHTMLRingkasan(rekapRingkasan, title, periodLabel))
             win.document.close()
+
+            logAudit({
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'gate_logs',
+                newData: { format: 'PDF', source, view: 'ringkasan', count: rekapRingkasan.length, period: periodLabel }
+            })
             return
+
         }
 
         const src = source === 'rekap' ? filteredRekapData : filteredLogs
@@ -1177,6 +1199,11 @@ export default function GatePage() {
         if (!win) return
         win.document.write(buildPrintHTMLDetail(src, title))
         win.document.close()
+
+        logAudit({
+            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'gate_logs',
+            newData: { format: 'PDF', source, view: rekapView, count: src.length, period: periodLabel }
+        })
     }, [rekapView, rekapRingkasan, filteredRekapData, filteredLogs, rekapMode, rekapDate, rekapLabel, buildPrintHTMLDetail, buildPrintHTMLRingkasan])
 
     const TABS = [
