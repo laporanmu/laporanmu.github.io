@@ -1332,13 +1332,13 @@ export default function RaportPage() {
     useEffect(() => {
         if (!showTutorialModal) return
         Promise.all([
-            import('../assets/Tutorial_1.png'),
-            import('../assets/Tutorial_2.png'),
-            import('../assets/Tutorial_3.png'),
-            import('../assets/Tutorial_4.png'),
-            import('../assets/Tutorial_5.png'),
-            import('../assets/Tutorial_6.png'),
-            import('../assets/Tutorial_7.png'),
+            import('../../assets/Tutorial_1.png'),
+            import('../../assets/Tutorial_2.png'),
+            import('../../assets/Tutorial_3.png'),
+            import('../../assets/Tutorial_4.png'),
+            import('../../assets/Tutorial_5.png'),
+            import('../../assets/Tutorial_6.png'),
+            import('../../assets/Tutorial_7.png'),
         ]).then(mods => setTutorialImgs(mods.map(m => m.default)))
     }, [showTutorialModal])
     // FIX #11: State konfirmasi sebelum WA Blast dimulai

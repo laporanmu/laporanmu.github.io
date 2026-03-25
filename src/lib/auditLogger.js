@@ -16,17 +16,37 @@ export async function logAudit({ action, tableName, source = 'SYSTEM', recordId 
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
+        // Snapshot actor name & role dari profiles (immutable — forensics safe)
+        let actorName = 'System'
+        let actorRole = 'unknown'
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('name, role')
+                .eq('id', user.id)
+                .single()
+            if (profile) {
+                actorName = profile.name || user.email || 'System'
+                actorRole = profile.role || 'unknown'
+            }
+        } catch (e) {
+            console.debug('[auditLogger] Failed to fetch profile:', e.message)
+        }
+
         // Capture forensic context
         const userAgent = navigator.userAgent
         const url = window.location.href
-        
-        let ipAddress = '0.0.0.0'
-        try {
-            const ipRes = await fetch('https://api64.ipify.org?format=json')
-            const ipJson = await ipRes.json()
-            ipAddress = ipJson.ip
-        } catch (e) {
-            console.debug('[auditLogger] Failed to fetch IP:', e.message)
+
+        let ipAddress = sessionStorage.getItem('_audit_ip') || '0.0.0.0'
+        if (ipAddress === '0.0.0.0') {
+            try {
+                const ipRes = await fetch('https://api64.ipify.org?format=json')
+                const ipJson = await ipRes.json()
+                ipAddress = ipJson.ip
+                sessionStorage.setItem('_audit_ip', ipAddress)
+            } catch (e) {
+                console.debug('[auditLogger] Failed to fetch IP:', e.message)
+            }
         }
 
         // Bersihkan data — hapus field sensitif sebelum disimpan
@@ -50,7 +70,9 @@ export async function logAudit({ action, tableName, source = 'SYSTEM', recordId 
             new_data: sanitize(newData),
             ip_address: ipAddress,
             user_agent: userAgent,
-            url: url
+            url: url,
+            actor_name: actorName,
+            actor_role: actorRole,
         })
         // Sengaja tidak throw error — audit log gagal tidak boleh block aksi utama
     } catch (err) {
@@ -67,6 +89,23 @@ export async function logAuditBatch(entries) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user || !entries?.length) return
 
+        // Snapshot actor name & role dari profiles
+        let actorName = 'System'
+        let actorRole = 'unknown'
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('name, role')
+                .eq('id', user.id)
+                .single()
+            if (profile) {
+                actorName = profile.name || user.email || 'System'
+                actorRole = profile.role || 'unknown'
+            }
+        } catch (e) {
+            console.debug('[auditLogger] Failed to fetch profile:', e.message)
+        }
+
         const sanitize = (obj) => {
             if (!obj) return null
             const clean = { ...obj }
@@ -77,12 +116,17 @@ export async function logAuditBatch(entries) {
 
         const userAgent = navigator.userAgent
         const url = window.location.href
-        let ipAddress = '0.0.0.0'
-        try {
-            const ipRes = await fetch('https://api64.ipify.org?format=json')
-            const ipJson = await ipRes.json()
-            ipAddress = ipJson.ip
-        } catch (e) {}
+        let ipAddress = sessionStorage.getItem('_audit_ip') || '0.0.0.0'
+        if (ipAddress === '0.0.0.0') {
+            try {
+                const ipRes = await fetch('https://api64.ipify.org?format=json')
+                const ipJson = await ipRes.json()
+                ipAddress = ipJson.ip
+                sessionStorage.setItem('_audit_ip', ipAddress)
+            } catch (e) {
+                console.debug('[auditLogger] Failed to fetch IP:', e.message)
+            }
+        }
 
         const rows = entries.map(e => ({
             user_id: user.id,
@@ -94,11 +138,13 @@ export async function logAuditBatch(entries) {
             new_data: sanitize(e.newData),
             ip_address: ipAddress,
             user_agent: userAgent,
-            url: url
+            url: url,
+            actor_name: actorName,
+            actor_role: actorRole,
         }))
 
         await supabase.from('audit_logs').insert(rows)
     } catch (err) {
         console.warn('[auditLogger] Gagal menulis batch audit log:', err?.message)
     }
-}
+}

@@ -252,7 +252,7 @@ export default function BehaviorPage() {
                     points: row.poin,
                     notes: row.notes,
                     reported_at: new Date(row.date).toISOString(),
-                    teacher_name: profile?.full_name || 'Sistem'
+                    teacher_name: profile?.name || 'Sistem'
                 }])
                 setImportProgress(p => ({ ...p, done: i + 1 }))
             }
