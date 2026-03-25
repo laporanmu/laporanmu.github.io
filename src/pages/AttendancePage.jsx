@@ -2331,7 +2331,7 @@ function AttendanceSettingsModal({ settings, onSave, onClose }) {
 
     const handleSave = async () => {
         setSaving(true)
-        const { error } = await supabase.from('attendance_config')
+        const { error } = await supabase.from('teacher_attendance_config')
             .upsert({ id: 1, ...form, updated_at: new Date().toISOString() }, { onConflict: 'id' })
         setSaving(false)
         if (error) {
@@ -3144,7 +3144,7 @@ function GuruTab() {
 
     // Load settings from DB
     useEffect(() => {
-        supabase.from('attendance_config').select('*').eq('id', 1).maybeSingle()
+        supabase.from('teacher_attendance_config').select('*').eq('id', 1).maybeSingle()
             .then(({ data }) => {
                 if (data) setSettings({ ...DEFAULT_ATTENDANCE_SETTINGS, ...data })
             })
