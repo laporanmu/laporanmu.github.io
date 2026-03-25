@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import StatsCarousel from '../../components/StatsCarousel'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faDatabase, faShieldHalved, faRotateRight, faSpinner,
@@ -797,14 +798,14 @@ export default function DatabasePage() {
                 </div>
 
                 {/* Summary Stats */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatsCarousel count={4}>
                     {[
                         { label: 'Total Tabel', value: summaryStats.tableCount, icon: faDatabase, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
                         { label: 'Total Rows', value: summaryStats.totalRows, icon: faBolt, color: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10' },
                         { label: 'Integrity Score', value: integrityScore?.percentage != null ? `${integrityScore.percentage}%` : '—', icon: faShieldHalved, color: integrityScore?.percentage >= 90 ? 'text-emerald-500' : integrityScore?.percentage >= 70 ? 'text-amber-500' : 'text-red-500', bg: integrityScore?.percentage >= 90 ? 'bg-emerald-500/10' : integrityScore?.percentage >= 70 ? 'bg-amber-500/10' : 'bg-red-500/10' },
                         { label: 'Soft Deleted', value: summaryStats.totalDeleted, icon: faTriangleExclamation, color: 'text-amber-500', bg: 'bg-amber-500/10' },
                     ].map((s, i) => (
-                        <div key={i} className="glass rounded-[1.5rem] p-4 flex items-center gap-3 border border-[var(--color-border)] transition-all hover:scale-[1.02]">
+                        <div key={i} className="shrink-0 snap-center w-[200px] xs:w-[220px] sm:w-auto glass rounded-[1.5rem] p-4 flex items-center gap-3 border border-[var(--color-border)] transition-all hover:scale-[1.02]">
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${s.bg}`}>
                                 <FontAwesomeIcon icon={s.icon} className={`text-sm ${s.color}`} />
                             </div>
@@ -816,7 +817,7 @@ export default function DatabasePage() {
                             </div>
                         </div>
                     ))}
-                </div>
+                </StatsCarousel>
 
                 {/* Search */}
                 <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">

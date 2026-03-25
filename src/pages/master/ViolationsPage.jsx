@@ -56,7 +56,7 @@ export default function ViolationsPage() {
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [filterExtreme, setFilterExtreme] = useState(false) // Points > 20
 
-    // Privacy Mode
+    // Privasi Mode
     const [isPrivacyMode, setIsPrivacyMode] = useState(false)
     const [isShortcutOpen, setIsShortcutOpen] = useState(false)
     const shortcutRef = useRef(null)
@@ -248,12 +248,12 @@ export default function ViolationsPage() {
                 const { error } = await supabase.from('violation_types').update(payload).eq('id', selectedItem.id)
                 if (error) throw error
                 addToast('Data berhasil diupdate', 'success')
-                await logAudit({ action: 'UPDATE', tableName: 'violation_types', recordId: selectedItem.id, oldData: { name: selectedItem.name, points: selectedItem.points, category: selectedItem.category }, newData: payload })
+                await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'violation_types', recordId: selectedItem.id, oldData: { name: selectedItem.name, points: selectedItem.points, category: selectedItem.category }, newData: payload })
             } else {
                 const { data: insData, error } = await supabase.from('violation_types').insert(payload).select().single()
                 if (error) throw error
                 addToast('Data baru berhasil ditambahkan', 'success')
-                await logAudit({ action: 'INSERT', tableName: 'violation_types', recordId: insData?.id, newData: payload })
+                await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'violation_types', recordId: insData?.id, newData: payload })
             }
             setIsModalOpen(false)
             fetchData()
@@ -268,7 +268,7 @@ export default function ViolationsPage() {
             const { error } = await supabase.from('violation_types').delete().eq('id', itemToDelete.id)
             if (error) throw error
             addToast('Data berhasil dihapus', 'success')
-            await logAudit({ action: 'DELETE', tableName: 'violation_types', recordId: itemToDelete.id, oldData: { name: itemToDelete.name, points: itemToDelete.points, category: itemToDelete.category } })
+            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'violation_types', recordId: itemToDelete.id, oldData: { name: itemToDelete.name, points: itemToDelete.points, category: itemToDelete.category } })
             setIsDeleteModalOpen(false)
             fetchData()
         } catch { addToast('Gagal menghapus data', 'error') }
@@ -337,7 +337,7 @@ export default function ViolationsPage() {
             <style>{isAnyModalOpen ? ` .top-nav, .sidebar, .floating-dock { display: none !important; } main { padding-top: 0 !important; } ` : ''}</style>
             {/* TAMBAH INI: */}
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
-                {/* Privacy Banner */}
+                {/* Privasi Banner */}
                 {isPrivacyMode && (
                     <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-amber-600 text-xs font-bold">
@@ -388,7 +388,7 @@ export default function ViolationsPage() {
                             className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
                             <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
-                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privacy On' : 'Privacy Off'}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privasi On' : 'Privasi Off'}</span>
                         </button>
                         <div className="relative" ref={shortcutRef}>
                             <button onClick={() => setIsShortcutOpen(!isShortcutOpen)}

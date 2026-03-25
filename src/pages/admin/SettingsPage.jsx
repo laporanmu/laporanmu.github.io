@@ -308,7 +308,7 @@ export default function AdminSettingsPage() {
         if (err) addToast('Gagal: ' + err.message, 'error')
         else {
             addToast('Konfigurasi raport disimpan', 'success'); setDirty(false)
-            await logAudit({ action: 'UPDATE', tableName: 'school_settings', newData: { settings_saved: true, keys: Object.keys(form) } })
+            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'school_settings', newData: { settings_saved: true, keys: Object.keys(form) } })
         }
     }
 
@@ -332,7 +332,7 @@ export default function AdminSettingsPage() {
         if (error) {
             setFlags(prev => prev.map(f => f.key === flag.key ? { ...f, enabled: !newVal } : f))
             addToast('Gagal: ' + error.message, 'error')
-            await logAudit({ action: 'UPDATE', tableName: 'feature_flags', newData: { key: flag.key, label: flag.label, enabled: newVal } })
+            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'feature_flags', newData: { key: flag.key, label: flag.label, enabled: newVal } })
         } else if (flag.key === 'system.maintenance') {
             addToast(newVal ? 'Maintenance mode AKTIF' : 'Maintenance mode dinonaktifkan', newVal ? 'warning' : 'success')
         }

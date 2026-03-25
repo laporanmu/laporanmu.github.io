@@ -2113,7 +2113,7 @@ function TutorialModal({ onClose }) {
 
 
 // ─── Guru Attendance Tab ─────────────────────────────────────────────────────
-// (embedded directly — uses AbsensiPage's imports and constants)
+// (embedded directly — uses AttendancePage's imports and constants)
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -3660,7 +3660,7 @@ function GuruTab() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function AbsensiPage() {
+export default function AttendancePage() {
     const { addToast } = useToast()
     const { profile } = useAuth()
     const now = new Date()

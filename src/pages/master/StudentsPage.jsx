@@ -488,7 +488,7 @@ export default function StudentsPage() {
                     </div>
                 </div>
 
-                {/* Privacy Banner */}
+                {/* Privasi Banner */}
                 {isPrivacyMode && (
                     <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disensor</div>
@@ -686,7 +686,7 @@ export default function StudentsPage() {
                         >
                             <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
                             <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
-                                Privacy
+                                Privasi
                             </span>
                         </button>
 
@@ -799,11 +799,10 @@ export default function StudentsPage() {
                                     const cardWidth = el.scrollWidth / STAT_CARD_COUNT
                                     el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
                                 }}
-                                className={`rounded-full transition-all duration-300 ${
-                                    activeStatIdx === i
-                                        ? 'w-5 h-1.5 bg-[var(--color-primary)]'
-                                        : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
-                                }`}
+                                className={`rounded-full transition-all duration-300 ${activeStatIdx === i
+                                    ? 'w-5 h-1.5 bg-[var(--color-primary)]'
+                                    : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
+                                    }`}
                             />
                         ))}
                     </div>
@@ -1539,156 +1538,156 @@ export default function StudentsPage() {
 
                                         <div className="space-y-3 mt-2">
                                             {mobileView === 'card' ? students.map(student => {
-                                                    const isRisk = (student.total_points || 0) <= RiskThreshold
-                                                    return (
-                                                        <div
-                                                            key={student.id}
-                                                            className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
-                                                        >
-                                                            {isRisk && (
-                                                                <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
-                                                            )}
-                                                            <StudentMobileCard
-                                                                student={student}
-                                                                isSelected={selectedIdSet.has(student.id)}
-                                                                hasSelection={selectedIdSet.size > 0}
-                                                                onToggleSelect={toggleSelectStudent}
-                                                                onViewProfile={handleViewProfile}
-                                                                onEdit={canEdit ? handleEdit : null}
-                                                                onConfirmDelete={canEdit ? confirmDelete : null}
-                                                                onTogglePin={handleTogglePin}
-                                                                onQuickPoint={handleQuickPoint}
-                                                                isPrivacyMode={isPrivacyMode}
-                                                                RiskThreshold={RiskThreshold}
-                                                                buildWAMessage={buildWAMessage}
-                                                                openWAForStudent={openWAForStudent}
-                                                                waTemplate={waTemplate}
-                                                            />
-                                                        </div>
-                                                    )
-                                                })
-                                             : (
-                                                <div className="flex flex-col gap-2">
-                                                    {students.length > 0 && canEdit && (
-                                                        <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
-                                                            <FontAwesomeIcon icon={faAnglesLeft} />
-                                                            Geser baris ke kiri untuk menu Edit & Poin
-                                                        </div>
-                                                    )}
-                                                    <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/40 overflow-hidden shadow-sm">
-                                                        {students.map((student) => {
-                                                            const p = student.total_points || 0
-                                                            const isRisk = p <= RiskThreshold
-                                                            return (
-                                                                <div
-                                                                    key={student.id}
-                                                                    className="w-full overflow-x-auto snap-x snap-mandatory flex [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                                                                >
-                                                                    {/* Main Content Pane */}
+                                                const isRisk = (student.total_points || 0) <= RiskThreshold
+                                                return (
+                                                    <div
+                                                        key={student.id}
+                                                        className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
+                                                    >
+                                                        {isRisk && (
+                                                            <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
+                                                        )}
+                                                        <StudentMobileCard
+                                                            student={student}
+                                                            isSelected={selectedIdSet.has(student.id)}
+                                                            hasSelection={selectedIdSet.size > 0}
+                                                            onToggleSelect={toggleSelectStudent}
+                                                            onViewProfile={handleViewProfile}
+                                                            onEdit={canEdit ? handleEdit : null}
+                                                            onConfirmDelete={canEdit ? confirmDelete : null}
+                                                            onTogglePin={handleTogglePin}
+                                                            onQuickPoint={handleQuickPoint}
+                                                            isPrivacyMode={isPrivacyMode}
+                                                            RiskThreshold={RiskThreshold}
+                                                            buildWAMessage={buildWAMessage}
+                                                            openWAForStudent={openWAForStudent}
+                                                            waTemplate={waTemplate}
+                                                        />
+                                                    </div>
+                                                )
+                                            })
+                                                : (
+                                                    <div className="flex flex-col gap-2">
+                                                        {students.length > 0 && canEdit && (
+                                                            <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
+                                                                <FontAwesomeIcon icon={faAnglesLeft} />
+                                                                Geser baris ke kiri untuk menu Edit & Poin
+                                                            </div>
+                                                        )}
+                                                        <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/40 overflow-hidden shadow-sm">
+                                                            {students.map((student) => {
+                                                                const p = student.total_points || 0
+                                                                const isRisk = p <= RiskThreshold
+                                                                return (
                                                                     <div
-                                                                        className={`w-full shrink-0 snap-center flex items-center gap-3 px-3 py-3 transition-colors active:bg-[var(--color-primary)]/5
+                                                                        key={student.id}
+                                                                        className="w-full overflow-x-auto snap-x snap-mandatory flex [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                                                                    >
+                                                                        {/* Main Content Pane */}
+                                                                        <div
+                                                                            className={`w-full shrink-0 snap-center flex items-center gap-3 px-3 py-3 transition-colors active:bg-[var(--color-primary)]/5
                                                                                 ${selectedIdSet.has(student.id) ? 'bg-[var(--color-primary)]/[0.04]' : ''}
                                                                                 ${student.is_pinned ? 'border-l-4 border-l-amber-400' : ''}`}
-                                                                        onClick={() => {
-                                                                            if (selectedIdSet.size > 0) {
-                                                                                toggleSelectStudent(student.id)
-                                                                            } else {
-                                                                                handleViewProfile(student)
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        {/* Checkbox */}
-                                                                        <div
-                                                                            className="flex justify-center shrink-0 w-6"
-                                                                            onClick={(e) => { e.stopPropagation(); toggleSelectStudent(student.id) }}
+                                                                            onClick={() => {
+                                                                                if (selectedIdSet.size > 0) {
+                                                                                    toggleSelectStudent(student.id)
+                                                                                } else {
+                                                                                    handleViewProfile(student)
+                                                                                }
+                                                                            }}
                                                                         >
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={selectedIdSet.has(student.id)}
-                                                                                readOnly
-                                                                                className="w-4.5 h-4.5 rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-[var(--color-surface)]"
-                                                                            />
-                                                                        </div>
-
-                                                                        {/* Avatar with Status Indicator */}
-                                                                        <div className="relative shrink-0 pointer-events-none">
+                                                                            {/* Checkbox */}
                                                                             <div
-                                                                                className={`w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-black shadow-inner border
-                                                                                        ${isRisk ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20'}
-                                                                                        ${isPrivacyMode ? 'blur-sm grayscale opacity-60' : ''}`}
+                                                                                className="flex justify-center shrink-0 w-6"
+                                                                                onClick={(e) => { e.stopPropagation(); toggleSelectStudent(student.id) }}
                                                                             >
-                                                                                {student.photo_url && !isPrivacyMode ? <img src={student.photo_url} className="w-full h-full object-cover rounded-full" /> : (student.name || 'S').charAt(0)}
-                                                                            </div>
-                                                                            <div className={`absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full border-2 border-[var(--color-surface)] flex items-center justify-center shadow-sm
-                                                                                ${p < 0 ? 'bg-amber-500' : p > 0 ? 'bg-emerald-500' : 'bg-gray-300'}`}>
-                                                                                <FontAwesomeIcon
-                                                                                    icon={p < 0 ? faArrowTrendDown : p > 0 ? faArrowTrendUp : faBolt}
-                                                                                    className="text-white text-[7px]"
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={selectedIdSet.has(student.id)}
+                                                                                    readOnly
+                                                                                    className="w-4.5 h-4.5 rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-[var(--color-surface)]"
                                                                                 />
                                                                             </div>
-                                                                        </div>
 
-                                                                        {/* Identity Details */}
-                                                                        <div className="flex-1 min-w-0 pointer-events-none pr-2">
-                                                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                                                                <p className="text-[14px] font-extrabold text-[var(--color-text)] tracking-tight truncate">
-                                                                                    {isPrivacyMode ? maskInfo(student.name, 4) : student.name}
-                                                                                </p>
-                                                                                {student.is_pinned && <FontAwesomeIcon icon={faThumbtack} className="text-amber-500 text-[9px] shrink-0" />}
-                                                                                {p >= 100 && <FontAwesomeIcon icon={faCrown} className="text-emerald-500 text-[9px] shrink-0" />}
-                                                                            </div>
-                                                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-bold text-[var(--color-text-muted)] opacity-80">
-                                                                                <span className="flex items-center gap-1"><FontAwesomeIcon icon={faUserTie} className="opacity-50 text-[9px]" /> {student.className}</span>
-                                                                                <span>•</span>
-                                                                                <span className={student.gender === 'L' ? 'text-blue-500' : 'text-pink-500'}>{student.gender === 'L' ? 'Putra' : 'Putri'}</span>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        {/* Quick Actions & Score */}
-                                                                        <div className="flex items-center gap-2 shrink-0 ml-1">
-                                                                            {student.phone && !isPrivacyMode && (
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation()
-                                                                                        if (!student.phone) return
-                                                                                        const phone = student.phone.replace(/[^0-9]/g, '').replace(/^0/, '62')
-                                                                                        window.open(`https://wa.me/${phone}`, '_blank')
-                                                                                    }}
-                                                                                    className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                                                                            {/* Avatar with Status Indicator */}
+                                                                            <div className="relative shrink-0 pointer-events-none">
+                                                                                <div
+                                                                                    className={`w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-black shadow-inner border
+                                                                                        ${isRisk ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20'}
+                                                                                        ${isPrivacyMode ? 'blur-sm grayscale opacity-60' : ''}`}
                                                                                 >
-                                                                                    <FontAwesomeIcon icon={faWhatsapp} className="text-[14px]" />
-                                                                                </button>
-                                                                            )}
-                                                                            <div className={`text-[12px] font-black px-3 py-1.5 rounded-xl border text-center min-w-[48px] shadow-sm flex items-center justify-center
+                                                                                    {student.photo_url && !isPrivacyMode ? <img src={student.photo_url} className="w-full h-full object-cover rounded-full" /> : (student.name || 'S').charAt(0)}
+                                                                                </div>
+                                                                                <div className={`absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full border-2 border-[var(--color-surface)] flex items-center justify-center shadow-sm
+                                                                                ${p < 0 ? 'bg-amber-500' : p > 0 ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                                                                                    <FontAwesomeIcon
+                                                                                        icon={p < 0 ? faArrowTrendDown : p > 0 ? faArrowTrendUp : faBolt}
+                                                                                        className="text-white text-[7px]"
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Identity Details */}
+                                                                            <div className="flex-1 min-w-0 pointer-events-none pr-2">
+                                                                                <div className="flex items-center gap-1.5 mb-0.5">
+                                                                                    <p className="text-[14px] font-extrabold text-[var(--color-text)] tracking-tight truncate">
+                                                                                        {isPrivacyMode ? maskInfo(student.name, 4) : student.name}
+                                                                                    </p>
+                                                                                    {student.is_pinned && <FontAwesomeIcon icon={faThumbtack} className="text-amber-500 text-[9px] shrink-0" />}
+                                                                                    {p >= 100 && <FontAwesomeIcon icon={faCrown} className="text-emerald-500 text-[9px] shrink-0" />}
+                                                                                </div>
+                                                                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-bold text-[var(--color-text-muted)] opacity-80">
+                                                                                    <span className="flex items-center gap-1"><FontAwesomeIcon icon={faUserTie} className="opacity-50 text-[9px]" /> {student.className}</span>
+                                                                                    <span>•</span>
+                                                                                    <span className={student.gender === 'L' ? 'text-blue-500' : 'text-pink-500'}>{student.gender === 'L' ? 'Putra' : 'Putri'}</span>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Quick Actions & Score */}
+                                                                            <div className="flex items-center gap-2 shrink-0 ml-1">
+                                                                                {student.phone && !isPrivacyMode && (
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation()
+                                                                                            if (!student.phone) return
+                                                                                            const phone = student.phone.replace(/[^0-9]/g, '').replace(/^0/, '62')
+                                                                                            window.open(`https://wa.me/${phone}`, '_blank')
+                                                                                        }}
+                                                                                        className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                                                                                    >
+                                                                                        <FontAwesomeIcon icon={faWhatsapp} className="text-[14px]" />
+                                                                                    </button>
+                                                                                )}
+                                                                                <div className={`text-[12px] font-black px-3 py-1.5 rounded-xl border text-center min-w-[48px] shadow-sm flex items-center justify-center
                                                                                     ${p < 0 ? 'bg-red-500/10 border-red-500/20 text-red-600' : p > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                                                                                {p > 0 ? '+' : ''}{p}
+                                                                                    {p > 0 ? '+' : ''}{p}
+                                                                                </div>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
 
-                                                                    {/* Swipe Actions Pane */}
-                                                                    {canEdit && (
-                                                                        <div className="shrink-0 flex items-stretch snap-end border-l border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                                                                            <button onClick={() => handleQuickPoint(student)} className="w-[64px] flex flex-col items-center justify-center gap-1.5 text-amber-500 hover:bg-amber-500 hover:text-white transition-colors bg-amber-500/5 border-r border-[var(--color-border)]/50 active:scale-95">
-                                                                                <FontAwesomeIcon icon={faBolt} className="text-[16px]" />
-                                                                                <span className="text-[8px] font-black uppercase tracking-widest">Poin</span>
-                                                                            </button>
-                                                                            <button onClick={() => handleTogglePin(student)} className="w-[64px] flex flex-col items-center justify-center gap-1.5 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors bg-blue-500/5 border-r border-[var(--color-border)]/50 active:scale-95">
-                                                                                <FontAwesomeIcon icon={faThumbtack} className={`text-[15px] ${student.is_pinned ? 'rotate-0' : 'rotate-45'}`} />
-                                                                                <span className="text-[8px] font-black uppercase tracking-widest">{student.is_pinned ? 'Unpin' : 'Pin'}</span>
-                                                                            </button>
-                                                                            <button onClick={() => handleEdit(student)} className="w-[64px] flex flex-col items-center justify-center gap-1.5 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors bg-indigo-500/5 active:scale-95">
-                                                                                <FontAwesomeIcon icon={faEdit} className="text-[16px]" />
-                                                                                <span className="text-[8px] font-black uppercase tracking-widest">Edit</span>
-                                                                            </button>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                    })}
-                                                </div>
-                                            </div>
-                                            )}
+                                                                        {/* Swipe Actions Pane */}
+                                                                        {canEdit && (
+                                                                            <div className="shrink-0 flex items-stretch snap-end border-l border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                                                                                <button onClick={() => handleQuickPoint(student)} className="w-[64px] flex flex-col items-center justify-center gap-1.5 text-amber-500 hover:bg-amber-500 hover:text-white transition-colors bg-amber-500/5 border-r border-[var(--color-border)]/50 active:scale-95">
+                                                                                    <FontAwesomeIcon icon={faBolt} className="text-[16px]" />
+                                                                                    <span className="text-[8px] font-black uppercase tracking-widest">Poin</span>
+                                                                                </button>
+                                                                                <button onClick={() => handleTogglePin(student)} className="w-[64px] flex flex-col items-center justify-center gap-1.5 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors bg-blue-500/5 border-r border-[var(--color-border)]/50 active:scale-95">
+                                                                                    <FontAwesomeIcon icon={faThumbtack} className={`text-[15px] ${student.is_pinned ? 'rotate-0' : 'rotate-45'}`} />
+                                                                                    <span className="text-[8px] font-black uppercase tracking-widest">{student.is_pinned ? 'Unpin' : 'Pin'}</span>
+                                                                                </button>
+                                                                                <button onClick={() => handleEdit(student)} className="w-[64px] flex flex-col items-center justify-center gap-1.5 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors bg-indigo-500/5 active:scale-95">
+                                                                                    <FontAwesomeIcon icon={faEdit} className="text-[16px]" />
+                                                                                    <span className="text-[8px] font-black uppercase tracking-widest">Edit</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                             {/* Quick Add trigger — stays below list */}
                                             {!isInlineAddOpen && canEdit && (

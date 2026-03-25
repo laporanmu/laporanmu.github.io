@@ -85,6 +85,32 @@ function NewsDetailModal({ news, onClose }) {
     const [fontSize, setFontSize] = useState('sm')
     const fs = NEWS_FONT_SIZES.find(f => f.key === fontSize)
     const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    const handlePrint = () => {
+        const w = window.open('', '_blank', 'width=800,height=600')
+        const fmt = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+        w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${news.title}</title>
+        <style>
+            @page{margin:20mm} body{font-family:system-ui,sans-serif;max-width:100%;margin:0;padding:40px;color:#111;line-height:1.75}
+            h1{font-size:1.75rem;font-weight:900;margin-bottom:.5rem;line-height:1.25}
+            .meta{font-size:.7rem;color:#888;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.5rem;border-bottom:1px solid #eee;padding-bottom:.75rem}
+            p{margin-bottom:.9rem}strong{color:#4f46e5}
+            ul,ol{margin-left:1.5rem;margin-bottom:.9rem}li{margin-bottom:.25rem}
+            blockquote{border-left:3px solid #4f46e5;padding-left:1rem;color:#666;font-style:italic;margin-bottom:.9rem}
+            h2{font-size:1.2rem;font-weight:900;margin:1.5rem 0 .4rem}h3{font-size:1rem;font-weight:800;margin:1.2rem 0 .4rem}
+            img{border-radius:.5rem;max-width:100%;margin:1rem 0}
+            .footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #eee;font-size:.7rem;color:#aaa;display:flex;justify-content:space-between}
+        </style></head><body>
+        <div class="meta">${news.tag} · ${fmt(news.created_at)}${news.read_time ? ` · ${news.read_time} mnt baca` : ''}</div>
+        <h1>${news.title}</h1>
+        <div class="content">${news.content}</div>
+        <div class="footer"><span>Diterbitkan oleh ${news.display_name || (news.author?.split('@')[0] || 'Admin')}</span><span>Laporanmu</span></div>
+        </body></html>`)
+        w.document.close()
+        setTimeout(() => {
+            w.focus()
+            w.print()
+        }, 300)
+    }
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={onClose} />
@@ -219,6 +245,12 @@ export default function LandingPage() {
 
     return (
         <div className="min-h-screen bg-[var(--color-surface)] transition-colors duration-300 overflow-hidden">
+            <style>{`
+                @media print {
+                    nav, footer, section, .no-print, .fixed, .absolute:not(.news-modal), .ChatAssistant-bubble { display: none !important; }
+                    .news-modal { position: static !important; width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; }
+                }
+            `}</style>
             {/* Ambient Background Glows */}
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
                 <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/10 dark:bg-primary/5 blur-[100px]" />
@@ -703,9 +735,11 @@ export default function LandingPage() {
             {selectedNews && <NewsDetailModal news={selectedNews} onClose={() => setSelectedNews(null)} />}
 
             {/* Lazy-loaded Chat Assistant */}
-            <Suspense fallback={null}>
-                <ChatAssistant />
-            </Suspense>
+            <div className="no-print">
+                <Suspense fallback={null}>
+                    <ChatAssistant />
+                </Suspense>
+            </div>
         </div>
     )
 }

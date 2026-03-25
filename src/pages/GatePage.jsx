@@ -10,9 +10,10 @@ import {
     faEdit, faTrash, faCheck,
     faArrowsRotate, faBell, faXmark, faTag, faKeyboard,
     faDownload, faFilter, faIdCard, faMotorcycle,
-    faFileCsv, faFilePdf, faCircleCheck, faCircleDot,
+    faFileCsv, faFilePdf, faCircleCheck, faCircleDot, faUserGraduate
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
+import StatsCarousel from '../components/StatsCarousel'
 import Breadcrumb from '../components/ui/Breadcrumb'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
@@ -24,6 +25,7 @@ import { logAudit } from '../lib/auditLogger'
 const VISITOR_TYPES = [
     { key: 'guru', label: 'Guru', icon: faChalkboardTeacher, color: 'text-indigo-500', bg: 'bg-indigo-500/10', border: 'border-indigo-500/30' },
     { key: 'karyawan', label: 'Karyawan', icon: faBriefcase, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+    { key: 'santri', label: 'Santri', icon: faUserGraduate, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
     { key: 'tamu', label: 'Tamu', icon: faUserFriends, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
 ]
 const TYPE_META = Object.fromEntries(VISITOR_TYPES.map(t => [t.key, t]))
@@ -31,6 +33,7 @@ const MONTHS_ID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli
 
 const PRESETS_GURU = ['Makan siang', 'Urusan bank', 'Ke apotek', 'Belanja', 'Keperluan keluarga', 'Urusan pribadi', 'Ke dokter', 'Pengambilan barang']
 const PRESETS_KARYAWAN = ['Dinas luar', 'Urusan bank', 'Rapat eksternal', 'Ke apotek', 'Keperluan kantor', 'Keperluan keluarga', 'Belanja kebutuhan', 'Ke dokter']
+const PRESETS_SANTRI = ['Sakit / Rawat Inap', 'Pulang kampung', 'Tugas pondok', 'Urusan keluarga', 'Membeli keperluan', 'Lain-lain']
 const PRESETS_TAMU = ['Silaturahmi', 'Menjemput santri', 'Wali murid', 'Urusan administrasi', 'Kunjungan keluarga', 'Antar barang / kiriman', 'Rapat / pertemuan', 'Urusan lainnya']
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
@@ -249,41 +252,41 @@ function PresetPills({ presets, value, onSelect }) {
     )
 }
 
-// ─── FormGuru ─────────────────────────────────────────────────────────────────
+// ─── FormInternal ──────────────────────────────────────────────────────────────
 
-function FormGuru({ teacherList, onSubmit, loading }) {
+function FormInternal({ internalList, onSubmit, loading }) {
     const [visitorType, setVisitorType] = useState('guru')
-    const [teacherId, setTeacherId] = useState('')
+    const [personId, setPersonId] = useState('')
     const [purpose, setPurpose] = useState('')
-    // FIX: lazy initializer — jam dicapture saat form pertama kali di-mount, bukan saat modul dimuat
     const [dateOut, setDateOut] = useState(() => nowDateStr())
     const [timeOut, setTimeOut] = useState(() => nowTimeStr())
 
-    // FIX: Filter daftar berdasarkan tipe — kolom `type` di tabel teachers
     const filteredList = useMemo(
-        () => teacherList.filter(t => !t.type || t.type === visitorType),
-        [teacherList, visitorType]
+        () => internalList.filter(t => {
+            if (visitorType === 'santri') return t.type === 'santri'
+            return t.type === visitorType || (!t.type && visitorType !== 'santri')
+        }),
+        [internalList, visitorType]
     )
 
-    // Preset berbeda untuk guru dan karyawan
-    const activePresets = visitorType === 'karyawan' ? PRESETS_KARYAWAN : PRESETS_GURU
+    const activePresets = visitorType === 'karyawan' ? PRESETS_KARYAWAN : visitorType === 'santri' ? PRESETS_SANTRI : PRESETS_GURU
 
-    const canSubmit = teacherId && purpose.trim()
+    const canSubmit = personId && purpose.trim()
 
     const submit = () => {
         if (!canSubmit) return
-        const teacher = teacherList.find(t => t.id === teacherId)
+        const person = internalList.find(t => t.id === personId)
         onSubmit({
-            flow: 'guru',
+            flow: 'internal',
             visitorType,
-            teacherId,
-            name: teacher?.name || '',
-            nbm: teacher?.nbm || '',
+            personId,
+            name: person?.name || '',
+            nbm: person?.nbm || '',
             purpose: purpose.trim(),
             dateOut,
             timeOut,
         })
-        setTeacherId('')
+        setPersonId('')
         setPurpose('')
         setDateOut(nowDateStr())
         setTimeOut(nowTimeStr())
@@ -293,10 +296,10 @@ function FormGuru({ teacherList, onSubmit, loading }) {
 
     return (
         <div className="space-y-4" onKeyDown={handleKeyDown}>
-            {/* Guru / Karyawan toggle */}
+            {/* Toggle Tipe Internal */}
             <div className="flex gap-2">
                 {VISITOR_TYPES.filter(t => t.key !== 'tamu').map(t => (
-                    <button key={t.key} onClick={() => { setVisitorType(t.key); setTeacherId('') }}
+                    <button key={t.key} onClick={() => { setVisitorType(t.key); setPersonId('') }}
                         className={`flex-1 h-9 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 border transition-all ${visitorType === t.key
                             ? `${t.bg} ${t.color} ${t.border}`
                             : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
@@ -306,7 +309,7 @@ function FormGuru({ teacherList, onSubmit, loading }) {
             </div>
 
             {/* Pilih person */}
-            <TeacherSearch teacherList={filteredList} value={teacherId} onChange={setTeacherId} label={TYPE_META[visitorType].label} />
+            <TeacherSearch teacherList={filteredList} value={personId} onChange={setPersonId} label={TYPE_META[visitorType].label} />
 
             {/* Keperluan + presets */}
             <div>
@@ -346,7 +349,7 @@ function FormGuru({ teacherList, onSubmit, loading }) {
 
             {/* Panduan / tips */}
             <div className="pt-3 border-t border-[var(--color-border)]">
-                {teacherId ? (
+                {personId ? (
                     <>
                         <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-2">Panduan Cepat</p>
                         <div className="space-y-1.5 text-[10px] text-[var(--color-text-muted)]">
@@ -359,7 +362,7 @@ function FormGuru({ teacherList, onSubmit, loading }) {
                     <>
                         <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-2">Cara Penggunaan</p>
                         <div className="space-y-1.5 text-[10px] text-[var(--color-text-muted)]">
-                            {['Pilih guru atau karyawan dari daftar', 'Pilih atau ketik keperluan keluar', 'Sesuaikan jam jika perlu, lalu catat', 'Klik Kembali di panel kanan saat sudah kembali'].map((t, i) => (
+                            {['Pilih orang dari daftar', 'Pilih atau ketik keperluan keluar', 'Sesuaikan jam jika perlu, lalu catat', 'Klik Kembali di panel kanan saat sudah kembali'].map((t, i) => (
                                 <p key={i} className="flex items-center gap-2">
                                     <span className="w-5 h-5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[9px] font-black shrink-0">{i + 1}</span>
                                     {t}
@@ -487,10 +490,10 @@ function FormTamu({ onSubmit, loading }) {
 // ─── ConfirmTimeModal ─────────────────────────────────────────────────────────
 
 function ConfirmTimeModal({ log, onConfirm, onCancel }) {
-    const isGuru = log.visitor_type === 'guru' || log.visitor_type === 'karyawan'
+    const isInternal = log.visitor_type !== 'tamu'
     const [time, setTime] = useState(nowTimeStr())
-    const label = isGuru ? 'Kembali' : 'Keluar'
-    const colorCls = isGuru
+    const label = isInternal ? 'Kembali' : 'Keluar'
+    const colorCls = isInternal
         ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
         : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
 
@@ -516,7 +519,7 @@ function ConfirmTimeModal({ log, onConfirm, onCancel }) {
 // ─── EditLogModal ─────────────────────────────────────────────────────────────
 
 function EditLogModal({ log, onSave, onDelete, onCancel, saving }) {
-    const isGuru = log.visitor_type === 'guru' || log.visitor_type === 'karyawan'
+    const isInternal = log.visitor_type !== 'tamu'
     const [purpose, setPurpose] = useState(log.purpose || '')
     const [destination, setDestination] = useState(log.destination || '')
     const [vehicle, setVehicle] = useState(log.vehicle_plate || '')
@@ -562,7 +565,7 @@ function EditLogModal({ log, onSave, onDelete, onCancel, saving }) {
                             className="w-full h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-all" />
                         <PresetPills presets={activePresets} value={purpose} onSelect={setPurpose} />
                     </div>
-                    {!isGuru && (
+                    {!isInternal && (
                         <div>
                             <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">Menemui / Tujuan</label>
                             <input value={destination} onChange={e => setDestination(e.target.value)} placeholder="Opsional..."
@@ -570,8 +573,8 @@ function EditLogModal({ log, onSave, onDelete, onCancel, saving }) {
                         </div>
                     )}
                     <div className="grid grid-cols-2 gap-3">
-                        <TimeInput value={timeIn} onChange={setTimeIn} label={isGuru ? 'Jam Keluar' : 'Jam Masuk'} />
-                        <TimeInput value={timeOut} onChange={setTimeOut} label={isGuru ? 'Jam Kembali' : 'Jam Keluar'} />
+                        <TimeInput value={timeIn} onChange={setTimeIn} label={isInternal ? 'Jam Keluar' : 'Jam Masuk'} />
+                        <TimeInput value={timeOut} onChange={setTimeOut} label={isInternal ? 'Jam Kembali' : 'Jam Keluar'} />
                     </div>
                     <div>
                         <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">No. Kendaraan</label>
@@ -603,16 +606,16 @@ function EditLogModal({ log, onSave, onDelete, onCancel, saving }) {
 
 function LogCard({ log, onReturn, onCheckout, onEdit }) {
     const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
-    const isGuru = log.visitor_type === 'guru' || log.visitor_type === 'karyawan'
+    const isInternal = log.visitor_type !== 'tamu'
     const isActive = !log.check_out
     const dur = durasi(log.check_in, log.check_out)
-    const overTime = isGuru && isActive && (Date.now() - new Date(log.check_in).getTime()) > 2 * 60 * 60 * 1000
+    const overTime = isInternal && isActive && (Date.now() - new Date(log.check_in).getTime()) > 2 * 60 * 60 * 1000
 
     return (
         <div className={`flex items-start gap-3 p-3 rounded-xl border transition-all group ${overTime
             ? 'border-amber-500/40 bg-amber-500/[0.05]'
             : isActive
-                ? (isGuru ? 'border-red-500/25 bg-red-500/[0.04]' : 'border-emerald-500/25 bg-emerald-500/[0.04]')
+                ? (isInternal ? 'border-red-500/25 bg-red-500/[0.04]' : 'border-emerald-500/25 bg-emerald-500/[0.04]')
                 : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}>
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${meta.bg}`}>
                 <FontAwesomeIcon icon={meta.icon} className={`text-[13px] ${meta.color}`} />
@@ -621,13 +624,13 @@ function LogCard({ log, onReturn, onCheckout, onEdit }) {
                 <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-[12px] font-black text-[var(--color-text)] truncate">{log.visitor_name}</p>
                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span>
-                    {isActive && isGuru && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 animate-pulse">● Sedang Keluar</span>}
-                    {isActive && !isGuru && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 animate-pulse">● Di Dalam</span>}
+                    {isActive && isInternal && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 animate-pulse">● Sedang Keluar</span>}
+                    {isActive && !isInternal && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 animate-pulse">● Di Dalam</span>}
                     {overTime && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 flex items-center gap-1"><FontAwesomeIcon icon={faBell} className="text-[7px]" />Lama keluar</span>}
                 </div>
                 <p className="text-[10px] text-[var(--color-text-muted)] truncate mt-0.5">{log.purpose}</p>
                 <div className="flex items-center gap-4 mt-1.5 flex-wrap">
-                    {isGuru ? (<>
+                    {isInternal ? (<>
                         <span className="text-[10px] font-bold text-red-500 flex items-center gap-1">
                             <FontAwesomeIcon icon={faSignOutAlt} className="text-[8px]" />Keluar {fmtTime(log.check_in)}
                         </span>
@@ -654,12 +657,12 @@ function LogCard({ log, onReturn, onCheckout, onEdit }) {
                     <FontAwesomeIcon icon={faEdit} />
                 </button>
                 {isActive && (
-                    <button onClick={() => isGuru ? onReturn(log) : onCheckout(log)}
-                        className={`h-8 px-2.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 transition-all active:scale-95 ${isGuru
+                    <button onClick={() => isInternal ? onReturn(log) : onCheckout(log)}
+                        className={`h-8 px-2.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 transition-all active:scale-95 ${isInternal
                             ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
                             : 'border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20'}`}>
-                        <FontAwesomeIcon icon={isGuru ? faSignInAlt : faSignOutAlt} className="text-[9px]" />
-                        <span className="hidden sm:inline">{isGuru ? 'Kembali' : 'Keluar'}</span>
+                        <FontAwesomeIcon icon={isInternal ? faSignInAlt : faSignOutAlt} className="text-[9px]" />
+                        <span className="hidden sm:inline">{isInternal ? 'Kembali' : 'Keluar'}</span>
                     </button>
                 )}
             </div>
@@ -678,8 +681,9 @@ export default function GatePage() {
     const isAllowed = profile ? ALLOWED_ROLES.includes(profile.role?.toLowerCase()) : null
 
     const [activeTab, setActiveTab] = useState('input')
-    const [inputMode, setInputMode] = useState('guru')
+    const [inputMode, setInputMode] = useState('internal')
     const [teacherList, setTeacherList] = useState([])
+    const [studentList, setStudentList] = useState([])
     const [todayLogs, setTodayLogs] = useState([])
     const [rekapData, setRekapData] = useState([])
     const [loadingLogs, setLoadingLogs] = useState(false)
@@ -704,21 +708,21 @@ export default function GatePage() {
 
     const stats = useMemo(() => ({
         total: todayLogs.length,
-        keluar: todayLogs.filter(l => (l.visitor_type === 'guru' || l.visitor_type === 'karyawan') && !l.check_out).length,
+        keluar: todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).length,
         dalamTamu: todayLogs.filter(l => l.visitor_type === 'tamu' && !l.check_out).length,
         tamu: todayLogs.filter(l => l.visitor_type === 'tamu').length,
     }), [todayLogs])
 
     const dailySummary = useMemo(() => {
-        const guruLogs = todayLogs.filter(l => l.visitor_type === 'guru' || l.visitor_type === 'karyawan')
-        const finished = guruLogs.filter(l => l.check_out)
+        const internalLogs = todayLogs.filter(l => l.visitor_type !== 'tamu')
+        const finished = internalLogs.filter(l => l.check_out)
         const avgMs = finished.length ? finished.reduce((sum, l) => sum + (new Date(l.check_out) - new Date(l.check_in)), 0) / finished.length : 0
         const avgMin = Math.round(avgMs / 60000)
         const overTimeList = todayLogs.filter(l =>
-            (l.visitor_type === 'guru' || l.visitor_type === 'karyawan') && !l.check_out
+            (l.visitor_type !== 'tamu') && !l.check_out
             && (Date.now() - new Date(l.check_in).getTime()) > 2 * 60 * 60 * 1000
         )
-        return { avgMin, overTimeList, totalGuru: guruLogs.length, selesai: finished.length }
+        return { avgMin, overTimeList, totalInternal: internalLogs.length, selesai: finished.length }
     }, [todayLogs])
 
     // Auto-reset dismiss saat jumlah overtime bertambah (ada orang baru yang overtime)
@@ -737,7 +741,15 @@ export default function GatePage() {
                 if (error) console.error('[GatePage] Teachers fetch error:', error)
                 setTeacherList(data || [])
             })
+        supabase.from('students').select('id,name,nisn').is('deleted_at', null).order('name')
+            .then(({ data, error }) => {
+                if (error) console.error('[GatePage] Students fetch error:', error)
+                const mapped = (data || []).map(s => ({ ...s, nbm: s.nisn, type: 'santri' }))
+                setStudentList(mapped)
+            })
     }, [])
+
+    const internalList = useMemo(() => [...teacherList, ...studentList], [teacherList, studentList])
 
     const loadTodayLogs = useCallback(async () => {
         setLoadingLogs(true)
@@ -807,10 +819,13 @@ export default function GatePage() {
         setSubmitting(true)
         try {
             let payload
-            if (form.flow === 'guru') {
+            if (form.flow === 'internal') {
                 payload = {
                     visitor_type: form.visitorType,
-                    teacher_id: form.teacherId,
+                    // Kita asumsikan teacher_id dipakai untuk internal (termasuk santri) atau kalau mau pakai kolom berbeda bisa di-null-kan jika struktur beda.
+                    // Namun di sini kita set null untuk santri biar gak tabrakan dengan relasi FK public.teachers (jika FK ketat).
+                    // Karena id murid berbentuk beda. Sebenarnya form.personId bisa.
+                    teacher_id: form.visitorType === 'santri' ? null : form.personId,
                     visitor_name: form.name,
                     visitor_nip: form.nbm || null,
                     purpose: form.purpose,
@@ -839,9 +854,27 @@ export default function GatePage() {
             if (error) {
                 addToast(`Gagal simpan: ${error.message}`, 'error')
             } else {
-                const who = form.flow === 'guru' ? form.name : `Tamu ${form.name}`
-                const act = form.flow === 'guru' ? 'keluar' : 'masuk'
-                addToast(`${who} ${act} berhasil dicatat ✓`, 'success')
+                const insertedRow = data?.[0]
+                const who = form.flow === 'internal' ? form.name : `Tamu ${form.name}`
+                const act = form.flow === 'internal' ? 'keluar' : 'masuk'
+                addToast(`${who} ${act} berhasil dicatat`, 'success')
+
+                // Audit log untuk INSERT
+                await logAudit({
+                    action: 'INSERT',
+                    source: 'OPERATIONAL',
+                    tableName: 'gate_logs',
+                    recordId: insertedRow?.id || null,
+                    newData: {
+                        visitor_name: payload.visitor_name,
+                        visitor_type: payload.visitor_type,
+                        visitor_nip: payload.visitor_nip,
+                        purpose: payload.purpose,
+                        check_in: payload.check_in,
+                        check_out: payload.check_out,
+                    },
+                })
+
                 await loadTodayLogs()
             }
         } catch (err) {
@@ -871,10 +904,22 @@ export default function GatePage() {
             .eq('id', log.id)
         if (error) addToast('Gagal: ' + error.message, 'error')
         else {
-            addToast(action === 'return' ? 'Kembali dicatat ✓' : 'Tamu keluar dicatat ✓', 'success')
+            addToast(action === 'return' ? 'Kembali dicatat' : 'Tamu keluar dicatat', 'success')
+            
+            // Audit log untuk UPDATE (Check-out/Return)
+            await logAudit({
+                action: 'UPDATE',
+                source: 'OPERATIONAL',
+                tableName: 'gate_logs',
+                recordId: log.id,
+                oldData: { check_out: log.check_out },
+                newData: { check_out: checkOutISO }
+            })
+
             loadTodayLogs()
+            if (activeTab === 'rekap') loadRekap()
         }
-    }, [confirmModal, loadTodayLogs, addToast])
+    }, [confirmModal, loadTodayLogs, loadRekap, activeTab, addToast])
 
     const handleSaveEdit = useCallback(async (updates) => {
         setEditSaving(true)
@@ -882,9 +927,10 @@ export default function GatePage() {
         setEditSaving(false)
         if (error) addToast('Gagal menyimpan: ' + error.message, 'error')
         else {
-            addToast('Log diperbarui ✓', 'success')
+            addToast('Log diperbarui', 'success')
             await logAudit({
                 action: 'UPDATE',
+                source: 'OPERATIONAL',
                 tableName: 'gate_logs',
                 recordId: editLog.id,
                 oldData: {
@@ -898,16 +944,18 @@ export default function GatePage() {
             })
             setEditLog(null)
             loadTodayLogs()
+            if (activeTab === 'rekap') loadRekap()
         }
-    }, [editLog, loadTodayLogs, addToast])
+    }, [editLog, loadTodayLogs, loadRekap, activeTab, addToast])
 
     const handleDeleteLog = useCallback(async () => {
         const { error } = await supabase.from('gate_logs').delete().eq('id', editLog.id)
         if (error) addToast('Gagal hapus: ' + error.message, 'error')
         else {
-            addToast('Log dihapus ✓', 'success')
+            addToast('Log dihapus', 'success')
             await logAudit({
                 action: 'DELETE',
+                source: 'OPERATIONAL',
                 tableName: 'gate_logs',
                 recordId: editLog.id,
                 oldData: {
@@ -920,8 +968,9 @@ export default function GatePage() {
             })
             setEditLog(null)
             loadTodayLogs()
+            if (activeTab === 'rekap') loadRekap()
         }
-    }, [editLog, loadTodayLogs, addToast])
+    }, [editLog, loadTodayLogs, loadRekap, activeTab, addToast])
 
     // ── Filters ────────────────────────────────────────────────────────────────
 
@@ -943,7 +992,7 @@ export default function GatePage() {
     const buildPrintHTMLDetail = useCallback((src, title) => {
         const now = new Date()
         const rows = src.map((l, i) => {
-            const isG = l.visitor_type === 'guru' || l.visitor_type === 'karyawan'
+            const isG = l.visitor_type !== 'tamu'
             const dur = durasi(l.check_in, l.check_out)
             const statusColor = !l.check_out ? '#f59e0b' : '#10b981'
             const statusLabel = !l.check_out ? (isG ? 'Belum Kembali' : 'Masih di Dalam') : (isG ? 'Sudah Kembali' : 'Sudah Keluar')
@@ -1024,18 +1073,18 @@ export default function GatePage() {
             : src
 
         filtered.forEach(l => {
-            const isGuru = l.visitor_type === 'guru' || l.visitor_type === 'karyawan'
+            const isInternal = l.visitor_type !== 'tamu'
             const key = l.teacher_id || l.visitor_name
             if (!map.has(key)) {
                 map.set(key, { id: key, name: l.visitor_name, nip: l.visitor_nip || '-', type: l.visitor_type, count: 0, totalMs: 0, belumKembali: 0, purposes: [] })
             }
             const entry = map.get(key)
             entry.count++
-            if (isGuru && l.check_out) {
+            if (isInternal && l.check_out) {
                 const ms = new Date(l.check_out) - new Date(l.check_in)
                 if (ms > 0) entry.totalMs += ms
             }
-            if (isGuru && !l.check_out) entry.belumKembali++
+            if (isInternal && !l.check_out) entry.belumKembali++
             if (l.purpose && !entry.purposes.includes(l.purpose)) entry.purposes.push(l.purpose)
         })
 
@@ -1095,7 +1144,7 @@ export default function GatePage() {
             const a = document.createElement('a')
             a.href = url; a.download = `ringkasan_${label}.csv`; a.click()
             URL.revokeObjectURL(url)
-            addToast(`CSV Ringkasan berhasil diunduh (${rekapRingkasan.length} orang) ✓`, 'success')
+            addToast(`CSV Ringkasan berhasil diunduh (${rekapRingkasan.length} orang)`, 'success')
             return
         }
 
@@ -1103,7 +1152,7 @@ export default function GatePage() {
         const src = source === 'rekap' ? filteredRekapData : filteredLogs
         const header = ['No', 'Nama', 'Jenis', 'NIP / Instansi', 'Keperluan', 'Jam Keluar (Guru)', 'Jam Kembali / Masuk Tamu', 'Jam Keluar (Tamu)', 'Durasi', 'Kendaraan', 'Status']
         const rows = src.map((l, i) => {
-            const isG = l.visitor_type === 'guru' || l.visitor_type === 'karyawan'
+            const isG = l.visitor_type !== 'tamu'
             const dur = durasi(l.check_in, l.check_out) || '-'
             const stat = !l.check_out ? (isG ? 'Belum Kembali' : 'Masih di Dalam') : (isG ? 'Sudah Kembali' : 'Sudah Keluar')
             return [
@@ -1123,7 +1172,7 @@ export default function GatePage() {
         const a = document.createElement('a')
         a.href = url; a.download = `gate_log_${label}.csv`; a.click()
         URL.revokeObjectURL(url)
-        addToast(`CSV berhasil diunduh (${src.length} baris) ✓`, 'success')
+        addToast(`CSV berhasil diunduh (${src.length} baris)`, 'success')
     }, [rekapView, rekapRingkasan, filteredRekapData, filteredLogs, rekapMode, rekapDate, rekapLabel, addToast])
 
     // FIX: handleExportPDF — aware of rekapView, fix deps
@@ -1205,14 +1254,14 @@ export default function GatePage() {
                 </div>
 
                 {/* STATS */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                <StatsCarousel count={4}>
                     {[
                         { label: 'Total Hari Ini', value: stats.total, icon: faClipboardList, bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]', border: 'border-t-[var(--color-primary)]' },
                         { label: 'Guru Sedang Keluar', value: stats.keluar, icon: faPersonWalkingArrowRight, bg: 'bg-red-500/10 text-red-500', border: 'border-t-red-500' },
                         { label: 'Tamu di Dalam', value: stats.dalamTamu, icon: faBuilding, bg: 'bg-emerald-500/10 text-emerald-500', border: 'border-t-emerald-500' },
                         { label: 'Total Tamu', value: stats.tamu, icon: faUserFriends, bg: 'bg-amber-500/10 text-amber-500', border: 'border-t-amber-500' },
                     ].map((s, i) => (
-                        <div key={i} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.border} flex items-center gap-3 hover:border-t-4 transition-all cursor-default`}>
+                        <div key={i} className={`shrink-0 snap-center w-[200px] xs:w-[220px] sm:w-auto glass rounded-[1.5rem] p-4 border-t-[3px] ${s.border} flex items-center gap-3 hover:border-t-4 transition-all cursor-default`}>
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${s.bg}`}>
                                 <FontAwesomeIcon icon={s.icon} />
                             </div>
@@ -1222,7 +1271,7 @@ export default function GatePage() {
                             </div>
                         </div>
                     ))}
-                </div>
+                </StatsCarousel>
 
                 {/* TABS */}
                 <div className="flex gap-1 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] mb-6 w-fit">
@@ -1251,7 +1300,7 @@ export default function GatePage() {
                             {/* Mode switcher Guru / Tamu */}
                             <div className="flex gap-2 mb-5">
                                 {[
-                                    { k: 'guru', l: 'Guru / Karyawan', icon: faChalkboardTeacher, desc: 'Izin keluar dari dalam', active: 'border-red-500/30 bg-red-500/5', activeText: 'text-red-500' },
+                                    { k: 'internal', l: 'Internal', icon: faBuilding, desc: 'Keluar masuk warga sekolah', active: 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5', activeText: 'text-[var(--color-primary)]' },
                                     { k: 'tamu', l: 'Tamu', icon: faUserFriends, desc: 'Masuk dari luar', active: 'border-emerald-500/30 bg-emerald-500/5', activeText: 'text-emerald-600' },
                                 ].map(m => (
                                     <button key={m.k} onClick={() => setInputMode(m.k)}
@@ -1266,8 +1315,8 @@ export default function GatePage() {
 
                             {/* Form content — flex-1 agar mendorong tombol submit ke bawah */}
                             <div className="flex-1">
-                                {inputMode === 'guru'
-                                    ? <FormGuru teacherList={teacherList} onSubmit={handleSubmit} loading={submitting} />
+                                {inputMode === 'internal'
+                                    ? <FormInternal internalList={internalList} onSubmit={handleSubmit} loading={submitting} />
                                     : <FormTamu onSubmit={handleSubmit} loading={submitting} />
                                 }
                             </div>
@@ -1289,7 +1338,7 @@ export default function GatePage() {
                                 </div>
                                 {loadingLogs
                                     ? <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
-                                    : todayLogs.filter(l => (l.visitor_type === 'guru' || l.visitor_type === 'karyawan') && !l.check_out).length === 0
+                                    : todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).length === 0
                                         ? <div className="flex flex-col items-center gap-2 py-6 opacity-40">
                                             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                                                 <FontAwesomeIcon icon={faCheck} className="text-emerald-500" />
@@ -1297,7 +1346,7 @@ export default function GatePage() {
                                             <p className="text-[11px] text-[var(--color-text-muted)] font-bold">Semua guru &amp; karyawan ada di dalam</p>
                                         </div>
                                         : <div className="space-y-2">
-                                            {todayLogs.filter(l => (l.visitor_type === 'guru' || l.visitor_type === 'karyawan') && !l.check_out).map(log => (
+                                            {todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).map(log => (
                                                 <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />
                                             ))}
                                         </div>
@@ -1502,20 +1551,20 @@ export default function GatePage() {
                         </div>
 
                         {/* Summary cards */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <StatsCarousel count={4} className="!mb-0">
                             {[
                                 { l: 'Total', v: rekapSummary.total, c: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10' },
                                 { l: 'Guru', v: rekapSummary.guru, c: 'text-indigo-500', bg: 'bg-indigo-500/10' },
                                 { l: 'Karyawan', v: rekapSummary.karyawan, c: 'text-blue-500', bg: 'bg-blue-500/10' },
                                 { l: 'Tamu', v: rekapSummary.tamu, c: 'text-amber-500', bg: 'bg-amber-500/10' },
                             ].map((s, i) => (
-                                <div key={i} className={`glass rounded-2xl p-4 ${s.bg} cursor-pointer transition-all hover:scale-[1.02]`}
+                                <div key={i} className={`shrink-0 snap-center w-[200px] xs:w-[220px] sm:w-auto glass rounded-2xl p-4 ${s.bg} cursor-pointer transition-all hover:scale-[1.02]`}
                                     onClick={() => setFilterRekap(filterRekap === (i === 0 ? 'all' : VISITOR_TYPES[i - 1]?.key) ? 'all' : (i === 0 ? 'all' : VISITOR_TYPES[i - 1]?.key))}>
                                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-70 mb-1">{s.l}</p>
                                     <p className={`text-2xl font-black font-heading tabular-nums ${s.c}`}>{loadingRekap ? '…' : s.v}</p>
                                 </div>
                             ))}
-                        </div>
+                        </StatsCarousel>
 
                         {/* Baris 2: View toggle + Search + Filter type */}
                         <div className="glass rounded-2xl px-4 py-3 flex items-center gap-2 flex-wrap">
@@ -1582,7 +1631,7 @@ export default function GatePage() {
                                                 <tbody>
                                                     {filteredRekapData.map((log, i) => {
                                                         const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
-                                                        const isG = log.visitor_type === 'guru' || log.visitor_type === 'karyawan'
+                                                        const isG = log.visitor_type !== 'tamu'
                                                         const dur = durasi(log.check_in, log.check_out)
                                                         return (
                                                             <tr key={log.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors cursor-pointer"
@@ -1632,7 +1681,7 @@ export default function GatePage() {
                                                 <tbody>
                                                     {rekapRingkasan.map((r, i) => {
                                                         const meta = TYPE_META[r.type] || TYPE_META.tamu
-                                                        const isGuru = r.type === 'guru' || r.type === 'karyawan'
+                                                        const isInternal = r.type !== 'tamu'
                                                         const totalH = Math.floor(r.totalMs / 3600000)
                                                         const totalM = Math.floor((r.totalMs % 3600000) / 60000)
                                                         const totalStr = r.totalMs > 0 ? (totalH > 0 ? `${totalH}j ${totalM}m` : `${totalM}m`) : '-'
@@ -1660,7 +1709,7 @@ export default function GatePage() {
                                                                 </td>
                                                                 <td className="px-3 py-3 text-[13px] font-black text-[var(--color-text)] tabular-nums">{r.count}×</td>
                                                                 <td className="px-3 py-3">
-                                                                    {isGuru ? (
+                                                                    {isInternal ? (
                                                                         <div className="flex items-center gap-2">
                                                                             <span className={`text-[12px] font-black tabular-nums ${r.totalMs > 0 ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>{totalStr}</span>
                                                                             {barPct > 0 && (
@@ -1671,7 +1720,7 @@ export default function GatePage() {
                                                                         </div>
                                                                     ) : <span className="text-[11px] text-[var(--color-text-muted)]">-</span>}
                                                                 </td>
-                                                                <td className="px-3 py-3 text-[11px] font-bold text-[var(--color-text-muted)] tabular-nums">{isGuru ? avgStr : '-'}</td>
+                                                                <td className="px-3 py-3 text-[11px] font-bold text-[var(--color-text-muted)] tabular-nums">{isInternal ? avgStr : '-'}</td>
                                                                 <td className="px-3 py-3">
                                                                     {r.belumKembali > 0
                                                                         ? <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600">{r.belumKembali}×</span>

@@ -6,11 +6,12 @@ import { supabase } from './supabase'
  * @param {Object} params
  * @param {'INSERT'|'UPDATE'|'DELETE'} params.action  - Jenis aksi
  * @param {string}  params.tableName                  - Nama tabel yang dimodifikasi
+ * @param {'OPERATIONAL'|'SYSTEM'} [params.source]    - Sumber kategori (OPERATIONAL: Akademik/Gerbang, SYSTEM: Master/Settings/User)
  * @param {string}  [params.recordId]                 - UUID record yang dimodifikasi
  * @param {Object}  [params.oldData]                  - Data sebelum perubahan (UPDATE/DELETE)
  * @param {Object}  [params.newData]                  - Data setelah perubahan (INSERT/UPDATE)
  */
-export async function logAudit({ action, tableName, recordId = null, oldData = null, newData = null }) {
+export async function logAudit({ action, tableName, source = 'SYSTEM', recordId = null, oldData = null, newData = null }) {
     try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return // tidak log kalau tidak ada sesi
@@ -29,6 +30,7 @@ export async function logAudit({ action, tableName, recordId = null, oldData = n
         await supabase.from('audit_logs').insert({
             user_id: user.id,
             action,
+            source: source || 'SYSTEM',
             table_name: tableName,
             record_id: recordId || null,
             old_data: sanitize(oldData),
@@ -42,7 +44,7 @@ export async function logAudit({ action, tableName, recordId = null, oldData = n
 
 /**
  * Helper khusus untuk batch log — misalnya import massal
- * @param {Array} entries - Array of { action, tableName, recordId, oldData, newData }
+ * @param {Array} entries - Array of { action, tableName, source, recordId, oldData, newData }
  */
 export async function logAuditBatch(entries) {
     try {
@@ -60,6 +62,7 @@ export async function logAuditBatch(entries) {
         const rows = entries.map(e => ({
             user_id: user.id,
             action: e.action,
+            source: e.source || 'SYSTEM',
             table_name: e.tableName,
             record_id: e.recordId || null,
             old_data: sanitize(e.oldData),
@@ -70,4 +73,4 @@ export async function logAuditBatch(entries) {
     } catch (err) {
         console.warn('[auditLogger] Gagal menulis batch audit log:', err?.message)
     }
-}
+}

@@ -572,7 +572,7 @@ export function useStudentsImportExport({
 
             if (importReadyRows.length > 0) {
                 addToast(`Berhasil import ${importReadyRows.length} siswa`, 'success')
-                await logAudit({ action: 'INSERT', tableName: 'students', newData: { bulk_import: true, count: importReadyRows.length } })
+                await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'students', newData: { bulk_import: true, count: importReadyRows.length } })
             } else {
                 addToast('Tidak ada siswa yang diimport', 'info')
             }

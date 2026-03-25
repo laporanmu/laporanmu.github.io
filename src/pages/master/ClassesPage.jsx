@@ -65,7 +65,7 @@ export default function ClassesPage() {
     const [filterCrowded, setFilterCrowded] = useState(false)
     const filterRef = useRef(null)
 
-    // Privacy Mode
+    // Privasi Mode
     const [isPrivacyMode, setIsPrivacyMode] = useState(false)
     const [isShortcutOpen, setIsShortcutOpen] = useState(false)
     const shortcutRef = useRef(null)
@@ -157,7 +157,7 @@ export default function ClassesPage() {
         try {
             const { error } = await supabase.from('classes').update({ deleted_at: null }).eq('id', id)
             if (error) throw error
-            addToast('Kelas berhasil dipulihkan', 'success'); await logAudit({ action: 'UPDATE', tableName: 'classes', recordId: id, newData: { deleted_at: null, restored: true } }); fetchArchived(); fetchData()
+            addToast('Kelas berhasil dipulihkan', 'success'); await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'classes', recordId: id, newData: { deleted_at: null, restored: true } }); fetchArchived(); fetchData()
         } catch { addToast('Gagal memulihkan kelas', 'error') }
     }
 
@@ -166,7 +166,7 @@ export default function ClassesPage() {
         try {
             const { error } = await supabase.from('classes').delete().eq('id', id)
             if (error) throw error
-            addToast('Kelas dihapus permanen', 'success'); await logAudit({ action: 'DELETE', tableName: 'classes', recordId: id, oldData: { permanent_delete: true } }); fetchArchived()
+            addToast('Kelas dihapus permanen', 'success'); await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'classes', recordId: id, oldData: { permanent_delete: true } }); fetchArchived()
         } catch { addToast('Gagal menghapus permanen', 'error') }
     }
 
@@ -284,8 +284,8 @@ export default function ClassesPage() {
         const finalMajor = [formData.program, formData.gender_type].filter(Boolean).join(' ')
         const payload = { name: formData.name, grade: formData.level, major: finalMajor, homeroom_teacher_id: formData.homeroom_teacher_id || null, academic_year_id: formData.academic_year_id || null }
         try {
-            if (selectedItem) { const { error } = await supabase.from('classes').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data kelas berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', tableName: 'classes', recordId: selectedItem.id, oldData: { name: selectedItem.name, grade: selectedItem.grade, major: selectedItem.major }, newData: payload }) }
-            else { const { data: insData, error } = await supabase.from('classes').insert(payload).select().single(); if (error) throw error; addToast('Kelas baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', tableName: 'classes', recordId: insData?.id, newData: payload }) }
+            if (selectedItem) { const { error } = await supabase.from('classes').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data kelas berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'classes', recordId: selectedItem.id, oldData: { name: selectedItem.name, grade: selectedItem.grade, major: selectedItem.major }, newData: payload }) }
+            else { const { data: insData, error } = await supabase.from('classes').insert(payload).select().single(); if (error) throw error; addToast('Kelas baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'classes', recordId: insData?.id, newData: payload }) }
             setIsModalOpen(false); fetchData()
         } catch (err) { addToast(err.message || 'Gagal menyimpan data', 'error') }
         finally { setSubmitting(false) }
@@ -296,7 +296,7 @@ export default function ClassesPage() {
         try {
             const { error } = await supabase.from('classes').delete().eq('id', itemToDelete.id)
             if (error) throw error
-            addToast('Kelas berhasil dihapus', 'success'); await logAudit({ action: 'DELETE', tableName: 'classes', recordId: itemToDelete.id, oldData: { name: itemToDelete.name, grade: itemToDelete.grade } }); setIsDeleteModalOpen(false); fetchData()
+            addToast('Kelas berhasil dihapus', 'success'); await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'classes', recordId: itemToDelete.id, oldData: { name: itemToDelete.name, grade: itemToDelete.grade } }); setIsDeleteModalOpen(false); fetchData()
         } catch { addToast('Gagal mengarsipkan kelas', 'error') }
         finally { setSubmitting(false) }
     }
@@ -306,7 +306,7 @@ export default function ClassesPage() {
         try {
             const { error } = await supabase.from('classes').delete().in('id', selectedIds)
             if (error) throw error
-            addToast(`${selectedIds.length} kelas berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', tableName: 'classes', newData: { bulk: true, count: selectedIds.length, ids: selectedIds } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData()
+            addToast(`${selectedIds.length} kelas berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'classes', newData: { bulk: true, count: selectedIds.length, ids: selectedIds } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData()
         } catch { addToast('Gagal menghapus kelas', 'error') }
         finally { setSubmitting(false) }
     }
@@ -380,7 +380,7 @@ export default function ClassesPage() {
             <style>{isAnyModalOpen ? ` .top-nav, .sidebar, .floating-dock { display: none !important; } main { padding-top: 0 !important; } ` : ''}</style>
             {/* TAMBAH INI: */}
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
-                {/* Privacy Banner */}
+                {/* Privasi Banner */}
                 {isPrivacyMode && (
                     <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-amber-600 text-xs font-bold">
@@ -444,12 +444,12 @@ export default function ClassesPage() {
                                 </div>
                             )}
                         </div>
-                        {/* Privacy toggle */}
+                        {/* Privasi toggle */}
                         <button onClick={() => setIsPrivacyMode(!isPrivacyMode)}
                             className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
                             <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
-                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privacy On' : 'Privacy Off'}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privasi On' : 'Privasi Off'}</span>
                         </button>
                         {/* Shortcut toggle */}
                         <div className="relative" ref={shortcutRef}>
@@ -523,8 +523,8 @@ export default function ClassesPage() {
                                     el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
                                 }}
                                 className={`rounded-full transition-all duration-300 ${activeStatIdx === i
-                                        ? 'w-5 h-1.5 bg-[var(--color-primary)]'
-                                        : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
+                                    ? 'w-5 h-1.5 bg-[var(--color-primary)]'
+                                    : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
                                     }`}
                             />
                         ))}

@@ -470,7 +470,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     .eq('id', student.id)
                 if (error) throw error
                 await logAudit({
-                    action: 'UPDATE', tableName: 'students', recordId: student.id,
+                    action: 'UPDATE', source: 'SYSTEM', tableName: 'students', recordId: student.id,
                     oldData: { name: student.name, deleted_at: null }, newData: { deleted_at: new Date().toISOString() }
                 })
                 fetchData()
@@ -533,7 +533,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 }
 
                 await logAudit({
-                    action: 'UPDATE', tableName: 'students', recordId: selectedStudent.id,
+                    action: 'UPDATE', source: 'SYSTEM', tableName: 'students', recordId: selectedStudent.id,
                     oldData: { name: selectedStudent.name, class_id: selectedStudent.class_id, nisn: selectedStudent.nisn },
                     newData: { name: formData.name, class_id: formData.class_id, nisn: formData.nisn, status: formData.status }
                 })
@@ -559,7 +559,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 const { data: insData, error } = await supabase.from('students').insert([newStudentData]).select('id').single()
                 if (error) throw error
                 await logAudit({
-                    action: 'INSERT', tableName: 'students', recordId: insData?.id,
+                    action: 'INSERT', source: 'SYSTEM', tableName: 'students', recordId: insData?.id,
                     newData: { name: newStudentData.name, class_id: newStudentData.class_id, gender: newStudentData.gender, nisn: newStudentData.nisn }
                 })
 
@@ -607,7 +607,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             setSelectedStudentIds([])
             fetchData()
             fetchStats()
-            await logAudit({ action: 'UPDATE', tableName: 'students', newData: { bulk_promote: true, count, to_class_id: bulkClassId, ids: idsToMove } })
+            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'students', newData: { bulk_promote: true, count, to_class_id: bulkClassId, ids: idsToMove } })
             addUndoToast(`${count} siswa dipindahkan`, async () => {
                 await Promise.all(idsToMove.map(id => supabase.from('students').update({ class_id: prevClassMap[id] }).eq('id', id)))
                 fetchData()
@@ -626,7 +626,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             closeModal()
             setSelectedStudentIds([])
             fetchData()
-            await logAudit({ action: 'UPDATE', tableName: 'students', newData: { bulk_archive: true, count: idsToDelete.length, ids: idsToDelete } })
+            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'students', newData: { bulk_archive: true, count: idsToDelete.length, ids: idsToDelete } })
             addUndoToast(`${idsToDelete.length} siswa diarsipkan`, async () => {
                 await supabase.from('students').update({ deleted_at: null }).in('id', idsToDelete)
                 fetchData()
@@ -685,7 +685,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             const { error } = await supabase.from('students').update({ deleted_at: null }).eq('id', student.id)
             if (error) throw error
             addToast(`${student.name} berhasil dipulihkan`, 'success')
-            await logAudit({ action: 'UPDATE', tableName: 'students', recordId: student.id, newData: { deleted_at: null, name: student.name, restored: true } })
+            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'students', recordId: student.id, newData: { deleted_at: null, name: student.name, restored: true } })
             fetchArchivedStudents(); fetchData(); fetchStats()
         } catch { addToast('Gagal memulihkan', 'error') }
     }
@@ -696,7 +696,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             const { error } = await supabase.from('students').delete().eq('id', student.id)
             if (error) throw error
             addToast(`${student.name} dihapus permanen`, 'success')
-            await logAudit({ action: 'DELETE', tableName: 'students', recordId: student.id, oldData: { name: student.name, permanent_delete: true } })
+            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'students', recordId: student.id, oldData: { name: student.name, permanent_delete: true } })
             fetchArchivedStudents()
         } catch { addToast('Gagal hapus', 'error') }
     }
@@ -942,7 +942,7 @@ Laporanmu System`
             if (resetPointsClassId) q = q.eq('class_id', resetPointsClassId)
             await q
             addToast('Poin direset', 'success')
-            await logAudit({ action: 'UPDATE', tableName: 'students', newData: { batch_reset_points: true, class_id: resetPointsClassId || 'all' } })
+            await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'students', newData: { batch_reset_points: true, class_id: resetPointsClassId || 'all' } })
             closeModal(); fetchData(); fetchStats()
         } catch { addToast('Gagal', 'error') } finally { setResettingPoints(false) }
     }

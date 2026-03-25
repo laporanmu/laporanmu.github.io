@@ -1912,6 +1912,7 @@ export default function RaportPage() {
             setSavedIds(prev => new Set([...prev, studentId]))
             await logAudit({
                 action: existingId ? 'UPDATE' : 'INSERT',
+                source: 'OPERATIONAL',
                 tableName: 'student_monthly_reports',
                 recordId: existingId || null,
                 newData: { student_id: studentId, month: selectedMonth, year: selectedYear, student_name: students.find(s => s.id === studentId)?.name },
@@ -1943,7 +1944,7 @@ export default function RaportPage() {
             const studentName = students.find(s => s.id === studentId)?.name
             addToast(`Data ${studentName?.split(' ')[0] ?? ''} berhasil direset`, 'success')
             await logAudit({
-                action: 'DELETE', tableName: 'student_monthly_reports', recordId: existingId,
+                action: 'DELETE', source: 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: existingId,
                 oldData: { student_id: studentId, student_name: studentName, month: selectedMonth, year: selectedYear }
             })
         } catch (e) {

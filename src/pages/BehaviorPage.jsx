@@ -12,6 +12,7 @@ import {
     faKeyboard, faEye, faEyeSlash, faBoxArchive, faRotateLeft,
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../components/layout/DashboardLayout'
+import StatsCarousel from '../components/StatsCarousel'
 import Breadcrumb from '../components/ui/Breadcrumb'
 import Modal from '../components/ui/Modal'
 import { useToast } from '../context/ToastContext'
@@ -30,7 +31,7 @@ const LS_COLS = 'reports_columns'
 const LS_PAGE_SIZE = 'reports_page_size'
 
 
-export default function PerilakuPage() {
+export default function BehaviorPage() {
     const { profile } = useAuth()
     const { addToast } = useToast()
 
@@ -257,7 +258,7 @@ export default function PerilakuPage() {
             }
             addToast(`Berhasil mengimpor ${validRows.length} laporan`, 'success')
             await logAudit({
-                action: 'INSERT', tableName: 'reports', recordId: null,
+                action: 'INSERT', source: 'OPERATIONAL', tableName: 'reports', recordId: null,
                 newData: { bulk_import: true, count: validRows.length }
             })
             setIsImportModalOpen(false)
@@ -423,7 +424,7 @@ export default function PerilakuPage() {
                 if (error) throw error
                 addToast('Laporan diupdate', 'success')
                 await logAudit({
-                    action: 'UPDATE', tableName: 'reports', recordId: selectedItem.id,
+                    action: 'UPDATE', source: 'OPERATIONAL', tableName: 'reports', recordId: selectedItem.id,
                     oldData: { student_id: selectedItem.student_id, violation_type_id: selectedItem.violation_type_id, points: selectedItem.points, notes: selectedItem.notes },
                     newData: { student_id: payload.student_id, violation_type_id: payload.violation_type_id, points: payload.points, notes: payload.notes }
                 })
@@ -432,7 +433,7 @@ export default function PerilakuPage() {
                 if (error) throw error
                 addToast('Laporan berhasil dibuat', 'success')
                 await logAudit({
-                    action: 'INSERT', tableName: 'reports', recordId: insData?.id,
+                    action: 'INSERT', source: 'OPERATIONAL', tableName: 'reports', recordId: insData?.id,
                     newData: { student_id: payload.student_id, violation_type_id: payload.violation_type_id, points: payload.points, notes: payload.notes, teacher_name: payload.teacher_name }
                 })
             }
@@ -448,7 +449,7 @@ export default function PerilakuPage() {
             if (error) throw error
             addToast('Laporan dihapus', 'success')
             await logAudit({
-                action: 'DELETE', tableName: 'reports', recordId: itemToDelete.id,
+                action: 'DELETE', source: 'OPERATIONAL', tableName: 'reports', recordId: itemToDelete.id,
                 oldData: { student_id: itemToDelete.student_id, violation_type_id: itemToDelete.violation_type_id, points: itemToDelete.points, notes: itemToDelete.notes }
             })
             setIsDeleteModalOpen(false); fetchReports(); fetchStats()
@@ -464,7 +465,7 @@ export default function PerilakuPage() {
             if (error) throw error
             addToast(`${idsSnap.length} laporan dihapus`, 'success')
             await logAudit({
-                action: 'DELETE', tableName: 'reports', recordId: null,
+                action: 'DELETE', source: 'OPERATIONAL', tableName: 'reports', recordId: null,
                 oldData: { bulk: true, count: idsSnap.length, ids: idsSnap }
             })
             setSelectedIds([]); setIsBulkDeleteOpen(false); fetchReports(); fetchStats()
@@ -719,7 +720,7 @@ export default function PerilakuPage() {
             {/* TAMBAH INI: */}
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
 
-                {/* Privacy Banner */}
+                {/* Privasi Banner */}
                 {isPrivacyMode && (
                     <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disensor</div>
@@ -802,7 +803,7 @@ export default function PerilakuPage() {
                             )}
                         </div>
 
-                        {/* Privacy Button Standalone */}
+                        {/* Privasi Button Standalone */}
                         <button
                             onClick={() => setIsPrivacyMode(!isPrivacyMode)}
                             className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
@@ -810,7 +811,7 @@ export default function PerilakuPage() {
                         >
                             <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
                             <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
-                                {isPrivacyMode ? 'Privacy On' : 'Privacy Off'}
+                                {isPrivacyMode ? 'Privasi On' : 'Privasi Off'}
                             </span>
                         </button>
 
@@ -871,7 +872,7 @@ export default function PerilakuPage() {
                 </div>
 
                 {/* ── STATS ── */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                <StatsCarousel count={4}>
                     {[
                         { label: 'Total', value: stats.total, icon: faClipboardList, bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]', border: 'border-t-[var(--color-primary)]', key: '' },
                         { label: 'Positif', value: stats.positive, icon: faCheckCircle, bg: 'bg-emerald-500/10 text-emerald-500', border: 'border-t-emerald-500', key: 'positive' },
@@ -880,7 +881,7 @@ export default function PerilakuPage() {
                     ].map(s => (
                         <div key={s.label}
                             onClick={() => s.key && setFilterType(prev => prev === s.key ? '' : s.key)}
-                            className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.border} flex items-center gap-3 hover:border-t-4 transition-all ${s.key ? 'cursor-pointer' : ''} ${s.key && filterType === s.key ? 'ring-2 ring-[var(--color-primary)]/30' : ''}`}>
+                            className={`shrink-0 snap-center w-[200px] xs:w-[220px] sm:w-auto glass rounded-[1.5rem] p-4 border-t-[3px] ${s.border} flex items-center gap-3 hover:border-t-4 transition-all ${s.key ? 'cursor-pointer' : ''} ${s.key && filterType === s.key ? 'ring-2 ring-[var(--color-primary)]/30' : ''}`}>
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${s.bg}`}>
                                 <FontAwesomeIcon icon={s.icon} />
                             </div>
@@ -890,7 +891,7 @@ export default function PerilakuPage() {
                             </div>
                         </div>
                     ))}
-                </div>
+                </StatsCarousel>
 
                 {/* ── SEARCH + FILTER ── */}
                 <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">

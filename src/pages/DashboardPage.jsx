@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import StatsCarousel from '../components/StatsCarousel'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faUsers,
@@ -9,6 +10,8 @@ import {
     faArrowRight,
     faExclamationTriangle,
     faTrophy,
+    faDoorOpen,
+    faClock,
 } from '@fortawesome/free-solid-svg-icons'
 import { Link } from 'react-router-dom'
 import {
@@ -83,6 +86,7 @@ export default function DashboardPage() {
     const [raportProgress, setRaportProgress] = useState([])  // [{className, filled, total, pct}]
     const [riskStudents, setRiskStudents] = useState([])  // [{id, name, className, points}]
     const [classRanking, setClassRanking] = useState([])  // [{className, avg, count}]
+    const [recentGate, setRecentGate] = useState([])      // [{id, name, type, time}]
 
     const COLORS = useMemo(() => ([
         '#ef4444', '#f59e0b', '#6366f1', '#8b5cf6', '#10b981', '#3b82f6'
@@ -341,6 +345,23 @@ export default function DashboardPage() {
                         .sort((a, b) => b.avg - a.avg)
                     setClassRanking(ranking)
                 }
+
+                // ── 10) Recent Gate Activity (3 terbaru) ──────────────────────
+                const { data: gateData } = await supabase
+                    .from('gate_logs')
+                    .select('id, visitor_name, visitor_type, check_in')
+                    .is('check_out', null)
+                    .order('check_in', { ascending: false })
+                    .limit(3)
+
+                if (gateData) {
+                    setRecentGate(gateData.map(g => ({
+                        id: g.id,
+                        name: g.visitor_name,
+                        type: g.visitor_type,
+                        time: new Date(g.check_in).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    })))
+                }
             } catch (e) {
                 console.error('Dashboard fetch error:', e)
             } finally {
@@ -409,26 +430,31 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* ── STATS GRID ── */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                {/* ── STATS CAROUSEL ── */}
+                <StatsCarousel count={STATS.length}>
                     {STATS.map((stat, idx) => (
-                        <div key={idx} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${stat.borderColor} flex items-center gap-3 hover:border-t-4 transition-all`}>
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${stat.iconBg}`}>
+                        <div key={idx} className={`shrink-0 snap-center w-[200px] xs:w-[220px] sm:w-auto glass group relative overflow-hidden rounded-[1.8rem] p-5 border-t-4 ${stat.borderColor} flex items-center gap-4 hover:shadow-2xl hover:shadow-[var(--color-primary)]/10 transition-all duration-300`}>
+                            {/* Decorative background element */}
+                            <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-gradient-to-br from-white/5 to-transparent rounded-full rotate-45 transform group-hover:scale-125 transition-transform duration-500" />
+
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-base flex-shrink-0 shadow-sm ${stat.iconBg} transform group-hover:scale-110 group-hover:rotate-6 transition-all`}>
                                 <FontAwesomeIcon icon={stat.icon} />
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 leading-none mb-1">{stat.label}</p>
-                                <h3 className="font-black font-heading leading-none text-[var(--color-text)] text-xl tabular-nums">
-                                    {loading ? <span className="inline-block w-8 h-5 rounded bg-[var(--color-border)] animate-pulse" /> : stat.value}
+                            <div className="min-w-0 relative z-10">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5">{stat.label}</p>
+                                <h3 className="font-black font-heading leading-none text-[var(--color-text)] text-2xl tabular-nums tracking-tight">
+                                    {loading ? <span className="inline-block w-8 h-6 rounded bg-[var(--color-border)] animate-pulse" /> : stat.value}
                                 </h3>
-                                <p className={`text-[9px] font-black mt-1 flex items-center gap-1 ${stat.trendUp ? 'text-emerald-500' : 'text-red-500'}`}>
-                                    <FontAwesomeIcon icon={stat.trendUp ? faArrowUp : faArrowDown} className="text-[8px]" />
+                                <p className={`text-[10px] font-black mt-1.5 flex items-center gap-1.5 ${stat.trendUp ? 'text-emerald-500' : 'text-red-500'}`}>
+                                    <span className="flex items-center justify-center w-4 h-4 rounded-full bg-current/10 -ml-0.5">
+                                        <FontAwesomeIcon icon={stat.trendUp ? faArrowUp : faArrowDown} className="text-[7px]" />
+                                    </span>
                                     {stat.trend}
                                 </p>
                             </div>
                         </div>
                     ))}
-                </div>
+                </StatsCarousel>
 
                 {/* ── CHARTS ROW ── */}
                 <div className="grid lg:grid-cols-3 gap-4 mb-6">
@@ -465,10 +491,15 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Pie Chart */}
-                    <div className="glass rounded-[1.5rem] p-5 flex flex-col">
-                        <div className="mb-5">
-                            <p className="text-[13px] font-black text-[var(--color-text)]">Konfigurasi Poin</p>
-                            <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Minggu ini</p>
+                    <div className="glass rounded-[1.5rem] p-5 flex flex-col relative overflow-hidden">
+                        <div className="mb-5 flex justify-between items-start">
+                            <div>
+                                <p className="text-[13px] font-black text-[var(--color-text)]">Konfigurasi Poin</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Minggu ini</p>
+                            </div>
+                            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                                <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
+                            </div>
                         </div>
                         <div className="h-44">
                             <ResponsiveContainer width="100%" height="100%">
@@ -536,39 +567,82 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="glass rounded-[1.5rem] p-5">
-                        <div className="mb-5">
-                            <p className="text-[13px] font-black text-[var(--color-text)]">Aksi Cepat</p>
-                            <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Navigasi halaman utama</p>
+                    {/* Quick Actions & Activity Pulse */}
+                    <div className="flex flex-col gap-4">
+                        {/* Quick Actions */}
+                        <div className="glass rounded-[2rem] p-5 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)]">
+                            <div className="mb-5">
+                                <p className="text-[13px] font-black text-[var(--color-text)]">Aksi Cepat</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Navigasi halaman utama</p>
+                            </div>
+                            <div className="space-y-2.5">
+                                <Link to="/raport/new" className="flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--color-primary)] hover:brightness-110 active:scale-[0.98] text-white transition-all shadow-xl shadow-[var(--color-primary)]/25">
+                                    <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                                        <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[13px] font-black leading-tight">Buat Laporan</p>
+                                        <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Input Poin</p>
+                                    </div>
+                                </Link>
+                                <Link to="/master/students" className="flex items-center gap-3 p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/40 hover:shadow-lg group transition-all">
+                                    <div className="w-9 h-9 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faUsers} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[13px] font-black text-[var(--color-text)] leading-tight">Data Siswa</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest opacity-60">Database</p>
+                                    </div>
+                                </Link>
+                                <Link to="/raport" className="flex items-center gap-3 p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/40 hover:shadow-lg group transition-all">
+                                    <div className="w-9 h-9 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faClipboardList} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[13px] font-black text-[var(--color-text)] leading-tight">Semua Laporan</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest opacity-60">Lihat riwayat lengkap</p>
+                                    </div>
+                                </Link>
+                            </div>
                         </div>
-                        <div className="space-y-2.5">
-                            <Link to="/raport/new" className="flex items-center gap-3 p-3.5 rounded-xl bg-[var(--color-primary)] hover:opacity-90 text-white transition-all shadow-lg shadow-[var(--color-primary)]/20">
-                                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
-                                    <FontAwesomeIcon icon={faPlus} className="text-sm" />
+
+                        {/* Gate Activity Pulse */}
+                        <div className="glass rounded-[2rem] p-5 flex-1 relative overflow-hidden bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)]">
+                            <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl" />
+                            <div className="mb-4 flex justify-between items-center">
+                                <div>
+                                    <p className="text-[13px] font-black text-[var(--color-text)]">Gate Presence</p>
+                                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Aktivitas gerbang aktif</p>
                                 </div>
-                                <div className="min-w-0">
-                                    <p className="text-[12px] font-black leading-tight">Buat Laporan</p>
-                                    <p className="text-[10px] text-white/70 font-bold">Pelanggaran / Prestasi</p>
+                                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                                    <FontAwesomeIcon icon={faDoorOpen} className="text-xs" />
                                 </div>
-                            </Link>
-                            <Link to="/master/students" className="flex items-center gap-3 p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/30 group transition-all">
-                                <div className="w-8 h-8 bg-blue-500/10 text-blue-500 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                    <FontAwesomeIcon icon={faUsers} />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[12px] font-black text-[var(--color-text)] leading-tight">Data Siswa</p>
-                                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold">Kelola database siswa</p>
-                                </div>
-                            </Link>
-                            <Link to="/raport" className="flex items-center gap-3 p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/30 group transition-all">
-                                <div className="w-8 h-8 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                    <FontAwesomeIcon icon={faClipboardList} />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[12px] font-black text-[var(--color-text)] leading-tight">Semua Laporan</p>
-                                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold">Lihat riwayat lengkap</p>
-                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                {loading ? (
+                                    [1, 2].map(i => <div key={i} className="h-10 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)
+                                ) : recentGate.length === 0 ? (
+                                    <div className="py-4 text-center border-2 border-dashed border-[var(--color-border)] rounded-2xl">
+                                        <p className="text-[10px] font-black text-[var(--color-text-muted)] italic opacity-50">Semua di dalam sekolah</p>
+                                    </div>
+                                ) : (
+                                    recentGate.map(g => (
+                                        <div key={g.id} className="flex items-center gap-3 p-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] hover:border-emerald-500/20 transition-all">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-1" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[11px] font-black text-[var(--color-text)] truncate">{g.name}</p>
+                                                <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tighter opacity-60">{g.type}</p>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-right px-2">
+                                                <FontAwesomeIcon icon={faClock} className="text-[9px] text-[var(--color-text-muted)] opacity-40" />
+                                                <span className="text-[10px] font-black tabular-nums text-[var(--color-text-muted)]">{g.time}</span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <Link to="/gate" className="mt-4 w-full flex items-center justify-center p-2 rounded-xl border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all uppercase tracking-widest gap-2">
+                                Monitor Gerbang <FontAwesomeIcon icon={faArrowRight} className="text-[8px]" />
                             </Link>
                         </div>
                     </div>

@@ -299,8 +299,8 @@ export default function TeachersPage() {
     const handleSubmit = async (payload) => {
         setSubmitting(true)
         try {
-            if (selectedItem) { const { error } = await supabase.from('teachers').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data guru berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', recordId: selectedItem.id, oldData: { name: selectedItem.name, status: selectedItem.status, type: selectedItem.type }, newData: payload }) }
-            else { const { data: insData, error } = await supabase.from('teachers').insert([payload]).select().single(); if (error) throw error; addToast('Guru baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', tableName: 'teachers', recordId: insData?.id, newData: { name: payload.name, subject: payload.subject, status: payload.status } }) }
+            if (selectedItem) { const { error } = await supabase.from('teachers').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data guru berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'teachers', recordId: selectedItem.id, oldData: { name: selectedItem.name, status: selectedItem.status, type: selectedItem.type }, newData: payload }) }
+            else { const { data: insData, error } = await supabase.from('teachers').insert([payload]).select().single(); if (error) throw error; addToast('Guru baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'teachers', recordId: insData?.id, newData: { name: payload.name, subject: payload.subject, status: payload.status } }) }
             setIsModalOpen(false); fetchData(); fetchStats()
             return null
         } catch (err) { return { error: true, code: err.code, message: 'Gagal menyimpan data.' } }
@@ -308,16 +308,16 @@ export default function TeachersPage() {
     }
     const handleDeleteConfirm = async () => {
         if (!teacherToAction) return; setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').delete().eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', tableName: 'teachers', recordId: teacherToAction.id, oldData: { name: teacherToAction.name, status: teacherToAction.status } }); setIsDeleteModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').delete().eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'teachers', recordId: teacherToAction.id, oldData: { name: teacherToAction.name, status: teacherToAction.status } }); setIsDeleteModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
         catch { addToast('Gagal menghapus', 'error') } finally { setSubmitting(false) }
     }
     const handleArchive = async () => {
         if (!teacherToAction) return; setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', recordId: teacherToAction.id, oldData: { name: teacherToAction.name, deleted_at: null }, newData: { deleted_at: new Date().toISOString() } }); setIsArchiveModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'teachers', recordId: teacherToAction.id, oldData: { name: teacherToAction.name, deleted_at: null }, newData: { deleted_at: new Date().toISOString() } }); setIsArchiveModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
         catch { addToast('Gagal mengarsipkan', 'error') } finally { setSubmitting(false) }
     }
     const handleRestore = async teacher => {
-        try { const { error } = await supabase.from('teachers').update({ deleted_at: null }).eq('id', teacher.id); if (error) throw error; addToast(`"${teacher.name}" dipulihkan`, 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', recordId: teacher.id, newData: { deleted_at: null, name: teacher.name, restored: true } }); setArchivedTeachers(prev => prev.filter(t => t.id !== teacher.id)); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').update({ deleted_at: null }).eq('id', teacher.id); if (error) throw error; addToast(`"${teacher.name}" dipulihkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'teachers', recordId: teacher.id, newData: { deleted_at: null, name: teacher.name, restored: true } }); setArchivedTeachers(prev => prev.filter(t => t.id !== teacher.id)); fetchData(); fetchStats() }
         catch { addToast('Gagal memulihkan', 'error') }
     }
     const fetchArchived = async () => {
@@ -373,7 +373,7 @@ export default function TeachersPage() {
 
     // ── quick status ──────────────────────────────────────────────────────────
     const handleQuickStatus = async (teacher, newStatus) => {
-        try { const { error } = await supabase.from('teachers').update({ status: newStatus }).eq('id', teacher.id); if (error) throw error; addToast(`Status ${teacher.name} → ${STATUS_CONFIG[newStatus].label}`, 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', recordId: teacher.id, oldData: { name: teacher.name, status: teacher.status }, newData: { status: newStatus } }); setQuickStatusId(null); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').update({ status: newStatus }).eq('id', teacher.id); if (error) throw error; addToast(`Status ${teacher.name} → ${STATUS_CONFIG[newStatus].label}`, 'success'); await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'teachers', recordId: teacher.id, oldData: { name: teacher.name, status: teacher.status }, newData: { status: newStatus } }); setQuickStatusId(null); fetchData(); fetchStats() }
         catch { addToast('Gagal update status', 'error') }
     }
 
@@ -398,12 +398,12 @@ export default function TeachersPage() {
     const toggleSelect = id => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
     const handleBulkArchive = async () => {
         setSubmitting(true)
-        try { const idsSnap = [...selectedIds]; const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).in('id', idsSnap); if (error) throw error; addToast(`${idsSnap.length} guru diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', tableName: 'teachers', newData: { bulk_archive: true, count: idsSnap.length, ids: idsSnap } }); setSelectedIds([]); setIsBulkModalOpen(false); fetchData(); fetchStats() }
+        try { const idsSnap = [...selectedIds]; const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).in('id', idsSnap); if (error) throw error; addToast(`${idsSnap.length} guru diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'teachers', newData: { bulk_archive: true, count: idsSnap.length, ids: idsSnap } }); setSelectedIds([]); setIsBulkModalOpen(false); fetchData(); fetchStats() }
         catch { addToast('Gagal arsip massal', 'error') } finally { setSubmitting(false) }
     }
     const handleBulkDelete = async () => {
         setSubmitting(true)
-        try { const idsSnap2 = [...selectedIds]; const { error } = await supabase.from('teachers').delete().in('id', idsSnap2); if (error) throw error; addToast(`${idsSnap2.length} guru dihapus`, 'success'); await logAudit({ action: 'DELETE', tableName: 'teachers', newData: { bulk: true, count: idsSnap2.length, ids: idsSnap2 } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData(); fetchStats() }
+        try { const idsSnap2 = [...selectedIds]; const { error } = await supabase.from('teachers').delete().in('id', idsSnap2); if (error) throw error; addToast(`${idsSnap2.length} guru dihapus`, 'success'); await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'teachers', newData: { bulk: true, count: idsSnap2.length, ids: idsSnap2 } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData(); fetchStats() }
         catch { addToast('Gagal hapus massal', 'error') } finally { setSubmitting(false) }
     }
     const bulkWATeachers = useMemo(() => teachers.filter(t => selectedIds.includes(t.id) && t.phone), [teachers, selectedIds])
@@ -459,7 +459,7 @@ export default function TeachersPage() {
                 setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
             }
             addToast(`Berhasil import ${validRows.length} guru`, 'success')
-            await logAudit({ action: 'INSERT', tableName: 'teachers', newData: { bulk_import: true, count: validRows.length } })
+            await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'teachers', newData: { bulk_import: true, count: validRows.length } })
             setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportDupes([]); setImportFileName(''); setImportTab('panduan')
             fetchData(); fetchStats()
         } catch { addToast('Gagal import (cek constraint DB / duplikat)', 'error') }
@@ -492,7 +492,7 @@ export default function TeachersPage() {
         <DashboardLayout title="Data Guru">
             {/* TAMBAH INI: */}
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
-                {/* Privacy Banner */}
+                {/* Privasi Banner */}
                 {isPrivacyMode && (
                     <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disensor</div>
@@ -576,12 +576,12 @@ export default function TeachersPage() {
                             )}
                         </div>
 
-                        {/* Privacy toggle */}
+                        {/* Privasi toggle */}
                         <button onClick={() => setIsPrivacyMode(!isPrivacyMode)}
                             className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
                             <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
-                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privacy On' : 'Privacy Off'}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privasi On' : 'Privasi Off'}</span>
                         </button>
 
                         {/* Keyboard shortcuts floating panel */}
@@ -657,8 +657,8 @@ export default function TeachersPage() {
                                     el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
                                 }}
                                 className={`rounded-full transition-all duration-300 ${activeStatIdx === i
-                                        ? 'w-5 h-1.5 bg-[var(--color-primary)]'
-                                        : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
+                                    ? 'w-5 h-1.5 bg-[var(--color-primary)]'
+                                    : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
                                     }`}
                             />
                         ))}

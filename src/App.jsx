@@ -20,8 +20,8 @@ const InformationPage = lazy(() => import('./pages/InformationPage'))
 // Core
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const RaportPage = lazy(() => import('./pages/RaportPage'))
-const PerilakuPage = lazy(() => import('./pages/PerilakuPage'))
-const AbsensiPage = lazy(() => import('./pages/AbsensiPage'))
+const BehaviorPage = lazy(() => import('./pages/BehaviorPage'))
+const AttendancePage = lazy(() => import('./pages/AttendancePage'))
 const GatePage = lazy(() => import('./pages/GatePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
@@ -133,7 +133,7 @@ function RoleRoute({ children, roles = [] }) {
  * Jika flag sedang load: tampilkan spinner.
  *
  * Usage:
- *   <Route path="/absensi" element={<FlagRoute flag="module.absensi"><AbsensiPage /></FlagRoute>} />
+ *   <Route path="/absensi" element={<FlagRoute flag="module.absensi"><AttendancePage /></FlagRoute>} />
  */
 function FlagRoute({ children, flag, label }) {
   const { flags, loading } = useFeatureFlags()
@@ -377,8 +377,8 @@ function AppRoutes() {
             {/* Core — module flag guarded */}
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Bulanan"><RaportPage /></FlagRoute>} />
-            <Route path="/perilaku" element={<FlagRoute flag="module.poin" label="Laporan Perilaku"><PerilakuPage /></FlagRoute>} />
-            <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AbsensiPage /></FlagRoute>} />
+            <Route path="/perilaku" element={<FlagRoute flag="module.poin" label="Laporan Perilaku"><BehaviorPage /></FlagRoute>} />
+            <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AttendancePage /></FlagRoute>} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/informasi" element={<InformationPage />} />
 

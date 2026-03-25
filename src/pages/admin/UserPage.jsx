@@ -286,7 +286,7 @@ export default function UserManagementPage() {
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error)
             addToast('Session dicabut ✓', 'success')
-            await logAudit({ action: 'DELETE', tableName: 'sessions', newData: { session_id: sessionId, revoked: true } })
+            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'sessions', newData: { session_id: sessionId, revoked: true } })
             fetchSessions(true)
         } catch (err) {
             addToast('Gagal revoke: ' + err.message, 'error')
@@ -308,7 +308,7 @@ export default function UserManagementPage() {
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error)
             addToast(`Semua session ${userName} dicabut ✓`, 'success')
-            await logAudit({ action: 'DELETE', tableName: 'sessions', newData: { revoke_all: true, user_id: userId, user_name: userName } })
+            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'sessions', newData: { revoke_all: true, user_id: userId, user_name: userName } })
             setConfirmRevokeAll(null)
             fetchSessions(true)
         } catch (err) {
@@ -382,7 +382,7 @@ export default function UserManagementPage() {
 
             addToast(`Akun berhasil dibuat untuk ${createName}`, 'success')
             await logAudit({
-                action: 'INSERT', tableName: 'profiles',
+                action: 'INSERT', source: 'SYSTEM', tableName: 'profiles',
                 newData: { name: createName.trim(), email: createEmail.trim(), role: createRole, teacher_id: createTeacherId || null }
             })
             setCreateModal(false)
@@ -426,7 +426,7 @@ export default function UserManagementPage() {
 
             addToast(`Password ${resetModal.name} berhasil diubah ✓`, 'success')
             await logAudit({
-                action: 'UPDATE', tableName: 'profiles', recordId: resetModal.id,
+                action: 'UPDATE', source: 'SYSTEM', tableName: 'profiles', recordId: resetModal.id,
                 newData: { password_reset: true, name: resetModal.name, email: resetModal.email }
             })
             setResetModal(null)
@@ -451,7 +451,7 @@ export default function UserManagementPage() {
             if (error) throw error
             addToast('Profil user diperbarui ✓', 'success')
             await logAudit({
-                action: 'UPDATE', tableName: 'profiles', recordId: editModal.id,
+                action: 'UPDATE', source: 'SYSTEM', tableName: 'profiles', recordId: editModal.id,
                 oldData: { name: editModal.name, role: editModal.role }, newData: updates
             })
             setEditModal(null)
@@ -474,7 +474,7 @@ export default function UserManagementPage() {
             if (error) throw error
             addToast('Teacher berhasil di-link ke akun ini ✓', 'success')
             await logAudit({
-                action: 'UPDATE', tableName: 'teachers', recordId: linkTeacherId,
+                action: 'UPDATE', source: 'SYSTEM', tableName: 'teachers', recordId: linkTeacherId,
                 newData: { profile_id: linkModal.id, linked_to: linkModal.name }
             })
             setLinkModal(null); setLinkTeacherId('')
@@ -497,7 +497,7 @@ export default function UserManagementPage() {
             if (error) throw error
             addToast('Teacher berhasil di-unlink ✓', 'success')
             await logAudit({
-                action: 'UPDATE', tableName: 'teachers', recordId: user.linkedTeacher.id,
+                action: 'UPDATE', source: 'SYSTEM', tableName: 'teachers', recordId: user.linkedTeacher.id,
                 oldData: { profile_id: user.id, name: user.linkedTeacher.name }, newData: { profile_id: null }
             })
             fetchUsers(); fetchUnlinked()
@@ -531,7 +531,7 @@ export default function UserManagementPage() {
 
             addToast(`Akun ${deleteModal.name} dihapus permanen ✓`, 'success')
             await logAudit({
-                action: 'DELETE', tableName: 'profiles', recordId: deleteModal.id,
+                action: 'DELETE', source: 'SYSTEM', tableName: 'profiles', recordId: deleteModal.id,
                 oldData: { name: deleteModal.name, email: deleteModal.email, role: deleteModal.role }
             })
             setDeleteModal(null)
@@ -553,7 +553,7 @@ export default function UserManagementPage() {
         <DashboardLayout title="Manajemen User">
             <div className="p-4 md:p-6 space-y-5 max-w-[1800px] mx-auto">
 
-                {/* ── Privacy Banner ── */}
+                {/* ── Privasi Banner ── */}
                 {isPrivacyMode && (
                     <div className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-amber-600 text-[11px] font-bold">
@@ -592,7 +592,7 @@ export default function UserManagementPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        {/* Privacy toggle */}
+                        {/* Privasi toggle */}
                         <button
                             onClick={() => setIsPrivacyMode(v => !v)}
                             className={`h-9 px-3 rounded-xl border flex items-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest
@@ -603,7 +603,7 @@ export default function UserManagementPage() {
                             title={isPrivacyMode ? 'Matikan Mode Privasi' : 'Aktifkan Mode Privasi'}
                         >
                             <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
-                            <span className="hidden sm:inline">{isPrivacyMode ? 'Privacy On' : 'Privacy'}</span>
+                            <span className="hidden sm:inline">{isPrivacyMode ? 'Privasi On' : 'Privasi'}</span>
                         </button>
                         <button onClick={() => { fetchUsers(); fetchUnlinked() }}
                             className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all flex items-center justify-center"

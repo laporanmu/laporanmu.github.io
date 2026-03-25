@@ -159,7 +159,7 @@ const StudentsHeader = memo(function StudentsHeader({
                 >
                     <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
                     <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
-                        {isPrivacyMode ? 'Privacy On' : 'Privacy Off'}
+                        {isPrivacyMode ? 'Privasi On' : 'Privasi Off'}
                     </span>
                 </button>
 

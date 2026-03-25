@@ -1,0 +1,20 @@
+                        {activeTab === 'input' && (
+                            <>
+                                {/* ── Toolbar Highest Fidelity ── */}
+                                <div className="p-3 md:p-5 border-b border-[var(--color-border)] flex flex-col gap-4 bg-[var(--color-surface)]">
+                                    
+                                    {/* Tier 1: Actions & Management - Full Width & Symmetrical */}
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 lg:gap-6">
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                                            {/* Data Operations Group */}
+                                            <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-1 shadow-sm flex-1 lg:flex-none">
+                                                <div className="flex-1 lg:flex-none">
+                                                    <MassActionDropdown
+                                                        studentList={studentList}
+                                                        dataMap={dataMap}
+                                                        setDataMap={setDataMap}
+                                                        tahun={tahun}
+                                                        bulan={bulan}
+                                                        daysInMonth={daysInMonth}
+                                                        onDirty={markDirty}
+                                                        addToast={addToast}
