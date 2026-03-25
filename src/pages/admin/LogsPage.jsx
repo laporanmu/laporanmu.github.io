@@ -49,7 +49,7 @@ const TABLE_LABELS = {
     gate_logs: 'Log Gerbang',
     reports: 'Poin Pelanggaran',
     student_monthly_reports: 'Raport Santri',
-    behavior_types: 'Konfigurasi Poin',
+    point_rules: 'Konfigurasi Poin',
     user_preferences: 'Pengaturan User',
 }
 

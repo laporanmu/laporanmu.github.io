@@ -27,7 +27,7 @@ const TABLE_CONFIG = [
     { key: 'classes', label: 'Kelas', icon: faSchool, color: 'text-blue-500', bg: 'bg-blue-500/10', softDelete: false, dateCol: 'created_at' },
     { key: 'student_monthly_reports', label: 'Raport Bulanan', icon: faClipboardList, color: 'text-purple-500', bg: 'bg-purple-500/10', softDelete: false, dateCol: 'created_at' },
     { key: 'reports', label: 'Poin Siswa', icon: faShield, color: 'text-orange-500', bg: 'bg-orange-500/10', softDelete: false, dateCol: 'reported_at' },
-    { key: 'behavior_types', label: 'Konfigurasi Poin', icon: faExclamationTriangle, color: 'text-red-500', bg: 'bg-red-500/10', softDelete: false, dateCol: 'created_at' },
+    { key: 'point_rules', label: 'Konfigurasi Poin', icon: faExclamationTriangle, color: 'text-red-500', bg: 'bg-red-500/10', softDelete: false, dateCol: 'created_at' },
     { key: 'academic_years', label: 'Tahun Pelajaran', icon: faCalendarAlt, color: 'text-teal-500', bg: 'bg-teal-500/10', softDelete: true, dateCol: 'created_at' },
     { key: 'gate_logs', label: 'Log Gerbang', icon: faPersonWalkingArrowRight, color: 'text-rose-500', bg: 'bg-rose-500/10', softDelete: false, dateCol: 'created_at' },
     { key: 'profiles', label: 'Profil Akun', icon: faUserShield, color: 'text-violet-500', bg: 'bg-violet-500/10', softDelete: false, dateCol: 'created_at' },

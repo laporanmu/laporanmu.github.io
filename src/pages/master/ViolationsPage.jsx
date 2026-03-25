@@ -104,7 +104,7 @@ export default function ViolationsPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const { data, error } = await supabase.from('behavior_types').select('*').order('name')
+            const { data, error } = await supabase.from('point_rules').select('*').order('name')
             if (error) throw error
             if (data) {
                 setViolations(data)
@@ -130,7 +130,7 @@ export default function ViolationsPage() {
     useEffect(() => {
         fetchData()
         const ch = supabase.channel('violation-types-rt')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'behavior_types' }, () => fetchDataRef.current?.())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'point_rules' }, () => fetchDataRef.current?.())
             .subscribe()
         return () => supabase.removeChannel(ch)
     }, [fetchData])
@@ -247,15 +247,15 @@ export default function ViolationsPage() {
                 status: formData.status
             }
             if (selectedItem) {
-                const { error } = await supabase.from('behavior_types').update(payload).eq('id', selectedItem.id)
+                const { error } = await supabase.from('point_rules').update(payload).eq('id', selectedItem.id)
                 if (error) throw error
                 addToast('Data berhasil diupdate', 'success')
-                await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'behavior_types', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } })
+                await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'point_rules', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } })
             } else {
-                const { data: insData, error } = await supabase.from('behavior_types').insert(payload).select().single()
+                const { data: insData, error } = await supabase.from('point_rules').insert(payload).select().single()
                 if (error) throw error
                 addToast('Data baru berhasil ditambahkan', 'success')
-                await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'behavior_types', recordId: insData?.id, newData: payload })
+                await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'point_rules', recordId: insData?.id, newData: payload })
             }
             setIsModalOpen(false)
             fetchData()
@@ -267,10 +267,10 @@ export default function ViolationsPage() {
         if (!itemToDelete) return
         setSubmitting(true)
         try {
-            const { error } = await supabase.from('behavior_types').delete().eq('id', itemToDelete.id)
+            const { error } = await supabase.from('point_rules').delete().eq('id', itemToDelete.id)
             if (error) throw error
             addToast('Data berhasil dihapus', 'success')
-            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'behavior_types', recordId: itemToDelete.id, oldData: itemToDelete })
+            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'point_rules', recordId: itemToDelete.id, oldData: itemToDelete })
             setIsDeleteModalOpen(false)
             fetchData()
         } catch { addToast('Gagal menghapus data', 'error') }
@@ -281,10 +281,10 @@ export default function ViolationsPage() {
         setSubmitting(true)
         try {
             const idsSnap = [...selectedIds]
-            const { error } = await supabase.from('behavior_types').delete().in('id', idsSnap)
+            const { error } = await supabase.from('point_rules').delete().in('id', idsSnap)
             if (error) throw error
             addToast(`${idsSnap.length} data berhasil dihapus`, 'success')
-            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'behavior_types', newData: { bulk: true, count: idsSnap.length, ids: idsSnap } })
+            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'point_rules', newData: { bulk: true, count: idsSnap.length, ids: idsSnap } })
             setSelectedIds([])
             setIsBulkDeleteOpen(false)
             fetchData()
@@ -312,7 +312,7 @@ export default function ViolationsPage() {
     const handleExport = async (format) => {
         setExporting(true)
         try {
-            let q = supabase.from('behavior_types').select('*').order('name')
+            let q = supabase.from('point_rules').select('*').order('name')
             if (exportScope === 'selected') q = q.in('id', selectedIds)
             const { data, error } = await q
             if (error) throw error

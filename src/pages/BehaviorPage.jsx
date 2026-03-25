@@ -301,7 +301,7 @@ export default function BehaviorPage() {
             // students has class_id FK → classes table. No class_name column.
             const [studRes, vtRes, classRes] = await Promise.all([
                 supabase.from('students').select('id,name,class_id,classes(id,name)').order('name'),
-                supabase.from('behavior_types').select('id,name,points').order('name'),
+                supabase.from('point_rules').select('id,name,points').order('name'),
                 supabase.from('classes').select('id,name').order('name'),
             ])
             if (studRes.data) {
@@ -334,7 +334,7 @@ export default function BehaviorPage() {
             if (debouncedSearch) {
                 const [matchedS, matchedT] = await Promise.all([
                     supabase.from('students').select('id').ilike('name', `%${debouncedSearch}%`),
-                    supabase.from('behavior_types').select('id').ilike('name', `%${debouncedSearch}%`),
+                    supabase.from('point_rules').select('id').ilike('name', `%${debouncedSearch}%`),
                 ])
                 const sIds = (matchedS.data || []).map(s => s.id)
                 const tIds = (matchedT.data || []).map(t => t.id)
@@ -483,7 +483,7 @@ export default function BehaviorPage() {
     const getExportData = async () => {
         let q = supabase
             .from('reports')
-            .select('*, students(name, class_id, classes(name)), behavior_types(name)')
+            .select('*, students(name, class_id, classes(name)), point_rules(name)')
             .order('reported_at', { ascending: false })
 
         if (exportScope === 'filtered') {
@@ -505,7 +505,7 @@ export default function BehaviorPage() {
                 const s = debouncedSearch.toLowerCase()
                 filtered = filtered.filter(r =>
                     (r.students?.name || '').toLowerCase().includes(s) ||
-                    (r.behavior_types?.name || '').toLowerCase().includes(s)
+                    (r.point_rules?.name || '').toLowerCase().includes(s)
                 )
             }
         }
@@ -515,7 +515,7 @@ export default function BehaviorPage() {
             if (exportColumns.date) row['Tanggal'] = fmtDate(r.reported_at)
             if (exportColumns.student) row['Siswa'] = r.students?.name || '-'
             if (exportColumns.class) row['Kelas'] = r.students?.classes?.name || '-'
-            if (exportColumns.type) row['Jenis'] = r.behavior_types?.name || '-'
+            if (exportColumns.type) row['Jenis'] = r.point_rules?.name || '-'
             if (exportColumns.points) row['Poin'] = r.points
             if (exportColumns.notes) row['Catatan'] = r.notes || '-'
             if (exportColumns.teacher) row['Pelapor'] = r.teacher_name || '-'
