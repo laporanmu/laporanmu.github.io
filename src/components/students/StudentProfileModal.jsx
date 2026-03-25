@@ -8,7 +8,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import AuditTimeline from '../ui/AuditTimeline'
+import { ActionBadge, DiffViewer, AuditTimeline } from '../../pages/admin/LogsPage'
 import { faShieldHalved } from '@fortawesome/free-solid-svg-icons'
 
 export default memo(function StudentProfileModal({
@@ -72,7 +72,7 @@ END:VCARD`
                     <p className="text-[10px] sm:text-[11px] text-[var(--color-text-muted)] font-bold opacity-70 leading-relaxed px-0.5">
                         Detail informasi akademik, statistik perilaku, histori laporan perizinan, dan rekapan raport siswa.
                     </p>
-                    
+
                     {/* Compact Slim Header */}
                     <div className="relative overflow-hidden rounded-2xl border border-white/10 shadow-xl">
                         <div className="absolute inset-0 bg-gradient-to-r from-indigo-700 via-violet-600 to-purple-800"></div>
@@ -92,7 +92,7 @@ END:VCARD`
                                     {selectedStudent.status}
                                 </div>
                             </div>
- 
+
                             {/* Name & Quick Stats */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -108,7 +108,7 @@ END:VCARD`
                                         )
                                     })()}
                                 </div>
- 
+
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center gap-1.5 text-white/70 overflow-hidden">
                                         <FontAwesomeIcon icon={faIdCard} className="text-[8px] shrink-0" />

@@ -24,7 +24,7 @@ import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
 import { TeacherRow, TeacherMobileCard, STATUS_CONFIG } from '../../components/teachers/TeacherRow'
 import TeacherFormModal from '../../components/teachers/TeacherFormModal'
-import AuditTimeline from '../../components/ui/AuditTimeline'
+import { ActionBadge, DiffViewer, AuditTimeline } from '../../pages/admin/LogsPage'
 import Pagination from '../../components/ui/Pagination'
 import Papa from 'papaparse'
 
