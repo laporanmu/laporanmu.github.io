@@ -1004,7 +1004,13 @@ Laporanmu System`
     const fetchAuditLog = async (id) => {
         setLoadingAudit(true)
         try {
-            const { data } = await supabase.from('student_audit_log').select('*').eq('student_id', id).order('created_at', { ascending: false }).limit(50)
+            const { data } = await supabase
+                .from('audit_logs')
+                .select('*')
+                .eq('table_name', 'students')
+                .eq('record_id', id)
+                .order('created_at', { ascending: false })
+                .limit(50)
             setAuditLogs(data || [])
         } catch { setAuditLogs([]) } finally { setLoadingAudit(false) }
     }

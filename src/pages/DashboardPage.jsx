@@ -144,7 +144,7 @@ export default function DashboardPage() {
                     .from('reports')
                     .select(`
                         id, student_id, violation_type_id, points, reported_at,
-                        violation_types:violation_type_id ( id, name, is_negative )
+                        behavior_types:violation_type_id ( id, name, is_negative )
                     `)
                     .gte('reported_at', iso(from14))
                     .lt('reported_at', iso(tomorrow0))
@@ -159,7 +159,7 @@ export default function DashboardPage() {
                 const rThisWeek = reports14.filter(r => new Date(r.reported_at) >= from7)
                 const rPrevWeek = reports14.filter(r => new Date(r.reported_at) < from7)
 
-                const isNeg = (r) => r.violation_types?.is_negative === true
+                const isNeg = (r) => r.behavior_types?.is_negative === true
 
                 const vioThis = rThisWeek.filter(isNeg).length
                 const achThis = rThisWeek.filter(r => !isNeg(r)).length
@@ -196,7 +196,7 @@ export default function DashboardPage() {
                     const ids = [...new Set(rThisWeek.map(r => r.violation_type_id).filter(Boolean))]
 
                     const { data: vtData, error: vtErr } = await supabase
-                        .from('violation_types')
+                        .from('behavior_types')
                         .select('id, name')
                         .in('id', ids)
 
@@ -206,7 +206,7 @@ export default function DashboardPage() {
 
                         for (const r of rThisWeek) {
                             if (!isNeg(r)) continue
-                            const nm = r.violation_types?.name || 'Lainnya'
+                            const nm = r.behavior_types?.name || 'Lainnya'
                             freq.set(nm, (freq.get(nm) || 0) + 1)
                         }
 
@@ -237,7 +237,7 @@ export default function DashboardPage() {
             name,
             classes:class_id ( name )
           ),
-          violation_types:violation_type_id ( name )
+          behavior_types:violation_type_id ( name )
         `)
                     .order('reported_at', { ascending: false })
                     .limit(4)
@@ -247,7 +247,7 @@ export default function DashboardPage() {
                         id: r.id,
                         student: r.students?.name || 'Siswa',
                         class: r.students?.classes?.name || '-',
-                        type: r.violation_types?.name || 'Laporan',
+                        type: r.behavior_types?.name || 'Laporan',
                         points: r.points ?? 0,
                         time: new Date(r.reported_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
                     }))
