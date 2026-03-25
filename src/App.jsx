@@ -39,7 +39,7 @@ const AdminNewsPage = lazy(() => import('./pages/admin/NewsPage'))
 const StudentsPage = lazy(() => import('./pages/master/StudentsPage'))
 const TeachersPage = lazy(() => import('./pages/master/TeachersPage'))
 const ClassesPage = lazy(() => import('./pages/master/ClassesPage'))
-const ViolationsTypePage = lazy(() => import('./pages/master/ViolationsPage'))
+const ViolationsTypePage = lazy(() => import('./pages/master/PoinPage'))
 const AcademicYearsPage = lazy(() => import('./pages/master/AcademicYearsPage'))
 
 // ─── Role Hierarchy ───────────────────────────────────────────────────────────

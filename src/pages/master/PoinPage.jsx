@@ -32,7 +32,7 @@ const LS_PAGE_SIZE = 'violations_page_size'
 
 
 
-export default function ViolationsPage() {
+export default function PoinPage() {
     const { addToast } = useToast()
     const { profile } = useAuth()
     const { enabled: canEdit } = useFlag('access.teacher_violations')
