@@ -14,14 +14,14 @@ import {
     faQuestion, faCircleInfo, faSortAmountDown, faWifi, faKeyboard, faLightbulb
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import DashboardLayout from '../components/layout/DashboardLayout'
-import Breadcrumb from '../components/ui/Breadcrumb'
-import { supabase } from '../lib/supabase'
-import { logAudit } from '../lib/auditLogger'
-import { useToast } from '../context/ToastContext'
-import { useSchoolSettings } from '../context/SchoolSettingsContext'
-import { useAuth } from '../context/AuthContext'
-import { useFlag } from '../context/FeatureFlagsContext'
+import DashboardLayout from '../../components/layout/DashboardLayout'
+import Breadcrumb from '../../components/ui/Breadcrumb'
+import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
+import { useToast } from '../../context/ToastContext'
+import { useSchoolSettings } from '../../context/SchoolSettingsContext'
+import { useAuth } from '../../context/AuthContext'
+import { useFlag } from '../../context/FeatureFlagsContext'
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ const LABEL = {
 let _translitCache = null
 const loadTranslitData = () => {
     if (_translitCache) return Promise.resolve(_translitCache)
-    return import('../data/translitData').then(m => { _translitCache = m; return m })
+    return import('../../data/translitData').then(m => { _translitCache = m; return m })
 }
 
 // ─── KATA_ARAB (versi singkat — hanya untuk RaportPrintCard inline musyrif) ──

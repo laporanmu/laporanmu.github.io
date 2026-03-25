@@ -19,10 +19,10 @@ const InformationPage = lazy(() => import('./pages/InformationPage'))
 
 // Core
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
-const RaportPage = lazy(() => import('./pages/RaportPage'))
-const BehaviorPage = lazy(() => import('./pages/BehaviorPage'))
-const AttendancePage = lazy(() => import('./pages/AttendancePage'))
-const GatePage = lazy(() => import('./pages/GatePage'))
+const RaportPage = lazy(() => import('./pages/reports/RaportPage'))
+const BehaviorPage = lazy(() => import('./pages/reports/BehaviorPage'))
+const AttendancePage = lazy(() => import('./pages/reports/AttendancePage'))
+const GatePage = lazy(() => import('./pages/reports/GatePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 // Admin-only

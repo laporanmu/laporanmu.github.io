@@ -12,13 +12,13 @@ import {
     faDownload, faFilter, faIdCard, faMotorcycle,
     faFileCsv, faFilePdf, faCircleCheck, faCircleDot, faUserGraduate
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '../components/layout/DashboardLayout'
-import StatsCarousel from '../components/StatsCarousel'
-import Breadcrumb from '../components/ui/Breadcrumb'
-import { useToast } from '../context/ToastContext'
-import { useAuth } from '../context/AuthContext'
-import { supabase } from '../lib/supabase'
-import { logAudit } from '../lib/auditLogger'
+import DashboardLayout from '../../components/layout/DashboardLayout'
+import StatsCarousel from '../../components/StatsCarousel'
+import Breadcrumb from '../../components/ui/Breadcrumb'
+import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
+import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -898,7 +898,7 @@ export default function GatePage() {
         if (error) addToast('Gagal: ' + error.message, 'error')
         else {
             addToast(action === 'return' ? 'Kembali dicatat' : 'Tamu keluar dicatat', 'success')
-            
+
             // Audit log untuk UPDATE (Check-out/Return)
             await logAudit({
                 action: 'UPDATE',
