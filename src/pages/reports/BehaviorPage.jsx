@@ -547,6 +547,12 @@ export default function BehaviorPage() {
             }
             addToast(`Ekspor ${format.toUpperCase()} berhasil`, 'success')
             setIsExportModalOpen(false)
+
+            // Forensic Audit Log
+            logAudit({
+                action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'reports',
+                newData: { format: format.toUpperCase(), scope: exportScope, count: data.length, filters: { type: filterType, class: filterClass, search: debouncedSearch } }
+            })
         } catch (err) {
             console.error(err)
             addToast('Gagal mengekspor data', 'error')

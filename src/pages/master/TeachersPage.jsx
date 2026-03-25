@@ -350,6 +350,15 @@ export default function TeachersPage() {
 
             if (error) throw error
 
+            await logAudit({
+                action: 'UPDATE',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'teachers',
+                recordId: teacher.id,
+                oldData: { is_pinned: teacher.is_pinned },
+                newData: { is_pinned: newPinned }
+            })
+
             addToast(
                 newPinned ? (
                     <span className="flex items-center gap-1.5">
@@ -411,8 +420,25 @@ export default function TeachersPage() {
     }
     const bulkWATeachers = useMemo(() => teachers.filter(t => selectedIds.includes(t.id) && t.phone), [teachers, selectedIds])
     const startBulkWA = () => { if (!bulkWATeachers.length) { addToast('Tidak ada guru terpilih dengan nomor WA', 'warning'); return }; setBulkWAIndex(0); setBulkWAResults({}); setIsBulkWAOpen(true) }
-    const sendNextWA = () => { const t = bulkWATeachers[bulkWAIndex]; if (!t) return; const msg = { info: `Assalamu'alaikum, *${t.name}*.\nBerikut informasi akun Anda di sistem.`, notif: `Assalamu'alaikum, *${t.name}*.\nAda notifikasi baru untukAnda di sistem.` }; window.open(`https://wa.me/${t.phone.replace(/^0/, '62')}?text=${encodeURIComponent(msg[waTemplate] || msg.info)}`, '_blank'); setBulkWAResults(prev => ({ ...prev, [t.id]: 'sent' })); setBulkWAIndex(bulkWAIndex + 1 < bulkWATeachers.length ? bulkWAIndex + 1 : -1) }
+    const sendNextWA = () => {
+        const t = bulkWATeachers[bulkWAIndex]
+        if (!t) return
+        const msg = {
+            info: `Assalamu'alaikum, *${t.name}*.\nBerikut informasi akun Anda di sistem.`,
+            notif: `Assalamu'alaikum, *${t.name}*.\nAda notifikasi baru untuk Anda di sistem.`
+        }
+        window.open(`https://wa.me/${t.phone.replace(/^0/, '62')}?text=${encodeURIComponent(msg[waTemplate] || msg.info)}`, '_blank')
+        setBulkWAResults(prev => ({ ...prev, [t.id]: 'sent' }))
+        setBulkWAIndex(bulkWAIndex + 1 < bulkWATeachers.length ? bulkWAIndex + 1 : -1)
 
+        logAudit({
+            action: 'SEND',
+            source: profile?.id || 'SYSTEM',
+            tableName: 'teachers',
+            recordId: t.id,
+            newData: { channel: 'whatsapp', template: waTemplate, recipient: t.name }
+        })
+    }
     // ── import ────────────────────────────────────────────────────────────────
     const processImportFile = async file => {
         if (!file) return
@@ -479,13 +505,57 @@ export default function TeachersPage() {
     }
     const handleExportCSV = async () => {
         setExporting(true)
-        try { const rows = await getExportData(); if (!rows.length) return addToast('Tidak ada data', 'warning'); const blob = new Blob([Papa.unparse(rows)], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `data-guru-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); addToast(`Export CSV berhasil (${rows.length} guru)`, 'success') }
-        catch { addToast('Gagal export CSV', 'error') } finally { setExporting(false); setIsExportModalOpen(false) }
+        try {
+            const rows = await getExportData()
+            if (!rows.length) return addToast('Tidak ada data', 'warning')
+            const blob = new Blob([Papa.unparse(rows)], { type: 'text/csv;charset=utf-8;' })
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(blob)
+            a.download = `data-guru-${new Date().toISOString().slice(0, 10)}.csv`
+            a.click()
+
+            await logAudit({
+                action: 'EXPORT',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'teachers',
+                newData: {
+                    format: 'csv',
+                    scope: exportScope,
+                    columns: Object.keys(exportColumns).filter(k => exportColumns[k]),
+                    count: rows.length
+                }
+            })
+
+            addToast(`Export CSV berhasil (${rows.length} guru)`, 'success')
+        } catch { addToast('Gagal export CSV', 'error') }
+        finally { setExporting(false); setIsExportModalOpen(false) }
     }
     const handleExportExcel = async () => {
         setExporting(true)
-        try { const rows = await getExportData(); if (!rows.length) return addToast('Tidak ada data', 'warning'); const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 14) })); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Data Guru'); XLSX.writeFile(wb, `data-guru-${new Date().toISOString().slice(0, 10)}.xlsx`); addToast(`Export Excel berhasil (${rows.length} guru)`, 'success') }
-        catch { addToast('Gagal export Excel', 'error') } finally { setExporting(false); setIsExportModalOpen(false) }
+        try {
+            const rows = await getExportData()
+            if (!rows.length) return addToast('Tidak ada data', 'warning')
+            const ws = XLSX.utils.json_to_sheet(rows)
+            ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 14) }))
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'Data Guru')
+            XLSX.writeFile(wb, `data-guru-${new Date().toISOString().slice(0, 10)}.xlsx`)
+
+            await logAudit({
+                action: 'EXPORT',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'teachers',
+                newData: {
+                    format: 'xlsx',
+                    scope: exportScope,
+                    columns: Object.keys(exportColumns).filter(k => exportColumns[k]),
+                    count: rows.length
+                }
+            })
+
+            addToast(`Export Excel berhasil (${rows.length} guru)`, 'success')
+        } catch { addToast('Gagal export Excel', 'error') }
+        finally { setExporting(false); setIsExportModalOpen(false) }
     }
 
     const disp = val => isPrivacyMode ? maskInfo(val) : (val || '—')

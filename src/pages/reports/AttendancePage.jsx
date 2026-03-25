@@ -1438,7 +1438,11 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
             <script>window.onload=()=>window.print()<\/script>
         </body></html>`)
         win.document.close()
-    }, [studentList, rekapData, lastMonthMap, weekdays, bulan, tahun])
+        logAudit({
+            action: 'PRINT', source: 'OPERATIONAL', tableName: 'student_attendance',
+            newData: { format: 'HTML_PRINT', count: studentList.length, month: bulan, year: tahun, classId }
+        })
+    }, [studentList, rekapData, lastMonthMap, weekdays, bulan, tahun, profile, classId])
 
     const handleExport = async () => {
         if (!window.XLSX) {

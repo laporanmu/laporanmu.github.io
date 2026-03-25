@@ -331,6 +331,18 @@ export default function PoinPage() {
                 const ws = XLSX.utils.json_to_sheet(mapped); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Data Poin')
                 XLSX.writeFile(wb, `data_poin_${new Date().toISOString().slice(0, 10)}.xlsx`)
             }
+            
+            await logAudit({
+                action: 'EXPORT',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'point_rules',
+                newData: {
+                    format,
+                    scope: exportScope,
+                    count: data.length
+                }
+            })
+
             addToast(`Export berhasil`, 'success')
         } catch { addToast('Gagal export data', 'error') }
         finally { setExporting(false); setIsExportModalOpen(false) }

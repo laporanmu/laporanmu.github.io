@@ -2026,6 +2026,12 @@ export default function RaportPage() {
                 'success'
             )
             try { const key = `draft_raport_${selectedClassId}_${selectedMonth}_${selectedYear}`; localStorage.removeItem(key); setDraftAvailable(false) } catch { }
+
+            // Forensic Audit Log
+            logAudit({
+                action: 'UPDATE', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { bulk_save_all: true, count: studentsToSave.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
+            })
         } catch (e) { addToast(`Gagal menyimpan semua: ${e.message}`, 'error'); console.error('_doSaveAll error:', e) }
         finally { setSavingAll(false); savingAllRef.current = false }
     }, [students, scores, extras, selectedMonth, selectedYear, musyrif, selectedClassId, addToast])
@@ -2087,7 +2093,13 @@ export default function RaportPage() {
         a.href = url; a.download = `Raport_${selectedClass?.name || ''}_${bulanObj?.id_str || ''}_${selectedYear}.csv`
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
         addToast(`CSV berhasil diexport (${students.length} santri)`, 'success')
-    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast])
+
+        // Forensic Audit Log
+        logAudit({
+            action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+            newData: { format: 'CSV', count: students.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
+        })
+    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, profile])
 
     // ── Export XLS (XLSX via SheetJS — lazy load dari CDN)
     const exportXLS = useCallback(async () => {
@@ -2135,7 +2147,13 @@ export default function RaportPage() {
         XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Raport')
         XLSX.writeFile(wb, `Raport_${selectedClass?.name || ''}_${bulanObj?.id_str || ''}_${selectedYear}.xlsx`)
         addToast(`XLS berhasil diexport (${students.length} santri)`, 'success')
-    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast])
+
+        // Forensic Audit Log
+        logAudit({
+            action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+            newData: { format: 'XLSX', count: students.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
+        })
+    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, profile])
 
     // ── Auto-save
     const triggerAutoSave = useCallback((studentId) => {
@@ -2471,8 +2489,14 @@ export default function RaportPage() {
         const titleStr = stuList.length === 1 ? `Raport ${stuList[0].name}_${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}` : `Raport Kelas ${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}`
         const win = window.open('', '_blank'); if (!win) { addToast('Popup diblokir browser.', 'error'); setPrintQueue([]); setPrintRenderedCount(0); return }
         win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titleStr}</title><style>@page{size:A4;margin:0}body{margin:0;padding:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}img{mix-blend-mode:multiply}.raport-card{page-break-after:always}</style></head><body>${html}</body></html>`)
-        win.document.close(); win.focus(); setTimeout(() => { win.print(); setPrintQueue([]); setPrintRenderedCount(0) }, 700)
-    }, [selectedClass, bulanObj, selectedYear, addToast])
+        win.document.close(); win.focus(); setTimeout(() => {
+            win.print(); setPrintQueue([]); setPrintRenderedCount(0);
+            logAudit({
+                action: 'PRINT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { format: 'PDF_PRINT', count: stuList.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
+            })
+        }, 700)
+    }, [selectedClass, bulanObj, selectedYear, addToast, profile, selectedMonth])
 
     useEffect(() => {
         if (!printQueue.length || printRenderedCount < printQueue.length) return
@@ -2595,8 +2619,15 @@ export default function RaportPage() {
             setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
             openWATab(`https://wa.me/${phone}?text=${buildWaMessage(student, url)}`)
             addToast(`Terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
+
+            // Forensic Audit Log
+            logAudit({
+                action: 'SEND_WA', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                recordId: student.id,
+                newData: { student_name: student.name, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, url: raportLinks[student.id] }
+            })
         } catch (err) { addToast(`Gagal: ${err.message}`, 'error'); setSendingWA(prev => ({ ...prev, [student.id]: null })); console.error('generateAndSendWA error:', err) }
-    }, [raportLinks, buildWaMessage, generatePDFBlob, uploadToSupabase, addToast])
+    }, [raportLinks, buildWaMessage, generatePDFBlob, uploadToSupabase, addToast, profile, selectedClass, selectedMonth, selectedYear])
 
     // ── WA Blast runner
     const runWaBlast = useCallback(async (queue) => {
@@ -2633,7 +2664,13 @@ export default function RaportPage() {
         }
         setWaBlast(prev => prev ? { ...prev, active: false, done, failed } : null)
         addToast(`WA Blast selesai: ${done} terkirim, ${failed} gagal`, done > 0 ? 'success' : 'error')
-    }, [raportLinks, generatePDFBlob, uploadToSupabase, buildWaMessage, addToast])
+
+        // Forensic Audit Log
+        logAudit({
+            action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+            newData: { format: 'WA_BLAST', count: done, failed_count: failed, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
+        })
+    }, [raportLinks, generatePDFBlob, uploadToSupabase, buildWaMessage, addToast, profile, selectedClass, selectedMonth, selectedYear])
 
     // ── Bulk ZIP export (after generatePDFBlob so no TDZ)
     const runZipBlast = useCallback(async (stuList, archEntry) => {
@@ -2673,8 +2710,14 @@ export default function RaportPage() {
             setTimeout(() => URL.revokeObjectURL(url), 5000)
             setZipBlast(prev => prev ? { ...prev, active: false, done, failed } : null)
             addToast(`ZIP berhasil: ${done} raport diunduh`, 'success')
+
+            // Forensic Audit Log
+            logAudit({
+                action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { format: 'ZIP_ARCHIVE', count: done, failed_count: failed, class_name: archEntry?.class_name || selectedClass?.name, month: archEntry ? archEntry.month : selectedMonth, year: archEntry ? archEntry.year : selectedYear }
+            })
         } catch (e) { addToast('Gagal membuat ZIP: ' + e.message, 'error'); setZipBlast(null) }
-    }, [generatePDFBlob, selectedMonth, selectedYear, selectedClass, addToast])
+    }, [generatePDFBlob, selectedMonth, selectedYear, selectedClass, addToast, profile])
 
     // ─── Render helpers ───────────────────────────────────────────────────────
 
