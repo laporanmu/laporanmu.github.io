@@ -1340,7 +1340,7 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
         // Feature 9: Load previous month
         const prevBulanVal = bulan === 1 ? 12 : bulan - 1
         const prevTahunVal = bulan === 1 ? tahun - 1 : tahun
-        supabase.from('attendance_monthly')
+        supabase.from('student_attendance')
             .select('student_id, days')
             .in('student_id', ids).eq('year', prevTahunVal).eq('month', prevBulanVal)
             .then(({ data }) => {
@@ -3901,7 +3901,7 @@ export default function AttendancePage() {
         const [{ data: students }, { data: attendance }] = await Promise.all([
             supabase.from('students').select('id, name, nisn')
                 .eq('class_id', classId).is('deleted_at', null).eq('is_active', true).order('name'),
-            supabase.from('attendance_monthly').select('student_id, days')
+            supabase.from('student_attendance').select('student_id, days')
                 .eq('class_id', classId).eq('year', tahun).eq('month', bulan),
         ])
         setStudentList(students || [])
@@ -4114,7 +4114,7 @@ export default function AttendancePage() {
             student_id: s.id, class_id: classId, year: tahun, month: bulan,
             days: dataMap[s.id] || {}, updated_by: profile?.id ?? null,
         }))
-        const { error } = await supabase.from('attendance_monthly')
+        const { error } = await supabase.from('student_attendance')
             .upsert(upserts, { onConflict: 'student_id,year,month' })
         setSaving(false)
         if (error) {
@@ -4126,7 +4126,7 @@ export default function AttendancePage() {
             setDraftAvail(false)
             addToast(`Absensi ${BULAN_NAMA[bulan]} ${tahun} tersimpan ✓`, 'success')
             await logAudit({
-                action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'attendance_monthly', recordId: null,
+                action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'student_attendance', recordId: null,
                 newData: { class_id: classId, year: tahun, month: bulan, count: studentList.length }
             })
             haptic('success')
@@ -4141,7 +4141,7 @@ export default function AttendancePage() {
         const prevBulanVal = bulan === 1 ? 12 : bulan - 1
         const prevTahunVal = bulan === 1 ? tahun - 1 : tahun
         setCopyingLastMonth(true)
-        const { data } = await supabase.from('attendance_monthly')
+        const { data } = await supabase.from('student_attendance')
             .select('student_id, days')
             .eq('class_id', classId).eq('year', prevTahunVal).eq('month', prevBulanVal)
         setCopyingLastMonth(false)

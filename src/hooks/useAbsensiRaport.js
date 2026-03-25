@@ -1,35 +1,3 @@
-/**
- * useAbsensiRaport.js
- *
- * Hook untuk auto-fill field absensi di form student_monthly_reports
- * dari data attendance_weekly yang sudah diakumulasi via v_attendance_monthly.
- *
- * ─── CARA PAKAI di form raport ────────────────────────────────────────────────
- *
- *   import { useAbsensiRaport } from '../hooks/useAbsensiRaport'
- *
- *   // Di dalam komponen form raport:
- *   const { rekap, loading: loadingRekap } = useAbsensiRaport(studentId, year, month)
- *
- *   useEffect(() => {
- *     if (rekap) {
- *       setForm(prev => ({
- *         ...prev,
- *         hari_sakit:  rekap.total_sakit,
- *         hari_izin:   rekap.total_izin,
- *         hari_alpa:   rekap.total_alpa,
- *         hari_pulang: rekap.total_pulang,
- *       }))
- *     }
- *   }, [rekap])
- *
- *   // Tampilkan indikator di form:
- *   {loadingRekap && <span>Memuat data absensi...</span>}
- *   {rekap && <span className="text-xs text-emerald-500">✓ Diisi otomatis dari Absensi Bulanan</span>}
- *   {!loadingRekap && !rekap && <span className="text-xs text-amber-500">Belum ada rekap absensi bulan ini</span>}
- * ──────────────────────────────────────────────────────────────────────────────
- */
-
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -54,7 +22,7 @@ export function useAbsensiRaport(studentId, year, month) {
         async function fetch() {
             setLoading(true)
             const { data, error } = await supabase
-                .from('v_attendance_monthly')
+                .from('v_student_attendance')
                 .select('total_hadir, total_sakit, total_izin, total_alpa, total_pulang')
                 .eq('student_id', studentId)
                 .eq('year', year)
@@ -92,7 +60,7 @@ export function useAbsensiRaportBatch(classId, year, month) {
         async function fetch() {
             setLoading(true)
             const { data, error } = await supabase
-                .from('v_attendance_monthly')
+                .from('v_student_attendance')
                 .select('student_id, total_hadir, total_sakit, total_izin, total_alpa, total_pulang')
                 .eq('class_id', classId)
                 .eq('year', year)
