@@ -677,6 +677,10 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             })
 
             await Promise.all(updates)
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'students',
+                newData: { bulk_point_update: true, count: idsToUpdate.length, delta: pointDelta, label: bulkPointLabel || 'Aksi Massal' }
+            })
             fetchData()
             closeModal()
             setBulkPointValue(0)
@@ -759,6 +763,12 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             if (error) throw error
             setStudentForTags({ ...student, tags: next })
             addToast(`Label diperbarui`, 'success')
+            await logAudit({
+                action: 'UPDATE', source: 'MASTER', tableName: 'students',
+                recordId: student.id,
+                oldData: { tags: current },
+                newData: { tags: next }
+            })
             fetchData(); fetchUsedTags()
         } catch { addToast('Gagal', 'error') }
     }
@@ -776,6 +786,10 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     return supabase.from('students').update({ tags: next }).eq('id', s.id)
                 })
                 await Promise.all(updates)
+                await logAudit({
+                    action: 'UPDATE', source: 'MASTER', tableName: 'students',
+                    newData: { bulk_tag: true, action: bulkTagAction, tag, count: selectedStudentIds.length }
+                })
                 fetchData(); fetchUsedTags(); closeModal(); setSelectedStudentIds([])
                 addUndoToast(`${selectedStudentIds.length} siswa diperbarui`, async () => {
                     await Promise.all(Object.keys(prevTagMap).map(id => supabase.from('students').update({ tags: prevTagMap[id] }).eq('id', id)))
@@ -851,6 +865,12 @@ Laporanmu System`
             const next = (student.total_points || 0) + amount
             await supabase.from('students').update({ total_points: next }).eq('id', student.id)
             addToast(`${amount > 0 ? '+' : ''}${amount} poin untuk ${student.name}`, 'success')
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'students',
+                recordId: student.id,
+                oldData: { total_points: student.total_points || 0 },
+                newData: { total_points: next, quick_point: true, reason: reason || '-' }
+            })
             fetchData(); fetchStats()
         } catch { addToast('Gagal', 'error') }
     }
@@ -861,6 +881,11 @@ Laporanmu System`
         try {
             await supabase.from('students').update({ is_pinned: next }).eq('id', student.id)
             addToast(next ? `"${student.name}" disematkan` : `Semat dilepas`, 'success')
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'students',
+                recordId: student.id,
+                newData: { is_pinned: next, name: student.name }
+            })
         } catch { fetchData(); addToast('Gagal', 'error') }
     }
 
@@ -943,6 +968,10 @@ Laporanmu System`
             } catch { }
         }
         addToast(`Selesai`, 'success'); closeModal(); setBulkPhotoMatches([]); setUploadingBulkPhotos(false); fetchData()
+        await logAudit({
+            action: 'UPDATE', source: 'OPERATIONAL', tableName: 'students',
+            newData: { bulk_photo_upload: true, count: matched.length }
+        })
     }
 
     const handleClassBreakdown = async (classId, className) => {
@@ -1087,6 +1116,10 @@ Laporanmu System`
             const { data } = await supabase.from('students').select('id, tags').contains('tags', [tag]).is('deleted_at', null)
             if (data) {
                 await Promise.all(data.map(s => supabase.from('students').update({ tags: (s.tags || []).filter(t => t !== tag) }).eq('id', s.id)))
+                await logAudit({
+                    action: 'DELETE', source: 'MASTER', tableName: 'students',
+                    newData: { global_delete_tag: true, tag, affected_count: data.length }
+                })
                 fetchData(); fetchUsedTags()
             }
         } catch { } finally { setSubmitting(false) }
@@ -1099,6 +1132,10 @@ Laporanmu System`
             const { data } = await supabase.from('students').select('id, tags').contains('tags', [oldTag]).is('deleted_at', null)
             if (data) {
                 await Promise.all(data.map(s => supabase.from('students').update({ tags: (s.tags || []).map(t => t === oldTag ? newTag : t) }).eq('id', s.id)))
+                await logAudit({
+                    action: 'UPDATE', source: 'MASTER', tableName: 'students',
+                    newData: { global_rename_tag: true, old_tag: oldTag, new_tag: newTag, affected_count: data.length }
+                })
                 fetchData(); fetchUsedTags(); setTagToEdit(null)
             }
         } catch { } finally { setSubmitting(false) }

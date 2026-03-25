@@ -260,6 +260,10 @@ export function useStudentsImportExport({
             closeModal()
             setIsImportModalOpen(true)
             addToast(`${rows.length} baris berhasil dibaca dari Google Sheets`, 'success')
+            await logAudit({
+                action: 'INSERT', source: 'SYSTEM', tableName: 'students',
+                newData: { via: 'gsheets', row_count: rows.length, url: gSheetsUrl }
+            })
         } catch (err) {
             addToast(err.message || 'Gagal mengambil data dari Google Sheets', 'error')
         } finally {
@@ -624,6 +628,10 @@ export function useStudentsImportExport({
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
             downloadBlob(blob, `data_siswa_${new Date().toISOString().slice(0, 10)}.csv`)
             addToast(`Export CSV berhasil (${rows.length} siswa)`, 'success')
+            await logAudit({
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
+                newData: { format: 'CSV', count: rows.length, scope: exportScope }
+            })
         } catch (e) {
             console.error(e)
             addToast('Gagal export CSV', 'error')
@@ -649,6 +657,10 @@ export function useStudentsImportExport({
             const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
             downloadBlob(blob, `data_siswa_${new Date().toISOString().slice(0, 10)}.xlsx`)
             addToast(`Export Excel berhasil (${data.length} siswa)`, 'success')
+            await logAudit({
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
+                newData: { format: 'XLSX', count: data.length, scope: exportScope }
+            })
         } catch (e) {
             console.error(e)
             addToast('Gagal export Excel', 'error')
@@ -692,6 +704,10 @@ export function useStudentsImportExport({
             })
             doc.save(`laporan_siswa_${new Date().toISOString().slice(0, 10)}.pdf`)
             addToast(`Export PDF berhasil (${allRows.length} siswa)`, 'success')
+            await logAudit({
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
+                newData: { format: 'PDF', count: allRows.length, scope: exportScope }
+            })
         } catch (e) {
             console.error(e)
             addToast('Gagal export PDF', 'error')

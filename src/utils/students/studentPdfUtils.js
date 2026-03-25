@@ -80,6 +80,11 @@ export const handlePrintThermal = async (student, { addToast, setGeneratingPdf }
         printWin.onload = () => setTimeout(() => { printWin.focus(); printWin.print(); }, 400);
         setTimeout(() => { if (printWin && !printWin.closed) { printWin.focus(); printWin.print(); } }, 900);
         addToast('Struk siap dicetak!', 'success');
+        await logAudit({
+            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
+            recordId: student.id,
+            newData: { format: 'THERMAL', via: 'print', name: student.name }
+        })
     } catch (e) {
         console.error('Thermal print error:', e);
         addToast('Gagal menyiapkan cetak thermal', 'error');
@@ -164,6 +169,11 @@ export const handleSavePNG = async (student, { addToast, setGeneratingPdf }) => 
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             addToast('Kartu berhasil disimpan sebagai PNG!', 'success');
         }, 'image/png');
+        await logAudit({
+            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
+            recordId: student.id,
+            newData: { format: 'PNG', via: 'save_image', name: student.name }
+        })
     } catch (e) {
         console.error('PNG export error:', e);
         addToast('Gagal menyimpan kartu sebagai gambar', 'error');
@@ -762,6 +772,11 @@ export const generateStudentPDF = async (targets, captureRef = null, { addToast,
 
         doc.save(`SURAT_AKSES_${targets.length > 1 ? 'BULK' : targets[0].name.toUpperCase().replace(/\s+/g, '_')}.pdf`);
         addToast('Dokumen berhasil dibuat!', 'success');
+        await logAudit({
+            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
+            recordId: student?.id || null, // null untuk bulk
+            newData: { format: 'PDF', via: 'print_card', count: targets.length }
+        })
     } catch (e) {
         console.error(e);
         addToast('Gagal membuat dokumen PDF', 'error');
