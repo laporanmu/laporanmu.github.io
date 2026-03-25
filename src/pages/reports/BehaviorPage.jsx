@@ -258,7 +258,7 @@ export default function BehaviorPage() {
             }
             addToast(`Berhasil mengimpor ${validRows.length} laporan`, 'success')
             await logAudit({
-                action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: null,
+                action: 'INSERT', source: 'OPERATIONAL', tableName: 'reports', recordId: null,
                 newData: { bulk_import: true, count: validRows.length, data: validRows }
             })
             setIsImportModalOpen(false)
@@ -424,7 +424,7 @@ export default function BehaviorPage() {
                 if (error) throw error
                 addToast('Laporan diupdate', 'success')
                 await logAudit({
-                    action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: selectedItem.id,
+                    action: 'UPDATE', source: 'OPERATIONAL', tableName: 'reports', recordId: selectedItem.id,
                     oldData: selectedItem,
                     newData: { ...selectedItem, ...payload }
                 })
@@ -433,7 +433,7 @@ export default function BehaviorPage() {
                 if (error) throw error
                 addToast('Laporan berhasil dibuat', 'success')
                 await logAudit({
-                    action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: insData?.id,
+                    action: 'INSERT', source: 'OPERATIONAL', tableName: 'reports', recordId: insData?.id,
                     newData: insData || payload
                 })
             }
@@ -449,7 +449,7 @@ export default function BehaviorPage() {
             if (error) throw error
             addToast('Laporan dihapus', 'success')
             await logAudit({
-                action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: itemToDelete.id,
+                action: 'DELETE', source: 'OPERATIONAL', tableName: 'reports', recordId: itemToDelete.id,
                 oldData: itemToDelete
             })
             setIsDeleteModalOpen(false); fetchReports(); fetchStats()
@@ -465,7 +465,7 @@ export default function BehaviorPage() {
             if (error) throw error
             addToast(`${idsSnap.length} laporan dihapus`, 'success')
             await logAudit({
-                action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'reports', recordId: null,
+                action: 'DELETE', source: 'OPERATIONAL', tableName: 'reports', recordId: null,
                 oldData: { bulk: true, count: idsSnap.length, ids: idsSnap }
             })
             setSelectedIds([]); setIsBulkDeleteOpen(false); fetchReports(); fetchStats()

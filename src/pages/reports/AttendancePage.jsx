@@ -365,6 +365,7 @@ function MassActionDropdown({ studentList, dataMap, setDataMap, tahun, bulan, da
         })
         onDirty()
         setOpen(false)
+        logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'mass_fill', status: statusCode, count: studentList.length } })
         addToast(`Semua hari kerja diisi: ${STATUS_META[statusCode].label}`, 'success')
     }, [studentList, tahun, bulan, daysInMonth, setDataMap, onDirty, addToast])
 
@@ -376,6 +377,7 @@ function MassActionDropdown({ studentList, dataMap, setDataMap, tahun, bulan, da
         })
         onDirty()
         setOpen(false)
+        logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'mass_reset', count: studentList.length } })
         addToast('Semua data absensi direset', 'info')
     }, [studentList, setDataMap, onDirty, addToast])
 
@@ -2337,6 +2339,7 @@ function AttendanceSettingsModal({ settings, onSave, onClose }) {
         if (error) {
             addToast('Gagal menyimpan: ' + error.message, 'error')
         } else {
+            await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'teacher_attendance_config', recordId: '1', newData: form })
             addToast('Pengaturan absensi guru tersimpan ✓', 'success')
             onSave(form)
             onClose()
@@ -4159,8 +4162,9 @@ export default function AttendancePage() {
             return next
         })
         setIsDirty(true)
+        logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'copy_last_month', from_year: prevTahunVal, from_month: prevBulanVal, count: data.length } })
         addToast(`Data ${BULAN_NAMA[prevBulanVal]} ${prevTahunVal} disalin ✓`, 'success')
-    }, [classId, bulan, tahun, studentList, copyingLastMonth, pushHistory, addToast])
+    }, [classId, bulan, tahun, studentList, copyingLastMonth, pushHistory, addToast, profile])
 
     // ── Feature 5: Scroll ke hari ini ────────────────────────────────────────
     const handleScrollToToday = useCallback(() => {
@@ -4270,6 +4274,7 @@ export default function AttendancePage() {
                     return next
                 })
                 setIsDirty(true)
+                logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'mass_fill', status: payload, count: studentList.length } })
                 addToast(`Semua hari kerja diisi: ${STATUS_META[payload].label}`, 'success')
                 haptic('medium')
                 break
@@ -4282,6 +4287,7 @@ export default function AttendancePage() {
                     return next
                 })
                 setIsDirty(true)
+                logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'mass_reset', count: studentList.length } })
                 addToast('Semua data direset', 'info')
                 haptic('warning')
                 break

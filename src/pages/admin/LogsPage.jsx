@@ -777,7 +777,7 @@ const LogRow = ({ entry, isExpanded, onToggle, onRestore }) => {
                 </div>
 
                 {/* Badge kategori */}
-                <div className="hidden md:flex flex-col items-end gap-1.5 w-24">
+                <div className="hidden md:flex flex-row items-center gap-2 w-28 justify-end">
                     <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border uppercase tracking-widest ${meta.bg} ${meta.border} ${meta.color}`}>
                         {meta.label}
                     </span>
