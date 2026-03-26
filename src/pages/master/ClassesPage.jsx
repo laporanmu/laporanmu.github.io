@@ -945,32 +945,6 @@ export default function ClassesPage() {
                 <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden min-h-[400px]">
                     {loading ? (
                         <div className="p-6 space-y-4"><div className="hidden md:block"><TableSkeleton rows={8} cols={7} /></div><div className="md:hidden"><CardSkeleton count={4} /></div></div>
-                    ) : totalRows === 0 ? (
-                        <div className="py-12 flex flex-col items-center justify-center text-center px-6">
-                            <div className="w-16 h-16 mb-4 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] border border-dashed border-[var(--color-border)] opacity-40"><FontAwesomeIcon icon={faSchool} className="text-2xl" /></div>
-                            <h3 className="text-base font-black text-[var(--color-text)] mb-2 uppercase tracking-wide">Data Tidak Ditemukan</h3>
-                            <p className="text-[10px] text-[var(--color-text-muted)] max-w-xs leading-relaxed font-bold uppercase tracking-widest opacity-60">Tidak ditemukan kelas yang cocok dengan filter atau database masih kosong.</p>
-                            <div className="mt-6 flex flex-col sm:flex-row items-center gap-2">
-                                {hasAnyActiveFilter ? (
-                                    <button
-                                        onClick={resetAllFilters}
-                                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center gap-2"
-                                    >
-                                        <FontAwesomeIcon icon={faRotateLeft} />
-                                        Hapus Semua Filter
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={handleAdd}
-                                        disabled={!canEdit}
-                                        className="h-10 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                        <FontAwesomeIcon icon={faPlus} />
-                                        Tambah Kelas Pertama
-                                    </button>
-                                )}
-                            </div>
-                        </div>
                     ) : (
                         <>
                             <div className="overflow-x-auto whitespace-nowrap hidden md:block">
@@ -1025,14 +999,88 @@ export default function ClassesPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {pagedClasses.map(cls => (
+                                        {totalRows === 0 ? (
+                                            <tr>
+                                                <td colSpan={10} className="px-6 py-28 text-center align-middle">
+                                                    <div className="w-full h-full flex flex-col items-center justify-center text-center mx-auto animate-in fade-in zoom-in-95 duration-700">
+                                                        <div className="relative mb-6">
+                                                            <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
+                                                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
+                                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <h3 className="text-base font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                                        <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-sm leading-relaxed mb-6">
+                                                            Tidak ditemukan kelas yang cocok dengan filter atau database masih kosong.
+                                                        </p>
+                                                        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mb-4">
+                                                            {hasAnyActiveFilter ? (
+                                                                <button
+                                                                    onClick={resetAllFilters}
+                                                                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                                                >
+                                                                    Reset Semua Filter
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={handleAdd}
+                                                                    disabled={!canEdit}
+                                                                    className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                >
+                                                                    <FontAwesomeIcon icon={faPlus} />
+                                                                    Tambah Kelas Pertama
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : pagedClasses.map(cls => (
                                             <ClassRow key={cls.id} cls={cls} selectedIds={selectedIds} toggleSelect={toggleSelect} visibleCols={visibleCols} handleEdit={canEdit ? handleEdit : null} setItemToDelete={canEdit ? setItemToDelete : null} setIsDeleteModalOpen={canEdit ? setIsDeleteModalOpen : null} isPrivacyMode={isPrivacyMode} />
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
                             <div className="md:hidden divide-y divide-[var(--color-border)]">
-                                {pagedClasses.map(cls => (
+                                {totalRows === 0 ? (
+                                    <div className="py-24 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-700">
+                                        <div className="relative mb-6">
+                                            <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
+                                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
+                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <h3 className="text-lg font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                        <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-[280px] leading-relaxed mb-6">
+                                            Tidak ditemukan kelas yang cocok dengan filter atau database masih kosong.
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mb-4">
+                                            {hasAnyActiveFilter ? (
+                                                <button
+                                                    onClick={resetAllFilters}
+                                                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                                >
+                                                    Reset Semua Filter
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={handleAdd}
+                                                    disabled={!canEdit}
+                                                    className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                >
+                                                    <FontAwesomeIcon icon={faPlus} />
+                                                    Tambah Kelas Pertama
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : pagedClasses.map(cls => (
                                     <ClassMobileCard key={cls.id} cls={cls} selectedIds={selectedIds} toggleSelect={toggleSelect} handleEdit={canEdit ? handleEdit : null} setItemToDelete={canEdit ? setItemToDelete : null} setIsDeleteModalOpen={canEdit ? setIsDeleteModalOpen : null} />
                                 ))}
                             </div>

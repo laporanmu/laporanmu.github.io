@@ -39,7 +39,7 @@ const AdminNewsPage = lazy(() => import('./pages/admin/NewsPage'))
 const StudentsPage = lazy(() => import('./pages/master/StudentsPage'))
 const TeachersPage = lazy(() => import('./pages/master/TeachersPage'))
 const ClassesPage = lazy(() => import('./pages/master/ClassesPage'))
-const ViolationsTypePage = lazy(() => import('./pages/master/PoinPage'))
+const PoinPage = lazy(() => import('./pages/master/PoinPage'))
 const AcademicYearsPage = lazy(() => import('./pages/master/AcademicYearsPage'))
 
 // ─── Role Hierarchy ───────────────────────────────────────────────────────────
@@ -446,9 +446,9 @@ function AppRoutes() {
                 <ClassesPage />
               </RoleFlagRoute>
             } />
-            <Route path="/master/violations" element={
-              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.violations" label="Konfigurasi Poin">
-                <ViolationsTypePage />
+            <Route path="/master/poin" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.poin" label="Konfigurasi Poin">
+                <PoinPage />
               </RoleFlagRoute>
             } />
             <Route path="/master/academic-years" element={

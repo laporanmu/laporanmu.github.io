@@ -36,12 +36,12 @@ export default function PoinPage() {
     const { addToast } = useToast()
     const { profile } = useAuth()
     const { enabled: canEdit } = useFlag('access.teacher_violations')
-    const [violations, setViolations] = useState([])
+    const [poin, setViolations] = useState([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
     // Stats
-    const [stats, setStats] = useState({ total: 0, violations: 0, achievements: 0, avgPoints: 0 })
+    const [stats, setStats] = useState({ total: 0, poin: 0, achievements: 0, avgPoints: 0 })
 
     // --- Stats Carousel Dot Indicator ---
     const statsScrollRef = useRef(null)
@@ -110,7 +110,7 @@ export default function PoinPage() {
                 setViolations(data)
                 const s = {
                     total: data.length,
-                    violations: data.filter(v => v.is_negative).length,
+                    poin: data.filter(v => v.is_negative).length,
                     achievements: data.filter(v => !v.is_negative).length,
                     avgPoints: data.length ? Math.round(data.reduce((acc, v) => acc + Math.abs(v.points), 0) / data.length) : 0
                 }
@@ -183,7 +183,7 @@ export default function PoinPage() {
 
     // Filter & Sort Logic
     const filteredViolations = useMemo(() => {
-        let result = violations.filter(v => {
+        let result = poin.filter(v => {
             const q = debouncedSearch.toLowerCase()
             const matchSearch = !q || v.name.toLowerCase().includes(q) || (v.description || '').toLowerCase().includes(q)
             const matchCat = !filterCategory || v.category === filterCategory
@@ -196,7 +196,7 @@ export default function PoinPage() {
         else if (sortBy === 'points') result.sort((a, b) => Math.abs(b.points) - Math.abs(a.points))
         else if (sortBy === 'newest') result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         return result
-    }, [violations, debouncedSearch, filterCategory, filterType, filterStatus, filterExtreme, sortBy])
+    }, [poin, debouncedSearch, filterCategory, filterType, filterStatus, filterExtreme, sortBy])
 
     const totalRows = filteredViolations.length
 
@@ -207,7 +207,7 @@ export default function PoinPage() {
     // Insights Row
     const insights = useMemo(() => {
         const res = []
-        const extremeCount = violations.filter(v => Math.abs(v.points) >= 20).length
+        const extremeCount = poin.filter(v => Math.abs(v.points) >= 20).length
         if (extremeCount > 0) res.push({
             id: 'extreme',
             label: `${extremeCount} Poin Ekstrim`,
@@ -219,7 +219,7 @@ export default function PoinPage() {
             onClick: () => { setFilterExtreme(!filterExtreme); setIsFilterOpen(true) }
         })
 
-        const inactiveCount = violations.filter(v => v.status === 'inactive').length
+        const inactiveCount = poin.filter(v => v.status === 'inactive').length
         if (inactiveCount > 0) res.push({
             id: 'archived',
             label: `${inactiveCount} Tipe Nonaktif`,
@@ -232,7 +232,7 @@ export default function PoinPage() {
         })
 
         return res
-    }, [violations, filterExtreme, filterStatus])
+    }, [poin, filterExtreme, filterStatus])
 
     // Handlers
     const handleSubmit = async (formData) => {
@@ -376,7 +376,7 @@ export default function PoinPage() {
                     <div>
                         <Breadcrumb badge="Master Data" items={['Rules Configuration']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Konfigurasi Poin</h1>
-                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola bobot poin untuk {stats.violations} Konfigurasi Poin & {stats.achievements} prestasi.</p>
+                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola bobot poin untuk {stats.poin} Konfigurasi Poin & {stats.achievements} prestasi.</p>
                         <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
                             Tahun pelajaran aktif menjadi acuan laporan, presensi, dan penilaian di seluruh sistem.
                         </p>
@@ -454,7 +454,7 @@ export default function PoinPage() {
                     >
                         {[
                             { icon: faShieldAlt, label: 'Total Tipe', value: stats.total, top: 'border-t-[var(--color-primary)]', ibg: 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]', hover: 'hover:bg-[var(--color-primary)]/5' },
-                            { icon: faGavel, label: 'Pelanggaran', value: stats.violations, top: 'border-t-orange-500', ibg: 'bg-orange-500/10 text-orange-500', hover: 'hover:bg-orange-500/5' },
+                            { icon: faGavel, label: 'Pelanggaran', value: stats.poin, top: 'border-t-orange-500', ibg: 'bg-orange-500/10 text-orange-500', hover: 'hover:bg-orange-500/5' },
                             { icon: faTrophy, label: 'Prestasi', value: stats.achievements, top: 'border-t-emerald-500', ibg: 'bg-emerald-500/10 text-emerald-500', hover: 'hover:bg-emerald-500/5' },
                             { icon: faInfoCircle, label: 'Rata-rata Poin', value: stats.avgPoints, top: 'border-t-pink-500', ibg: 'bg-pink-500/10 text-pink-500', hover: 'hover:bg-pink-500/5' },
                         ].map((s, i) => (
@@ -643,13 +643,6 @@ export default function PoinPage() {
                 <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden">
                     {loading ? (
                         <div className="p-6 space-y-4"><div className="hidden md:block"><TableSkeleton rows={8} cols={5} /></div><div className="md:hidden"><CardSkeleton count={4} /></div></div>
-                    ) : totalRows === 0 ? (
-                        <div className="py-12 flex flex-col items-center justify-center text-center px-6">
-                            <div className="w-16 h-16 mb-4 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] border border-dashed border-[var(--color-border)] opacity-40"><FontAwesomeIcon icon={faShieldAlt} className="text-2xl" /></div>
-                            <h3 className="text-base font-black text-[var(--color-text)] mb-2 uppercase tracking-wide">Data Tidak Ditemukan</h3>
-                            <p className="text-[10px] text-[var(--color-text-muted)] max-w-xs leading-relaxed font-bold uppercase tracking-widest opacity-60">Tidak ditemukan tipe poin yang cocok dengan filter atau database masih kosong.</p>
-                            <button onClick={resetAllFilters} className="mt-6 h-9 px-5 rounded-xl border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all">Clear Filter</button>
-                        </div>
                     ) : (
                         <>
                             <div className="overflow-x-auto whitespace-nowrap hidden md:block">
@@ -702,7 +695,30 @@ export default function PoinPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--color-border)]">
-                                        {pagedViolations.map(violation => (
+                                        {totalRows === 0 ? (
+                                            <tr>
+                                                <td colSpan={10} className="px-6 py-28 text-center align-middle">
+                                                    <div className="w-full h-full flex flex-col items-center justify-center text-center mx-auto animate-in fade-in zoom-in-95 duration-700">
+                                                        <div className="relative mb-6">
+                                                            <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
+                                                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
+                                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <h3 className="text-base font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                                        <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-sm leading-relaxed mb-6">
+                                                            Tidak ditemukan tipe poin yang cocok dengan kriteria filter atau database masih kosong.
+                                                        </p>
+                                                        <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
+                                                            Reset Semua Filter
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : pagedViolations.map(violation => (
                                             <tr key={violation.id} className="hover:bg-[var(--color-surface-alt)]/30 transition-all group">
                                                 <td className="px-6 py-4 w-16 text-center"><input type="checkbox" checked={selectedIds.includes(violation.id)} onChange={() => toggleSelect(violation.id)} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] cursor-pointer" /></td>
                                                 <td className="px-6 py-4">
@@ -749,7 +765,26 @@ export default function PoinPage() {
 
                             {/* Mobile view */}
                             <div className="md:hidden divide-y divide-[var(--color-border)]">
-                                {pagedViolations.map(v => (
+                                {totalRows === 0 ? (
+                                    <div className="py-24 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-700">
+                                        <div className="relative mb-6">
+                                            <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
+                                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
+                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <h3 className="text-lg font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                        <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-[280px] leading-relaxed mb-6">
+                                            Tidak ditemukan tipe poin yang cocok dengan kriteria filter atau database masih kosong.
+                                        </p>
+                                        <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
+                                            Reset Semua Filter
+                                        </button>
+                                    </div>
+                                ) : pagedViolations.map(v => (
                                     <div key={v.id} className="p-4 bg-[var(--color-surface)]">
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             <div className="flex items-center gap-3">

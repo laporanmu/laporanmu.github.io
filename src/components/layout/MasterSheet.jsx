@@ -42,7 +42,7 @@ const MASTER_ITEMS = [
     { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Kelola data santri aktif", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
     { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Daftar musyrif & pengajar", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
     { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Manajemen kelas & kamar", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
-    { to: "/master/violations", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Kategori & bobot pelanggaran", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
+    { to: "/master/poin", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Kategori & bobot pelanggaran", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
     { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Periode tahun ajaran aktif", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
 ]
 
@@ -126,7 +126,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
         if (it.to === '/master/students') return flags['nav.students'] !== false
         if (it.to === '/master/teachers') return flags['nav.teachers'] !== false
         if (it.to === '/master/classes') return flags['nav.classes'] !== false
-        if (it.to === '/master/violations') return flags['nav.violations'] !== false
+        if (it.to === '/master/poin') return flags['nav.poin'] !== false
         if (it.to === '/master/academic-years') return flags['nav.academic_years'] !== false
         return true
     })

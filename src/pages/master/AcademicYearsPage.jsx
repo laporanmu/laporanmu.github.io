@@ -618,7 +618,7 @@ export default function AcademicYearsPage() {
 
                     {showAdvFilter && (
                         <div className="border-t border-[var(--color-border)] px-4 py-4 bg-[var(--color-surface-alt)]/40">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Semester</label>
                                     <select value={filterSemester} onChange={e => { setFilterSemester(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">
@@ -647,18 +647,9 @@ export default function AcademicYearsPage() {
                             <div className="hidden md:block"><TableSkeleton rows={6} cols={5} /></div>
                             <div className="md:hidden"><CardSkeleton count={4} /></div>
                         </div>
-                    ) : totalRows === 0 ? (
-                        <div className="py-16 flex flex-col items-center justify-center text-center px-6">
-                            <div className="w-16 h-16 mb-4 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] border border-dashed border-[var(--color-border)] opacity-40">
-                                <FontAwesomeIcon icon={faGraduationCap} className="text-2xl" />
-                            </div>
-                            <h3 className="text-base font-black text-[var(--color-text)] mb-2 uppercase tracking-wide">Data Tidak Ditemukan</h3>
-                            <p className="text-[10px] text-[var(--color-text-muted)] max-w-xs leading-relaxed font-bold uppercase tracking-widest opacity-60">Belum ada tahun pelajaran atau tidak cocok dengan filter.</p>
-                            <button onClick={resetAllFilters} className="mt-6 h-9 px-5 rounded-xl border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all">Clear Filter</button>
-                        </div>
                     ) : (
                         <>
-                            {/* Desktop Table */}
+                            {/* Desktop Table — empty state handled inside tbody */}
                             <div className="overflow-x-auto hidden md:block">
                                 <table className="w-full text-left border-collapse">
                                     <thead className="bg-[var(--color-surface-alt)]/50 border-b border-[var(--color-border)]">
@@ -711,7 +702,30 @@ export default function AcademicYearsPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {paged.map(year => (
+                                        {paged.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={10} className="px-6 py-28 text-center align-middle">
+                                                    <div className="w-full h-full flex flex-col items-center justify-center text-center mx-auto animate-in fade-in zoom-in-95 duration-700">
+                                                        <div className="relative mb-6">
+                                                            <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
+                                                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
+                                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <h3 className="text-base font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                                        <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-sm leading-relaxed mb-6">
+                                                            Tidak ada tahun pelajaran yang cocok dengan kriteria tersebut. Coba ubah kata kunci atau reset filter.
+                                                        </p>
+                                                        <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
+                                                            Reset Semua Filter
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : paged.map(year => (
                                             <tr key={year.id} className={`border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors group ${selectedIds.includes(year.id) ? 'bg-[var(--color-primary)]/5' : ''}`}>
                                                 <td className="px-6 py-4 text-center">
                                                     <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
@@ -802,7 +816,26 @@ export default function AcademicYearsPage() {
 
                             {/* Mobile Cards */}
                             <div className="md:hidden divide-y divide-[var(--color-border)]">
-                                {paged.map(year => (
+                                {paged.length === 0 ? (
+                                    <div className="py-24 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-700">
+                                        <div className="relative mb-6">
+                                            <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
+                                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
+                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <h3 className="text-lg font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                        <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-[280px] leading-relaxed mb-6">
+                                            Tidak ada tahun pelajaran yang cocok. Coba ubah kata kunci atau reset filter.
+                                        </p>
+                                        <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
+                                            Reset Semua Filter
+                                        </button>
+                                    </div>
+                                ) : paged.map(year => (
                                     <div key={year.id} className={`p-4 flex items-center gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors ${selectedIds.includes(year.id) ? 'bg-[var(--color-primary)]/5' : ''}`}>
                                         <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] shrink-0" />
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white' : 'bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>

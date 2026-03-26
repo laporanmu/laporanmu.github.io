@@ -922,14 +922,28 @@ export default function TeachersPage() {
                                 </thead>
                                 <tbody>
                                     {teachers.length === 0 ? (
-                                        <tr><td colSpan={10} className="px-6 py-14">
-                                            <div className="flex flex-col items-center text-center gap-2">
-                                                <FontAwesomeIcon icon={faTableList} className="text-3xl text-[var(--color-text-muted)] opacity-30 mb-2" />
-                                                <div className="text-sm font-extrabold text-[var(--color-text)]">Data tidak ditemukan</div>
-                                                <div className="text-xs font-bold text-[var(--color-text-muted)]">Coba ganti filter / kata kunci pencarian.</div>
-                                                <button onClick={resetAllFilters} className="mt-3 h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">Reset Semua Filter</button>
-                                            </div>
-                                        </td></tr>
+                                        <tr>
+                                            <td colSpan={10} className="px-6 py-28 text-center align-middle">
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-center mx-auto animate-in fade-in zoom-in-95 duration-700">
+                                                    <div className="relative mb-6">
+                                                        <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
+                                                        <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
+                                                            <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                                            <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                                <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <h3 className="text-base font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                                    <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-sm leading-relaxed mb-6">
+                                                        Tidak ada guru atau karyawan yang cocok dengan kriteria pencarian. Coba ubah kata kunci atau reset filter.
+                                                    </p>
+                                                    <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
+                                                        Reset Semua Filter
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     ) : teachers.map(teacher => (
                                         <TeacherRow
                                             key={teacher.id}
@@ -958,10 +972,23 @@ export default function TeachersPage() {
                         {/* Mobile Cards */}
                         <div className="md:hidden divide-y divide-[var(--color-border)]">
                             {teachers.length === 0 ? (
-                                <div className="py-14 flex flex-col items-center text-center gap-2">
-                                    <FontAwesomeIcon icon={faTableList} className="text-3xl text-[var(--color-text-muted)] opacity-30 mb-2" />
-                                    <p className="text-sm font-extrabold text-[var(--color-text)]">Data tidak ditemukan</p>
-                                    <button onClick={resetAllFilters} className="mt-2 h-9 px-4 rounded-xl text-[10px] font-black uppercase border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition">Reset Filter</button>
+                                <div className="py-24 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-700">
+                                    <div className="relative mb-6">
+                                        <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
+                                        <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
+                                            <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                            <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <h3 className="text-lg font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                    <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-[280px] leading-relaxed mb-6">
+                                        Tidak ada guru atau karyawan yang cocok dengan kriteria pencarian. Coba ubah kata kunci atau reset filter.
+                                    </p>
+                                    <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
+                                        Reset Semua Filter
+                                    </button>
                                 </div>
                             ) : teachers.map(teacher => (
                                 <TeacherMobileCard

@@ -179,7 +179,7 @@ export function useNotifications() {
 
             if (violationCount > 0) {
                 items.push({
-                    id: 'violations-this-month',
+                    id: 'poin-this-month',
                     type: 'info',
                     icon: '⚠️',
                     title: `Pelanggaran bulan ${BULAN.find(b => b.id === month)?.str}`,

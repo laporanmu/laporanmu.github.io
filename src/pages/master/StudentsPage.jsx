@@ -1344,22 +1344,25 @@ export default function StudentsPage() {
                                             ))
                                         ) : students.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-20">
-                                                    <div className="flex flex-col items-center text-center gap-4 animate-in fade-in zoom-in duration-500">
-                                                        <div className="relative">
-                                                            <div className="absolute inset-0 bg-amber-500/10 blur-2xl rounded-full scale-150 animate-pulse" />
-                                                            <div className="relative w-24 h-24 rounded-3xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm flex items-center justify-center -rotate-6 hover:rotate-0 transition-transform duration-300">
-                                                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-4xl text-amber-500/80" />
+                                                <td colSpan={10} className="px-6 py-28 text-center align-middle">
+                                                    <div className="w-full h-full flex flex-col items-center justify-center text-center mx-auto animate-in fade-in zoom-in-95 duration-700">
+                                                        <div className="relative mb-6">
+                                                            <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
+                                                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
+                                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div>
-                                                            <h3 className="text-base font-black text-[var(--color-text)] mb-1">Pencarian Tidak Ditemukan</h3>
-                                                            <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-sm">Maaf, kami tidak menemukan data siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter.</p>
-                                                        </div>
+                                                        <h3 className="text-base font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                                        <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-sm leading-relaxed mb-6">
+                                                            Maaf, kami tidak menemukan data siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter.
+                                                        </p>
                                                         <button
                                                             type="button"
                                                             onClick={resetAllFilters}
-                                                            className="mt-3 h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4"
+                                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4"
                                                         >
                                                             Reset Semua Filter
                                                         </button>
@@ -1487,12 +1490,12 @@ export default function StudentsPage() {
                                         )}
                                     </div>
                                 ) : students.length === 0 ? (
-                                    <div className="py-24 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-700">
+                                    <div className="py-24 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-700">
                                         <div className="relative mb-6">
                                             <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
                                             <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
                                                 <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
-                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-white dark:bg-gray-800 shadow-lg flex items-center justify-center border border-[var(--color-border)]">
+                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
                                                     <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
                                                 </div>
                                             </div>
