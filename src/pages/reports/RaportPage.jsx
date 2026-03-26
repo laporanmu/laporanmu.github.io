@@ -1912,7 +1912,7 @@ export default function RaportPage() {
             setSavedIds(prev => new Set([...prev, studentId]))
             await logAudit({
                 action: existingId ? 'UPDATE' : 'INSERT',
-                source: profile?.id || 'OPERATIONAL',
+                source: 'OPERATIONAL',
                 tableName: 'student_monthly_reports',
                 recordId: existingId || null,
                 newData: payload,
@@ -1944,7 +1944,7 @@ export default function RaportPage() {
             const studentName = students.find(s => s.id === studentId)?.name
             addToast(`Data ${studentName?.split(' ')[0] ?? ''} berhasil direset`, 'success')
             await logAudit({
-                action: 'DELETE', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: existingId,
+                action: 'DELETE', source: 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: existingId,
                 oldData: { student_id: studentId, student_name: studentName, month: selectedMonth, year: selectedYear }
             })
         } catch (e) {
@@ -2029,7 +2029,7 @@ export default function RaportPage() {
 
             // Forensic Audit Log
             logAudit({
-                action: 'UPDATE', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
                 newData: { bulk_save_all: true, count: studentsToSave.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
             })
         } catch (e) { addToast(`Gagal menyimpan semua: ${e.message}`, 'error'); console.error('_doSaveAll error:', e) }
@@ -2096,7 +2096,7 @@ export default function RaportPage() {
 
         // Forensic Audit Log
         logAudit({
-            action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
             newData: { format: 'CSV', count: students.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
         })
     }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, profile])
@@ -2150,7 +2150,7 @@ export default function RaportPage() {
 
         // Forensic Audit Log
         logAudit({
-            action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
             newData: { format: 'XLSX', count: students.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
         })
     }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, profile])
@@ -2424,7 +2424,7 @@ export default function RaportPage() {
             setArchiveEditMode(false)
             addToast(`${pStu.length} raport arsip berhasil diperbarui`, 'success')
             await logAudit({
-                action: 'UPDATE', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
                 newData: { bulk_archive_edit: true, count: pStu.length, class_name: archivePreview.className, month: entry.month, year: entry.year }
             })
         } catch (e) { addToast('Gagal menyimpan: ' + e.message, 'error') }
@@ -2469,7 +2469,7 @@ export default function RaportPage() {
             setArchiveList(prev => prev.filter(a => a.key !== entry.key))
             addToast('Arsip berhasil dihapus', 'success')
             await logAudit({
-                action: 'DELETE', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: null,
+                action: 'DELETE', source: 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: null,
                 oldData: { archive_month: entry.month, archive_year: entry.year, class_id: entry.class_id, count: toDelete.length }
             })
             loadArchive()
@@ -2492,7 +2492,7 @@ export default function RaportPage() {
         win.document.close(); win.focus(); setTimeout(() => {
             win.print(); setPrintQueue([]); setPrintRenderedCount(0);
             logAudit({
-                action: 'PRINT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'PRINT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
                 newData: { format: 'PDF_PRINT', count: stuList.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
             })
         }, 700)
@@ -2622,7 +2622,7 @@ export default function RaportPage() {
 
             // Forensic Audit Log
             logAudit({
-                action: 'SEND_WA', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'SEND_WA', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
                 recordId: student.id,
                 newData: { student_name: student.name, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, url: raportLinks[student.id] }
             })
@@ -2667,7 +2667,7 @@ export default function RaportPage() {
 
         // Forensic Audit Log
         logAudit({
-            action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
             newData: { format: 'WA_BLAST', count: done, failed_count: failed, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
         })
     }, [raportLinks, generatePDFBlob, uploadToSupabase, buildWaMessage, addToast, profile, selectedClass, selectedMonth, selectedYear])
@@ -2713,7 +2713,7 @@ export default function RaportPage() {
 
             // Forensic Audit Log
             logAudit({
-                action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
                 newData: { format: 'ZIP_ARCHIVE', count: done, failed_count: failed, class_name: archEntry?.class_name || selectedClass?.name, month: archEntry ? archEntry.month : selectedMonth, year: archEntry ? archEntry.year : selectedYear }
             })
         } catch (e) { addToast('Gagal membuat ZIP: ' + e.message, 'error'); setZipBlast(null) }

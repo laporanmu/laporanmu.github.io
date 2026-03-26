@@ -2969,7 +2969,7 @@ function FingerspotImportModal({ teachers, onClose, onImported }) {
                 setProgress({ done: Math.min(i + CHUNK, previewRows.length), total: previewRows.length })
             }
             await logAudit({
-                action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'teacher_attendance', recordId: null,
+                action: 'INSERT', source: 'SYSTEM', tableName: 'teacher_attendance', recordId: null,
                 newData: { source: 'fingerspot', count: previewRows.length }
             })
             addToast(`${previewRows.length} record absensi berhasil diimpor ✓`, 'success')
@@ -4138,7 +4138,7 @@ export default function AttendancePage() {
             setDraftAvail(false)
             addToast(`Absensi ${BULAN_NAMA[bulan]} ${tahun} tersimpan ✓`, 'success')
             await logAudit({
-                action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'student_attendance', recordId: null,
+                action: 'UPDATE', source: 'SYSTEM', tableName: 'student_attendance', recordId: null,
                 newData: { class_id: classId, year: tahun, month: bulan, count: studentList.length }
             })
             haptic('success')
@@ -4171,7 +4171,7 @@ export default function AttendancePage() {
             return next
         })
         setIsDirty(true)
-        logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'copy_last_month', from_year: prevTahunVal, from_month: prevBulanVal, count: data.length } })
+        logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'copy_last_month', from_year: prevTahunVal, from_month: prevBulanVal, count: data.length } })
         addToast(`Data ${BULAN_NAMA[prevBulanVal]} ${prevTahunVal} disalin ✓`, 'success')
     }, [classId, bulan, tahun, studentList, copyingLastMonth, pushHistory, addToast, profile])
 
@@ -4285,7 +4285,7 @@ export default function AttendancePage() {
                     return next
                 })
                 setIsDirty(true)
-                logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'mass_fill', status: payload, count: studentList.length } })
+                logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'mass_fill', status: payload, count: studentList.length } })
                 addToast(`Semua hari kerja diisi: ${STATUS_META[payload].label}`, 'success')
                 haptic('medium')
                 break
@@ -4298,7 +4298,7 @@ export default function AttendancePage() {
                     return next
                 })
                 setIsDirty(true)
-                logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'mass_reset', count: studentList.length } })
+                logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'student_attendance', newData: { intent: 'mass_reset', count: studentList.length } })
                 addToast('Semua data direset', 'info')
                 haptic('warning')
                 break

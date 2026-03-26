@@ -579,7 +579,7 @@ export function useStudentsImportExport({
                 addToast(`Berhasil import ${importReadyRows.length} siswa`, 'success')
                 await logAudit({
                     action: 'INSERT',
-                    source: profile?.id || 'SYSTEM',
+                    source: 'SYSTEM',
                     tableName: 'students',
                     newData: {
                         bulk_import: true,

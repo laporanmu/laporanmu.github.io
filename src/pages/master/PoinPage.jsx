@@ -250,12 +250,12 @@ export default function PoinPage() {
                 const { error } = await supabase.from('point_rules').update(payload).eq('id', selectedItem.id)
                 if (error) throw error
                 addToast('Data berhasil diupdate', 'success')
-                await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'point_rules', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } })
+                await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'point_rules', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } })
             } else {
                 const { data: insData, error } = await supabase.from('point_rules').insert(payload).select().single()
                 if (error) throw error
                 addToast('Data baru berhasil ditambahkan', 'success')
-                await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'point_rules', recordId: insData?.id, newData: payload })
+                await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'point_rules', recordId: insData?.id, newData: payload })
             }
             setIsModalOpen(false)
             fetchData()
@@ -270,7 +270,7 @@ export default function PoinPage() {
             const { error } = await supabase.from('point_rules').delete().eq('id', itemToDelete.id)
             if (error) throw error
             addToast('Data berhasil dihapus', 'success')
-            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'point_rules', recordId: itemToDelete.id, oldData: itemToDelete })
+            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'point_rules', recordId: itemToDelete.id, oldData: itemToDelete })
             setIsDeleteModalOpen(false)
             fetchData()
         } catch { addToast('Gagal menghapus data', 'error') }
@@ -284,7 +284,7 @@ export default function PoinPage() {
             const { error } = await supabase.from('point_rules').delete().in('id', idsSnap)
             if (error) throw error
             addToast(`${idsSnap.length} data berhasil dihapus`, 'success')
-            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'point_rules', oldData: { bulk: true, count: idsSnap.length, ids: idsSnap } })
+            await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'point_rules', oldData: { bulk: true, count: idsSnap.length, ids: idsSnap } })
             setSelectedIds([])
             setIsBulkDeleteOpen(false)
             fetchData()

@@ -550,7 +550,7 @@ export default function BehaviorPage() {
 
             // Forensic Audit Log
             logAudit({
-                action: 'EXPORT', source: profile?.id || 'OPERATIONAL', tableName: 'reports',
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'reports',
                 newData: { format: format.toUpperCase(), scope: exportScope, count: data.length, filters: { type: filterType, class: filterClass, search: debouncedSearch } }
             })
         } catch (err) {

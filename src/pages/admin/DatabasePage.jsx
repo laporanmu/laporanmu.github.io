@@ -629,7 +629,7 @@ export default function DatabasePage() {
             addToast(msg, 'success')
             await logAudit({
                 action: action === 'delete' ? 'DELETE' : 'UPDATE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: table,
                 newData: { repair: true, id: id, count: itemsToDelete.length, ids: itemsToDelete }
             })

@@ -1222,7 +1222,7 @@ export default function LogsPage() {
             addToast(`Pembersihan berhasil`, 'success')
             await logAudit({
                 action: 'DELETE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'audit_logs',
                 newData: { cleanup: true, days: cleanupDays, count: count || 0 },
             })

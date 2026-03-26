@@ -862,7 +862,7 @@ export default function GatePage() {
                 // Audit log untuk INSERT
                 await logAudit({
                     action: 'INSERT',
-                    source: profile?.id || 'SYSTEM',
+                    source: 'SYSTEM',
                     tableName: 'gate_logs',
                     recordId: insertedRow?.id || null,
                     newData: insertedRow || payload,
@@ -902,7 +902,7 @@ export default function GatePage() {
             // Audit log untuk UPDATE (Check-out/Return)
             await logAudit({
                 action: 'UPDATE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'gate_logs',
                 recordId: log.id,
                 oldData: log,
@@ -923,7 +923,7 @@ export default function GatePage() {
             addToast('Log diperbarui', 'success')
             await logAudit({
                 action: 'UPDATE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'gate_logs',
                 recordId: editLog.id,
                 oldData: editLog,
@@ -942,7 +942,7 @@ export default function GatePage() {
             addToast('Log dihapus', 'success')
             await logAudit({
                 action: 'DELETE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'gate_logs',
                 recordId: editLog.id,
                 oldData: editLog,

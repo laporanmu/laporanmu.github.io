@@ -811,7 +811,7 @@ export default function AdminNewsPage() {
         setNewsList(prev => prev.filter(n => n.id !== deleteModal.data.id))
         await logAudit({
             action: 'DELETE',
-            source: profile?.id || 'SYSTEM',
+            source: 'SYSTEM',
             tableName: 'news',
             recordId: deleteModal.data.id,
             oldData: deleteModal.data
@@ -837,7 +837,7 @@ export default function AdminNewsPage() {
         // Show toast with undo option for unpublish
         await logAudit({
             action: 'UPDATE',
-            source: profile?.id || 'SYSTEM',
+            source: 'SYSTEM',
             tableName: 'news',
             recordId: item.id,
             oldData: item,
@@ -872,7 +872,7 @@ export default function AdminNewsPage() {
         setNewsList(prev => [data[0], ...prev])
         await logAudit({
             action: 'INSERT',
-            source: profile?.id || 'SYSTEM',
+            source: 'SYSTEM',
             tableName: 'news',
             recordId: data[0].id,
             newData: data[0]
@@ -902,7 +902,7 @@ export default function AdminNewsPage() {
         setNewsList(prev => prev.map(n => ids.includes(n.id) ? { ...n, ...update } : n))
         await logAudit({
             action: 'UPDATE',
-            source: profile?.id || 'SYSTEM',
+            source: 'SYSTEM',
             tableName: 'news',
             newData: { bulk: true, count: ids.length, ids, ...update }
         })
@@ -917,7 +917,7 @@ export default function AdminNewsPage() {
         setNewsList(prev => prev.filter(n => !ids.includes(n.id)))
         await logAudit({
             action: 'DELETE',
-            source: profile?.id || 'SYSTEM',
+            source: 'SYSTEM',
             tableName: 'news',
             newData: { bulk: true, count: ids.length, ids }
         })

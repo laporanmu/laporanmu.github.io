@@ -236,7 +236,7 @@ export default function TasksPage() {
             addToast(`"${tObj.name}" selesai!`, 'success')
             await logAudit({
                 action: 'EXECUTE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'tasks',
                 recordId: id,
                 newData: { task: id, status: 'success', msg: resultMsg, duration }
@@ -248,7 +248,7 @@ export default function TasksPage() {
             if (!cancelledRef.current) addToast(`Task gagal: ${err?.message}`, 'error')
             await logAudit({
                 action: 'EXECUTE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'tasks',
                 recordId: id,
                 newData: { task: id, status: 'error', msg: err?.message }

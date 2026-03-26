@@ -470,7 +470,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     .eq('id', student.id)
                 if (error) throw error
                 await logAudit({
-                    action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'students', recordId: student.id,
+                    action: 'UPDATE', source: 'SYSTEM', tableName: 'students', recordId: student.id,
                     oldData: student, newData: { ...student, deleted_at: new Date().toISOString() }
                 })
                 fetchData()
@@ -533,7 +533,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 }
 
                 await logAudit({
-                    action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'students', recordId: selectedStudent.id,
+                    action: 'UPDATE', source: 'SYSTEM', tableName: 'students', recordId: selectedStudent.id,
                     oldData: selectedStudent,
                     newData: { ...selectedStudent, ...formData }
                 })
@@ -559,7 +559,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 const { data: insData, error } = await supabase.from('students').insert([newStudentData]).select('id').single()
                 if (error) throw error
                 await logAudit({
-                    action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'students', recordId: insData?.id,
+                    action: 'INSERT', source: 'SYSTEM', tableName: 'students', recordId: insData?.id,
                     newData: newStudentData
                 })
 
@@ -609,7 +609,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             fetchStats()
             await logAudit({
                 action: 'UPDATE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'students',
                 newData: {
                     bulk_promote: true,
@@ -639,7 +639,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             fetchData()
             await logAudit({
                 action: 'UPDATE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'students',
                 newData: {
                     bulk_archive: true,
@@ -711,7 +711,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             addToast(`${student.name} berhasil dipulihkan`, 'success')
             await logAudit({
                 action: 'UPDATE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'students',
                 recordId: student.id,
                 oldData: student,
@@ -729,7 +729,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             addToast(`${student.name} dihapus permanen`, 'success')
             await logAudit({
                 action: 'DELETE',
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'students',
                 recordId: student.id,
                 oldData: student

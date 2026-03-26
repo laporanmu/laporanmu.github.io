@@ -99,7 +99,7 @@ export default function StoragePage() {
             addToast(`File ${fileName} berhasil dihapus`, 'success')
             await logAudit({ 
                 action: 'DELETE', 
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'storage', 
                 newData: { bucket: bucketName, file: fileName } 
             })
@@ -233,7 +233,7 @@ export default function StoragePage() {
             addToast(`${deletedCount} file sampah berhasil dibersihkan`, 'success')
             await logAudit({ 
                 action: 'DELETE', 
-                source: profile?.id || 'SYSTEM',
+                source: 'SYSTEM',
                 tableName: 'storage', 
                 newData: { orphan_cleanup: true, count: deletedCount } 
             })
