@@ -4017,7 +4017,8 @@ export default function AttendancePage() {
             return next
         })
         setIsDirty(true)
-    }, [studentList, pushHistory])
+        logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'student_attendance', newData: { intent: 'column_fill', day, status, count: studentList.length, class_id: classId } })
+    }, [studentList, pushHistory, classId])
 
     const handleColClear = useCallback((day) => {
         setDataMap(prev => {
@@ -4030,13 +4031,9 @@ export default function AttendancePage() {
             pushHistory(next)
             return next
         })
-        setDirtyMap(prev => {
-            const next = { ...prev }
-            for (const s of studentList) next[s.id] = { ...(next[s.id] || {}), [day]: true }
-            return next
-        })
         setIsDirty(true)
-    }, [studentList, pushHistory])
+        logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'student_attendance', newData: { intent: 'column_clear', day, count: studentList.length, class_id: classId } })
+    }, [studentList, pushHistory, classId])
 
     // Row fill: isi semua hari kerja satu siswa
     const handleRowFill = useCallback((sid, status) => {
@@ -4054,7 +4051,8 @@ export default function AttendancePage() {
             return updated
         })
         setIsDirty(true)
-    }, [daysInMonth, tahun, bulan, pushHistory])
+        logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'student_attendance', recordId: sid, newData: { intent: 'row_fill', status, class_id: classId } })
+    }, [daysInMonth, tahun, bulan, pushHistory, classId])
 
     const handleRowClear = useCallback((sid) => {
         setDataMap(prev => {
@@ -4062,13 +4060,9 @@ export default function AttendancePage() {
             pushHistory(updated)
             return updated
         })
-        setDirtyMap(prev => {
-            const days = {}
-            for (let d = 1; d <= daysInMonth; d++) if (!isWeekend(tahun, bulan, d)) days[d] = true
-            return { ...prev, [sid]: days }
-        })
         setIsDirty(true)
-    }, [pushHistory, daysInMonth, tahun, bulan])
+        logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'student_attendance', recordId: sid, newData: { intent: 'row_clear', class_id: classId } })
+    }, [pushHistory, classId])
 
     const markDirty = useCallback(() => setIsDirty(true), [])
 
@@ -4252,13 +4246,15 @@ export default function AttendancePage() {
         })
         setIsDirty(true)
         addToast(`${matched.length} siswa diimport ✓`, 'success')
-    }, [pushHistory, addToast])
+        logAudit({ action: 'INSERT', source: 'MASTER', tableName: 'student_attendance', newData: { intent: 'import', count: matched.length, class_id: classId, year: tahun, month: bulan } })
+    }, [pushHistory, addToast, classId, tahun, bulan])
 
     // ── Feature 10: Save alert threshold ─────────────────────────────────────
     const handleSaveThreshold = useCallback((val) => {
         setAlertThreshold(val)
         try { localStorage.setItem('absensi_alert_threshold', JSON.stringify(val)) } catch { }
         addToast('Ambang batas alert disimpan ✓', 'success')
+        logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'preferences', newData: { type: 'alert_threshold', ...val } })
     }, [addToast])
 
     // ── Fix 3: Stable callbacks — not recreated per-student per-render ──────────

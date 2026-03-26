@@ -24,7 +24,21 @@ import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
 const LS_COLS = 'academic_years_columns'
 const LS_PAGE_SIZE = 'academic_years_page_size'
 
-
+// Singleton portal manager — same pattern as StudentsPage
+const _portalContainers = {}
+function getPortalContainer(id) {
+    if (typeof document === 'undefined') return null
+    if (!_portalContainers[id]) {
+        let el = document.getElementById(id)
+        if (!el) {
+            el = document.createElement('div')
+            el.id = id
+            document.body.appendChild(el)
+        }
+        _portalContainers[id] = el
+    }
+    return _portalContainers[id]
+}
 
 export default function AcademicYearsPage() {
     const { addToast } = useToast()
@@ -72,8 +86,11 @@ export default function AcademicYearsPage() {
     // Privasi mode not needed — academic year data is public info
     const [isShortcutOpen, setIsShortcutOpen] = useState(false)
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
-    const shortcutRef = useRef(null)
-    const headerMenuRef = useRef(null)
+    // Portal rect tracking — keeps portaled dropdowns anchored to buttons on scroll
+    const headerMenuBtnRef = useRef(null)
+    const shortcutBtnRef = useRef(null)
+    const [headerMenuRect, setHeaderMenuRect] = useState(null)
+    const [shortcutRect, setShortcutRect] = useState(null)
     const searchInputRef = useRef(null)
 
     // Modals
@@ -85,7 +102,8 @@ export default function AcademicYearsPage() {
     const [itemToPermanentDelete, setItemToPermanentDelete] = useState(null)
     const [selectedItem, setSelectedItem] = useState(null)
     const [itemToDelete, setItemToDelete] = useState(null)
-    const [formData, setFormData] = useState({ name: '', semester: 'Ganjil', startDate: '', endDate: '' })
+    const [formData, setFormData] = useState({ name: '', semester: 'Ganjil', startDate: '', endDate: '', makeActive: false })
+    const [isDuplicateName, setIsDuplicateName] = useState(false)
 
     // ── Fetch ────────────────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -121,25 +139,46 @@ export default function AcademicYearsPage() {
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    // Click outside
+    // Click outside — only needed for colMenu now; headerMenu & shortcut use portaled backdrops
     useEffect(() => {
         const handler = (e) => {
             if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setIsColMenuOpen(false)
-            if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setIsHeaderMenuOpen(false)
-            if (shortcutRef.current && !shortcutRef.current.contains(e.target)) setIsShortcutOpen(false)
         }
         document.addEventListener('mousedown', handler)
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
+    // Sticky portal positioning — keep portaled dropdowns anchored to buttons on scroll/resize
+    useEffect(() => {
+        if (!isHeaderMenuOpen && !isShortcutOpen) return
+        const update = () => {
+            if (isHeaderMenuOpen && headerMenuBtnRef.current) setHeaderMenuRect(headerMenuBtnRef.current.getBoundingClientRect())
+            if (isShortcutOpen && shortcutBtnRef.current) setShortcutRect(shortcutBtnRef.current.getBoundingClientRect())
+        }
+        update()
+        window.addEventListener('scroll', update, true)
+        window.addEventListener('resize', update)
+        return () => { window.removeEventListener('scroll', update, true); window.removeEventListener('resize', update) }
+    }, [isHeaderMenuOpen, isShortcutOpen])
+
     // Keyboard shortcuts
     useEffect(() => {
         const handler = (e) => {
             if (isModalOpen || isDeleteModalOpen) return
+            const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)
+
+            if (e.key === 'Escape') {
+                if (isTyping) { document.activeElement.blur() }
+                else { setIsColMenuOpen(false); setIsHeaderMenuOpen(false); setIsShortcutOpen(false); setSearchQuery(''); setSelectedIds([]) }
+                return
+            }
+
+            if (isTyping) return
+
             if (e.ctrlKey && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus() }
-            if (e.key === 'n' && !e.ctrlKey && document.activeElement.tagName !== 'INPUT') handleAdd()
-            if (e.key === 'Escape') { setSearchQuery(''); setSelectedIds([]) }
-            if (e.key === '?') setIsShortcutOpen(v => !v)
+            else if (e.key === 'n') { e.preventDefault(); handleAdd() }
+            else if (e.key === 'x' || e.key === 'X') { resetAllFilters() }
+            else if (e.key === '?') { setIsShortcutOpen(v => !v) }
         }
         document.addEventListener('keydown', handler)
         return () => document.removeEventListener('keydown', handler)
@@ -158,14 +197,16 @@ export default function AcademicYearsPage() {
 
     const handleAdd = () => {
         setSelectedItem(null)
-        setFormData({ name: '', semester: 'Ganjil', startDate: '', endDate: '' })
+        setFormData({ name: '', semester: 'Ganjil', startDate: '', endDate: '', makeActive: false })
         setFormErrors({})
+        setIsDuplicateName(false)
         setIsModalOpen(true)
     }
     const handleEdit = (item) => {
         setSelectedItem(item)
-        setFormData({ name: item.name, semester: item.semester, startDate: item.start_date || '', endDate: item.end_date || '' })
+        setFormData({ name: item.name, semester: item.semester, startDate: item.start_date || '', endDate: item.end_date || '', makeActive: item.is_active || false })
         setFormErrors({})
+        setIsDuplicateName(false)
         setIsModalOpen(true)
     }
 
@@ -173,6 +214,7 @@ export default function AcademicYearsPage() {
         // Inline validation
         const errors = {}
         if (!formData.name.trim()) errors.name = 'Nama tahun pelajaran wajib diisi'
+        else if (!/^\d{4}\/\d{4}$/.test(formData.name.trim())) errors.name = 'Format harus YYYY/YYYY, contoh: 2024/2025'
         if (!formData.startDate) errors.startDate = 'Tanggal mulai wajib diisi'
         if (!formData.endDate) errors.endDate = 'Tanggal selesai wajib diisi'
         if (formData.startDate && formData.endDate && formData.endDate <= formData.startDate) errors.endDate = 'Tanggal selesai harus setelah tanggal mulai'
@@ -185,14 +227,26 @@ export default function AcademicYearsPage() {
                 const { data, error } = await supabase.from('academic_years').update(payload).eq('id', selectedItem.id).select()
                 if (error) throw error
                 if (!data || data.length === 0) throw new Error('Gagal mengupdate: tidak ada data yang berubah (periksa RLS policy)')
+                // Handle makeActive for edit
+                if (formData.makeActive && !selectedItem.is_active) {
+                    await supabase.from('academic_years').update({ is_active: false }).neq('id', selectedItem.id)
+                    await supabase.from('academic_years').update({ is_active: true }).eq('id', selectedItem.id)
+                } else if (!formData.makeActive && selectedItem.is_active) {
+                    await supabase.from('academic_years').update({ is_active: false }).eq('id', selectedItem.id)
+                }
                 addToast('Tahun pelajaran berhasil diupdate', 'success')
-                await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } })
+                await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } })
             } else {
                 const { data, error } = await supabase.from('academic_years').insert({ ...payload, is_active: false }).select()
                 if (error) throw error
                 if (!data || data.length === 0) throw new Error('Gagal menambahkan: tidak ada data yang tersimpan (periksa RLS policy)')
+                // If makeActive checked, deactivate all others then activate new one
+                if (formData.makeActive && data[0]?.id) {
+                    await supabase.from('academic_years').update({ is_active: false }).neq('id', data[0].id)
+                    await supabase.from('academic_years').update({ is_active: true }).eq('id', data[0].id)
+                }
                 addToast('Tahun pelajaran berhasil ditambahkan', 'success')
-                await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: data?.[0]?.id, newData: { ...payload, is_active: false } })
+                await logAudit({ action: 'INSERT', source: 'MASTER', tableName: 'academic_years', recordId: data?.[0]?.id, newData: { ...payload, is_active: formData.makeActive } })
             }
             setIsModalOpen(false)
             fetchData()
@@ -210,7 +264,7 @@ export default function AcademicYearsPage() {
             if (e2) throw e2
             if (!data || data.length === 0) throw new Error('Gagal mengaktifkan: periksa RLS policy di Supabase')
             addToast(`${item.name} ${item.semester} diaktifkan`, 'success')
-            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_active: true } })
+            await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_active: true } })
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal mengaktifkan', 'error') }
         finally { setSubmitting(false) }
@@ -224,7 +278,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal menonaktifkan: periksa RLS policy di Supabase')
             addToast(`${item.name} ${item.semester} dinonaktifkan`, 'success')
-            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_active: false } })
+            await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_active: false } })
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal menonaktifkan', 'error') }
         finally { setSubmitting(false) }
@@ -241,7 +295,7 @@ export default function AcademicYearsPage() {
             })
             if (error) throw error
             addToast(`Berhasil menduplikasi ${item.name}`, 'success')
-            await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'academic_years', newData: { name: item.name + ' (Salinan)', semester: item.semester, duplicated_from: item.id } })
+            await logAudit({ action: 'INSERT', source: 'MASTER', tableName: 'academic_years', newData: { name: item.name + ' (Salinan)', semester: item.semester, duplicated_from: item.id } })
             fetchData()
         } catch { addToast('Gagal menduplikasi', 'error') }
     }
@@ -263,30 +317,30 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal mengarsipkan: periksa RLS policy di Supabase')
             addToast('Tahun pelajaran diarsipkan', 'success')
-            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: itemToDelete.id, oldData: itemToDelete, newData: { ...itemToDelete, deleted_at: new Date().toISOString() } })
+            await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: itemToDelete.id, oldData: itemToDelete, newData: { ...itemToDelete, deleted_at: new Date().toISOString() } })
             setIsDeleteModalOpen(false)
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal menghapus', 'error') }
         finally { setSubmitting(false); setItemToDelete(null) }
     }
 
-    const handleRestore = async (id) => {
+    const handleRestore = async (item) => {
         try {
-            const { data, error } = await supabase.from('academic_years').update({ deleted_at: null }).eq('id', id).select()
+            const { data, error } = await supabase.from('academic_years').update({ deleted_at: null }).eq('id', item.id).select()
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal memulihkan: periksa RLS policy di Supabase')
             addToast('Berhasil dipulihkan', 'success')
-            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: id, newData: { deleted_at: null, restored: true } })
+            await logAudit({ action: 'RESTORE', source: 'MASTER', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, deleted_at: null } })
             fetchArchived(); fetchData()
         } catch (err) { addToast(err.message || 'Gagal memulihkan', 'error') }
     }
 
-    const handlePermanentDelete = async (id) => {
+    const handlePermanentDelete = async (item) => {
         try {
-            const { error } = await supabase.from('academic_years').delete().eq('id', id)
+            const { error } = await supabase.from('academic_years').delete().eq('id', item.id)
             if (error) throw error
             addToast('Data dihapus permanen', 'success')
-            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', recordId: id, oldData: { permanent_delete: true } })
+            await logAudit({ action: 'DELETE', source: 'MASTER', tableName: 'academic_years', recordId: item.id, oldData: item })
             setIsPermanentDeleteOpen(false)
             setItemToPermanentDelete(null)
             fetchArchived()
@@ -300,7 +354,7 @@ export default function AcademicYearsPage() {
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal mengarsipkan massal: periksa RLS policy di Supabase')
             addToast(`${data.length} data diarsipkan`, 'success')
-            await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'academic_years', newData: { bulk_archive: true, count: data.length, ids: selectedIds } })
+            await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', newData: { bulk_archive: true, count: data.length, ids: selectedIds } })
             setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData()
         } catch { addToast('Gagal menghapus massal', 'error') }
         finally { setSubmitting(false) }
@@ -389,15 +443,34 @@ export default function AcademicYearsPage() {
                         <Breadcrumb badge="Master Data" items={['Academic Cycle']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Tahun Pelajaran</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} tahun pelajaran dan semester aktif dalam sistem.</p>
+                        <p className="hidden sm:block text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                            Tahun pelajaran aktif menjadi acuan laporan, presensi, dan penilaian di seluruh sistem.
+                        </p>
                     </div>
                     <div className="flex gap-2 items-center">
                         {/* Header menu */}
-                        <div className="relative" ref={headerMenuRef}>
-                            <button onClick={() => setIsHeaderMenuOpen(v => !v)}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                                title="Aksi lainnya"><FontAwesomeIcon icon={faSliders} /></button>
-                            {isHeaderMenuOpen && (
-                                <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                        <div className="relative">
+                            <button
+                                ref={headerMenuBtnRef}
+                                onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                                title="Aksi lainnya"
+                            >
+                                <FontAwesomeIcon icon={faSliders} />
+                            </button>
+                        </div>
+
+                        {/* Portaled Header Menu Dropdown */}
+                        {isHeaderMenuOpen && headerMenuRect && createPortal(
+                            <>
+                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsHeaderMenuOpen(false)} />
+                                <div
+                                    className="fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-200"
+                                    style={{
+                                        top: headerMenuRect.bottom + 8,
+                                        left: Math.max(10, headerMenuRect.right - 224),
+                                    }}
+                                >
                                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Manajemen</p>
                                     <button onClick={() => { setIsHeaderMenuOpen(false); fetchArchived(); setIsArchivedOpen(true) }}
                                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
@@ -406,20 +479,35 @@ export default function AcademicYearsPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Arsip Tahun Pelajaran</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">arsip</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data yang diarsipkan</p>
                                         </div>
                                     </button>
                                 </div>
-                            )}
-                        </div>
+                            </>,
+                            getPortalContainer('portal-ay-header-menu')
+                        )}
 
                         {/* Keyboard shortcuts */}
-                        <div className="relative" ref={shortcutRef}>
-                            <button onClick={() => setIsShortcutOpen(v => !v)}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
-                            {isShortcutOpen && (
-                                <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden">
+                        <button
+                            ref={shortcutBtnRef}
+                            onClick={() => { if (!isShortcutOpen) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setIsShortcutOpen(v => !v) }}
+                            className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center transition-all active:scale-95 ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                            title="Keyboard Shortcuts (?)"
+                        >
+                            <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
+                        </button>
+
+                        {/* Portaled Keyboard Shortcuts Dropdown */}
+                        {isShortcutOpen && shortcutRect && createPortal(
+                            <>
+                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsShortcutOpen(false)} />
+                                <div
+                                    className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                                    style={{
+                                        top: shortcutRect.bottom + 8,
+                                        left: Math.max(10, shortcutRect.right - 288),
+                                    }}
+                                >
                                     <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
                                         <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
                                         <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
@@ -428,7 +516,7 @@ export default function AcademicYearsPage() {
                                         {[
                                             { section: 'Navigasi' },
                                             { keys: ['Ctrl', 'K'], label: 'Fokus ke search' },
-                                            { keys: ['Esc'], label: 'Clear / deselect' },
+                                            { keys: ['Esc'], label: 'Tutup / clear / deselect' },
                                             { section: 'Aksi' },
                                             { keys: ['N'], label: 'Tambah tahun pelajaran' },
                                             { keys: ['X'], label: 'Reset semua filter' },
@@ -438,17 +526,23 @@ export default function AcademicYearsPage() {
                                         ) : (
                                             <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
                                                 <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
-                                                <div className="flex items-center gap-1">{item.keys.map((k, ki) => <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>)}</div>
+                                                <div className="flex items-center gap-1">
+                                                    {item.keys.map((k, ki) => (
+                                                        <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            </>,
+                            getPortalContainer('portal-ay-shortcut-menu')
+                        )}
 
                         {/* Add button */}
-                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-5 rounded-xl btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">
-                            <FontAwesomeIcon icon={faPlus} />{canEdit ? 'Tambah' : 'Read-only'}
+                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100">
+                            <FontAwesomeIcon icon={faPlus} />
+                            <span className="hidden sm:inline">{canEdit ? 'Tambah' : 'Read-only'}</span>
                         </button>
                     </div>
                 </div>
@@ -751,30 +845,77 @@ export default function AcademicYearsPage() {
                 </div>
 
                 {/* ── Form Modal ── */}
-                <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setFormErrors({}) }} title={selectedItem ? 'Update Tahun Pelajaran' : 'Tahun Pelajaran Baru'} size="sm">
+                <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setFormErrors({}); setIsDuplicateName(false) }} title={selectedItem ? 'Update Tahun Pelajaran' : 'Tahun Pelajaran Baru'} size="sm">
                     <div className="space-y-5">
+
+                        {/* ── Nama Tahun Pelajaran ── */}
                         <div>
-                            <label className="block text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Tahun Pelajaran <span className="text-red-500">*</span></label>
-                            <input
-                                type="text"
-                                value={formData.name}
-                                onChange={e => { setFormData({ ...formData, name: e.target.value }); setFormErrors(p => ({ ...p, name: '' })) }}
-                                placeholder="Contoh: 2024/2025"
-                                className={`input-field font-bold text-sm h-11 w-full ${formErrors.name ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                            />
-                            {formErrors.name && <p className="mt-1.5 ml-1 text-[10px] font-bold text-red-500 flex items-center gap-1"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />{formErrors.name}</p>}
+                            <label className="block text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">
+                                Tahun Pelajaran <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={e => {
+                                        const val = e.target.value
+                                        setFormData({ ...formData, name: val })
+                                        setFormErrors(p => ({ ...p, name: '' }))
+                                        // Cek duplikat realtime
+                                        const trimmed = val.trim()
+                                        const isDupe = years.some(y =>
+                                            y.name === trimmed &&
+                                            y.semester === formData.semester &&
+                                            (!selectedItem || y.id !== selectedItem.id)
+                                        )
+                                        setIsDuplicateName(isDupe)
+                                    }}
+                                    placeholder="Contoh: 2024/2025"
+                                    maxLength={9}
+                                    className={`input-field font-bold text-sm h-11 w-full pr-24 ${formErrors.name ? 'border-red-500 ring-1 ring-red-500' : isDuplicateName ? 'border-amber-400 ring-1 ring-amber-400' : ''}`}
+                                />
+                                {/* Format badge hint */}
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-[var(--color-text-muted)] opacity-50 uppercase tracking-widest pointer-events-none font-mono">
+                                    YYYY/YYYY
+                                </span>
+                            </div>
+                            {formErrors.name && (
+                                <p className="mt-1.5 ml-1 text-[10px] font-bold text-red-500 flex items-center gap-1">
+                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />{formErrors.name}
+                                </p>
+                            )}
+                            {!formErrors.name && isDuplicateName && (
+                                <p className="mt-1.5 ml-1 text-[10px] font-bold text-amber-500 flex items-center gap-1">
+                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />
+                                    Kombinasi nama &amp; semester ini sudah ada
+                                </p>
+                            )}
                         </div>
+
+                        {/* ── Semester ── */}
                         <div>
                             <label className="block text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Semester</label>
                             <div className="flex p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] gap-1">
                                 {['Ganjil', 'Genap'].map(s => (
-                                    <button key={s} type="button" onClick={() => setFormData({ ...formData, semester: s })}
+                                    <button key={s} type="button"
+                                        onClick={() => {
+                                            setFormData({ ...formData, semester: s })
+                                            // Re-check duplikat dengan semester baru
+                                            const isDupe = years.some(y =>
+                                                y.name === formData.name.trim() &&
+                                                y.semester === s &&
+                                                (!selectedItem || y.id !== selectedItem.id)
+                                            )
+                                            setIsDuplicateName(isDupe)
+                                        }}
                                         className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${formData.semester === s ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                                         {s}
                                     </button>
                                 ))}
                             </div>
                         </div>
+
+                        {/* ── Tanggal ── */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Tanggal Mulai <span className="text-red-500">*</span></label>
@@ -797,9 +938,51 @@ export default function AcademicYearsPage() {
                                 {formErrors.endDate && <p className="mt-1.5 text-[10px] font-bold text-red-500 flex items-center gap-1"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />{formErrors.endDate}</p>}
                             </div>
                         </div>
+
+                        {/* ── Live Duration Preview ── */}
+                        {formData.startDate && formData.endDate && formData.endDate > formData.startDate && (() => {
+                            const s = new Date(formData.startDate), e = new Date(formData.endDate)
+                            const months = (e.getFullYear() - s.getFullYear()) * 12 + e.getMonth() - s.getMonth()
+                            const days = Math.round((e - s) / (1000 * 60 * 60 * 24))
+                            return (
+                                <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/15">
+                                    <FontAwesomeIcon icon={faCalendar} className="text-[var(--color-primary)] text-xs shrink-0" />
+                                    <p className="text-[11px] font-bold text-[var(--color-text-muted)]">
+                                        Durasi semester: <span className="font-black text-[var(--color-primary)]">{months} bulan</span>
+                                        <span className="opacity-50 ml-1">({days} hari)</span>
+                                    </p>
+                                </div>
+                            )
+                        })()}
+
+                        {/* ── Jadikan Aktif Toggle ── */}
+                        <button
+                            type="button"
+                            onClick={() => setFormData(p => ({ ...p, makeActive: !p.makeActive }))}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${formData.makeActive ? 'bg-emerald-500/8 border-emerald-500/30' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] hover:border-[var(--color-primary)]/30'}`}
+                        >
+                            <div className="text-left">
+                                <p className={`text-[11px] font-black ${formData.makeActive ? 'text-emerald-600' : 'text-[var(--color-text)]'}`}>
+                                    {selectedItem ? 'Jadikan tahun aktif' : 'Langsung jadikan tahun aktif'}
+                                </p>
+                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-70 mt-0.5 uppercase tracking-wider">
+                                    {formData.makeActive ? 'Tahun lain akan dinonaktifkan otomatis' : 'Bisa diaktifkan nanti dari tabel'}
+                                </p>
+                            </div>
+                            <div className={`relative w-10 h-5.5 rounded-full transition-all shrink-0 ${formData.makeActive ? 'bg-emerald-500' : 'bg-[var(--color-border)]'}`}
+                                style={{ height: '22px' }}>
+                                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${formData.makeActive ? 'left-[22px]' : 'left-0.5'}`} />
+                            </div>
+                        </button>
+
+                        {/* ── Actions ── */}
                         <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-                            <button type="button" onClick={() => { setIsModalOpen(false); setFormErrors({}) }} className="h-11 px-6 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                            <button type="button" onClick={handleSubmit} disabled={submitting} className="h-11 px-8 rounded-xl btn-primary font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center gap-2">
+                            <button type="button" onClick={() => { setIsModalOpen(false); setFormErrors({}); setIsDuplicateName(false) }}
+                                className="h-11 px-6 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest transition-all">
+                                Batal
+                            </button>
+                            <button type="button" onClick={handleSubmit} disabled={submitting || isDuplicateName}
+                                className="h-11 px-8 rounded-xl btn-primary font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center gap-2">
                                 {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : null}
                                 {selectedItem ? 'Update' : 'Simpan'}
                             </button>
@@ -861,7 +1044,7 @@ export default function AcademicYearsPage() {
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <button onClick={() => handleRestore(y.id)} title="Pulihkan" className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center">
+                                        <button onClick={() => handleRestore(y)} title="Pulihkan" className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center">
                                             <FontAwesomeIcon icon={faRotateLeft} className="text-xs" />
                                         </button>
                                         <button onClick={() => { setItemToPermanentDelete(y); setIsPermanentDeleteOpen(true) }} title="Hapus Permanen" className="w-8 h-8 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
@@ -893,7 +1076,7 @@ export default function AcademicYearsPage() {
                         </p>
                         <div className="flex gap-3 pt-2">
                             <button onClick={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                            <button onClick={() => handlePermanentDelete(itemToPermanentDelete?.id)} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
+                            <button onClick={() => handlePermanentDelete(itemToPermanentDelete)} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
                                 {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Hapus Permanen'}
                             </button>
                         </div>

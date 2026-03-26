@@ -4,7 +4,7 @@ import { supabase } from './supabase'
 /**
  * Tulis satu entry ke audit_logs
  * @param {Object} params
- * @param {'INSERT'|'UPDATE'|'DELETE'|'LOGIN'|'LOGOUT'|'RESTORE'} params.action
+ * @param {'INSERT'|'UPDATE'|'DELETE'|'LOGIN'|'LOGOUT'|'RESTORE'|'EXPORT'|'SEND'} params.action
  * @param {string}  params.tableName
  * @param {'OPERATIONAL'|'SYSTEM'|'MASTER'|'SECURITY'|'AUTH'} [params.source]
  * @param {string}  [params.recordId]

@@ -97,6 +97,17 @@ export default function ClassesPage() {
     const [exporting, setExporting] = useState(false)
     const [exportScope, setExportScope] = useState('filtered')
 
+    // Import
+    const [importTab, setImportTab] = useState('guideline') // 'guideline' | 'preview'
+    const [importFileName, setImportFileName] = useState('')
+    const [importPreview, setImportPreview] = useState([])
+    const [importIssues, setImportIssues] = useState([])
+    const [importDupes, setImportDupes] = useState([])
+    const [importSkip, setImportSkip] = useState(true)
+    const [importDrag, setImportDrag] = useState(false)
+    const [importing, setImporting] = useState(false)
+    const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
+
     // Header & Columns
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
@@ -105,6 +116,7 @@ export default function ClassesPage() {
     const headerMenuRef = useRef(null)
     const colMenuRef = useRef(null)
     const slidersRef = useRef(null)
+    const importFileRef = useRef(null)
     const defaultCols = { level: true, program: true, gender: true, teacher: true, students: true, year: true }
     const [visibleCols, setVisibleCols] = useState(() => {
         try { return JSON.parse(localStorage.getItem(LS_COLS)) || defaultCols }
@@ -350,6 +362,16 @@ export default function ClassesPage() {
             const blob = new Blob([Papa.unparse(data)], { type: 'text/csv;charset=utf-8;' })
             const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.setAttribute('download', `data_kelas_${new Date().toISOString().slice(0, 10)}.csv`); link.click()
             addToast(`Export CSV berhasil (${data.length} kelas)`, 'success')
+            await logAudit({
+                action: 'EXPORT',
+                source: 'MASTER',
+                tableName: 'classes',
+                newData: {
+                    format: 'csv',
+                    scope: exportScope,
+                    count: data.length
+                }
+            })
         } catch { addToast('Gagal export CSV', 'error') }
         finally { setExporting(false); setIsExportModalOpen(false) }
     }
@@ -362,8 +384,196 @@ export default function ClassesPage() {
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Data Kelas')
             XLSX.writeFile(wb, `data_kelas_${new Date().toISOString().slice(0, 10)}.xlsx`)
             addToast(`Export Excel berhasil (${data.length} kelas)`, 'success')
+            await logAudit({
+                action: 'EXPORT',
+                source: 'MASTER',
+                tableName: 'classes',
+                newData: {
+                    format: 'xlsx',
+                    scope: exportScope,
+                    count: data.length
+                }
+            })
         } catch { addToast('Gagal export Excel', 'error') }
         finally { setExporting(false); setIsExportModalOpen(false) }
+    }
+
+    // ── Import Logic ──────────────────────────────────────────────────────────
+    const handleDownloadTemplate = async () => {
+        const templateData = [
+            { 'Nama Kelas': 'VII A', 'Tingkat': '7', 'Program': 'Reguler', 'Tipe Gender': 'Putra', 'Wali Kelas': '', 'Tahun Ajaran': '' },
+            { 'Nama Kelas': 'VIII Boarding A', 'Tingkat': '8', 'Program': 'Boarding', 'Tipe Gender': 'Putri', 'Wali Kelas': '', 'Tahun Ajaran': '' },
+        ]
+        const ws = XLSX.utils.json_to_sheet(templateData)
+        ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 25 }, { wch: 20 }]
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Template Import Kelas')
+        const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = 'Template_Import_Kelas.xlsx'
+        link.click()
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+    }
+
+    const processImportFile = async (file) => {
+        if (!file) return
+        const ext = file.name.toLowerCase()
+        if (!ext.endsWith('.csv') && !ext.endsWith('.xlsx')) {
+            addToast('Format tidak didukung. Gunakan .csv atau .xlsx', 'error')
+            return
+        }
+        setImportFileName(file.name)
+        setImportPreview([])
+        setImportIssues([])
+        setImportDupes([])
+        setImportTab('preview')
+
+        try {
+            let rows = []
+            if (ext.endsWith('.csv')) {
+                rows = await new Promise(res =>
+                    Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => res(r.data) })
+                )
+            } else {
+                rows = await new Promise(res => {
+                    const reader = new FileReader()
+                    reader.onload = e => {
+                        const wb = XLSX.read(e.target.result, { type: 'array' })
+                        res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' }))
+                    }
+                    reader.readAsArrayBuffer(file)
+                })
+            }
+
+            if (!rows.length) { addToast('File kosong atau tidak terbaca', 'error'); return }
+
+            // Fetch latest metadata for matching
+            const { t: tMap, y: yMap } = await loadMetadata()
+            const teacherByName = Object.fromEntries(
+                teachersList.map(t => [t.name.toLowerCase().trim(), t.id])
+            )
+            const yearByLabel = Object.fromEntries(
+                academicYearsList.map(y => [y.label.toLowerCase().trim(), y.id])
+            )
+
+            const issues = [], dupes = []
+            const preview = rows.map((row, i) => {
+                const name = (row['Nama Kelas'] || row['nama_kelas'] || row['name'] || '').toString().trim()
+                const grade = (row['Tingkat'] || row['grade'] || row['level'] || '').toString().trim()
+                const program = (row['Program'] || row['program'] || '').toString().trim()
+                const genderType = (row['Tipe Gender'] || row['tipe_gender'] || row['gender_type'] || '').toString().trim()
+                const teacherRaw = (row['Wali Kelas'] || row['wali_kelas'] || row['teacher'] || '').toString().trim()
+                const yearRaw = (row['Tahun Ajaran'] || row['tahun_ajaran'] || row['year'] || '').toString().trim()
+
+                const rowIssues = []
+                if (!name) rowIssues.push({ level: 'error', msg: 'Nama Kelas tidak boleh kosong' })
+                if (!grade) rowIssues.push({ level: 'error', msg: 'Tingkat tidak boleh kosong' })
+                else if (!LEVELS.includes(grade)) rowIssues.push({ level: 'error', msg: `Tingkat "${grade}" tidak valid. Gunakan: ${LEVELS.join(', ')}` })
+
+                if (program && !PROGRAMS.includes(program))
+                    rowIssues.push({ level: 'warn', msg: `Program "${program}" tidak dikenali, akan digunakan apa adanya` })
+
+                // Resolve teacher ID
+                const homeroom_teacher_id = teacherRaw
+                    ? (teacherByName[teacherRaw.toLowerCase()] || null)
+                    : null
+                if (teacherRaw && !homeroom_teacher_id)
+                    rowIssues.push({ level: 'warn', msg: `Wali kelas "${teacherRaw}" tidak ditemukan, akan dikosongkan` })
+
+                // Resolve academic year ID
+                const academic_year_id = yearRaw
+                    ? (yearByLabel[yearRaw.toLowerCase()] || null)
+                    : null
+                if (yearRaw && !academic_year_id)
+                    rowIssues.push({ level: 'warn', msg: `Tahun ajaran "${yearRaw}" tidak ditemukan, akan dikosongkan` })
+
+                if (rowIssues.length)
+                    issues.push({ row: i + 2, level: rowIssues[0].level, messages: rowIssues.map(x => x.msg) })
+
+                // Compose major from program + genderType
+                const major = [program, genderType].filter(Boolean).join(' ') || null
+
+                return {
+                    _row: i,
+                    name,
+                    grade,
+                    major,
+                    homeroom_teacher_id,
+                    academic_year_id,
+                    _teacherRaw: teacherRaw,
+                    _yearRaw: yearRaw,
+                    _hasError: rowIssues.some(x => x.level === 'error'),
+                }
+            })
+
+            // Detect duplicate names in file
+            preview.forEach((row, i) => {
+                if (row.name && preview.slice(0, i).some(p => p.name.toLowerCase() === row.name.toLowerCase())) {
+                    dupes.push(i)
+                    issues.push({ row: i + 2, level: 'dupe', messages: [`Nama kelas "${row.name}" duplikat dalam file`] })
+                }
+            })
+
+            setImportPreview(preview)
+            setImportIssues(issues)
+            setImportDupes(dupes)
+        } catch {
+            addToast('Gagal membaca file import', 'error')
+        }
+    }
+
+    const hasImportBlockingErrors = importIssues.some(x => x.level === 'error')
+
+    const handleCommitImport = async () => {
+        if (!importPreview.length) { addToast('Tidak ada data untuk diimport', 'error'); return }
+        if (hasImportBlockingErrors) { addToast('Masih ada ERROR. Perbaiki file dulu.', 'error'); return }
+
+        const dupeSet = new Set(importDupes)
+        const errRows = new Set(importIssues.filter(x => x.level === 'error').map(x => x.row - 2))
+        const validRows = importPreview.filter((_, i) => !errRows.has(i) && !(importSkip && dupeSet.has(i)))
+
+        if (!validRows.length) { addToast('Tidak ada baris valid untuk diimport', 'warning'); return }
+
+        setImporting(true)
+        setImportProgress({ done: 0, total: validRows.length })
+
+        try {
+            const CHUNK = 50
+            for (let i = 0; i < validRows.length; i += CHUNK) {
+                const chunk = validRows.slice(i, i + CHUNK).map(r => ({
+                    name: r.name,
+                    grade: r.grade,
+                    major: r.major || null,
+                    homeroom_teacher_id: r.homeroom_teacher_id || null,
+                    academic_year_id: r.academic_year_id || null,
+                }))
+                const { error } = await supabase.from('classes').insert(chunk)
+                if (error) throw error
+                setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
+            }
+
+            addToast(`Berhasil import ${validRows.length} kelas`, 'success')
+            await logAudit({
+                action: 'INSERT',
+                source: profile?.id || 'SYSTEM',
+                tableName: 'classes',
+                newData: { bulk_import: true, count: validRows.length }
+            })
+
+            setIsImportModalOpen(false)
+            setImportPreview([])
+            setImportIssues([])
+            setImportDupes([])
+            setImportFileName('')
+            setImportTab('guideline')
+            fetchData()
+        } catch {
+            addToast('Gagal import (cek constraint DB / duplikat / koneksi)', 'error')
+        } finally {
+            setImporting(false)
+        }
     }
 
     const activeFilterCountVal = activeFilterCount
@@ -446,17 +656,11 @@ export default function ClassesPage() {
                                 </div>
                             )}
                         </div>
-                        {/* Privasi toggle */}
-                        <button onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-                            className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                            title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
-                            <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
-                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privasi On' : 'Privasi Off'}</span>
-                        </button>
+
                         {/* Shortcut toggle */}
                         <div className="relative" ref={shortcutRef}>
                             <button onClick={() => setIsShortcutOpen(!isShortcutOpen)}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                className={`hidden sm:flex h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                                 title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
                             {isShortcutOpen && (
                                 <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-11 -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[340px] sm:w-72 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
@@ -477,8 +681,10 @@ export default function ClassesPage() {
                                 </div>
                             )}
                         </div>
-                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-4 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
-                            <FontAwesomeIcon icon={faPlus} /> {canEdit ? 'Tambah' : 'Read-only'}
+
+                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100">
+                            <FontAwesomeIcon icon={faPlus} />
+                            <span className="hidden sm:inline">{canEdit ? 'Tambah' : 'Read-only'}</span>
                         </button>
                     </div>
                 </div>
@@ -922,6 +1128,243 @@ export default function ClassesPage() {
                         <button onClick={() => setIsArchivedModalOpen(false)} className="w-full h-11 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">TUTUP</button>
                     </div>
                 </Modal>
+                {/* ── Import Modal ── */}
+                <Modal isOpen={isImportModalOpen} onClose={() => { setIsImportModalOpen(false); setImportTab('guideline'); setImportPreview([]); setImportIssues([]); setImportDupes([]); setImportFileName('') }} title="Import Data Kelas" size="lg">
+                    <div className="space-y-4">
+
+                        {/* Tab Switch */}
+                        <div className="flex p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
+                            {[{ id: 'guideline', label: 'Panduan' }, { id: 'preview', label: `Preview${importPreview.length ? ` (${importPreview.length})` : ''}` }].map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => setImportTab(t.id)}
+                                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${importTab === t.id ? 'bg-[var(--color-primary)] text-white shadow-lg' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                >{t.label}</button>
+                            ))}
+                        </div>
+
+                        {/* ── TAB: PANDUAN ── */}
+                        {importTab === 'guideline' && (
+                            <div className="space-y-4">
+                                {/* Format info */}
+                                <div className="p-4 rounded-2xl bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/20 space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-primary)]">Format Kolom yang Didukung</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { col: 'Nama Kelas', req: true, desc: 'Wajib diisi' },
+                                            { col: 'Tingkat', req: true, desc: '7 – 12' },
+                                            { col: 'Program', req: false, desc: 'Boarding / Reguler' },
+                                            { col: 'Tipe Gender', req: false, desc: 'Putra / Putri' },
+                                            { col: 'Wali Kelas', req: false, desc: 'Nama guru (opsional)' },
+                                            { col: 'Tahun Ajaran', req: false, desc: 'Nama tahun ajaran (opsional)' },
+                                        ].map(({ col, req, desc }) => (
+                                            <div key={col} className="flex items-start gap-2 p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                                                <span className={`mt-0.5 shrink-0 w-1.5 h-1.5 rounded-full ${req ? 'bg-red-500' : 'bg-[var(--color-border)]'}`} />
+                                                <div>
+                                                    <p className="text-[10px] font-black text-[var(--color-text)]">{col}</p>
+                                                    <p className="text-[9px] text-[var(--color-text-muted)] font-medium">{desc}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-1" />= Wajib diisi</p>
+                                </div>
+
+                                {/* Download template */}
+                                <button
+                                    onClick={handleDownloadTemplate}
+                                    className="w-full h-11 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[var(--color-border)] transition-all"
+                                >
+                                    <FontAwesomeIcon icon={faDownload} /> Download Template Excel
+                                </button>
+
+                                {/* Drag & Drop Upload */}
+                                <div
+                                    onDragOver={e => { e.preventDefault(); setImportDrag(true) }}
+                                    onDragLeave={() => setImportDrag(false)}
+                                    onDrop={e => { e.preventDefault(); setImportDrag(false); const file = e.dataTransfer.files?.[0]; if (file) processImportFile(file) }}
+                                    onClick={() => importFileRef.current?.click()}
+                                    className={`relative cursor-pointer flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all ${importDrag ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 scale-[1.01]' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-surface-alt)]/50'}`}
+                                >
+                                    <input ref={importFileRef} type="file" accept=".csv,.xlsx" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) processImportFile(f); e.target.value = '' }} />
+                                    <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-xl">
+                                        <FontAwesomeIcon icon={faUpload} />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-sm font-black text-[var(--color-text)]">Klik atau seret file di sini</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1 uppercase tracking-widest">CSV atau XLSX • Maks 5MB</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── TAB: PREVIEW ── */}
+                        {importTab === 'preview' && (
+                            <div className="space-y-4">
+                                {/* File info */}
+                                {importFileName && (
+                                    <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                                        <FontAwesomeIcon icon={faFileImport} className="text-[var(--color-primary)] shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-black text-[var(--color-text)] truncate">{importFileName}</p>
+                                            <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">{importPreview.length} baris terbaca</p>
+                                        </div>
+                                        <button onClick={() => importFileRef.current?.click()} className="shrink-0 text-[10px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest">Ganti File</button>
+                                        <input ref={importFileRef} type="file" accept=".csv,.xlsx" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) processImportFile(f); e.target.value = '' }} />
+                                    </div>
+                                )}
+
+                                {/* Issue summary */}
+                                {importIssues.length > 0 && (
+                                    <div className="space-y-1.5">
+                                        {importIssues.filter(x => x.level === 'error').length > 0 && (
+                                            <div className="px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+                                                <FontAwesomeIcon icon={faXmark} className="text-red-500 shrink-0 mt-0.5 text-xs" />
+                                                <div>
+                                                    <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">{importIssues.filter(x => x.level === 'error').length} Error — Wajib diperbaiki</p>
+                                                    <ul className="mt-1 space-y-0.5">
+                                                        {importIssues.filter(x => x.level === 'error').map((iss, i) => (
+                                                            <li key={i} className="text-[9px] text-red-600 font-bold">Baris {iss.row}: {iss.messages.join(', ')}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {importIssues.filter(x => x.level === 'warn').length > 0 && (
+                                            <div className="px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
+                                                <FontAwesomeIcon icon={faCheck} className="text-amber-500 shrink-0 mt-0.5 text-xs" />
+                                                <div>
+                                                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">{importIssues.filter(x => x.level === 'warn').length} Peringatan</p>
+                                                    <ul className="mt-1 space-y-0.5">
+                                                        {importIssues.filter(x => x.level === 'warn').map((iss, i) => (
+                                                            <li key={i} className="text-[9px] text-amber-600 font-bold">Baris {iss.row}: {iss.messages.join(', ')}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {importDupes.length > 0 && (
+                                            <div className="px-3 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center gap-2">
+                                                <FontAwesomeIcon icon={faLink} className="text-blue-500 shrink-0 text-xs" />
+                                                <div className="flex-1">
+                                                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{importDupes.length} Duplikat dalam file</p>
+                                                </div>
+                                                <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                                                    <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Skip duplikat</span>
+                                                    <div
+                                                        onClick={() => setImportSkip(v => !v)}
+                                                        className={`w-8 h-4 rounded-full transition-all flex items-center px-0.5 cursor-pointer ${importSkip ? 'bg-blue-500' : 'bg-[var(--color-border)]'}`}
+                                                    >
+                                                        <div className={`w-3 h-3 rounded-full bg-white shadow transition-all ${importSkip ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Preview table */}
+                                {importPreview.length > 0 && (
+                                    <div className="overflow-auto max-h-64 rounded-xl border border-[var(--color-border)]">
+                                        <table className="w-full text-left text-xs border-collapse min-w-[600px]">
+                                            <thead className="sticky top-0 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
+                                                <tr>
+                                                    {['#', 'Nama Kelas', 'Tingkat', 'Major', 'Wali Kelas', 'Status'].map(h => (
+                                                        <th key={h} className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{h}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-[var(--color-border)]">
+                                                {importPreview.map((row, i) => {
+                                                    const isDupe = importDupes.includes(i)
+                                                    const isSkipped = isDupe && importSkip
+                                                    const issue = importIssues.find(x => x.row === i + 2)
+                                                    return (
+                                                        <tr key={i} className={`transition-colors ${isSkipped ? 'opacity-40' : row._hasError ? 'bg-red-500/5' : isDupe ? 'bg-blue-500/5' : 'hover:bg-[var(--color-surface-alt)]/50'}`}>
+                                                            <td className="px-3 py-2 text-[var(--color-text-muted)] font-bold">{i + 2}</td>
+                                                            <td className="px-3 py-2 font-bold text-[var(--color-text)]">{row.name || <span className="text-red-500 italic">kosong</span>}</td>
+                                                            <td className="px-3 py-2 font-bold text-[var(--color-text)]">{row.grade || '—'}</td>
+                                                            <td className="px-3 py-2 text-[var(--color-text-muted)]">{row.major || '—'}</td>
+                                                            <td className="px-3 py-2 text-[var(--color-text-muted)]">{row._teacherRaw ? (row.homeroom_teacher_id ? row._teacherRaw : <span className="text-amber-500">{row._teacherRaw} (?)</span>) : '—'}</td>
+                                                            <td className="px-3 py-2">
+                                                                {isSkipped ? (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] text-[9px] font-black text-[var(--color-text-muted)] uppercase">Skip</span>
+                                                                ) : row._hasError ? (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-red-500/10 text-[9px] font-black text-red-500 uppercase">Error</span>
+                                                                ) : isDupe ? (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-[9px] font-black text-blue-500 uppercase">Duplikat</span>
+                                                                ) : (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-[9px] font-black text-emerald-600 uppercase">OK</span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
+                                {/* Progress bar saat importing */}
+                                {importing && (
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
+                                            <span>Mengimport...</span>
+                                            <span>{importProgress.done} / {importProgress.total}</span>
+                                        </div>
+                                        <div className="w-full h-2 bg-[var(--color-border)] rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-[var(--color-primary)] rounded-full transition-all duration-300"
+                                                style={{ width: `${importProgress.total ? (importProgress.done / importProgress.total) * 100 : 0}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Summary & CTA */}
+                                {importPreview.length > 0 && !importing && (
+                                    <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
+                                        <p className="text-xs font-bold text-[var(--color-text-muted)]">
+                                            <span className="text-[var(--color-primary)] font-black">
+                                                {importPreview.filter((_, i) => {
+                                                    const dupeSet = new Set(importDupes)
+                                                    const errRows = new Set(importIssues.filter(x => x.level === 'error').map(x => x.row - 2))
+                                                    return !errRows.has(i) && !(importSkip && dupeSet.has(i))
+                                                }).length}
+                                            </span>{' '}kelas siap diimport
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => { setIsImportModalOpen(false); setImportTab('guideline'); setImportPreview([]); setImportIssues([]); setImportDupes([]); setImportFileName('') }}
+                                                className="h-10 px-5 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-border)] transition-all"
+                                            >Batal</button>
+                                            <button
+                                                onClick={handleCommitImport}
+                                                disabled={hasImportBlockingErrors || importing}
+                                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                                            >
+                                                {importing
+                                                    ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengimport...</>
+                                                    : <><FontAwesomeIcon icon={faCheck} /> Import Sekarang</>
+                                                }
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Empty state */}
+                                {!importPreview.length && !importing && (
+                                    <div className="py-10 flex flex-col items-center gap-3 text-[var(--color-text-muted)]">
+                                        <FontAwesomeIcon icon={faFileImport} className="text-3xl opacity-20" />
+                                        <p className="text-xs font-black uppercase tracking-widest opacity-40">Belum ada file yang diupload</p>
+                                        <button onClick={() => setImportTab('guideline')} className="text-[10px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest">← Kembali ke Panduan</button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </Modal>
+
             </div>
         </DashboardLayout>
     )

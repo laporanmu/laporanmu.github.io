@@ -302,8 +302,8 @@ export default function TeachersPage() {
     const handleSubmit = async (payload) => {
         setSubmitting(true)
         try {
-            if (selectedItem) { const { error } = await supabase.from('teachers').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data guru berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'teachers', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } }) }
-            else { const { data: insData, error } = await supabase.from('teachers').insert([payload]).select().single(); if (error) throw error; addToast('Guru baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'teachers', recordId: insData?.id, newData: payload }) }
+            if (selectedItem) { const { error } = await supabase.from('teachers').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data guru berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } }) }
+            else { const { data: insData, error } = await supabase.from('teachers').insert([payload]).select().single(); if (error) throw error; addToast('Guru baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', source: 'OPERATIONAL', tableName: 'teachers', recordId: insData?.id, newData: payload }) }
             setIsModalOpen(false); fetchData(); fetchStats()
             return null
         } catch (err) { return { error: true, code: err.code, message: 'Gagal menyimpan data.' } }
@@ -311,16 +311,16 @@ export default function TeachersPage() {
     }
     const handleDeleteConfirm = async () => {
         if (!teacherToAction) return; setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').delete().eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'teachers', recordId: teacherToAction.id, oldData: teacherToAction }); setIsDeleteModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').delete().eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacherToAction.id, oldData: teacherToAction }); setIsDeleteModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
         catch { addToast('Gagal menghapus', 'error') } finally { setSubmitting(false) }
     }
     const handleArchive = async () => {
         if (!teacherToAction) return; setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'teachers', recordId: teacherToAction.id, oldData: teacherToAction, newData: { ...teacherToAction, deleted_at: new Date().toISOString() } }); setIsArchiveModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacherToAction.id, oldData: teacherToAction, newData: { ...teacherToAction, deleted_at: new Date().toISOString() } }); setIsArchiveModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
         catch { addToast('Gagal mengarsipkan', 'error') } finally { setSubmitting(false) }
     }
     const handleRestore = async teacher => {
-        try { const { error } = await supabase.from('teachers').update({ deleted_at: null }).eq('id', teacher.id); if (error) throw error; addToast(`"${teacher.name}" dipulihkan`, 'success'); await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'teachers', recordId: teacher.id, oldData: teacher, newData: { ...teacher, deleted_at: null, restored: true } }); setArchivedTeachers(prev => prev.filter(t => t.id !== teacher.id)); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').update({ deleted_at: null }).eq('id', teacher.id); if (error) throw error; addToast(`"${teacher.name}" dipulihkan`, 'success'); await logAudit({ action: 'RESTORE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacher.id, oldData: teacher, newData: { ...teacher, deleted_at: null } }); setArchivedTeachers(prev => prev.filter(t => t.id !== teacher.id)); fetchData(); fetchStats() }
         catch { addToast('Gagal memulihkan', 'error') }
     }
     const fetchArchived = async () => {
@@ -352,7 +352,7 @@ export default function TeachersPage() {
 
             await logAudit({
                 action: 'UPDATE',
-                source: profile?.id || 'SYSTEM',
+                source: 'OPERATIONAL',
                 tableName: 'teachers',
                 recordId: teacher.id,
                 oldData: { is_pinned: teacher.is_pinned },
@@ -385,7 +385,7 @@ export default function TeachersPage() {
 
     // ── quick status ──────────────────────────────────────────────────────────
     const handleQuickStatus = async (teacher, newStatus) => {
-        try { const { error } = await supabase.from('teachers').update({ status: newStatus }).eq('id', teacher.id); if (error) throw error; addToast(`Status ${teacher.name} → ${STATUS_CONFIG[newStatus].label}`, 'success'); await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'teachers', recordId: teacher.id, oldData: teacher, newData: { ...teacher, status: newStatus } }); setQuickStatusId(null); fetchData(); fetchStats() }
+        try { const { error } = await supabase.from('teachers').update({ status: newStatus }).eq('id', teacher.id); if (error) throw error; addToast(`Status ${teacher.name} → ${STATUS_CONFIG[newStatus].label}`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacher.id, oldData: teacher, newData: { ...teacher, status: newStatus } }); setQuickStatusId(null); fetchData(); fetchStats() }
         catch { addToast('Gagal update status', 'error') }
     }
 
@@ -410,12 +410,12 @@ export default function TeachersPage() {
     const toggleSelect = id => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
     const handleBulkArchive = async () => {
         setSubmitting(true)
-        try { const idsSnap = [...selectedIds]; const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).in('id', idsSnap); if (error) throw error; addToast(`${idsSnap.length} guru diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: profile?.id || 'SYSTEM', tableName: 'teachers', newData: { bulk_archive: true, count: idsSnap.length, ids: idsSnap } }); setSelectedIds([]); setIsBulkModalOpen(false); fetchData(); fetchStats() }
+        try { const idsSnap = [...selectedIds]; const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).in('id', idsSnap); if (error) throw error; addToast(`${idsSnap.length} guru diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', newData: { bulk_archive: true, count: idsSnap.length, ids: idsSnap } }); setSelectedIds([]); setIsBulkModalOpen(false); fetchData(); fetchStats() }
         catch { addToast('Gagal arsip massal', 'error') } finally { setSubmitting(false) }
     }
     const handleBulkDelete = async () => {
         setSubmitting(true)
-        try { const idsSnap2 = [...selectedIds]; const { error } = await supabase.from('teachers').delete().in('id', idsSnap2); if (error) throw error; addToast(`${idsSnap2.length} guru dihapus`, 'success'); await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'teachers', newData: { bulk: true, count: idsSnap2.length, ids: idsSnap2 } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData(); fetchStats() }
+        try { const idsSnap2 = [...selectedIds]; const { error } = await supabase.from('teachers').delete().in('id', idsSnap2); if (error) throw error; addToast(`${idsSnap2.length} guru dihapus`, 'success'); await logAudit({ action: 'DELETE', source: 'OPERATIONAL', tableName: 'teachers', oldData: { bulk: true, count: idsSnap2.length, ids: idsSnap2 } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData(); fetchStats() }
         catch { addToast('Gagal hapus massal', 'error') } finally { setSubmitting(false) }
     }
     const bulkWATeachers = useMemo(() => teachers.filter(t => selectedIds.includes(t.id) && t.phone), [teachers, selectedIds])
@@ -433,7 +433,7 @@ export default function TeachersPage() {
 
         logAudit({
             action: 'SEND',
-            source: profile?.id || 'SYSTEM',
+            source: 'OPERATIONAL',
             tableName: 'teachers',
             recordId: t.id,
             newData: { channel: 'whatsapp', template: waTemplate, recipient: t.name }
@@ -488,7 +488,7 @@ export default function TeachersPage() {
                 setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
             }
             addToast(`Berhasil import ${validRows.length} guru`, 'success')
-            await logAudit({ action: 'INSERT', source: profile?.id || 'SYSTEM', tableName: 'teachers', newData: { bulk_import: true, count: validRows.length, data: validRows } })
+            await logAudit({ action: 'INSERT', source: 'OPERATIONAL', tableName: 'teachers', newData: { bulk_import: true, count: validRows.length, data: validRows } })
             setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportDupes([]); setImportFileName(''); setImportTab('panduan')
             fetchData(); fetchStats()
         } catch { addToast('Gagal import (cek constraint DB / duplikat)', 'error') }
@@ -516,7 +516,7 @@ export default function TeachersPage() {
 
             await logAudit({
                 action: 'EXPORT',
-                source: profile?.id || 'SYSTEM',
+                source: 'OPERATIONAL',
                 tableName: 'teachers',
                 newData: {
                     format: 'csv',
@@ -543,7 +543,7 @@ export default function TeachersPage() {
 
             await logAudit({
                 action: 'EXPORT',
-                source: profile?.id || 'SYSTEM',
+                source: 'OPERATIONAL',
                 tableName: 'teachers',
                 newData: {
                     format: 'xlsx',
@@ -649,18 +649,10 @@ export default function TeachersPage() {
                             )}
                         </div>
 
-                        {/* Privasi toggle */}
-                        <button onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-                            className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                            title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
-                            <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
-                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privasi On' : 'Privasi Off'}</span>
-                        </button>
-
                         {/* Keyboard shortcuts floating panel */}
                         <div className="relative" ref={shortcutRef}>
-                            <button onClick={() => setIsShortcutOpen(v => !v)}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                            <button onClick={() => setIsShortcutOpen(!isShortcutOpen)}
+                                className={`hidden sm:flex h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                                 title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
                             {isShortcutOpen && (
                                 <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-11 -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[340px] sm:w-72 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
@@ -682,9 +674,22 @@ export default function TeachersPage() {
                             )}
                         </div>
 
+                        {/* Privasi toggle */}
+                        <button
+                            onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                            className={`h-9 w-9 sm:w-auto sm:px-3 rounded-lg border flex items-center justify-center sm:justify-start gap-2 transition-all active:scale-95 ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
+                            title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}
+                        >
+                            <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                                Privasi
+                            </span>
+                        </button>
+
                         {/* Add button */}
-                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-5 rounded-xl btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">
-                            <FontAwesomeIcon icon={faPlus} />{canEdit ? 'Tambah' : 'Read-only'}
+                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100">
+                            <FontAwesomeIcon icon={faPlus} />
+                            <span className="hidden sm:inline">{canEdit ? 'Tambah' : 'Read-only'}</span>
                         </button>
                     </div>
                 </div>

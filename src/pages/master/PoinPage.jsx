@@ -284,7 +284,7 @@ export default function PoinPage() {
             const { error } = await supabase.from('point_rules').delete().in('id', idsSnap)
             if (error) throw error
             addToast(`${idsSnap.length} data berhasil dihapus`, 'success')
-            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'point_rules', newData: { bulk: true, count: idsSnap.length, ids: idsSnap } })
+            await logAudit({ action: 'DELETE', source: profile?.id || 'SYSTEM', tableName: 'point_rules', oldData: { bulk: true, count: idsSnap.length, ids: idsSnap } })
             setSelectedIds([])
             setIsBulkDeleteOpen(false)
             fetchData()
@@ -331,10 +331,10 @@ export default function PoinPage() {
                 const ws = XLSX.utils.json_to_sheet(mapped); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Data Poin')
                 XLSX.writeFile(wb, `data_poin_${new Date().toISOString().slice(0, 10)}.xlsx`)
             }
-            
+
             await logAudit({
                 action: 'EXPORT',
-                source: profile?.id || 'SYSTEM',
+                source: 'OPERATIONAL',
                 tableName: 'point_rules',
                 newData: {
                     format,
@@ -429,8 +429,9 @@ export default function PoinPage() {
                                 </div>
                             )}
                         </div>
-                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-4 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
-                            <FontAwesomeIcon icon={faPlus} /> {canEdit ? 'Tambah' : 'Read-only'}
+                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100">
+                            <FontAwesomeIcon icon={faPlus} />
+                            <span className="hidden sm:inline">{canEdit ? 'Tambah' : 'Read-only'}</span>
                         </button>
                     </div>
                 </div>

@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { logAudit } from '../lib/auditLogger'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -207,6 +208,13 @@ function AvatarUpload({ profile, onAvatarChange }) {
             setImgError(false)
             onAvatarChange?.(url)
             addToast('Foto profil berhasil diupdate ✓', 'success')
+            await logAudit({
+                action: 'UPDATE',
+                tableName: 'profiles',
+                recordId: profile.id,
+                source: 'SECURITY',
+                newData: { avatar_url: url }
+            })
         } catch (err) {
             addToast('Gagal upload: ' + err.message, 'error')
         } finally {
@@ -240,6 +248,13 @@ function AvatarUpload({ profile, onAvatarChange }) {
             setImgError(false)
             onAvatarChange?.(null)
             addToast('Foto profil dihapus', 'success')
+            await logAudit({
+                action: 'UPDATE',
+                tableName: 'profiles',
+                recordId: profile.id,
+                source: 'SECURITY',
+                newData: { avatar_url: null }
+            })
         } catch (err) {
             addToast('Gagal menghapus: ' + err.message, 'error')
         } finally {
@@ -366,6 +381,15 @@ export default function SettingsPage() {
             refreshProfile?.()
             addToast('Nama berhasil diupdate ✓', 'success')
             setProfileDirty(false)
+
+            await logAudit({
+                action: 'UPDATE',
+                tableName: 'profiles',
+                recordId: profile.id,
+                source: 'SECURITY',
+                oldData: { name: profile.name },
+                newData: { name: name.trim() }
+            })
         } catch (err) {
             addToast('Gagal menyimpan: ' + err.message, 'error')
         } finally {
@@ -390,6 +414,14 @@ export default function SettingsPage() {
             if (error) throw error
             addToast('Password berhasil diubah ✓', 'success')
             setPw({ current: '', next: '', confirm: '' })
+
+            await logAudit({
+                action: 'UPDATE',
+                tableName: 'auth.users',
+                recordId: user.id,
+                source: 'SECURITY',
+                newData: { password_change: true }
+            })
         } catch (err) {
             addToast('Gagal mengubah password: ' + err.message, 'error')
         } finally {

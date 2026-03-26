@@ -512,7 +512,7 @@ export default function StudentsPage() {
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">
                             Kelola {globalStats.total} data siswa aktif dalam sistem laporan.
                         </p>
-                        <p className="hidden sm:block text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
                             Untuk pengisian awal, gunakan menu import (Excel / GSheets) agar lebih cepat dan minim salah ketik.
                         </p>
                     </div>

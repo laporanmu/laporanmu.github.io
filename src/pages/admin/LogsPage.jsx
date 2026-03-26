@@ -25,38 +25,6 @@ import * as XLSX from 'xlsx'
 import { fmtDate, fmtTime, fmtDateTime, fmtRelative } from '../../utils/formatters'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SCHEMA MIGRATION — jalankan sekali di Supabase SQL Editor
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// ALTER TABLE audit_logs
-//   ADD COLUMN IF NOT EXISTS actor_name  text,          -- snapshot nama aktor saat insert (immutable)
-//   ADD COLUMN IF NOT EXISTS actor_role  text,          -- snapshot role saat insert
-//   ADD COLUMN IF NOT EXISTS severity    text DEFAULT 'LOW' CHECK (severity IN ('LOW','MEDIUM','HIGH','CRITICAL')),
-//   ADD COLUMN IF NOT EXISTS session_id  text,          -- group aksi dalam 1 sesi browser
-//   ADD COLUMN IF NOT EXISTS changed_fields text[],     -- field apa saja yang berubah (untuk UPDATE)
-//   ADD COLUMN IF NOT EXISTS duration_ms int;           -- lama operasi (ms) untuk perf audit
-//
-// Kenapa actor_name di-denormalize?
-//   → User bisa dihapus, tapi audit trail harus tetap identifiable (forensics)
-//   → Eliminasi N+1 JOIN ke profiles setiap render
-//   → Immutable — tidak bisa di-manipulate setelah insert
-//
-// Kenapa changed_fields[]?
-//   → Trigger DB capture FULL ROW di old_data/new_data
-//   → Frontend bisa filter hanya field yang intentionally diubah user
-//   → Misal: edit wali → changed_fields=['wali_name'] → DiffViewer cukup tampil wali_name
-//
-// Kenapa severity?
-//   → Bisa alert ke Slack/email jika severity=CRITICAL (mis: hapus data raport)
-//   → Bisa filter "show me only HIGH/CRITICAL logs" untuk incident response
-//
-// UPDATE auditLogger.js — tambahkan di insert payload:
-//   actor_name: currentUser?.name || 'System',
-//   actor_role: currentUser?.role || 'unknown',
-//   changed_fields: changedFieldsArray,  // kalau bisa dihitung di caller
-//   severity: deriveSeverity(action, tableName),
-
-// ─────────────────────────────────────────────────────────────────────────────
 // SECTION 1: CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 

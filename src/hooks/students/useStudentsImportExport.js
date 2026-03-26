@@ -261,7 +261,7 @@ export function useStudentsImportExport({
             setIsImportModalOpen(true)
             addToast(`${rows.length} baris berhasil dibaca dari Google Sheets`, 'success')
             await logAudit({
-                action: 'INSERT', source: 'SYSTEM', tableName: 'students',
+                action: 'READ', source: 'SYSTEM', tableName: 'students',
                 newData: { via: 'gsheets', row_count: rows.length, url: gSheetsUrl }
             })
         } catch (err) {
