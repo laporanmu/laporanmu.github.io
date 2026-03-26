@@ -251,7 +251,7 @@ export default function AcademicYearsPage() {
                 const { data, error } = await supabase.from('academic_years').update(payload).eq('id', selectedItem.id).select()
                 if (error) throw error
                 if (!data || data.length === 0) throw new Error('Gagal mengupdate data')
-                
+
                 // Handle makeActive
                 if (formData.makeActive && !selectedItem.is_active) {
                     await supabase.from('academic_years').update({ is_active: false }).neq('id', selectedItem.id)
@@ -266,7 +266,7 @@ export default function AcademicYearsPage() {
                 const { data, error } = await supabase.from('academic_years').insert({ ...payload, is_active: false }).select()
                 if (error) throw error
                 if (!data || data.length === 0) throw new Error('Gagal menambahkan data')
-                
+
                 if (formData.makeActive && data[0]?.id) {
                     await supabase.from('academic_years').update({ is_active: false }).neq('id', data[0].id)
                     await supabase.from('academic_years').update({ is_active: true }).eq('id', data[0].id)
