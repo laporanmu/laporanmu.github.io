@@ -73,11 +73,11 @@ export default function DashboardPage() {
     const [stats, setStats] = useState({
         totalStudents: 0,
         todayReports: 0,
-        weekViolations: 0,
+        weekPoin: 0,
         weekAchievements: 0,
         trendStudents: '+0',
         trendReports: '+0',
-        trendViolations: '0%',
+        trendPoin: '0%',
         trendAchievements: '0%',
     })
     const [chartData, setChartData] = useState([]) // [{name, pelanggaran, prestasi}]
@@ -258,11 +258,11 @@ export default function DashboardPage() {
                 setStats({
                     totalStudents: studentCount || 0,
                     todayReports: todayReportCount || 0,
-                    weekViolations: vioThis,
+                    weekPoin: vioThis,
                     weekAchievements: achThis,
                     trendStudents: `${studentCount || 0} total`,
                     trendReports: 'hari ini',
-                    trendViolations: `${formatTrend(vioThis, vioPrev)} minggu ini`,
+                    trendPoin: `${formatTrend(vioThis, vioPrev)} minggu ini`,
                     trendAchievements: `${formatTrend(achThis, achPrev)} minggu ini`,
                 })
 
@@ -395,9 +395,9 @@ export default function DashboardPage() {
         {
             icon: faExclamationTriangle,
             label: 'Pelanggaran',
-            value: loading ? '…' : String(stats.weekViolations),
-            trend: stats.trendViolations,
-            trendUp: !stats.trendViolations.startsWith('+'),
+            value: loading ? '…' : String(stats.weekPoin),
+            trend: stats.trendPoin,
+            trendUp: !stats.trendPoin.startsWith('+'),
             borderColor: 'border-t-red-500',
             iconBg: 'bg-red-500/10 text-red-500',
         },

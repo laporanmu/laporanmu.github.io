@@ -27,16 +27,16 @@ import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
 const CATEGORIES = ['Kedisiplinan', 'Akademik', 'Tata Tertib', 'Sikap', 'Prestasi', 'Lainnya']
-const LS_COLS = 'violations_columns'
-const LS_PAGE_SIZE = 'violations_page_size'
+const LS_COLS = 'Poin_columns'
+const LS_PAGE_SIZE = 'Poin_page_size'
 
 
 
 export default function PoinPage() {
     const { addToast } = useToast()
     const { profile } = useAuth()
-    const { enabled: canEdit } = useFlag('access.teacher_violations')
-    const [poin, setViolations] = useState([])
+    const { enabled: canEdit } = useFlag('access.teacher_Poin')
+    const [poin, setPoin] = useState([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
@@ -107,7 +107,7 @@ export default function PoinPage() {
             const { data, error } = await supabase.from('point_rules').select('*').order('name')
             if (error) throw error
             if (data) {
-                setViolations(data)
+                setPoin(data)
                 const s = {
                     total: data.length,
                     poin: data.filter(v => v.is_negative).length,
@@ -182,7 +182,7 @@ export default function PoinPage() {
     }, [isAnyModalOpen, fetchData])
 
     // Filter & Sort Logic
-    const filteredViolations = useMemo(() => {
+    const filteredPoin = useMemo(() => {
         let result = poin.filter(v => {
             const q = debouncedSearch.toLowerCase()
             const matchSearch = !q || v.name.toLowerCase().includes(q) || (v.description || '').toLowerCase().includes(q)
@@ -198,9 +198,9 @@ export default function PoinPage() {
         return result
     }, [poin, debouncedSearch, filterCategory, filterType, filterStatus, filterExtreme, sortBy])
 
-    const totalRows = filteredViolations.length
+    const totalRows = filteredPoin.length
 
-    const pagedViolations = filteredViolations.slice((page - 1) * pageSize, page * pageSize)
+    const pagedPoin = filteredPoin.slice((page - 1) * pageSize, page * pageSize)
 
     useEffect(() => { setPage(1) }, [debouncedSearch, filterCategory, filterType, filterStatus, filterExtreme])
 
@@ -294,10 +294,10 @@ export default function PoinPage() {
 
     const toggleSelect = id => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
     const toggleSelectAll = () => {
-        const ids = pagedViolations.map(v => v.id)
+        const ids = pagedPoin.map(v => v.id)
         setSelectedIds(prev => ids.every(id => prev.includes(id)) ? prev.filter(id => !ids.includes(id)) : [...new Set([...prev, ...ids])])
     }
-    const allSelected = pagedViolations.length > 0 && pagedViolations.every(v => selectedIds.includes(v.id))
+    const allSelected = pagedPoin.length > 0 && pagedPoin.every(v => selectedIds.includes(v.id))
 
     // Points Badge Helper
     const getPointStyle = (val) => {
@@ -718,7 +718,7 @@ export default function PoinPage() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ) : pagedViolations.map(violation => (
+                                        ) : pagedPoin.map(violation => (
                                             <tr key={violation.id} className="hover:bg-[var(--color-surface-alt)]/30 transition-all group">
                                                 <td className="px-6 py-4 w-16 text-center"><input type="checkbox" checked={selectedIds.includes(violation.id)} onChange={() => toggleSelect(violation.id)} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] cursor-pointer" /></td>
                                                 <td className="px-6 py-4">
@@ -784,7 +784,7 @@ export default function PoinPage() {
                                             Reset Semua Filter
                                         </button>
                                     </div>
-                                ) : pagedViolations.map(v => (
+                                ) : pagedPoin.map(v => (
                                     <div key={v.id} className="p-4 bg-[var(--color-surface)]">
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             <div className="flex items-center gap-3">
