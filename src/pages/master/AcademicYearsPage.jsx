@@ -40,7 +40,7 @@ function getPortalContainer(id) {
 }
 
 export default function AcademicYearsPage() {
-    const { addToast } = useToast()
+    const { addToast, addUndoToast } = useToast()
     const { profile } = useAuth()
     const { enabled: canEdit } = useFlag('access.teacher_academic')
 
@@ -105,9 +105,6 @@ export default function AcademicYearsPage() {
     const [itemToDelete, setItemToDelete] = useState(null)
     const [formData, setFormData] = useState({ name: '', semester: 'Ganjil', startDate: '', endDate: '', makeActive: false })
     const [isDuplicateName, setIsDuplicateName] = useState(false)
-    // Undo archive
-    const [undoItem, setUndoItem] = useState(null)
-    const undoTimerRef = useRef(null)
 
     // ── Fetch ────────────────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -337,18 +334,23 @@ export default function AcademicYearsPage() {
     const handleDeleteConfirm = async () => {
         if (!itemToDelete) return
         setSubmitting(true)
+        const archived = itemToDelete
         try {
-            const { data, error } = await supabase.from('academic_years').update({ deleted_at: new Date().toISOString() }).eq('id', itemToDelete.id).select()
+            const { data, error } = await supabase.from('academic_years').update({ deleted_at: new Date().toISOString() }).eq('id', archived.id).select()
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal mengarsipkan: periksa RLS policy di Supabase')
-            addToast('Tahun pelajaran diarsipkan', 'success')
-            await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: itemToDelete.id, oldData: itemToDelete, newData: { ...itemToDelete, deleted_at: new Date().toISOString() } })
-            // Undo: simpan item, hilang otomatis setelah 6 detik
-            if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
-            setUndoItem(itemToDelete)
-            undoTimerRef.current = setTimeout(() => setUndoItem(null), 6000)
+            await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: archived.id, oldData: archived, newData: { ...archived, deleted_at: new Date().toISOString() } })
             setIsDeleteModalOpen(false)
             fetchData()
+            addUndoToast(
+                `${archived.name} ${archived.semester} diarsipkan.`,
+                async () => {
+                    await supabase.from('academic_years').update({ deleted_at: null }).eq('id', archived.id)
+                    addToast('Berhasil dipulihkan', 'success')
+                    fetchData()
+                },
+                6000
+            )
         } catch (err) { addToast(err.message || 'Gagal menghapus', 'error') }
         finally { setSubmitting(false); setItemToDelete(null) }
     }
@@ -363,16 +365,6 @@ export default function AcademicYearsPage() {
             fetchArchived(); fetchData()
         } catch (err) { addToast(err.message || 'Gagal memulihkan', 'error') }
     }
-
-    const handleUndoArchive = async () => {
-        if (!undoItem) return
-        if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
-        setUndoItem(null)
-        await handleRestore(undoItem)
-    }
-
-    // Cleanup undo timer on unmount
-    useEffect(() => () => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current) }, [])
 
     const handlePermanentDelete = async (item) => {
         try {
@@ -480,7 +472,6 @@ export default function AcademicYearsPage() {
     // ══════════════════════════════════════════════════════════════════════════
     return (
         <DashboardLayout title="Tahun Pelajaran">
-            {/* TAMBAH INI: */}
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
                 {/* Bulk Action Bar */}
                 {selectedIds.length > 0 && (
@@ -493,30 +484,10 @@ export default function AcademicYearsPage() {
                     </div>
                 )}
 
-                {/* Undo Archive Banner */}
-                {undoItem && (
-                    <div className="px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="flex items-center gap-2.5">
-                            <FontAwesomeIcon icon={faBoxArchive} className="text-amber-500 text-xs shrink-0" />
-                            <p className="text-[11px] font-bold text-amber-700">
-                                <span className="font-black">{undoItem.name} {undoItem.semester}</span> diarsipkan.
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <button onClick={handleUndoArchive} className="h-7 px-3 rounded-lg bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all">
-                                Undo
-                            </button>
-                            <button onClick={() => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current); setUndoItem(null) }} className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-500/20 transition-all">
-                                <FontAwesomeIcon icon={faXmark} className="text-xs" />
-                            </button>
-                        </div>
-                    </div>
-                )}
-
                 {/* Read-only Banner */}
                 {!canEdit && (
                     <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
-                        <FontAwesomeIcon icon={faTrash} className="text-rose-500 shrink-0 text-xs" />
+                        <FontAwesomeIcon icon={faCheckCircle} className="text-rose-500 shrink-0 text-xs" />
                         <p className="text-[11px] font-bold text-rose-600">Mode Read-only — Edit tahun pelajaran dinonaktifkan oleh administrator.</p>
                     </div>
                 )}
@@ -995,162 +966,183 @@ export default function AcademicYearsPage() {
 
                 {/* ── Form Modal ── */}
                 <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setFormErrors({}); setIsDuplicateName(false) }} title={selectedItem ? 'Update Tahun Pelajaran' : 'Tahun Pelajaran Baru'} size="sm" mobileVariant="bottom-sheet">
-                    <div className="space-y-5">
+                    <div className="space-y-4">
+                        {/* Sub-header text */}
+                        <p className="text-[10px] text-[var(--color-text-muted)] font-bold opacity-70 leading-relaxed px-0.5 -mt-2">
+                            {selectedItem ? 'Perbarui detail periode tahun pelajaran ini.' : 'Buat periode tahun pelajaran baru untuk sistem.'}
+                        </p>
 
-                        {/* ── Nama Tahun Pelajaran ── */}
-                        <div>
-                            <label className="block text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">
-                                Tahun Pelajaran <span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={e => {
-                                        const val = e.target.value
-                                        setFormData({ ...formData, name: val })
-                                        setFormErrors(p => ({ ...p, name: '' }))
-                                        // Cek duplikat realtime
-                                        const trimmed = val.trim()
-                                        const isDupe = years.some(y =>
-                                            y.name === trimmed &&
-                                            y.semester === formData.semester &&
-                                            (!selectedItem || y.id !== selectedItem.id)
-                                        )
-                                        setIsDuplicateName(isDupe)
-                                    }}
-                                    placeholder="Contoh: 2024/2025"
-                                    maxLength={9}
-                                    className={`input-field font-bold text-sm h-11 w-full pr-24 ${formErrors.name ? 'border-red-500 ring-1 ring-red-500' : isDuplicateName ? 'border-amber-400 ring-1 ring-amber-400' : ''}`}
-                                />
-                                {/* Format badge hint */}
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-[var(--color-text-muted)] opacity-50 uppercase tracking-widest pointer-events-none font-mono">
-                                    YYYY/YYYY
-                                </span>
-                            </div>
-                            {formErrors.name && (
-                                <p className="mt-1.5 ml-1 text-[10px] font-bold text-red-500 flex items-center gap-1">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />{formErrors.name}
-                                </p>
-                            )}
-                            {!formErrors.name && isDuplicateName && (
-                                <p className="mt-1.5 ml-1 text-[10px] font-bold text-amber-500 flex items-center gap-1">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />
-                                    Kombinasi nama &amp; semester ini sudah ada
-                                </p>
-                            )}
-                        </div>
-
-                        {/* ── Semester ── */}
-                        <div>
-                            <label className="block text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Semester</label>
-                            <div className="flex p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] gap-1">
-                                {['Ganjil', 'Genap'].map(s => (
-                                    <button key={s} type="button"
-                                        onClick={() => {
-                                            setFormData({ ...formData, semester: s })
-                                            // Re-check duplikat dengan semester baru
+                        <div className="grid grid-cols-12 gap-3">
+                            {/* ── Nama Tahun Pelajaran ── */}
+                            <div className="col-span-12 sm:col-span-7">
+                                <label className="block text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-1.5 ml-1 opacity-60">
+                                    Tahun Pelajaran <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={e => {
+                                            const val = e.target.value
+                                            setFormData({ ...formData, name: val })
+                                            setFormErrors(p => ({ ...p, name: '' }))
+                                            const trimmed = val.trim()
                                             const isDupe = years.some(y =>
-                                                y.name === formData.name.trim() &&
-                                                y.semester === s &&
+                                                y.name === trimmed &&
+                                                y.semester === formData.semester &&
                                                 (!selectedItem || y.id !== selectedItem.id)
                                             )
                                             setIsDuplicateName(isDupe)
                                         }}
-                                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${formData.semester === s ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                        {s}
-                                    </button>
-                                ))}
+                                        placeholder="2024/2025"
+                                        maxLength={9}
+                                        className={`w-full px-3.5 h-9 rounded-xl border bg-[var(--color-surface-alt)]/20 focus:ring-4 focus:ring-[var(--color-primary)]/10 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold placeholder:opacity-30 ${formErrors.name ? 'border-red-500' : isDuplicateName ? 'border-amber-400' : 'border-[var(--color-border)]'}`}
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] font-black text-[var(--color-text-muted)] opacity-30 uppercase tracking-widest pointer-events-none font-mono">
+                                        YYYY/YYYY
+                                    </span>
+                                </div>
+                                {formErrors.name && (
+                                    <p className="mt-1 ml-1 text-[9px] font-bold text-red-500 flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
+                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-[8px]" />{formErrors.name}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* ── Semester ── */}
+                            <div className="col-span-12 sm:col-span-5">
+                                <label className="block text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-1.5 ml-1 opacity-60">Semester</label>
+                                <div className="flex p-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] h-9">
+                                    {['Ganjil', 'Genap'].map(s => (
+                                        <button key={s} type="button"
+                                            onClick={() => {
+                                                setFormData({ ...formData, semester: s })
+                                                const isDupe = years.some(y =>
+                                                    y.name === formData.name.trim() &&
+                                                    y.semester === s &&
+                                                    (!selectedItem || y.id !== selectedItem.id)
+                                                )
+                                                setIsDuplicateName(isDupe)
+                                            }}
+                                            className={`flex-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${formData.semester === s ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                            {s}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
+                        {/* Duplicates Alert */}
+                        {isDuplicateName && !formErrors.name && (
+                            <div className="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/5 text-amber-700 flex gap-2.5 animate-in fade-in slide-in-from-top-1">
+                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 text-[10px] mt-0.5" />
+                                <p className="text-[10px] font-bold leading-tight">Nama & semester ini sudah ada dalam sistem.</p>
+                            </div>
+                        )}
+
                         {/* ── Tanggal ── */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="block text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Tanggal Mulai <span className="text-red-500">*</span></label>
+                                <label className="block text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-1.5 ml-1 opacity-60">Mulai <span className="text-red-500">*</span></label>
                                 <input
                                     type="date"
                                     value={formData.startDate}
-                                    onChange={e => { setFormData({ ...formData, startDate: e.target.value }); setFormErrors(p => ({ ...p, startDate: '' })) }}
-                                    className={`input-field font-bold text-sm h-11 w-full ${formErrors.startDate ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                    onChange={e => { setFormData({ ...formData, startDate: e.target.value }); setFormErrors(p => ({ ...p, startDate: '', endDate: '' })) }}
+                                    className={`w-full px-3 h-9 rounded-xl border bg-[var(--color-surface-alt)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold ${formErrors.startDate ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[var(--color-border)]'}`}
                                 />
-                                {formErrors.startDate && <p className="mt-1.5 text-[10px] font-bold text-red-500 flex items-center gap-1"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />{formErrors.startDate}</p>}
+                                {formErrors.startDate && <p className="mt-1 text-[9px] font-bold text-red-500 flex items-center gap-1 animate-in fade-in slide-in-from-top-1"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[8px]" />{formErrors.startDate}</p>}
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2 ml-1">Tanggal Selesai <span className="text-red-500">*</span></label>
+                                <label className="block text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-1.5 ml-1 opacity-60">Selesai <span className="text-red-500">*</span></label>
                                 <input
                                     type="date"
                                     value={formData.endDate}
                                     onChange={e => { setFormData({ ...formData, endDate: e.target.value }); setFormErrors(p => ({ ...p, endDate: '' })) }}
-                                    className={`input-field font-bold text-sm h-11 w-full ${formErrors.endDate ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                    className={`w-full px-3 h-9 rounded-xl border bg-[var(--color-surface-alt)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-bold ${formErrors.endDate ? 'border-red-500 ring-2 ring-red-500/10' : 'border-[var(--color-border)]'}`}
                                 />
-                                {formErrors.endDate && <p className="mt-1.5 text-[10px] font-bold text-red-500 flex items-center gap-1"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />{formErrors.endDate}</p>}
+                                {formErrors.endDate && !formErrors.endDate.includes('tumpang tindih') && (
+                                    <p className="mt-1 text-[9px] font-bold text-red-500 flex items-center gap-1 animate-in fade-in slide-in-from-top-1"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[8px]" />{formErrors.endDate}</p>
+                                )}
                             </div>
                         </div>
 
-                        {/* ── Live Duration Preview ── */}
-                        {formData.startDate && formData.endDate && formData.endDate > formData.startDate && (() => {
-                            const s = new Date(formData.startDate), e = new Date(formData.endDate)
-                            const months = (e.getFullYear() - s.getFullYear()) * 12 + e.getMonth() - s.getMonth()
-                            const days = Math.round((e - s) / (1000 * 60 * 60 * 24))
-                            return (
-                                <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/15">
-                                    <FontAwesomeIcon icon={faCalendar} className="text-[var(--color-primary)] text-xs shrink-0" />
-                                    <p className="text-[11px] font-bold text-[var(--color-text-muted)]">
-                                        Durasi semester: <span className="font-black text-[var(--color-primary)]">{months} bulan</span>
-                                        <span className="opacity-50 ml-1">({days} hari)</span>
-                                    </p>
-                                </div>
-                            )
-                        })()}
+                        {/* ── Overlap & Duration Compact Banner ── */}
+                        {((formData.startDate && formData.endDate) || formErrors.endDate?.includes('tumpang tindih')) && (
+                            <div className="space-y-2">
+                                {formErrors.endDate?.includes('tumpang tindih') ? (
+                                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 animate-in zoom-in-95">
+                                        <div className="w-5 h-5 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
+                                            <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-600 text-[10px]" />
+                                        </div>
+                                        <p className="text-[10px] font-black text-amber-700 leading-tight">
+                                            {formErrors.endDate}
+                                        </p>
+                                    </div>
+                                ) : (formData.startDate && formData.endDate && formData.endDate > formData.startDate) && (
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/15">
+                                        <FontAwesomeIcon icon={faCalendar} className="text-[var(--color-primary)] text-[10px] opacity-60" />
+                                        <p className="text-[10px] font-bold text-[var(--color-text-muted)]">
+                                            Estimasi Durasi: <span className="font-black text-[var(--color-primary)]">{getDuration(formData.startDate, formData.endDate)}</span>
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                        {/* ── Jadikan Aktif Toggle ── */}
-                        <button
-                            type="button"
+                        {/* ── Status Aktif Toggle ── */}
+                        <div
                             onClick={() => setFormData(p => ({ ...p, makeActive: !p.makeActive }))}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${formData.makeActive ? 'bg-emerald-500/8 border-emerald-500/30' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] hover:border-[var(--color-primary)]/30'}`}
+                            className={`group flex items-center justify-between px-3.5 py-2.5 rounded-2xl border transition-all cursor-pointer select-none ${formData.makeActive ? 'bg-emerald-500/8 border-emerald-500/30' : 'bg-[var(--color-surface-alt)]/40 border-[var(--color-border)] hover:border-[var(--color-primary)]/30'}`}
                         >
-                            <div className="text-left">
-                                <p className={`text-[11px] font-black ${formData.makeActive ? 'text-emerald-600' : 'text-[var(--color-text)]'}`}>
-                                    {selectedItem ? 'Jadikan tahun aktif' : 'Langsung jadikan tahun aktif'}
-                                </p>
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-70 mt-0.5 uppercase tracking-wider">
-                                    {formData.makeActive ? 'Tahun lain akan dinonaktifkan otomatis' : 'Bisa diaktifkan nanti dari tabel'}
-                                </p>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${formData.makeActive ? 'bg-emerald-500/20 text-emerald-600' : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                    <FontAwesomeIcon icon={faCircleCheck} className="text-xs" />
+                                </div>
+                                <div>
+                                    <p className={`text-[11px] font-black ${formData.makeActive ? 'text-emerald-700' : 'text-[var(--color-text)]'}`}>Jadikan Tahun Aktif</p>
+                                    <p className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-60 mt-0.5 uppercase tracking-tight">Otomatis menonaktifkan tahun lain</p>
+                                </div>
                             </div>
-                            <div className={`relative w-10 h-5.5 rounded-full transition-all shrink-0 ${formData.makeActive ? 'bg-emerald-500' : 'bg-[var(--color-border)]'}`}
-                                style={{ height: '22px' }}>
-                                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${formData.makeActive ? 'left-[22px]' : 'left-0.5'}`} />
+                            <div className={`relative w-8 h-4.5 rounded-full transition-all shrink-0 ${formData.makeActive ? 'bg-emerald-500' : 'bg-[var(--color-border)]'}`}>
+                                <div className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all duration-200 ${formData.makeActive ? 'left-[16px]' : 'left-0.5'}`} />
                             </div>
-                        </button>
+                        </div>
 
                         {/* ── Actions ── */}
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex gap-2.5 pt-1">
                             <button type="button" onClick={() => { setIsModalOpen(false); setFormErrors({}); setIsDuplicateName(false) }}
-                                className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">
+                                className="h-10 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">
                                 Batal
                             </button>
                             <button type="button" onClick={handleSubmit} disabled={submitting || isDuplicateName}
-                                className="h-12 flex-[1.5] rounded-xl btn-primary font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : null}
-                                {selectedItem ? 'Update' : 'Simpan'}
+                                className="h-10 flex-[1.5] rounded-xl btn-primary font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (selectedItem ? 'Update Data' : 'Simpan Tahun')}
                             </button>
                         </div>
                     </div>
                 </Modal>
 
                 {/* ── Delete/Archive Modal ── */}
-                <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Arsipkan Tahun Pelajaran" size="sm" mobileVariant="bottom-sheet">
-                    <div className="space-y-6">
-                        <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-4 text-red-500 border border-red-500/20">
-                            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30 animate-pulse"><FontAwesomeIcon icon={faBoxArchive} /></div>
-                            <div><h3 className="text-sm font-black uppercase tracking-wider italic">Konfirmasi Arsip</h3><p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest">Data bisa dipulihkan dari arsip.</p></div>
+                <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Konfirmasi Arsip" size="sm" mobileVariant="bottom-sheet">
+                    <div className="space-y-4">
+                        <div className="p-3 bg-amber-500/10 rounded-2xl flex items-center gap-3 text-amber-600 border border-amber-500/20">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 border border-amber-500/30">
+                                <FontAwesomeIcon icon={faBoxArchive} className="text-sm" />
+                            </div>
+                            <div>
+                                <p className="text-[11px] font-black uppercase tracking-[0.1em]">Pindahkan ke Arsip?</p>
+                                <p className="text-[10px] font-bold opacity-70 mt-0.5">Dapat dipulihkan dari menu arsip.</p>
+                            </div>
                         </div>
-                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">Arsipkan <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20 italic">{itemToDelete?.name} {itemToDelete?.semester}</span>?</p>
-                        <div className="flex gap-3 pt-2">
-                            <button onClick={() => setIsDeleteModalOpen(false)} className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                            <button onClick={handleDeleteConfirm} disabled={submitting} className="h-12 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Arsipkan'}
+                        <div className="px-1">
+                            <p className="text-xs text-[var(--color-text)] leading-relaxed font-medium">
+                                Tahun Pelajaran <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20 inline-block">{itemToDelete?.name} {itemToDelete?.semester}</span> akan diarsipkan. Laporan terkait tetap tersimpan dengan aman.
+                            </p>
+                        </div>
+                        <div className="flex gap-2.5">
+                            <button onClick={() => setIsDeleteModalOpen(false)} className="h-10 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
+                            <button onClick={handleDeleteConfirm} disabled={submitting} className="h-10 flex-[1.5] rounded-xl bg-amber-500 hover:brightness-110 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faBoxArchive} className="text-[10px]" />Arsipkan</>}
                             </button>
                         </div>
                     </div>
@@ -1158,40 +1150,42 @@ export default function AcademicYearsPage() {
 
                 {/* ── Bulk Delete Modal ── */}
                 <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title="Arsipkan Massal" size="sm" mobileVariant="bottom-sheet">
-                    <div className="space-y-6">
-                        <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-4 text-red-500 border border-red-500/20">
-                            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl"><FontAwesomeIcon icon={faBoxArchive} /></div>
-                            <div><h3 className="text-sm font-black uppercase tracking-wider">Arsipkan {selectedIds.length} Data</h3><p className="text-[10px] font-bold opacity-70 mt-1">Data bisa dipulihkan kembali.</p></div>
+                    <div className="space-y-4">
+                        <div className="p-3 bg-red-500/10 rounded-2xl flex items-center gap-3 text-red-500 border border-red-500/20">
+                            <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30"><FontAwesomeIcon icon={faBoxArchive} className="text-sm" /></div>
+                            <div><p className="text-[11px] font-black uppercase tracking-wider">Arsipkan {selectedIds.length} Data</p><p className="text-[10px] font-bold opacity-70 mt-0.5">Data bisa dipulihkan kembali.</p></div>
                         </div>
                         <div className="flex gap-3">
-                            <button onClick={() => setIsBulkDeleteOpen(false)} className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                            <button onClick={handleBulkDelete} disabled={submitting} className="h-12 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : `Arsipkan ${selectedIds.length} Data`}
+                            <button onClick={() => setIsBulkDeleteOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
+                            <button onClick={handleBulkDelete} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faBoxArchive} className="text-[10px]" />Arsipkan {selectedIds.length} Data</>}
                             </button>
                         </div>
                     </div>
                 </Modal>
 
                 {/* ── Nonaktifkan Confirm Modal ── */}
-                <Modal isOpen={isDeactivateConfirmOpen} onClose={() => { setIsDeactivateConfirmOpen(false); setItemToDeactivate(null) }} title="Nonaktifkan Tahun Pelajaran" size="sm" mobileVariant="bottom-sheet">
-                    <div className="space-y-6">
-                        <div className="p-4 bg-amber-500/10 rounded-2xl flex items-center gap-4 text-amber-600 border border-amber-500/20">
-                            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 text-xl border border-amber-500/30">
-                                <FontAwesomeIcon icon={faTriangleExclamation} />
+                <Modal isOpen={isDeactivateConfirmOpen} onClose={() => { setIsDeactivateConfirmOpen(false); setItemToDeactivate(null) }} title="Nonaktifkan Periode" size="sm" mobileVariant="bottom-sheet">
+                    <div className="space-y-4">
+                        <div className="p-3 bg-amber-500/10 rounded-2xl flex items-center gap-3 text-amber-600 border border-amber-500/20">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 border border-amber-500/30">
+                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-sm" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-black uppercase tracking-wider">Konfirmasi Nonaktifkan</h3>
-                                <p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest">Laporan & presensi akan tanpa acuan aktif.</p>
+                                <p className="text-[11px] font-black uppercase tracking-[0.1em]">Konfirmasi Nonaktifkan</p>
+                                <p className="text-[10px] font-bold opacity-70 mt-0.5">Laporan & presensi akan tanpa acuan aktif.</p>
                             </div>
                         </div>
-                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">
-                            Nonaktifkan <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20 italic">{itemToDeactivate?.name} {itemToDeactivate?.semester}</span>?
-                            <span className="block text-[10px] text-[var(--color-text-muted)] mt-2 opacity-70 font-medium leading-relaxed">Seluruh sistem akan berjalan tanpa tahun pelajaran aktif sampai kamu mengaktifkan yang lain.</span>
-                        </p>
-                        <div className="flex gap-3 pt-2">
-                            <button onClick={() => { setIsDeactivateConfirmOpen(false); setItemToDeactivate(null) }} className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                            <button onClick={handleDeactivateConfirm} disabled={submitting} className="h-12 flex-[1.5] rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Nonaktifkan'}
+                        <div className="px-1">
+                            <p className="text-xs text-[var(--color-text)] leading-relaxed font-medium">
+                                Nonaktifkan <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20 inline-block">{itemToDeactivate?.name} {itemToDeactivate?.semester}</span>?
+                                <span className="block text-[10px] text-[var(--color-text-muted)] mt-1.5 opacity-70 font-medium leading-relaxed">Seluruh sistem akan berjalan tanpa acuan tahun aktif sampai kamu mengaktifkan yang lain.</span>
+                            </p>
+                        </div>
+                        <div className="flex gap-2.5">
+                            <button onClick={() => { setIsDeactivateConfirmOpen(false); setItemToDeactivate(null) }} className="h-10 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
+                            <button onClick={handleDeactivateConfirm} disabled={submitting} className="h-10 flex-[1.5] rounded-xl bg-amber-500 hover:brightness-110 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Nonaktifkan SEKARANG'}
                             </button>
                         </div>
                     </div>
@@ -1234,24 +1228,24 @@ export default function AcademicYearsPage() {
 
                 {/* ── Hapus Permanen Modal ── */}
                 <Modal isOpen={isPermanentDeleteOpen} onClose={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} title="Hapus Permanen" size="sm" mobileVariant="bottom-sheet">
-                    <div className="space-y-6">
-                        <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-4 text-red-500 border border-red-500/20">
-                            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30 animate-pulse">
-                                <FontAwesomeIcon icon={faTrash} />
+                    <div className="space-y-4">
+                        <div className="p-3 bg-red-500/10 rounded-2xl flex items-center gap-3 text-red-500 border border-red-500/20">
+                            <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30 animate-pulse">
+                                <FontAwesomeIcon icon={faTrash} className="text-sm" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-black uppercase tracking-wider italic">Hapus Permanen</h3>
-                                <p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest">Tindakan ini tidak dapat dibatalkan.</p>
+                                <p className="text-[11px] font-black uppercase tracking-wider">Hapus Permanen</p>
+                                <p className="text-[10px] font-bold opacity-70 mt-0.5">Tindakan ini tidak dapat dibatalkan.</p>
                             </div>
                         </div>
-                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">
-                            Yakin hapus permanen <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20 italic">{itemToPermanentDelete?.name} {itemToPermanentDelete?.semester}</span>?
-                            <span className="block text-[10px] text-[var(--color-text-muted)] mt-2 opacity-60">Data tidak dapat dipulihkan kembali setelah dihapus.</span>
+                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-medium px-1">
+                            Yakin hapus permanen <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToPermanentDelete?.name} {itemToPermanentDelete?.semester}</span>?
+                            <span className="block text-[10px] text-[var(--color-text-muted)] mt-1.5 opacity-60">Data tidak dapat dipulihkan kembali setelah dihapus.</span>
                         </p>
-                        <div className="flex gap-3 pt-2">
-                            <button onClick={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                            <button onClick={() => handlePermanentDelete(itemToPermanentDelete)} disabled={submitting} className="h-12 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Hapus Permanen'}
+                        <div className="flex gap-3">
+                            <button onClick={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
+                            <button onClick={() => handlePermanentDelete(itemToPermanentDelete)} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faTrash} className="text-[10px]" />Hapus Permanen</>}
                             </button>
                         </div>
                     </div>
