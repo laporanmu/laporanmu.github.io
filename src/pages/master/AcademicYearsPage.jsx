@@ -4,9 +4,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faPlus, faEdit, faTrash, faSearch, faSpinner, faCalendar,
     faCheckCircle, faXmark, faSliders, faBoxArchive, faRotateLeft,
-    faKeyboard, faChevronLeft, faChevronRight,
+    faKeyboard, faChevronLeft, faChevronRight, faGrip,
     faAnglesLeft, faAnglesRight, faDownload,
-    faGraduationCap, faLayerGroup, faCircleCheck, faTriangleExclamation,
+    faGraduationCap, faLayerGroup, faCircleCheck, faCheck,
+    faClock, faCalendarDay, faTableList,
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
@@ -84,6 +85,9 @@ export default function AcademicYearsPage() {
     const colMenuRef = useRef(null)
 
     // UI
+    const [mobileView, setMobileView] = useState(() => {
+        try { return localStorage.getItem('ay_mobile_view') || 'card' } catch { return 'card' }
+    }) // 'card' | 'list'
     // Privasi mode not needed — academic year data is public info
     const [isShortcutOpen, setIsShortcutOpen] = useState(false)
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
@@ -817,14 +821,16 @@ export default function AcademicYearsPage() {
                                                             {year.name?.slice(2, 4) || '??'}
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-black text-[var(--color-text)]">{year.name}</p>
-                                                            {year.is_active && (
-                                                                <span className="text-[9px] font-black text-[var(--color-primary)] uppercase tracking-widest flex items-center gap-1">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] inline-block animate-pulse"></span>
-                                                                    Sedang Aktif
-                                                                </span>
-                                                            )}
-                                                            {(() => { const ts = getTimeStatus(year.start_date, year.end_date); return ts ? <span className={`text-[9px] font-black uppercase tracking-widest ${ts.textCls}`}>{ts.label}</span> : null })()}
+                                                            <p className="text-sm font-black text-[var(--color-text)] leading-tight">{year.name}</p>
+                                                            <div className="flex items-center gap-1.5 mt-1">
+                                                                {year.is_active && (
+                                                                    <span className="text-[8px] font-black text-[var(--color-primary)] uppercase tracking-widest flex items-center gap-1 bg-[var(--color-primary)]/10 px-1.5 py-0.5 rounded-full border border-[var(--color-primary)]/20">
+                                                                        <span className="w-1 h-1 rounded-full bg-[var(--color-primary)] inline-block animate-pulse"></span>
+                                                                        Aktif
+                                                                    </span>
+                                                                )}
+                                                                {(() => { const ts = getTimeStatus(year.start_date, year.end_date); return ts ? <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full border ${ts.cls.replace(/bg-.*?\s/, '').replace('border-', 'border ')}`}>{ts.label}</span> : null })()}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -837,41 +843,42 @@ export default function AcademicYearsPage() {
                                                 )}
                                                 {visibleCols.period && (
                                                     <td className="px-6 py-4">
-                                                        <p className="text-xs font-bold text-[var(--color-text)]">{formatDate(year.start_date)}</p>
-                                                        <p className="text-[10px] text-[var(--color-text-muted)] font-medium">s/d {formatDate(year.end_date)}</p>
+                                                        <div className="flex items-center gap-2 text-xs font-bold text-[var(--color-text)]">
+                                                            <FontAwesomeIcon icon={faCalendar} className="opacity-30 text-[10px]" />
+                                                            <span>{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
+                                                        </div>
                                                     </td>
                                                 )}
                                                 {visibleCols.duration && (
                                                     <td className="px-6 py-4 text-center">
-                                                        <span className="text-xs font-bold text-[var(--color-text-muted)]">{getDuration(year.start_date, year.end_date)}</span>
+                                                        <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest bg-[var(--color-surface-alt)] px-2.5 py-1 rounded-lg border border-[var(--color-border)]/50">{getDuration(year.start_date, year.end_date)}</span>
                                                     </td>
                                                 )}
                                                 {visibleCols.status && (
                                                     <td className="px-6 py-4 text-center">
                                                         {year.is_active ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Aktif
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500 text-white shadow-sm shadow-emerald-500/20">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse"></span>Aktif
                                                             </span>
                                                         ) : (
                                                             <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
-                                                                Tidak Aktif
+                                                                Nonaktif
                                                             </span>
                                                         )}
                                                     </td>
                                                 )}
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-1">
-                                                        {/* Toggle aktif/nonaktif */}
                                                         {canEdit && (year.is_active ? (
-                                                            <button onClick={() => handleDeactivate(year)} title="Nonaktifkan" disabled={submitting} className="h-8 px-2.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all whitespace-nowrap disabled:opacity-50">
+                                                            <button onClick={() => handleDeactivate(year)} title="Nonaktifkan" disabled={submitting} className="h-8 px-3 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all whitespace-nowrap disabled:opacity-50">
                                                                 Nonaktifkan
                                                             </button>
                                                         ) : (
-                                                            <button onClick={() => handleSetActive(year)} title="Aktifkan" disabled={submitting} className="h-8 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-50">
+                                                            <button onClick={() => handleSetActive(year)} title="Aktifkan" disabled={submitting} className="h-8 px-3 rounded-lg bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-primary)]/90 transition-all shadow-sm active:scale-95 disabled:opacity-50">
                                                                 Aktifkan
                                                             </button>
                                                         ))}
-                                                        {/* Duplicate */}
+                                                        <div className="w-px h-4 bg-[var(--color-border)] mx-1 opacity-50" />
                                                         {canEdit && (
                                                             <button onClick={() => handleDuplicate(year)} title="Duplikasi" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all">
                                                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
@@ -895,8 +902,34 @@ export default function AcademicYearsPage() {
                                 </table>
                             </div>
 
-                            {/* Mobile Cards */}
-                            <div className="md:hidden divide-y divide-[var(--color-border)]">
+                            {/* Mobile Header & View Switcher */}
+                            <div className="md:hidden pt-3 pb-2 mb-1 flex items-center justify-between bg-[var(--color-surface)]/20 rounded-2xl -mx-1 px-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                        {paged.length} TAHUN DITEMUKAN
+                                    </span>
+                                </div>
+                                <div className="flex items-center bg-[var(--color-surface)] shadow-inner p-0.5 rounded-xl border border-[var(--color-border)]">
+                                    <button
+                                        onClick={() => { setMobileView('card'); try { localStorage.setItem('ay_mobile_view', 'card') } catch (e) { } }}
+                                        className={`h-7 px-3 rounded-lg flex items-center gap-2 text-[9px] font-black transition-all ${mobileView === 'card' ? 'bg-[var(--color-primary)] text-white shadow-sm shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
+                                    >
+                                        <FontAwesomeIcon icon={faGrip} className="text-[10px]" />
+                                        Card
+                                    </button>
+                                    <button
+                                        onClick={() => { setMobileView('list'); try { localStorage.setItem('ay_mobile_view', 'list') } catch (e) { } }}
+                                        className={`h-7 px-3 rounded-lg flex items-center gap-2 text-[9px] font-black transition-all ${mobileView === 'list' ? 'bg-[var(--color-primary)] text-white shadow-sm shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
+                                    >
+                                        <FontAwesomeIcon icon={faTableList} className="text-[10px]" />
+                                        List
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Mobile Cards / List */}
+                            <div className="md:hidden divide-y divide-[var(--color-border)]/50">
                                 {paged.length === 0 ? (
                                     <div className="py-24 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-700">
                                         <div className="relative mb-6">
@@ -916,51 +949,165 @@ export default function AcademicYearsPage() {
                                             Reset Semua Filter
                                         </button>
                                     </div>
-                                ) : paged.map(year => (
-                                    <div key={year.id} className={`p-4 flex items-center gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors ${selectedIds.includes(year.id) ? 'bg-[var(--color-primary)]/5' : ''}`}>
-                                        <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] shrink-0" />
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white' : 'bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                                            {year.name?.slice(2, 4) || '??'}
+                                ) : mobileView === 'list' ? (
+                                    <div className="flex flex-col gap-2 mt-2">
+                                        <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
+                                            <FontAwesomeIcon icon={faAnglesLeft} />
+                                            Tap baris untuk melihat detail & edit
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-black text-[var(--color-text)]">{year.name}</p>
-                                            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{year.semester}</p>
-                                            <p className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5">{formatDate(year.start_date)} — {formatDate(year.end_date)}</p>
-                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                {year.is_active && (
-                                                    <span className="text-[9px] font-black text-[var(--color-primary)] uppercase tracking-widest flex items-center gap-1">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] inline-block animate-pulse"></span>
-                                                        Sedang Aktif
-                                                    </span>
-                                                )}
-                                                {(() => { const ts = getTimeStatus(year.start_date, year.end_date); return ts ? <span className={`text-[9px] font-black uppercase tracking-widest ${ts.textCls}`}>{ts.label}</span> : null })()}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            {canEdit && (year.is_active ? (
-                                                <button onClick={() => handleDeactivate(year)} disabled={submitting} className="text-[9px] font-black text-amber-600 uppercase tracking-widest px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 disabled:opacity-50 whitespace-nowrap">Nonaktifkan</button>
-                                            ) : (
-                                                <button onClick={() => handleSetActive(year)} disabled={submitting} className="text-[9px] font-black text-[var(--color-primary)] uppercase tracking-widest px-2 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 disabled:opacity-50">Aktifkan</button>
-                                            ))}
-                                            {canEdit && (
-                                                <button onClick={() => handleDuplicate(year)} title="Duplikasi" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all">
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                                                </button>
-                                            )}
-                                            {canEdit && (
-                                                <button onClick={() => handleEdit(year)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
-                                                    <FontAwesomeIcon icon={faEdit} className="text-xs" />
-                                                </button>
-                                            )}
-                                            {canEdit && !year.is_active && (
-                                                <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} title="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all">
-                                                    <FontAwesomeIcon icon={faTrash} className="text-xs" />
-                                                </button>
-                                            )}
+                                        <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/40 overflow-hidden shadow-sm mx-2">
+                                            {paged.map(year => {
+                                                const ts = getTimeStatus(year.start_date, year.end_date);
+                                                return (
+                                                    <div key={year.id} className="flex items-center gap-4 px-4 py-4 active:bg-[var(--color-primary)]/[0.03] transition-colors group relative"
+                                                        onClick={() => handleEdit(year)}>
+                                                        {/* Avatar-style Icon */}
+                                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-[11px] font-black border-2 shadow-inner transition-all flex-shrink-0
+                                                            ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white border-white/20' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                                            {year.name?.slice(2, 4)}
+                                                        </div>
+
+                                                        {/* Info Column */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <h4 className="text-sm font-black text-[var(--color-text)] tracking-tight truncate">{year.name}</h4>
+                                                                {year.is_active && (
+                                                                    <div className="flex items-center gap-1 bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter border border-emerald-500/20">
+                                                                        Aktif
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--color-text-muted)]">
+                                                                    <FontAwesomeIcon icon={faLayerGroup} className="text-[8px] opacity-50" />
+                                                                    <span>Semester {year.semester}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--color-text-muted)]">
+                                                                    <FontAwesomeIcon icon={faCalendarDay} className="text-[8px] opacity-50" />
+                                                                    <span>{formatDate(year.start_date)} - {formatDate(year.end_date)}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Status & Action */}
+                                                        <div className="flex flex-col items-end gap-2 pr-1">
+                                                            <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${ts?.cls.replace(/bg-.*?\s/, '').replace('border-', 'border ')}`}>
+                                                                {ts?.label}
+                                                            </div>
+                                                            <FontAwesomeIcon icon={faChevronRight} className="text-[10px] text-[var(--color-text-muted)] opacity-30 group-active:translate-x-1 transition-transform" />
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                ) : (
+                                    <>
+                                        {paged.map(year => {
+                                    const ts = getTimeStatus(year.start_date, year.end_date);
+                                    return (
+                                        <div key={year.id} className="p-2">
+                                            <div className={`group relative p-3 rounded-[2.2rem] border transition-all duration-300 ease-out select-none ${selectedIds.includes(year.id) ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/[0.03] shadow-lg shadow-[var(--color-primary)]/10' : 'border-[var(--color-border)] bg-[var(--color-surface)] shadow-md shadow-black/[0.02]'}`}>
+
+                                                {/* Identity Area */}
+                                                <div className="flex items-center gap-4 py-1">
+                                                    {/* Large Icon Box */}
+                                                    <div className="relative shrink-0">
+                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black shadow-inner border-2 transition-all ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white border-white dark:border-gray-800' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                                            {year.name?.slice(2, 4) || '??'}
+                                                            {selectedIds.includes(year.id) && (
+                                                                <div className="absolute inset-0 bg-[var(--color-primary)]/40 rounded-2xl flex items-center justify-center animate-in zoom-in-50 duration-200">
+                                                                    <FontAwesomeIcon icon={faCheck} className="text-white text-xl" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {/* Status Dot */}
+                                                        <div className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-lg ${ts?.label === 'Sedang Berjalan' ? 'bg-emerald-500 text-white' : ts?.label === 'Akan Datang' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-400'}`}>
+                                                            <FontAwesomeIcon icon={ts?.label === 'Akan Datang' ? faCalendarDay : faClock} className="text-[7px]" />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Name & Identity */}
+                                                    <div className="flex-1 min-w-0 pr-2">
+                                                        <div className="flex items-start justify-between">
+                                                            <div>
+                                                                <h3 className="font-extrabold text-[17px] text-[var(--color-text)] leading-tight tracking-tight mb-0.5 truncate">{year.name}</h3>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-black text-[var(--color-text-muted)] opacity-40 uppercase tracking-[0.1em]">{year.semester}</span>
+                                                                    <div className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] opacity-20" />
+                                                                    <span className="text-[10px] font-bold text-[var(--color-primary)]/60 italic">{getDuration(year.start_date, year.end_date)}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
+                                                                <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] w-4.5 h-4.5" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Info Pills */}
+                                                <div className="mt-4 flex flex-wrap items-center gap-2">
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[var(--color-surface-alt)]/80 border border-[var(--color-border)]/40 min-w-0">
+                                                        <FontAwesomeIcon icon={faCalendar} className="text-[9px] text-[var(--color-text-muted)] shrink-0" />
+                                                        <span className="text-[9px] font-black text-[var(--color-text)] uppercase tracking-tight truncate">
+                                                            {formatDate(year.start_date)} — {formatDate(year.end_date)}
+                                                        </span>
+                                                    </div>
+                                                    {year.is_active && (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl font-black text-[9px] uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/10 text-emerald-600">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                            Sedang Aktif
+                                                        </span>
+                                                    )}
+                                                    {ts && (
+                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl font-black text-[9px] uppercase tracking-widest border ${ts.cls.replace(/bg-.*?\s/, '').replace('border-', 'border ')}`}>
+                                                            {ts.label}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Action Footer */}
+                                                <div className="mt-4 bg-[var(--color-surface-alt)] rounded-[2.2rem] p-1.5 flex items-center justify-between border border-[var(--color-border)] shadow-sm">
+                                                    <div className="flex items-center gap-0.5">
+                                                        {canEdit && (
+                                                            <button onClick={() => handleEdit(year)} className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] active:scale-95 transition-all">
+                                                                <FontAwesomeIcon icon={faEdit} className="text-[13px]" />
+                                                                <span className="text-[8px] font-black uppercase tracking-widest leading-none">Edit</span>
+                                                            </button>
+                                                        )}
+                                                        {canEdit && (
+                                                            <button onClick={() => handleDuplicate(year)} className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all">
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                                                                <span className="text-[8px] font-black uppercase tracking-widest leading-none">Salin</span>
+                                                            </button>
+                                                        )}
+                                                        {canEdit && !year.is_active && (
+                                                            <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-red-400/50 hover:text-red-500 hover:bg-red-500/10 active:scale-95 transition-all">
+                                                                <FontAwesomeIcon icon={faTrash} className="text-[13px]" />
+                                                                <span className="text-[8px] font-black uppercase tracking-widest leading-none">Arsip</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    {canEdit && (
+                                                        year.is_active ? (
+                                                            <button onClick={() => handleDeactivate(year)} disabled={submitting} className="h-9 px-4 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[9px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all active:scale-95 disabled:opacity-50">
+                                                                Nonaktifkan
+                                                            </button>
+                                                        ) : (
+                                                            <button onClick={() => handleSetActive(year)} disabled={submitting} className="h-9 px-5 rounded-full bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/90 transition-all active:scale-95 disabled:opacity-50">
+                                                                Aktifkan
+                                                            </button>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </>
+                        )}
+                    </div>
 
                             <Pagination
                                 totalRows={totalRows}
