@@ -98,11 +98,16 @@ export default function AcademicYearsPage() {
     const [isArchivedOpen, setIsArchivedOpen] = useState(false)
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
     const [isPermanentDeleteOpen, setIsPermanentDeleteOpen] = useState(false)
+    const [isDeactivateConfirmOpen, setIsDeactivateConfirmOpen] = useState(false)
+    const [itemToDeactivate, setItemToDeactivate] = useState(null)
     const [itemToPermanentDelete, setItemToPermanentDelete] = useState(null)
     const [selectedItem, setSelectedItem] = useState(null)
     const [itemToDelete, setItemToDelete] = useState(null)
     const [formData, setFormData] = useState({ name: '', semester: 'Ganjil', startDate: '', endDate: '', makeActive: false })
     const [isDuplicateName, setIsDuplicateName] = useState(false)
+    // Undo archive
+    const [undoItem, setUndoItem] = useState(null)
+    const undoTimerRef = useRef(null)
 
     // ── Fetch ────────────────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -176,12 +181,13 @@ export default function AcademicYearsPage() {
 
             if (e.ctrlKey && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus() }
             else if (e.key === 'n') { e.preventDefault(); handleAdd() }
+            else if (e.key === 'e' || e.key === 'E') { if (selectedIds.length === 1) { const item = years.find(y => y.id === selectedIds[0]); if (item) handleEdit(item) } }
             else if (e.key === 'x' || e.key === 'X') { resetAllFilters() }
             else if (e.key === '?') { setIsShortcutOpen(v => !v) }
         }
         document.addEventListener('keydown', handler)
         return () => document.removeEventListener('keydown', handler)
-    }, [isModalOpen, isDeleteModalOpen])
+    }, [isModalOpen, isDeleteModalOpen, selectedIds, years])
 
     // Cols persist
     useEffect(() => {
@@ -217,6 +223,19 @@ export default function AcademicYearsPage() {
         if (!formData.startDate) errors.startDate = 'Tanggal mulai wajib diisi'
         if (!formData.endDate) errors.endDate = 'Tanggal selesai wajib diisi'
         if (formData.startDate && formData.endDate && formData.endDate <= formData.startDate) errors.endDate = 'Tanggal selesai harus setelah tanggal mulai'
+        // Cek overlap periode dengan tahun pelajaran lain
+        if (formData.startDate && formData.endDate && formData.endDate > formData.startDate) {
+            const newStart = new Date(formData.startDate)
+            const newEnd = new Date(formData.endDate)
+            const overlap = years.find(y => {
+                if (selectedItem && y.id === selectedItem.id) return false
+                if (!y.start_date || !y.end_date) return false
+                const s = new Date(y.start_date)
+                const e = new Date(y.end_date)
+                return newStart < e && newEnd > s
+            })
+            if (overlap) errors.endDate = `Periode tumpang tindih dengan ${overlap.name} ${overlap.semester}`
+        }
         if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
         setFormErrors({})
         setSubmitting(true)
@@ -269,15 +288,22 @@ export default function AcademicYearsPage() {
         finally { setSubmitting(false) }
     }
 
-    const handleDeactivate = async (item) => {
-        if (submitting) return
+    const handleDeactivate = (item) => {
+        setItemToDeactivate(item)
+        setIsDeactivateConfirmOpen(true)
+    }
+
+    const handleDeactivateConfirm = async () => {
+        if (!itemToDeactivate || submitting) return
         setSubmitting(true)
         try {
-            const { data, error } = await supabase.from('academic_years').update({ is_active: false }).eq('id', item.id).select()
+            const { data, error } = await supabase.from('academic_years').update({ is_active: false }).eq('id', itemToDeactivate.id).select()
             if (error) throw error
             if (!data || data.length === 0) throw new Error('Gagal menonaktifkan: periksa RLS policy di Supabase')
-            addToast(`${item.name} ${item.semester} dinonaktifkan`, 'success')
-            await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_active: false } })
+            addToast(`${itemToDeactivate.name} ${itemToDeactivate.semester} dinonaktifkan`, 'success')
+            await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: itemToDeactivate.id, oldData: itemToDeactivate, newData: { ...itemToDeactivate, is_active: false } })
+            setIsDeactivateConfirmOpen(false)
+            setItemToDeactivate(null)
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal menonaktifkan', 'error') }
         finally { setSubmitting(false) }
@@ -317,6 +343,10 @@ export default function AcademicYearsPage() {
             if (!data || data.length === 0) throw new Error('Gagal mengarsipkan: periksa RLS policy di Supabase')
             addToast('Tahun pelajaran diarsipkan', 'success')
             await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: itemToDelete.id, oldData: itemToDelete, newData: { ...itemToDelete, deleted_at: new Date().toISOString() } })
+            // Undo: simpan item, hilang otomatis setelah 6 detik
+            if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+            setUndoItem(itemToDelete)
+            undoTimerRef.current = setTimeout(() => setUndoItem(null), 6000)
             setIsDeleteModalOpen(false)
             fetchData()
         } catch (err) { addToast(err.message || 'Gagal menghapus', 'error') }
@@ -333,6 +363,16 @@ export default function AcademicYearsPage() {
             fetchArchived(); fetchData()
         } catch (err) { addToast(err.message || 'Gagal memulihkan', 'error') }
     }
+
+    const handleUndoArchive = async () => {
+        if (!undoItem) return
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+        setUndoItem(null)
+        await handleRestore(undoItem)
+    }
+
+    // Cleanup undo timer on unmount
+    useEffect(() => () => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current) }, [])
 
     const handlePermanentDelete = async (item) => {
         try {
@@ -453,6 +493,26 @@ export default function AcademicYearsPage() {
                     </div>
                 )}
 
+                {/* Undo Archive Banner */}
+                {undoItem && (
+                    <div className="px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center gap-2.5">
+                            <FontAwesomeIcon icon={faBoxArchive} className="text-amber-500 text-xs shrink-0" />
+                            <p className="text-[11px] font-bold text-amber-700">
+                                <span className="font-black">{undoItem.name} {undoItem.semester}</span> diarsipkan.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={handleUndoArchive} className="h-7 px-3 rounded-lg bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all">
+                                Undo
+                            </button>
+                            <button onClick={() => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current); setUndoItem(null) }} className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-500/20 transition-all">
+                                <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Read-only Banner */}
                 {!canEdit && (
                     <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
@@ -555,6 +615,7 @@ export default function AcademicYearsPage() {
                                             { keys: ['Esc'], label: 'Tutup / clear / deselect' },
                                             { section: 'Aksi' },
                                             { keys: ['N'], label: 'Tambah tahun pelajaran' },
+                                            { keys: ['E'], label: 'Edit (1 row dipilih)' },
                                             { keys: ['X'], label: 'Reset semua filter' },
                                             { keys: ['?'], label: 'Tampilkan shortcut ini' },
                                         ].map((item, i) => item.section ? (
@@ -881,6 +942,15 @@ export default function AcademicYearsPage() {
                                             <p className="text-sm font-black text-[var(--color-text)]">{year.name}</p>
                                             <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">{year.semester}</p>
                                             <p className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5">{formatDate(year.start_date)} — {formatDate(year.end_date)}</p>
+                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                {year.is_active && (
+                                                    <span className="text-[9px] font-black text-[var(--color-primary)] uppercase tracking-widest flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] inline-block animate-pulse"></span>
+                                                        Sedang Aktif
+                                                    </span>
+                                                )}
+                                                {(() => { const ts = getTimeStatus(year.start_date, year.end_date); return ts ? <span className={`text-[9px] font-black uppercase tracking-widest ${ts.textCls}`}>{ts.label}</span> : null })()}
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
                                             {canEdit && (year.is_active ? (
@@ -1097,6 +1167,31 @@ export default function AcademicYearsPage() {
                             <button onClick={() => setIsBulkDeleteOpen(false)} className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
                             <button onClick={handleBulkDelete} disabled={submitting} className="h-12 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
                                 {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : `Arsipkan ${selectedIds.length} Data`}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* ── Nonaktifkan Confirm Modal ── */}
+                <Modal isOpen={isDeactivateConfirmOpen} onClose={() => { setIsDeactivateConfirmOpen(false); setItemToDeactivate(null) }} title="Nonaktifkan Tahun Pelajaran" size="sm" mobileVariant="bottom-sheet">
+                    <div className="space-y-6">
+                        <div className="p-4 bg-amber-500/10 rounded-2xl flex items-center gap-4 text-amber-600 border border-amber-500/20">
+                            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 text-xl border border-amber-500/30">
+                                <FontAwesomeIcon icon={faTriangleExclamation} />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black uppercase tracking-wider">Konfirmasi Nonaktifkan</h3>
+                                <p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest">Laporan & presensi akan tanpa acuan aktif.</p>
+                            </div>
+                        </div>
+                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">
+                            Nonaktifkan <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20 italic">{itemToDeactivate?.name} {itemToDeactivate?.semester}</span>?
+                            <span className="block text-[10px] text-[var(--color-text-muted)] mt-2 opacity-70 font-medium leading-relaxed">Seluruh sistem akan berjalan tanpa tahun pelajaran aktif sampai kamu mengaktifkan yang lain.</span>
+                        </p>
+                        <div className="flex gap-3 pt-2">
+                            <button onClick={() => { setIsDeactivateConfirmOpen(false); setItemToDeactivate(null) }} className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
+                            <button onClick={handleDeactivateConfirm} disabled={submitting} className="h-12 flex-[1.5] rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Nonaktifkan'}
                             </button>
                         </div>
                     </div>
