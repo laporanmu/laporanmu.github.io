@@ -4,10 +4,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faPlus, faEdit, faTrash, faSearch, faSpinner, faCalendar,
     faCheckCircle, faXmark, faSliders, faBoxArchive, faRotateLeft,
-    faEye, faEyeSlash, faKeyboard, faChevronLeft, faChevronRight,
-    faAnglesLeft, faAnglesRight, faDownload, faUpload, faTableList,
+    faKeyboard, faChevronLeft, faChevronRight,
+    faAnglesLeft, faAnglesRight, faDownload,
     faGraduationCap, faLayerGroup, faCircleCheck, faTriangleExclamation,
-    faBolt, faChevronDown,
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
@@ -363,6 +362,31 @@ export default function AcademicYearsPage() {
     const resetAllFilters = () => { setSearchQuery(''); setFilterSemester(''); setSortBy('name_desc'); setPage(1) }
     const activeFilterCount = [filterSemester].filter(Boolean).length
 
+    const handleExportCSV = () => {
+        const header = ['Tahun Pelajaran', 'Semester', 'Tanggal Mulai', 'Tanggal Selesai', 'Durasi', 'Status', 'Status Waktu']
+        const rows = filtered.map(y => {
+            const ts = getTimeStatus(y.start_date, y.end_date)
+            return [
+                y.name,
+                y.semester,
+                y.start_date ? new Date(y.start_date).toLocaleDateString('id-ID') : '-',
+                y.end_date ? new Date(y.end_date).toLocaleDateString('id-ID') : '-',
+                getDuration(y.start_date, y.end_date),
+                y.is_active ? 'Aktif' : 'Tidak Aktif',
+                ts?.label || '-',
+            ]
+        })
+        const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `tahun-pelajaran-${new Date().toISOString().slice(0, 10)}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+        addToast(`${filtered.length} data berhasil diekspor`, 'success')
+    }
+
     // ── Derived ───────────────────────────────────────────────────────────────
     const filtered = years.filter(y => {
         const q = searchQuery.toLowerCase()
@@ -465,10 +489,10 @@ export default function AcademicYearsPage() {
                             <>
                                 <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsHeaderMenuOpen(false)} />
                                 <div
-                                    className="fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-200"
+                                    className="fixed z-[9991] w-60 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-200"
                                     style={{
                                         top: headerMenuRect.bottom + 8,
-                                        left: Math.max(10, headerMenuRect.right - 224),
+                                        left: Math.max(10, headerMenuRect.right - 240),
                                     }}
                                 >
                                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Manajemen</p>
@@ -480,6 +504,18 @@ export default function AcademicYearsPage() {
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Arsip Tahun Pelajaran</p>
                                             <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data yang diarsipkan</p>
+                                        </div>
+                                    </button>
+                                    <div className="my-1 border-t border-[var(--color-border)]" />
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Export</p>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); handleExportCSV() }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faDownload} className="text-xs" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Export CSV</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">{filtered.length} data (sesuai filter aktif)</p>
                                         </div>
                                     </button>
                                 </div>
@@ -847,14 +883,24 @@ export default function AcademicYearsPage() {
                                             <p className="text-[10px] text-[var(--color-text-muted)] font-medium mt-0.5">{formatDate(year.start_date)} — {formatDate(year.end_date)}</p>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
-                                            {year.is_active ? (
-                                                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">Aktif</span>
-                                            ) : canEdit ? (
-                                                <button onClick={() => handleSetActive(year)} className="text-[9px] font-black text-[var(--color-primary)] uppercase tracking-widest px-2 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">Aktifkan</button>
-                                            ) : null}
+                                            {canEdit && (year.is_active ? (
+                                                <button onClick={() => handleDeactivate(year)} disabled={submitting} className="text-[9px] font-black text-amber-600 uppercase tracking-widest px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 disabled:opacity-50 whitespace-nowrap">Nonaktifkan</button>
+                                            ) : (
+                                                <button onClick={() => handleSetActive(year)} disabled={submitting} className="text-[9px] font-black text-[var(--color-primary)] uppercase tracking-widest px-2 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 disabled:opacity-50">Aktifkan</button>
+                                            ))}
                                             {canEdit && (
-                                                <button onClick={() => handleEdit(year)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
+                                                <button onClick={() => handleDuplicate(year)} title="Duplikasi" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all">
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                                                </button>
+                                            )}
+                                            {canEdit && (
+                                                <button onClick={() => handleEdit(year)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
                                                     <FontAwesomeIcon icon={faEdit} className="text-xs" />
+                                                </button>
+                                            )}
+                                            {canEdit && !year.is_active && (
+                                                <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} title="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all">
+                                                    <FontAwesomeIcon icon={faTrash} className="text-xs" />
                                                 </button>
                                             )}
                                         </div>
