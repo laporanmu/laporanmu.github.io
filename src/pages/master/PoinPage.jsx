@@ -377,6 +377,9 @@ export default function PoinPage() {
                         <Breadcrumb badge="Master Data" items={['Rules Configuration']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Konfigurasi Poin</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola bobot poin untuk {stats.violations} Konfigurasi Poin & {stats.achievements} prestasi.</p>
+                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
+                            Tahun pelajaran aktif menjadi acuan laporan, presensi, dan penilaian di seluruh sistem.
+                        </p>
                     </div>
                     <div className="flex gap-2 items-center">
                         <div className="relative" ref={headerMenuRef}>

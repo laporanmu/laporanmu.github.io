@@ -845,7 +845,7 @@ export default function AcademicYearsPage() {
                 </div>
 
                 {/* ── Form Modal ── */}
-                <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setFormErrors({}); setIsDuplicateName(false) }} title={selectedItem ? 'Update Tahun Pelajaran' : 'Tahun Pelajaran Baru'} size="sm">
+                <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setFormErrors({}); setIsDuplicateName(false) }} title={selectedItem ? 'Update Tahun Pelajaran' : 'Tahun Pelajaran Baru'} size="sm" mobileVariant="bottom-sheet">
                     <div className="space-y-5">
 
                         {/* ── Nama Tahun Pelajaran ── */}
@@ -976,13 +976,13 @@ export default function AcademicYearsPage() {
                         </button>
 
                         {/* ── Actions ── */}
-                        <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
+                        <div className="flex gap-3 pt-2">
                             <button type="button" onClick={() => { setIsModalOpen(false); setFormErrors({}); setIsDuplicateName(false) }}
-                                className="h-11 px-6 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest transition-all">
+                                className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">
                                 Batal
                             </button>
                             <button type="button" onClick={handleSubmit} disabled={submitting || isDuplicateName}
-                                className="h-11 px-8 rounded-xl btn-primary font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center gap-2">
+                                className="h-12 flex-[1.5] rounded-xl btn-primary font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                                 {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : null}
                                 {selectedItem ? 'Update' : 'Simpan'}
                             </button>
@@ -991,7 +991,7 @@ export default function AcademicYearsPage() {
                 </Modal>
 
                 {/* ── Delete/Archive Modal ── */}
-                <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Arsipkan Tahun Pelajaran" size="sm">
+                <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Arsipkan Tahun Pelajaran" size="sm" mobileVariant="bottom-sheet">
                     <div className="space-y-6">
                         <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-4 text-red-500 border border-red-500/20">
                             <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30 animate-pulse"><FontAwesomeIcon icon={faBoxArchive} /></div>
@@ -999,8 +999,8 @@ export default function AcademicYearsPage() {
                         </div>
                         <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">Arsipkan <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20 italic">{itemToDelete?.name} {itemToDelete?.semester}</span>?</p>
                         <div className="flex gap-3 pt-2">
-                            <button onClick={() => setIsDeleteModalOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                            <button onClick={handleDeleteConfirm} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
+                            <button onClick={() => setIsDeleteModalOpen(false)} className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
+                            <button onClick={handleDeleteConfirm} disabled={submitting} className="h-12 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
                                 {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Arsipkan'}
                             </button>
                         </div>
@@ -1008,15 +1008,15 @@ export default function AcademicYearsPage() {
                 </Modal>
 
                 {/* ── Bulk Delete Modal ── */}
-                <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title="Arsipkan Massal" size="sm">
+                <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title="Arsipkan Massal" size="sm" mobileVariant="bottom-sheet">
                     <div className="space-y-6">
                         <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-4 text-red-500 border border-red-500/20">
                             <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl"><FontAwesomeIcon icon={faBoxArchive} /></div>
                             <div><h3 className="text-sm font-black uppercase tracking-wider">Arsipkan {selectedIds.length} Data</h3><p className="text-[10px] font-bold opacity-70 mt-1">Data bisa dipulihkan kembali.</p></div>
                         </div>
                         <div className="flex gap-3">
-                            <button onClick={() => setIsBulkDeleteOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">Batal</button>
-                            <button onClick={handleBulkDelete} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 disabled:opacity-50">
+                            <button onClick={() => setIsBulkDeleteOpen(false)} className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
+                            <button onClick={handleBulkDelete} disabled={submitting} className="h-12 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
                                 {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : `Arsipkan ${selectedIds.length} Data`}
                             </button>
                         </div>
@@ -1024,7 +1024,7 @@ export default function AcademicYearsPage() {
                 </Modal>
 
                 {/* ── Arsip Modal ── */}
-                <Modal isOpen={isArchivedOpen} onClose={() => setIsArchivedOpen(false)} title="Arsip Tahun Pelajaran" size="lg">
+                <Modal isOpen={isArchivedOpen} onClose={() => setIsArchivedOpen(false)} title="Arsip Tahun Pelajaran" size="lg" mobileVariant="bottom-sheet">
                     <div className="space-y-4">
                         <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/20">
                             <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest leading-relaxed">Data di bawah telah diarsipkan. Anda dapat memulihkan atau menghapus permanen.</p>
@@ -1054,12 +1054,12 @@ export default function AcademicYearsPage() {
                                 </div>
                             ))}
                         </div>
-                        <button onClick={() => setIsArchivedOpen(false)} className="w-full h-11 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">Tutup</button>
+                        <button onClick={() => setIsArchivedOpen(false)} className="w-full h-12 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Tutup</button>
                     </div>
                 </Modal>
 
                 {/* ── Hapus Permanen Modal ── */}
-                <Modal isOpen={isPermanentDeleteOpen} onClose={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} title="Hapus Permanen" size="sm">
+                <Modal isOpen={isPermanentDeleteOpen} onClose={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} title="Hapus Permanen" size="sm" mobileVariant="bottom-sheet">
                     <div className="space-y-6">
                         <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-4 text-red-500 border border-red-500/20">
                             <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30 animate-pulse">
@@ -1075,8 +1075,8 @@ export default function AcademicYearsPage() {
                             <span className="block text-[10px] text-[var(--color-text-muted)] mt-2 opacity-60">Data tidak dapat dipulihkan kembali setelah dihapus.</span>
                         </p>
                         <div className="flex gap-3 pt-2">
-                            <button onClick={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                            <button onClick={() => handlePermanentDelete(itemToPermanentDelete)} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
+                            <button onClick={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} className="h-12 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
+                            <button onClick={() => handlePermanentDelete(itemToPermanentDelete)} disabled={submitting} className="h-12 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50">
                                 {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Hapus Permanen'}
                             </button>
                         </div>
