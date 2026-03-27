@@ -272,8 +272,12 @@ export default function AcademicYearsPage() {
                 return
             }
 
-            const payload = { ...formData, name: formData.name.trim(), start_date: formData.startDate, end_date: formData.endDate }
-            delete payload.makeActive // Avoid sending UI state to DB
+            const payload = { 
+                name: formData.name.trim(), 
+                semester: formData.semester, 
+                start_date: formData.startDate, 
+                end_date: formData.endDate 
+            }
 
             if (selectedItem?.id) {
                 const { data, error } = await supabase.from('academic_years').update(payload).eq('id', selectedItem.id).select()
