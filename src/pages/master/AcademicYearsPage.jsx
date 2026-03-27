@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -61,6 +61,7 @@ export default function AcademicYearsPage() {
     // Search & Filter
     const [searchQuery, setSearchQuery] = useState('')
     const [filterSemester, setFilterSemester] = useState('')
+    const [filterTimeStatus, setFilterTimeStatus] = useState('') // 'Akan Datang' | 'Sedang Berjalan' | 'Sudah Selesai'
     const [sortBy, setSortBy] = useState('name_desc')
     const [showAdvFilter, setShowAdvFilter] = useState(false)
 
@@ -83,6 +84,7 @@ export default function AcademicYearsPage() {
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
     const [colMenuPos, setColMenuPos] = useState({ top: 0, right: 0, showUp: false })
     const colMenuRef = useRef(null)
+    const colMenuPortalRef = useRef(null)
 
     // UI
     const [mobileView, setMobileView] = useState(() => {
@@ -119,7 +121,7 @@ export default function AcademicYearsPage() {
         try {
             const { data, error } = await supabase
                 .from('academic_years')
-                .select('*')
+                .select('id,name,semester,start_date,end_date,is_active,deleted_at,created_at')
                 .order('name', { ascending: false })
             if (error) throw error
             // Filter soft-delete di client side jika kolom belum ada
@@ -138,9 +140,12 @@ export default function AcademicYearsPage() {
     const fetchArchived = useCallback(async () => {
         if (!supabase) return
         try {
-            const { data } = await supabase.from('academic_years').select('*').order('created_at', { ascending: false })
-            // Filter hanya yang sudah diarsipkan (deleted_at tidak null)
-            setArchivedYears((data || []).filter(y => y.deleted_at != null))
+            const { data } = await supabase
+                .from('academic_years')
+                .select('id,name,semester,start_date,end_date,is_active,deleted_at,created_at')
+                .not('deleted_at', 'is', null)
+                .order('created_at', { ascending: false })
+            setArchivedYears(data || [])
         } catch { }
     }, [])
 
@@ -149,11 +154,14 @@ export default function AcademicYearsPage() {
     // Click outside — only needed for colMenu now; headerMenu & shortcut use portaled backdrops
     useEffect(() => {
         const handler = (e) => {
-            if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setIsColMenuOpen(false)
+            if (!isColMenuOpen) return
+            const inBtn = colMenuRef.current?.contains(e.target)
+            const inMenu = colMenuPortalRef.current?.contains(e.target)
+            if (!inBtn && !inMenu) setIsColMenuOpen(false)
         }
         document.addEventListener('mousedown', handler)
         return () => document.removeEventListener('mousedown', handler)
-    }, [])
+    }, [isColMenuOpen])
 
     // Sticky portal positioning — keep portaled dropdowns anchored to buttons on scroll/resize
     useEffect(() => {
@@ -408,8 +416,8 @@ export default function AcademicYearsPage() {
         finally { setSubmitting(false) }
     }
 
-    const resetAllFilters = () => { setSearchQuery(''); setFilterSemester(''); setSortBy('name_desc'); setPage(1) }
-    const activeFilterCount = [filterSemester].filter(Boolean).length
+    const resetAllFilters = () => { setSearchQuery(''); setFilterSemester(''); setFilterTimeStatus(''); setSortBy('name_desc'); setPage(1) }
+    const activeFilterCount = [filterSemester, filterTimeStatus].filter(Boolean).length
 
     const handleExportCSV = () => {
         const header = ['Tahun Pelajaran', 'Semester', 'Tanggal Mulai', 'Tanggal Selesai', 'Durasi', 'Status', 'Status Waktu']
@@ -437,24 +445,64 @@ export default function AcademicYearsPage() {
     }
 
     // ── Derived ───────────────────────────────────────────────────────────────
-    const filtered = years.filter(y => {
-        const q = searchQuery.toLowerCase()
-        const matchSearch = !q || y.name.toLowerCase().includes(q) || y.semester.toLowerCase().includes(q)
-        const matchSemester = !filterSemester || y.semester === filterSemester
-        return matchSearch && matchSemester
-    }).sort((a, b) => {
-        // Pin active items to top always
-        if (a.is_active !== b.is_active) return b.is_active ? 1 : -1
-        // Then apply selected sort
-        if (sortBy === 'name_desc') return b.name.localeCompare(a.name)
-        if (sortBy === 'name_asc') return a.name.localeCompare(b.name)
-        return 0
-    })
+    const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery])
+
+    const filtered = useMemo(() => {
+        const base = years.filter(y => {
+            const matchSearch = !normalizedQuery
+                || y.name?.toLowerCase().includes(normalizedQuery)
+                || y.semester?.toLowerCase().includes(normalizedQuery)
+
+            const matchSemester = !filterSemester || y.semester === filterSemester
+
+            const ts = getTimeStatus(y.start_date, y.end_date)
+            const matchTimeStatus = !filterTimeStatus || ts?.label === filterTimeStatus
+
+            return matchSearch && matchSemester && matchTimeStatus
+        })
+
+        const statusRank = (y) => {
+            const ts = getTimeStatus(y.start_date, y.end_date)?.label
+            if (ts === 'Sedang Berjalan') return 3
+            if (ts === 'Akan Datang') return 2
+            if (ts === 'Sudah Selesai') return 1
+            return 0
+        }
+
+        const safeDate = (d) => (d ? new Date(d).getTime() : 0)
+
+        return base.sort((a, b) => {
+            // Pin active items to top always
+            if (a.is_active !== b.is_active) return b.is_active ? 1 : -1
+
+            if (sortBy === 'active') {
+                // Active already pinned; secondary by status waktu, then by start_date desc
+                const r = statusRank(b) - statusRank(a)
+                if (r !== 0) return r
+                return safeDate(b.start_date) - safeDate(a.start_date)
+            }
+
+            if (sortBy === 'time_status') {
+                const r = statusRank(b) - statusRank(a)
+                if (r !== 0) return r
+                return safeDate(b.start_date) - safeDate(a.start_date)
+            }
+
+            if (sortBy === 'start_desc') return safeDate(b.start_date) - safeDate(a.start_date)
+            if (sortBy === 'start_asc') return safeDate(a.start_date) - safeDate(b.start_date)
+
+            if (sortBy === 'name_desc') return (b.name || '').localeCompare(a.name || '')
+            if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '')
+            return 0
+        })
+    }, [years, normalizedQuery, filterSemester, filterTimeStatus, sortBy])
 
     const totalRows = filtered.length
+    const isTrulyEmpty = years.length === 0
+    const isFilterEmpty = years.length > 0 && filtered.length === 0
 
     // PAGINATION - define paged variable
-    const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
+    const paged = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page, pageSize])
 
     // Selection logic
     const allSelected = paged.length > 0 && paged.every(y => selectedIds.includes(y.id))
@@ -474,10 +522,15 @@ export default function AcademicYearsPage() {
         setSelectedIds(ids => ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id])
     }
 
+    const selectAllFiltered = () => {
+        setSelectedIds(filtered.map(y => y.id))
+    }
+
     const getDuration = (start, end) => {
         if (!start || !end) return '—'
         const s = new Date(start), e = new Date(end)
-        const months = (e.getFullYear() - s.getFullYear()) * 12 + e.getMonth() - s.getMonth()
+        const rawMonths = (e.getFullYear() - s.getFullYear()) * 12 + e.getMonth() - s.getMonth()
+        const months = Math.max(1, rawMonths)
         return `${months} bulan`
     }
 
@@ -493,7 +546,21 @@ export default function AcademicYearsPage() {
                 {/* Bulk Action Bar */}
                 {selectedIds.length > 0 && (
                     <div className="mb-4 px-4 py-3 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-between gap-3 flex-wrap">
-                        <p className="text-sm font-black text-[var(--color-primary)]">{selectedIds.length} data dipilih</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-black text-[var(--color-primary)]">{selectedIds.length} dipilih</p>
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-70">
+                                dari {filtered.length} hasil (filter aktif)
+                            </span>
+                            {selectedIds.length !== filtered.length && filtered.length > 0 && (
+                                <button
+                                    onClick={selectAllFiltered}
+                                    className="h-7 px-3 rounded-xl bg-[var(--color-surface)]/70 border border-[var(--color-border)] text-[10px] font-black uppercase tracking-wide text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all"
+                                    title="Pilih semua hasil filter"
+                                >
+                                    Pilih semua
+                                </button>
+                            )}
+                        </div>
                         <div className="flex items-center gap-2">
                             <button onClick={() => setIsBulkDeleteOpen(true)} className="h-8 px-3 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-wide hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faTrash} />Arsipkan</button>
                             <button onClick={() => setSelectedIds([])} className="h-8 px-3 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faXmark} />Batal</button>
@@ -577,6 +644,7 @@ export default function AcademicYearsPage() {
                             onClick={() => { if (!isShortcutOpen) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setIsShortcutOpen(v => !v) }}
                             className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center transition-all active:scale-95 ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             title="Keyboard Shortcuts (?)"
+                            aria-label="Keyboard shortcuts"
                         >
                             <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
                         </button>
@@ -625,7 +693,7 @@ export default function AcademicYearsPage() {
                         )}
 
                         {/* Add button */}
-                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100">
+                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100" aria-label="Tambah tahun pelajaran">
                             <FontAwesomeIcon icon={faPlus} />
                             <span className="hidden sm:inline">{canEdit ? 'Tambah' : 'Read-only'}</span>
                         </button>
@@ -688,7 +756,16 @@ export default function AcademicYearsPage() {
                             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm"><FontAwesomeIcon icon={faSearch} /></div>
                             <input ref={searchInputRef} type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari tahun pelajaran atau semester... (Ctrl+K)"
                                 className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl" />
-                            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><FontAwesomeIcon icon={faXmark} className="text-xs" /></button>}
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                                    aria-label="Hapus pencarian"
+                                    title="Hapus pencarian"
+                                >
+                                    <FontAwesomeIcon icon={faXmark} className="text-xs" />
+                                </button>
+                            )}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                             <button onClick={() => setShowAdvFilter(!showAdvFilter)}
@@ -703,7 +780,7 @@ export default function AcademicYearsPage() {
 
                     {showAdvFilter && (
                         <div className="border-t border-[var(--color-border)] px-4 py-4 bg-[var(--color-surface-alt)]/40">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Semester</label>
                                     <select value={filterSemester} onChange={e => { setFilterSemester(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">
@@ -713,11 +790,23 @@ export default function AcademicYearsPage() {
                                     </select>
                                 </div>
                                 <div>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Status Waktu</label>
+                                    <select value={filterTimeStatus} onChange={e => { setFilterTimeStatus(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">
+                                        <option value="">Semua</option>
+                                        <option value="Sedang Berjalan">Sedang Berjalan</option>
+                                        <option value="Akan Datang">Akan Datang</option>
+                                        <option value="Sudah Selesai">Sudah Selesai</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Urutkan</label>
                                     <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="input-field h-9 text-sm w-full rounded-xl">
                                         <option value="name_desc">Tahun Terbaru</option>
                                         <option value="name_asc">Tahun Terlama</option>
                                         <option value="active">Aktif Dahulu</option>
+                                        <option value="time_status">Status Waktu</option>
+                                        <option value="start_desc">Mulai Terbaru</option>
+                                        <option value="start_asc">Mulai Terlama</option>
                                     </select>
                                 </div>
                             </div>
@@ -764,22 +853,33 @@ export default function AcademicYearsPage() {
                                                         })
                                                         setIsColMenuOpen(p => !p)
                                                     }} title="Atur tampilan kolom"
+                                                        aria-label="Atur tampilan kolom"
                                                         className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}>
                                                         <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
                                                     </button>
                                                     {isColMenuOpen && createPortal(
-                                                        <div className={`absolute z-[9999] w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${colMenuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
-                                                            style={{ top: colMenuPos.top, right: colMenuPos.right }}>
-                                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Atur Kolom</p>
-                                                            {[{ key: 'semester', label: 'Semester' }, { key: 'period', label: 'Periode' }, { key: 'duration', label: 'Durasi' }, { key: 'status', label: 'Status' }].map(({ key, label }) => (
-                                                                <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
-                                                                    <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
-                                                                    <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
-                                                                        <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${visibleCols[key] ? 'translate-x-[14px]' : 'translate-x-0'}`} />
-                                                                    </div>
-                                                                </button>
-                                                            ))}
-                                                        </div>,
+                                                        <>
+                                                            <div className="fixed inset-0 z-[9998] bg-transparent" onClick={() => setIsColMenuOpen(false)} />
+                                                            <div
+                                                                ref={colMenuPortalRef}
+                                                                className={`fixed z-[9999] w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${colMenuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
+                                                                style={{ top: colMenuPos.top, right: colMenuPos.right }}
+                                                            >
+                                                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Atur Kolom</p>
+                                                                {[{ key: 'semester', label: 'Semester' }, { key: 'period', label: 'Periode' }, { key: 'duration', label: 'Durasi' }, { key: 'status', label: 'Status' }].map(({ key, label }) => (
+                                                                    <button
+                                                                        key={key}
+                                                                        onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))}
+                                                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left"
+                                                                    >
+                                                                        <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
+                                                                        <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                                                            <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${visibleCols[key] ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </>,
                                                         document.body
                                                     )}
                                                 </div>
@@ -794,19 +894,33 @@ export default function AcademicYearsPage() {
                                                         <div className="relative mb-6">
                                                             <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
                                                             <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
-                                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
+                                                                <FontAwesomeIcon icon={isTrulyEmpty ? faGraduationCap : faSearch} className="text-4xl text-[var(--color-primary)]/30" />
                                                                 <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
-                                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
+                                                                    <FontAwesomeIcon icon={isTrulyEmpty ? faPlus : faXmark} className={`${isTrulyEmpty ? 'text-[var(--color-primary)]' : 'text-red-500'} text-sm`} />
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <h3 className="text-base font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                                        <h3 className="text-base font-black text-[var(--color-text)] mb-2">
+                                                            {isTrulyEmpty ? 'Belum Ada Tahun Pelajaran' : 'Pencarian Tidak Ditemukan'}
+                                                        </h3>
                                                         <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-sm leading-relaxed mb-6">
-                                                            Tidak ada tahun pelajaran yang cocok dengan kriteria tersebut. Coba ubah kata kunci atau reset filter.
+                                                            {isTrulyEmpty
+                                                                ? 'Mulai dengan membuat tahun pelajaran agar laporan, presensi, dan penilaian bisa menggunakan acuan yang benar.'
+                                                                : 'Tidak ada tahun pelajaran yang cocok dengan kriteria tersebut. Coba ubah kata kunci atau reset filter.'}
                                                         </p>
-                                                        <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
-                                                            Reset Semua Filter
-                                                        </button>
+                                                        <div className="flex items-center gap-2">
+                                                            {!isTrulyEmpty && (
+                                                                <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
+                                                                    Reset Semua Filter
+                                                                </button>
+                                                            )}
+                                                            {isTrulyEmpty && (
+                                                                <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-4 rounded-xl btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
+                                                                    <FontAwesomeIcon icon={faPlus} />
+                                                                    Tambah Tahun Pelajaran
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -880,17 +994,17 @@ export default function AcademicYearsPage() {
                                                         ))}
                                                         <div className="w-px h-4 bg-[var(--color-border)] mx-1 opacity-50" />
                                                         {canEdit && (
-                                                            <button onClick={() => handleDuplicate(year)} title="Duplikasi" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all">
+                                                            <button onClick={() => handleDuplicate(year)} title="Duplikasi" aria-label="Duplikasi" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all">
                                                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
                                                             </button>
                                                         )}
                                                         {canEdit && (
-                                                            <button onClick={() => handleEdit(year)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
+                                                            <button onClick={() => handleEdit(year)} title="Edit" aria-label="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all">
                                                                 <FontAwesomeIcon icon={faEdit} className="text-xs" />
                                                             </button>
                                                         )}
                                                         {canEdit && !year.is_active && (
-                                                            <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} title="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all">
+                                                            <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} title="Arsipkan" aria-label="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all">
                                                                 <FontAwesomeIcon icon={faTrash} className="text-xs" />
                                                             </button>
                                                         )}
@@ -941,26 +1055,40 @@ export default function AcademicYearsPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <h3 className="text-lg font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
+                                        <h3 className="text-lg font-black text-[var(--color-text)] mb-2">
+                                            {isTrulyEmpty ? 'Belum Ada Tahun Pelajaran' : 'Pencarian Tidak Ditemukan'}
+                                        </h3>
                                         <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-[280px] leading-relaxed mb-6">
-                                            Tidak ada tahun pelajaran yang cocok. Coba ubah kata kunci atau reset filter.
+                                            {isTrulyEmpty
+                                                ? 'Buat tahun pelajaran pertama untuk menjadi acuan di seluruh sistem.'
+                                                : 'Tidak ada tahun pelajaran yang cocok. Coba ubah kata kunci atau reset filter.'}
                                         </p>
-                                        <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
-                                            Reset Semua Filter
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            {!isTrulyEmpty && (
+                                                <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4">
+                                                    Reset Semua Filter
+                                                </button>
+                                            )}
+                                            {isTrulyEmpty && (
+                                                <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-4 rounded-xl btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
+                                                    <FontAwesomeIcon icon={faPlus} />
+                                                    Tambah
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 ) : mobileView === 'list' ? (
                                     <div className="flex flex-col gap-2 mt-2">
                                         <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
                                             <FontAwesomeIcon icon={faAnglesLeft} />
-                                            Tap baris untuk melihat detail & edit
+                                            {canEdit ? 'Tap baris untuk melihat detail & edit' : 'Tap baris untuk melihat detail'}
                                         </div>
                                         <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/40 overflow-hidden shadow-sm mx-2">
                                             {paged.map(year => {
                                                 const ts = getTimeStatus(year.start_date, year.end_date);
                                                 return (
                                                     <div key={year.id} className="flex items-center gap-4 px-4 py-4 active:bg-[var(--color-primary)]/[0.03] transition-colors group relative"
-                                                        onClick={() => handleEdit(year)}>
+                                                        onClick={() => { if (canEdit) handleEdit(year); else addToast('Mode read-only — detail belum tersedia', 'info') }}>
                                                         {/* Avatar-style Icon */}
                                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-[11px] font-black border-2 shadow-inner transition-all flex-shrink-0
                                                             ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white border-white/20' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
