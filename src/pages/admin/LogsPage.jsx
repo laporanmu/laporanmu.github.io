@@ -313,7 +313,7 @@ export const InsertViewer = ({ data }) => {
  * @param {number}  limit       — Batas jumlah entry yang ditampilkan (default 20)
  * @param {boolean} showSearch  — Tampilkan kolom pencarian (default false)
  */
-export function AuditTimeline({ tableName, recordId, limit = 20, showSearch = false }) {
+export function AuditTimeline({ tableName, recordId, limit = 20, showSearch = false, stickyHeader = false, containerClassName = "" }) {
     const [logs, setLogs] = useState([])
     const [loading, setLoading] = useState(true)
     const [expandedId, setExpandedId] = useState(null)
@@ -421,10 +421,10 @@ export function AuditTimeline({ tableName, recordId, limit = 20, showSearch = fa
     )
 
     return (
-        <div className="space-y-4">
+        <div className={`space-y-1 ${containerClassName} ${stickyHeader ? 'pt-0' : ''}`}>
             {showSearch && (
-                <div className="relative mb-4">
-                    <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px]" />
+                <div className={`relative ${stickyHeader ? 'sticky top-0 z-[30] bg-[var(--color-surface)] py-1.5 px-3 -mx-0 border-b border-[var(--color-border)]/50 shadow-sm transition-shadow' : 'mb-4'}`}>
+                    <FontAwesomeIcon icon={faSearch} className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px]" />
                     <input
                         type="text"
                         value={search}
@@ -435,45 +435,44 @@ export function AuditTimeline({ tableName, recordId, limit = 20, showSearch = fa
                 </div>
             )}
 
-            <div className="relative space-y-1">
+            <div className={`relative space-y-0 ${stickyHeader ? 'pb-3' : ''}`}>
                 {/* Garis vertikal */}
-                <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-[var(--color-border)] opacity-30" />
+                <div className="absolute left-[18px] top-2 bottom-2 w-px bg-[var(--color-border)] opacity-60" />
 
                 {filteredLogs.map(log => {
                     const isExpanded = expandedId === log.id
                     return (
-                        <div key={log.id} className="relative pl-9 pb-4 last:pb-0">
-                            {/* Dot indicator */}
-                            <div className={`absolute left-0 top-1.5 w-8 h-8 rounded-xl border bg-[var(--color-surface)] flex items-center justify-center transition-all z-10
-                                ${isExpanded
-                                    ? 'border-[var(--color-primary)] shadow-lg shadow-[var(--color-primary)]/10 scale-110'
-                                    : 'border-[var(--color-border)] opacity-80'}`}>
-                                <FontAwesomeIcon
-                                    icon={log.action === 'INSERT' ? faPlus : log.action === 'DELETE' ? faTrash : faPen}
-                                    className={`text-[10px] ${isExpanded ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
-                                />
-                            </div>
+                        <div key={log.id} className="relative pl-8 pb-1 last:pb-0">
+                            {/* Dot indicator (Minimalist Action-Aware) */}
+                            <div className={`absolute left-[14px] top-[1.1rem] w-2 h-2 rounded-full border transition-all z-10
+                                ${log.action === 'INSERT' ? 'bg-emerald-500/30 border-emerald-500/40' :
+                                  log.action === 'UPDATE' ? 'bg-orange-500/30 border-orange-500/40' :
+                                  log.action === 'DELETE' ? 'bg-rose-500/30 border-rose-500/40' :
+                                  'bg-indigo-500/30 border-indigo-500/40'}
+                                ${isExpanded ? 'ring-4 ring-current opacity-100 scale-125' : 'opacity-60'}`} 
+                                style={isExpanded ? { '--tw-ring-color': log.action === 'INSERT' ? 'rgba(16,185,129,0.1)' : log.action === 'UPDATE' ? 'rgba(245,158,11,0.1)' : 'rgba(244,63,94,0.1)' } : {}}
+                            />
 
                             <button
                                 onClick={() => setExpandedId(isExpanded ? null : log.id)}
-                                className={`w-full text-left group transition-all rounded-2xl p-3 border
+                                className={`w-full text-left group transition-all rounded-2xl p-1.5 border
                                     ${isExpanded
                                         ? 'bg-[var(--color-surface-alt)] border-[var(--color-border)] shadow-sm'
                                         : 'bg-transparent border-transparent hover:bg-[var(--color-surface-alt)]/30'}`}
                             >
-                                <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center justify-between mb-0.5">
                                     <div className="flex items-center gap-2">
                                         <ActionBadge action={log.action} />
-                                        <span className="text-[10px] font-black text-[var(--color-text)] uppercase tracking-tight">
+                                        <span className="text-[11px] font-black text-[var(--color-text)] tracking-tight">
                                             {log.actor_name}
                                         </span>
                                     </div>
-                                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] tabular-nums opacity-60">
+                                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] tabular-nums opacity-50">
                                         {fmtRelative(log.created_at)}
                                     </span>
                                 </div>
 
-                                <p className="text-[10px] text-[var(--color-text-muted)] font-medium leading-tight">
+                                <p className="text-[9.5px] text-[var(--color-text-muted)] font-medium leading-tight opacity-60">
                                     {log.action === 'UPDATE' ? 'Melakukan perubahan data record'
                                         : log.action === 'INSERT' ? 'Membuat record baru di sistem'
                                             : log.action === 'DELETE' ? 'Menghapus record dari sistem'
@@ -483,8 +482,8 @@ export function AuditTimeline({ tableName, recordId, limit = 20, showSearch = fa
                                 </p>
 
                                 {isExpanded && (
-                                    <div className="mt-4 pt-4 border-t border-[var(--color-border)] space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 space-y-3">
+                                    <div className="mt-2 pt-2.5 border-t border-[var(--color-border)] space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 space-y-2.5">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <FontAwesomeIcon icon={faClock} className="text-[10px] text-indigo-500" />
@@ -514,68 +513,78 @@ export function AuditTimeline({ tableName, recordId, limit = 20, showSearch = fa
                                                 <DiffViewer oldData={log.old_data} newData={log.new_data} />
                                             )}
 
-                                            {(log.action === 'DELETE' || log.action === 'UPDATE') && (
-                                                <div className="pt-3 border-t border-[var(--color-border)]/50 flex justify-end">
-                                                    <button
-                                                        onClick={e => { e.stopPropagation(); handleRestore(log) }}
-                                                        disabled={restoringId === log.id}
-                                                        className={`h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2
-                                                            ${restoringId === log.id
-                                                                ? 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] animate-pulse'
-                                                                : 'bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20 active:scale-95'}`}
-                                                    >
-                                                        <FontAwesomeIcon icon={faHistory} className={restoringId === log.id ? 'animate-spin' : ''} />
-                                                        {restoringId === log.id
-                                                            ? 'Memulihkan...'
-                                                            : log.action === 'DELETE' ? 'Pulihkan Record' : 'Revert ke State ini'}
-                                                    </button>
-                                                </div>
-                                            )}
-                                            {/* Severity */}
-                                            {log.severity && (() => {
-                                                const sev = SEVERITY_STYLES[log.severity] || SEVERITY_STYLES.LOW
-                                                return (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-7 h-7 rounded-lg bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)]">
-                                                            <FontAwesomeIcon icon={faExclamationTriangle} className="text-[10px]" />
+                                            {/* Footer Info & Actions */}
+                                            <div className="pt-3 border-t border-[var(--color-border)]/50 flex items-center justify-between gap-6">
+                                                {/* Left side: Severity & Meta */}
+                                                <div className="flex-1 flex flex-wrap items-center gap-4">
+                                                    {/* Severity */}
+                                                    {log.severity && (() => {
+                                                        const sev = SEVERITY_STYLES[log.severity] || SEVERITY_STYLES.LOW
+                                                        return (
+                                                            <div className="flex items-center gap-2 pr-4 border-r border-[var(--color-border)] last:border-0 border-opacity-30">
+                                                                <div className={`w-6 h-6 rounded-lg ${sev.color.split(' ')[0]} flex items-center justify-center`}>
+                                                                    <FontAwesomeIcon icon={faExclamationTriangle} className="text-[9px]" />
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Severity</span>
+                                                                    <span className={`text-[9.5px] font-black uppercase ${sev.color.split(' ')[1]}`}>
+                                                                        {sev.label}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })()}
+
+                                                    {/* Duration */}
+                                                    {log.duration_ms != null && (
+                                                        <div className="flex items-center gap-2 pr-4 border-r border-[var(--color-border)] last:border-0 border-opacity-30">
+                                                            <div className="w-6 h-6 rounded-lg bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)]">
+                                                                <FontAwesomeIcon icon={faStopwatch} className="text-[9px]" />
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Durasi</span>
+                                                                <span className={`text-[9px] font-mono font-bold ${log.duration_ms > 2000 ? 'text-rose-500' : log.duration_ms > 500 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                                                    {log.duration_ms}ms
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">Severity</span>
-                                                            <span className={`text-[10px] font-black uppercase ${sev.color.split(' ')[1]}`}>
-                                                                {sev.label}
-                                                            </span>
+                                                    )}
+
+                                                    {/* Session ID */}
+                                                    {log.session_id && (
+                                                        <div className="flex items-center gap-2 group cursor-help" title={log.session_id}>
+                                                            <div className="w-6 h-6 rounded-lg bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)] transition-colors">
+                                                                <FontAwesomeIcon icon={faFingerprint} className="text-[9px]" />
+                                                            </div>
+                                                            <div className="flex flex-col min-w-0">
+                                                                <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Session</span>
+                                                                <span className="text-[9px] font-mono font-bold text-[var(--color-text)] truncate max-w-[100px] block">
+                                                                    {log.session_id.slice(0, 12)}...
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )
-                                            })()}
-                                            {/* Session ID */}
-                                            {log.session_id && (
-                                                <div className="flex items-center gap-2 group cursor-help" title={log.session_id}>
-                                                    <div className="w-7 h-7 rounded-lg bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)] transition-colors">
-                                                        <FontAwesomeIcon icon={faFingerprint} className="text-[10px]" />
-                                                    </div>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">Session</span>
-                                                        <span className="text-[10px] font-mono font-bold text-[var(--color-text)] truncate max-w-[150px] block">
-                                                            {log.session_id.slice(0, 16)}...
-                                                        </span>
-                                                    </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                            {/* Duration */}
-                                            {log.duration_ms != null && (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 rounded-lg bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)]">
-                                                        <FontAwesomeIcon icon={faStopwatch} className="text-[10px]" />
+
+                                                {/* Right side: Revert Button */}
+                                                {(log.action === 'DELETE' || log.action === 'UPDATE') && (
+                                                    <div className="shrink-0">
+                                                        <button
+                                                            onClick={e => { e.stopPropagation(); handleRestore(log) }}
+                                                            disabled={restoringId === log.id}
+                                                            className={`h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2
+                                                                ${restoringId === log.id
+                                                                    ? 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] animate-pulse'
+                                                                    : 'bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20 active:scale-95'}`}
+                                                        >
+                                                            <FontAwesomeIcon icon={faHistory} className={restoringId === log.id ? 'animate-spin' : ''} />
+                                                            {restoringId === log.id
+                                                                ? 'Memulihkan...'
+                                                                : log.action === 'DELETE' ? 'Pulihkan Record' : 'Revert ke State ini'}
+                                                        </button>
                                                     </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">Durasi</span>
-                                                        <span className={`text-[10px] font-mono font-bold ${log.duration_ms > 2000 ? 'text-rose-500' : log.duration_ms > 500 ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                                            {log.duration_ms}ms
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -956,6 +965,16 @@ export default function LogsPage() {
     const { addToast } = useToast()
     const isAllowed = ALLOWED_ROLES.includes(profile?.role)
 
+    // Read initial query params (deep-link support)
+    const initialParams = useMemo(() => {
+        try { return new URLSearchParams(window.location.search) } catch { return new URLSearchParams() }
+    }, [])
+    const initialTable = initialParams.get('table') || ''
+    const initialRecordId = initialParams.get('recordId') || ''
+    const initialAction = initialParams.get('action') || ''
+    const initialSource = initialParams.get('source') || ''
+    const initialSeverity = initialParams.get('severity') || ''
+
     // Data state
     const [logs, setLogs] = useState([])
     const [loading, setLoading] = useState(true)
@@ -964,10 +983,10 @@ export default function LogsPage() {
     // UI state
     const [page, setPage] = useState(1)
     const [pageSize] = useState(20)
-    const [search, setSearch] = useState('')
+    const [search, setSearch] = useState(() => initialRecordId)
     const [debouncedSearch, setDebouncedSearch] = useState('')
     const [expandedId, setExpandedId] = useState(null)
-    const [showFilters, setShowFilters] = useState(false)
+    const [showFilters, setShowFilters] = useState(() => !!(initialTable || initialAction || initialSource || initialSeverity))
 
     // Realtime state — newLogsCount dipakai kalau user lagi di page > 1
     const [newLogsCount, setNewLogsCount] = useState(0)
@@ -979,10 +998,10 @@ export default function LogsPage() {
     useEffect(() => { pageRef.current = page }, [page])
 
     // Filter state
-    const [filterSource, setFilterSource] = useState('')
-    const [filterAction, setFilterAction] = useState('')
-    const [filterTable, setFilterTable] = useState('')
-    const [filterSeverity, setFilterSeverity] = useState('')
+    const [filterSource, setFilterSource] = useState(() => initialSource)
+    const [filterAction, setFilterAction] = useState(() => initialAction)
+    const [filterTable, setFilterTable] = useState(() => initialTable)
+    const [filterSeverity, setFilterSeverity] = useState(() => initialSeverity)
     const [filterRange, setFilterRange] = useState({ from: '', to: '' })
     const [sortDir, setSortDir] = useState('desc')
 
@@ -1022,7 +1041,18 @@ export default function LogsPage() {
             if (filterSeverity) q = q.eq('severity', filterSeverity)
             if (filterRange.from) q = q.gte('created_at', filterRange.from)
             if (filterRange.to) q = q.lte('created_at', filterRange.to + 'T23:59:59')
-            if (debouncedSearch) q = q.or(`table_name.ilike.%${debouncedSearch}%,action.ilike.%${debouncedSearch}%,record_id.ilike.%${debouncedSearch}%,actor_name.ilike.%${debouncedSearch}%`)
+            if (debouncedSearch) {
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+                const isUuid = uuidRegex.test(debouncedSearch.trim())
+                
+                if (isUuid) {
+                    // Jika UUID, gunakan .eq untuk record_id agar tidak crash PostgreSQL (uuid vs ilike)
+                    q = q.or(`record_id.eq.${debouncedSearch.trim()},table_name.ilike.%${debouncedSearch}%,action.ilike.%${debouncedSearch}%,actor_name.ilike.%${debouncedSearch}%`)
+                } else {
+                    // Jika bukan UUID, jangan cari di record_id pakai ilike (pasti error)
+                    q = q.or(`table_name.ilike.%${debouncedSearch}%,action.ilike.%${debouncedSearch}%,actor_name.ilike.%${debouncedSearch}%`)
+                }
+            }
 
             q = q.order('created_at', { ascending: sortDir === 'asc' })
             q = q.range((page - 1) * pageSize, page * pageSize - 1)
@@ -1086,62 +1116,59 @@ export default function LogsPage() {
     // ── Always-on realtime subscription ───────────────────────────────────────
     // Channel dibuat SEKALI via useRef, tidak di-recreate saat state berubah
     useEffect(() => {
-        if (!isAllowed) return
+        if (!isAllowed || isDemoMode) return
 
-        // Cleanup channel lama kalau ada (mis: HMR / strict mode double-invoke)
-        if (channelRef.current) {
-            supabase.removeChannel(channelRef.current)
-            channelRef.current = null
+        // Cleanup function for Supabase Realtime
+        const cleanup = async (ch) => {
+            if (!ch) return
+            try {
+                await ch.unsubscribe()
+                await supabase.removeChannel(ch)
+            } catch (e) {
+                console.warn('[Realtime Cleanup]', e.message)
+            }
         }
 
+        // Create new channel
         const channel = supabase
-            .channel('audit_logs_realtime')
+            .channel('audit_logs_broadcast')
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'audit_logs' },
                 async (payload) => {
                     const newRow = payload.new
                     if (!newRow?.id) return
-
-                    // Resolve actor untuk baris baru
                     const resolved = await resolveActor(newRow)
 
-                    if (filtersActiveRef.current) {
-                        // Ada filter aktif — data baru mungkin tidak match filter
-                        // Cukup increment counter saja, jangan inject
+                    if (filtersActiveRef.current || pageRef.current > 1) {
                         setNewLogsCount(c => c + 1)
                         setTotal(t => t + 1)
                         return
                     }
 
-                    if (pageRef.current > 1) {
-                        // User lagi di page bukan halaman pertama — tampilkan banner
-                        setNewLogsCount(c => c + 1)
-                        setTotal(t => t + 1)
-                        return
-                    }
-
-                    // Page 1, no filter — prepend langsung ke list
                     setLogs(prev => {
-                        // Hindari duplicate (edge case: double fire)
                         if (prev.some(l => l.id === resolved.id)) return prev
-                        // Prepend & potong supaya tidak lebih dari pageSize
                         return [resolved, ...prev].slice(0, 20)
                     })
                     setTotal(t => t + 1)
                 }
             )
-            .subscribe()
 
-        channelRef.current = channel
+        channel.subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                channelRef.current = channel
+            } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+                console.error('[Realtime Status]', status)
+            }
+        })
 
         return () => {
             if (channelRef.current) {
-                supabase.removeChannel(channelRef.current)
+                cleanup(channelRef.current)
                 channelRef.current = null
             }
         }
-    }, [isAllowed, resolveActor]) // Tidak ada fetchLogs di sini — channel tidak perlu tahu tentang fetch
+    }, [isAllowed, resolveActor, addToast])
 
     const handleRestore = async () => {
         if (!restoreEntry) return
@@ -1456,9 +1483,9 @@ export default function LogsPage() {
                         <span className="text-[11px] font-black text-[var(--color-primary)]">
                             {newLogsCount} log baru masuk
                         </span>
-                        <span className="text-[10px] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
+                        <h4 className="text-[11px] font-black text-[var(--color-text)] leading-tight uppercase tracking-tight group-hover:text-[var(--color-primary)] transition-colors">
                             — klik untuk lihat
-                        </span>
+                        </h4>
                     </button>
                 )}
 

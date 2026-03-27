@@ -18,7 +18,12 @@ function getPortalContainer(id) {
     return _portalContainers[id]
 }
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md', variant = 'centered', mobileVariant = 'centered' }) {
+export default function Modal({
+    isOpen, onClose, title, children, footer,
+    size = 'md', variant = 'centered', mobileVariant = 'centered',
+    noPadding = false, contentClassName = "",
+    icon, iconBg, iconColor, description
+}) {
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden'
@@ -57,46 +62,70 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', v
         <div
             className={`fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm transition-all duration-300
                 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}
-                ${isBottomSheet ? 'flex items-end md:items-start justify-center md:overflow-y-auto md:p-8' : 'flex items-start justify-center overflow-y-auto p-4 md:p-8'}
+                ${isBottomSheet ? 'flex items-end md:items-center justify-center md:p-8' : 'flex items-center justify-center p-4 md:p-8'}
             `}
             onClick={onClose}
             role="dialog"
             aria-modal="true"
         >
             <div
-                className={`bg-[var(--color-surface)] shadow-2xl w-full relative transition-all duration-500 transform overflow-hidden
+                className={`bg-[var(--color-surface)] shadow-2xl w-full relative transition-all duration-500 transform overflow-hidden flex flex-col
                     ${sizeClasses[size]}
                     ${isBottomSheet
-                        ? 'rounded-t-[2.5rem] md:rounded-2xl max-h-[92vh] md:max-h-[calc(100vh-4rem)] md:my-auto translate-y-0 animate-in slide-in-from-bottom-4 md:slide-in-from-top-4 flex flex-col'
-                        : 'rounded-2xl p-6 my-auto translate-y-0 animate-in zoom-in-95'
+                        ? 'rounded-t-[2rem] md:rounded-[2rem] max-h-[92vh] md:max-h-[calc(100vh-4rem)] translate-y-0 animate-in slide-in-from-bottom-4 md:slide-in-from-top-4'
+                        : 'rounded-[2rem] max-h-[calc(100vh-4rem)] translate-y-0 animate-in zoom-in-95'
                     }
                 `}
-                style={isBottomSheet ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' } : {}}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Drag Handle for Bottom Sheet */}
                 {isBottomSheet && (
-                    <div className="shrink-0 w-12 h-1.5 bg-[var(--color-border)] rounded-full mx-auto mt-4 mb-4 md:hidden opacity-30" />
+                    <div className="shrink-0 w-12 h-1.5 bg-[var(--color-border)] rounded-full mx-auto mt-4 mb-2 md:hidden opacity-30" />
                 )}
 
-                <div className={`flex items-center justify-between mb-4 ${isBottomSheet ? 'px-6 pt-2' : ''}`}>
-                    <h3 className="text-lg font-black font-heading tracking-tight text-[var(--color-text)]">{title}</h3>
+                {/* Header (Sticky by flex shrink-0) */}
+                <div className={`shrink-0 flex items-center justify-between mb-0 px-6 ${isBottomSheet ? 'pt-2' : 'pt-5 pb-4'} border-b border-[var(--color-border)]`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                        {icon && (
+                            <div className={`w-9 h-9 rounded-xl ${iconBg || 'bg-[var(--color-primary)]/10'} flex items-center justify-center shrink-0 opacity-80 ${iconColor || 'text-[var(--color-primary)]'}`}>
+                                <FontAwesomeIcon icon={icon} className="text-base" />
+                            </div>
+                        )}
+                        <div className="min-w-0">
+                            <h3 className={`font-black font-heading tracking-tight text-[var(--color-text)] leading-tight ${icon ? 'text-[13px]' : 'text-lg'}`}>
+                                {title}
+                            </h3>
+                            {description && (
+                                <p className="text-[10px] font-bold text-[var(--color-text-muted)] truncate leading-relaxed">
+                                    {description}
+                                </p>
+                            )}
+                        </div>
+                    </div>
                     <button
                         onClick={onClose}
-                        className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]
-              hover:bg-[var(--color-surface-alt)] rounded-xl transition-all active:scale-90"
+                        className="w-8 h-8 text-[var(--color-text-muted)] hover:text-[var(--color-text)]
+              hover:bg-[var(--color-surface-alt)] rounded-xl transition-all active:scale-90 flex items-center justify-center shrink-0"
                         aria-label="Close modal"
                     >
                         <FontAwesomeIcon icon={faXmark} />
                     </button>
                 </div>
 
-                <div className={`flex-1 min-h-0 ${isBottomSheet ? 'overflow-y-auto px-6 pr-4' : ''}`}>
+                {/* Content (Scrollable by flex-1 min-h-0 overflow-y-auto) */}
+                <div className={`flex-1 min-h-0 overflow-y-auto custom-scrollbar ${noPadding ? '' : 'p-6'} ${contentClassName}`}>
                     {children}
                 </div>
+
+                {/* Footer (Sticky by flex shrink-0) */}
+                {footer && (
+                    <div className="shrink-0 p-6 pt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                        {footer}
+                    </div>
+                )}
             </div>
         </div>
     )
 
     return createPortal(node, container)
-}
+}

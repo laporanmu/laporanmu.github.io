@@ -7,7 +7,8 @@ import {
     faKeyboard, faChevronLeft, faChevronRight, faGrip,
     faAnglesLeft, faAnglesRight, faDownload,
     faGraduationCap, faLayerGroup, faCircleCheck, faCheck,
-    faClock, faCalendarDay, faTableList,
+    faClock, faCalendarDay, faTableList, faHistory,
+    faFingerprint
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
@@ -21,6 +22,7 @@ import Pagination from '../../components/ui/Pagination'
 import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
 import AcademicYearFormModal from '../../components/academic-years/AcademicYearFormModal'
 import { ArchiveModal, DeactivateModal } from '../../components/academic-years/AcademicYearActionModals'
+import { AuditTimeline } from '../admin/LogsPage'
 
 
 const LS_COLS = 'academic_years_columns'
@@ -107,12 +109,16 @@ export default function AcademicYearsPage() {
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
     const [isPermanentDeleteOpen, setIsPermanentDeleteOpen] = useState(false)
     const [isDeactivateConfirmOpen, setIsDeactivateConfirmOpen] = useState(false)
+    const [isReadOnlyDetailOpen, setIsReadOnlyDetailOpen] = useState(false)
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
     // Selection & Data state
     const [selectedItem, setSelectedItem] = useState(null)
     const [itemToDelete, setItemToDelete] = useState(null)
     const [itemToDeactivate, setItemToDeactivate] = useState(null)
     const [itemToPermanentDelete, setItemToPermanentDelete] = useState(null)
+    const [readOnlyDetailItem, setReadOnlyDetailItem] = useState(null)
+    const [historyItem, setHistoryItem] = useState(null)
 
     // ── Fetch ────────────────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -217,6 +223,16 @@ export default function AcademicYearsPage() {
         setIsModalOpen(true)
     }
 
+    const handleOpenReadOnlyDetail = (item) => {
+        setReadOnlyDetailItem(item)
+        setIsReadOnlyDetailOpen(true)
+    }
+
+    const handleOpenHistory = (item) => {
+        setHistoryItem(item)
+        setIsHistoryOpen(true)
+    }
+
     const handleSubmit = async (formData, setFormErrors) => {
         if (!supabase || submitting) return
         setSubmitting(true)
@@ -259,7 +275,7 @@ export default function AcademicYearsPage() {
             const payload = { ...formData, name: formData.name.trim(), start_date: formData.startDate, end_date: formData.endDate }
             delete payload.makeActive // Avoid sending UI state to DB
 
-            if (selectedItem) {
+            if (selectedItem?.id) {
                 const { data, error } = await supabase.from('academic_years').update(payload).eq('id', selectedItem.id).select()
                 if (error) throw error
                 if (!data || data.length === 0) throw new Error('Gagal mengupdate data')
@@ -290,7 +306,29 @@ export default function AcademicYearsPage() {
             setIsModalOpen(false)
             setSelectedItem(null)
             fetchData()
-        } catch (err) { addToast(err.message || 'Gagal menyimpan data', 'error') }
+        } catch (err) {
+            // Postgres constraint errors (server-side integrity guards)
+            if (err?.code === '23505') {
+                addToast('Tidak bisa menyimpan: sudah ada tahun pelajaran lain yang aktif.', 'error')
+            } else if (err?.code === '23514') {
+                addToast('Tidak bisa menyimpan: pastikan tanggal mulai lebih kecil dari tanggal selesai.', 'error')
+            } else if (err?.code === '23P01') {
+                const clash = findOverlappingYear({
+                    semester: formData.semester,
+                    startDate: formData.startDate,
+                    endDate: formData.endDate,
+                    excludeId: selectedItem?.id || null,
+                })
+                if (clash) {
+                    setFormErrors?.({ endDate: `Periode bentrok dengan ${clash.name} (${clash.semester}) · ${formatDate(clash.start_date)}–${formatDate(clash.end_date)}` })
+                    addToast(`Tidak bisa menyimpan: periode bentrok dengan ${clash.name} (${clash.semester}).`, 'error')
+                } else {
+                    addToast('Tidak bisa menyimpan: periode bertabrakan dengan data lain.', 'error')
+                }
+            } else {
+                addToast(err?.message || 'Gagal menyimpan data', 'error')
+            }
+        }
         finally { setSubmitting(false) }
     }
 
@@ -306,7 +344,16 @@ export default function AcademicYearsPage() {
             addToast(`${item.name} ${item.semester} diaktifkan`, 'success')
             await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_active: true } })
             fetchData()
-        } catch (err) { addToast(err.message || 'Gagal mengaktifkan', 'error') }
+        } catch (err) {
+            // Postgres unique violation (e.g. "only one active") or constraint errors
+            if (err?.code === '23505') {
+                addToast('Tidak bisa mengaktifkan: sudah ada tahun pelajaran lain yang aktif.', 'error')
+            } else if (err?.code === '23P01') {
+                addToast('Tidak bisa mengaktifkan: periode bertabrakan dengan data lain.', 'error')
+            } else {
+                addToast(err?.message || 'Gagal mengaktifkan', 'error')
+            }
+        }
         finally { setSubmitting(false) }
     }
 
@@ -331,20 +378,15 @@ export default function AcademicYearsPage() {
         finally { setSubmitting(false) }
     }
 
-    const handleDuplicate = async (item) => {
-        try {
-            const { error } = await supabase.from('academic_years').insert({
-                name: item.name + ' (Salinan)',
-                semester: item.semester,
-                start_date: item.start_date,
-                end_date: item.end_date,
-                is_active: false,
-            })
-            if (error) throw error
-            addToast(`Berhasil menduplikasi ${item.name}`, 'success')
-            await logAudit({ action: 'INSERT', source: 'MASTER', tableName: 'academic_years', newData: { name: item.name + ' (Salinan)', semester: item.semester, duplicated_from: item.id } })
-            fetchData()
-        } catch { addToast('Gagal menduplikasi', 'error') }
+    const handleDuplicate = (item) => {
+        // Jangan langsung insert ke DB karena akan melanggar exclusion constraint (overlapping dates)
+        // Set selectedItem tanpa ID, tapi dengan value yang sudah terisi + label (Salinan)
+        setSelectedItem({
+            ...item,
+            id: undefined, // Hapus ID biar handleSubmit tau ini 'Insert'
+            name: `${item.name} (Salinan)`
+        })
+        setIsModalOpen(true)
     }
 
     // Status otomatis berdasarkan tanggal
@@ -354,6 +396,23 @@ export default function AcademicYearsPage() {
         if (now < s) return { label: 'Akan Datang', cls: 'bg-blue-500/10 text-blue-600 border-blue-500/20', textCls: 'text-blue-500' }
         if (now > e) return { label: 'Sudah Selesai', cls: 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)]', textCls: 'text-[var(--color-text-muted)]' }
         return { label: 'Sedang Berjalan', cls: 'bg-amber-500/10 text-amber-600 border-amber-500/20', textCls: 'text-amber-500' }
+    }
+
+    const findOverlappingYear = ({ semester, startDate, endDate, excludeId = null }) => {
+        if (!semester || !startDate || !endDate) return null
+        const targetS = new Date(startDate)
+        const targetE = new Date(endDate)
+        if (Number.isNaN(targetS.getTime()) || Number.isNaN(targetE.getTime())) return null
+
+        return years.find(y => {
+            if (excludeId && y.id === excludeId) return false
+            if (y.deleted_at != null) return false
+            if (y.semester !== semester) return false
+            const s = new Date(y.start_date)
+            const e = new Date(y.end_date)
+            if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return false
+            return (targetS >= s && targetS <= e) || (targetE >= s && targetE <= e) || (targetS <= s && targetE >= e)
+        }) || null
     }
 
     const handleDeleteConfirm = async () => {
@@ -562,7 +621,7 @@ export default function AcademicYearsPage() {
                             )}
                         </div>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setIsBulkDeleteOpen(true)} className="h-8 px-3 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-wide hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faTrash} />Arsipkan</button>
+                            <button onClick={() => setIsBulkDeleteOpen(true)} className="h-8 px-3 rounded-xl bg-amber-500/10 text-amber-600 text-[10px] font-black uppercase tracking-wide hover:bg-amber-500 hover:text-white transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faBoxArchive} />Arsipkan</button>
                             <button onClick={() => setSelectedIds([])} className="h-8 px-3 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faXmark} />Batal</button>
                         </div>
                     </div>
@@ -714,18 +773,49 @@ export default function AcademicYearsPage() {
                         className="flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0 lg:snap-none"
                     >
                         {[
-                            { icon: faGraduationCap, label: 'Total', value: stats.total, top: 'border-t-[var(--color-primary)]', ibg: 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]', hover: 'hover:bg-[var(--color-primary)]/5' },
-                            { icon: faCircleCheck, label: 'Aktif', value: stats.active, top: 'border-t-emerald-500', ibg: 'bg-emerald-500/10 text-emerald-500', hover: 'hover:bg-emerald-500/5' },
-                            { icon: faLayerGroup, label: 'Semester Ganjil', value: stats.ganjil, top: 'border-t-blue-500', ibg: 'bg-blue-500/10 text-blue-500', hover: 'hover:bg-blue-500/5' },
-                            { icon: faLayerGroup, label: 'Semester Genap', value: stats.genap, top: 'border-t-purple-500', ibg: 'bg-purple-500/10 text-purple-500', hover: 'hover:bg-purple-500/5' },
+                            { key: 'total', icon: faGraduationCap, label: 'Total', value: stats.total, top: 'border-t-[var(--color-primary)]', ibg: 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]', hover: 'hover:bg-[var(--color-primary)]/5' },
+                            { key: 'active', icon: faCircleCheck, label: 'Aktif', value: stats.active, top: 'border-t-emerald-500', ibg: 'bg-emerald-500/10 text-emerald-500', hover: 'hover:bg-emerald-500/5' },
+                            { key: 'ganjil', icon: faLayerGroup, label: 'Semester Ganjil', value: stats.ganjil, top: 'border-t-blue-500', ibg: 'bg-blue-500/10 text-blue-500', hover: 'hover:bg-blue-500/5' },
+                            { key: 'genap', icon: faLayerGroup, label: 'Semester Genap', value: stats.genap, top: 'border-t-purple-500', ibg: 'bg-purple-500/10 text-purple-500', hover: 'hover:bg-purple-500/5' },
                         ].map((s, i) => (
-                            <div key={i} className={`w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] ${s.top} flex items-center gap-3 group ${s.hover} transition-all`}>
+                            <button
+                                key={s.key}
+                                type="button"
+                                onClick={() => {
+                                    // Quick filter berdasarkan kartu statistik
+                                    if (s.key === 'total') {
+                                        resetAllFilters()
+                                        return
+                                    }
+                                    if (s.key === 'active') {
+                                        setFilterSemester('')
+                                        setFilterTimeStatus('Sedang Berjalan')
+                                        setSortBy('active')
+                                        setPage(1)
+                                        return
+                                    }
+                                    if (s.key === 'ganjil') {
+                                        setFilterSemester('Ganjil')
+                                        setFilterTimeStatus('')
+                                        setSortBy('name_desc')
+                                        setPage(1)
+                                        return
+                                    }
+                                    if (s.key === 'genap') {
+                                        setFilterSemester('Genap')
+                                        setFilterTimeStatus('')
+                                        setSortBy('name_desc')
+                                        setPage(1)
+                                    }
+                                }}
+                                className={`w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] ${s.top} flex items-center gap-3 group ${s.hover} transition-all text-left`}
+                            >
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform shrink-0 ${s.ibg}`}><FontAwesomeIcon icon={s.icon} /></div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">{s.label}</p>
                                     <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{s.value}</h3>
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
 
@@ -925,7 +1015,7 @@ export default function AcademicYearsPage() {
                                                 </td>
                                             </tr>
                                         ) : paged.map(year => (
-                                            <tr key={year.id} className={`border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors group ${selectedIds.includes(year.id) ? 'bg-[var(--color-primary)]/5' : ''}`}>
+                                            <tr key={year.id} className={`border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors group ${selectedIds.includes(year.id) ? 'bg-[var(--color-primary)]/5' : ''} ${year.is_active ? 'bg-emerald-500/[0.03] border-l-4 border-l-emerald-500' : ''}`}>
                                                 <td className="px-6 py-4 text-center">
                                                     <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
                                                 </td>
@@ -1008,6 +1098,14 @@ export default function AcademicYearsPage() {
                                                                 <FontAwesomeIcon icon={faTrash} className="text-xs" />
                                                             </button>
                                                         )}
+                                                        <button
+                                                            onClick={() => handleOpenHistory(year)}
+                                                            title="Riwayat Perubahan"
+                                                            aria-label="Riwayat Perubahan"
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-indigo-500/10 transition-all"
+                                                        >
+                                                            <FontAwesomeIcon icon={faHistory} className="text-xs" />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1088,7 +1186,7 @@ export default function AcademicYearsPage() {
                                                 const ts = getTimeStatus(year.start_date, year.end_date);
                                                 return (
                                                     <div key={year.id} className="flex items-center gap-4 px-4 py-4 active:bg-[var(--color-primary)]/[0.03] transition-colors group relative"
-                                                        onClick={() => { if (canEdit) handleEdit(year); else addToast('Mode read-only — detail belum tersedia', 'info') }}>
+                                                        onClick={() => { if (canEdit) handleEdit(year); else handleOpenReadOnlyDetail(year) }}>
                                                         {/* Avatar-style Icon */}
                                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-[11px] font-black border-2 shadow-inner transition-all flex-shrink-0
                                                             ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white border-white/20' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
@@ -1132,110 +1230,118 @@ export default function AcademicYearsPage() {
                                 ) : (
                                     <>
                                         {paged.map(year => {
-                                    const ts = getTimeStatus(year.start_date, year.end_date);
-                                    return (
-                                        <div key={year.id} className="p-2">
-                                            <div className={`group relative p-3 rounded-[2.2rem] border transition-all duration-300 ease-out select-none ${selectedIds.includes(year.id) ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/[0.03] shadow-lg shadow-[var(--color-primary)]/10' : 'border-[var(--color-border)] bg-[var(--color-surface)] shadow-md shadow-black/[0.02]'}`}>
+                                            const ts = getTimeStatus(year.start_date, year.end_date);
+                                            return (
+                                                <div key={year.id} className="p-2">
+                                                    <div className={`group relative p-3 rounded-[2.2rem] border transition-all duration-300 ease-out select-none ${selectedIds.includes(year.id) ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/[0.03] shadow-lg shadow-[var(--color-primary)]/10' : year.is_active ? 'border-emerald-500 bg-emerald-500/[0.02] shadow-lg shadow-emerald-500/5' : 'border-[var(--color-border)] bg-[var(--color-surface)] shadow-md shadow-black/[0.02]'}`}>
 
-                                                {/* Identity Area */}
-                                                <div className="flex items-center gap-4 py-1">
-                                                    {/* Large Icon Box */}
-                                                    <div className="relative shrink-0">
-                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black shadow-inner border-2 transition-all ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white border-white dark:border-gray-800' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                                                            {year.name?.slice(2, 4) || '??'}
-                                                            {selectedIds.includes(year.id) && (
-                                                                <div className="absolute inset-0 bg-[var(--color-primary)]/40 rounded-2xl flex items-center justify-center animate-in zoom-in-50 duration-200">
-                                                                    <FontAwesomeIcon icon={faCheck} className="text-white text-xl" />
+                                                        {/* Identity Area */}
+                                                        <div className="flex items-center gap-4 py-1">
+                                                            {/* Large Icon Box */}
+                                                            <div className="relative shrink-0">
+                                                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black shadow-inner border-2 transition-all ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white border-white dark:border-gray-800' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                                                    {year.name?.slice(2, 4) || '??'}
+                                                                    {selectedIds.includes(year.id) && (
+                                                                        <div className="absolute inset-0 bg-[var(--color-primary)]/40 rounded-2xl flex items-center justify-center animate-in zoom-in-50 duration-200">
+                                                                            <FontAwesomeIcon icon={faCheck} className="text-white text-xl" />
+                                                                        </div>
+                                                                    )}
                                                                 </div>
+                                                                {/* Status Dot */}
+                                                                <div className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-lg ${ts?.label === 'Sedang Berjalan' ? 'bg-emerald-500 text-white' : ts?.label === 'Akan Datang' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-400'}`}>
+                                                                    <FontAwesomeIcon icon={ts?.label === 'Akan Datang' ? faCalendarDay : faClock} className="text-[7px]" />
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Name & Identity */}
+                                                            <div className="flex-1 min-w-0 pr-2">
+                                                                <div className="flex items-start justify-between">
+                                                                    <div>
+                                                                        <h3 className="font-extrabold text-[17px] text-[var(--color-text)] leading-tight tracking-tight mb-0.5 truncate">{year.name}</h3>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[10px] font-black text-[var(--color-text-muted)] opacity-40 uppercase tracking-[0.1em]">{year.semester}</span>
+                                                                            <div className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] opacity-20" />
+                                                                            <span className="text-[10px] font-bold text-[var(--color-primary)]/60 italic">{getDuration(year.start_date, year.end_date)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
+                                                                        <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] w-4.5 h-4.5" />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Info Pills */}
+                                                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[var(--color-surface-alt)]/80 border border-[var(--color-border)]/40 min-w-0">
+                                                                <FontAwesomeIcon icon={faCalendar} className="text-[9px] text-[var(--color-text-muted)] shrink-0" />
+                                                                <span className="text-[9px] font-black text-[var(--color-text)] uppercase tracking-tight truncate">
+                                                                    {formatDate(year.start_date)} — {formatDate(year.end_date)}
+                                                                </span>
+                                                            </div>
+                                                            {year.is_active && (
+                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl font-black text-[9px] uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/10 text-emerald-600">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                                    Sedang Aktif
+                                                                </span>
+                                                            )}
+                                                            {ts && (
+                                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl font-black text-[9px] uppercase tracking-widest border ${ts.cls.replace(/bg-.*?\s/, '').replace('border-', 'border ')}`}>
+                                                                    {ts.label}
+                                                                </span>
                                                             )}
                                                         </div>
-                                                        {/* Status Dot */}
-                                                        <div className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-lg ${ts?.label === 'Sedang Berjalan' ? 'bg-emerald-500 text-white' : ts?.label === 'Akan Datang' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-400'}`}>
-                                                            <FontAwesomeIcon icon={ts?.label === 'Akan Datang' ? faCalendarDay : faClock} className="text-[7px]" />
+
+                                                        {/* Action Footer */}
+                                                        <div className="mt-4 bg-[var(--color-surface-alt)] rounded-[2.2rem] p-1.5 flex items-center justify-between border border-[var(--color-border)] shadow-sm">
+                                                            <div className="flex items-center gap-0.5">
+                                                                {canEdit && (
+                                                                    <button onClick={() => handleEdit(year)} className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] active:scale-95 transition-all">
+                                                                        <FontAwesomeIcon icon={faEdit} className="text-[13px]" />
+                                                                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">Edit</span>
+                                                                    </button>
+                                                                )}
+                                                                {canEdit && (
+                                                                    <button onClick={() => handleDuplicate(year)} className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all">
+                                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                                                                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">Salin</span>
+                                                                    </button>
+                                                                )}
+                                                                {canEdit && !year.is_active && (
+                                                                    <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-red-400/50 hover:text-red-500 hover:bg-red-500/10 active:scale-95 transition-all">
+                                                                        <FontAwesomeIcon icon={faTrash} className="text-[13px]" />
+                                                                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">Arsip</span>
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handleOpenHistory(year)}
+                                                                    className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-indigo-500/10 active:scale-95 transition-all"
+                                                                    aria-label="Riwayat perubahan"
+                                                                >
+                                                                    <FontAwesomeIcon icon={faHistory} className="text-[13px]" />
+                                                                    <span className="text-[8px] font-black uppercase tracking-widest leading-none">Riwayat</span>
+                                                                </button>
+                                                            </div>
+
+                                                            {canEdit && (
+                                                                year.is_active ? (
+                                                                    <button onClick={() => handleDeactivate(year)} disabled={submitting} className="h-9 px-4 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[9px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all active:scale-95 disabled:opacity-50">
+                                                                        Nonaktifkan
+                                                                    </button>
+                                                                ) : (
+                                                                    <button onClick={() => handleSetActive(year)} disabled={submitting} className="h-9 px-5 rounded-full bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/90 transition-all active:scale-95 disabled:opacity-50">
+                                                                        Aktifkan
+                                                                    </button>
+                                                                )
+                                                            )}
                                                         </div>
                                                     </div>
-
-                                                    {/* Name & Identity */}
-                                                    <div className="flex-1 min-w-0 pr-2">
-                                                        <div className="flex items-start justify-between">
-                                                            <div>
-                                                                <h3 className="font-extrabold text-[17px] text-[var(--color-text)] leading-tight tracking-tight mb-0.5 truncate">{year.name}</h3>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] font-black text-[var(--color-text-muted)] opacity-40 uppercase tracking-[0.1em]">{year.semester}</span>
-                                                                    <div className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] opacity-20" />
-                                                                    <span className="text-[10px] font-bold text-[var(--color-primary)]/60 italic">{getDuration(year.start_date, year.end_date)}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
-                                                                <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded-lg border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] w-4.5 h-4.5" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
                                                 </div>
-
-                                                {/* Info Pills */}
-                                                <div className="mt-4 flex flex-wrap items-center gap-2">
-                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[var(--color-surface-alt)]/80 border border-[var(--color-border)]/40 min-w-0">
-                                                        <FontAwesomeIcon icon={faCalendar} className="text-[9px] text-[var(--color-text-muted)] shrink-0" />
-                                                        <span className="text-[9px] font-black text-[var(--color-text)] uppercase tracking-tight truncate">
-                                                            {formatDate(year.start_date)} — {formatDate(year.end_date)}
-                                                        </span>
-                                                    </div>
-                                                    {year.is_active && (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl font-black text-[9px] uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/10 text-emerald-600">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                            Sedang Aktif
-                                                        </span>
-                                                    )}
-                                                    {ts && (
-                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl font-black text-[9px] uppercase tracking-widest border ${ts.cls.replace(/bg-.*?\s/, '').replace('border-', 'border ')}`}>
-                                                            {ts.label}
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                {/* Action Footer */}
-                                                <div className="mt-4 bg-[var(--color-surface-alt)] rounded-[2.2rem] p-1.5 flex items-center justify-between border border-[var(--color-border)] shadow-sm">
-                                                    <div className="flex items-center gap-0.5">
-                                                        {canEdit && (
-                                                            <button onClick={() => handleEdit(year)} className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] active:scale-95 transition-all">
-                                                                <FontAwesomeIcon icon={faEdit} className="text-[13px]" />
-                                                                <span className="text-[8px] font-black uppercase tracking-widest leading-none">Edit</span>
-                                                            </button>
-                                                        )}
-                                                        {canEdit && (
-                                                            <button onClick={() => handleDuplicate(year)} className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-[var(--color-surface)] active:scale-95 transition-all">
-                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                                                                <span className="text-[8px] font-black uppercase tracking-widest leading-none">Salin</span>
-                                                            </button>
-                                                        )}
-                                                        {canEdit && !year.is_active && (
-                                                            <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} className="flex flex-col items-center justify-center gap-1 w-11 py-2 rounded-2xl text-red-400/50 hover:text-red-500 hover:bg-red-500/10 active:scale-95 transition-all">
-                                                                <FontAwesomeIcon icon={faTrash} className="text-[13px]" />
-                                                                <span className="text-[8px] font-black uppercase tracking-widest leading-none">Arsip</span>
-                                                            </button>
-                                                        )}
-                                                    </div>
-
-                                                    {canEdit && (
-                                                        year.is_active ? (
-                                                            <button onClick={() => handleDeactivate(year)} disabled={submitting} className="h-9 px-4 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[9px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all active:scale-95 disabled:opacity-50">
-                                                                Nonaktifkan
-                                                            </button>
-                                                        ) : (
-                                                            <button onClick={() => handleSetActive(year)} disabled={submitting} className="h-9 px-5 rounded-full bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/90 transition-all active:scale-95 disabled:opacity-50">
-                                                                Aktifkan
-                                                            </button>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </>
-                        )}
-                    </div>
+                                            )
+                                        })}
+                                    </>
+                                )}
+                            </div>
 
                             <Pagination
                                 totalRows={totalRows}
@@ -1277,38 +1383,206 @@ export default function AcademicYearsPage() {
                     submitting={submitting}
                 />
 
-                {/* ── Bulk Delete Modal ── */}
-                <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title="Arsipkan Massal" size="sm">
-                    <div className="space-y-4">
-                        <div className="p-3 bg-red-500/10 rounded-2xl flex items-center gap-3 text-red-500 border border-red-500/20">
-                            <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30">
-                                <FontAwesomeIcon icon={faBoxArchive} className="text-sm" />
+                {/* ── Read-only Detail (Mobile) ── */}
+                <Modal
+                    isOpen={isReadOnlyDetailOpen}
+                    onClose={() => { setIsReadOnlyDetailOpen(false); setReadOnlyDetailItem(null) }}
+                    title="Detail Tahun Pelajaran"
+                    size="full"
+                    mobileVariant="bottom-sheet"
+                >
+                    {readOnlyDetailItem && (() => {
+                        const ts = getTimeStatus(readOnlyDetailItem.start_date, readOnlyDetailItem.end_date)
+                        return (
+                            <div className="space-y-4 pb-2">
+                                <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun Pelajaran</p>
+                                            <h4 className="text-lg font-black text-[var(--color-text)] leading-tight truncate">{readOnlyDetailItem.name}</h4>
+                                            <div className="flex flex-wrap items-center gap-2 mt-2">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${readOnlyDetailItem.semester === 'Ganjil' ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' : 'bg-purple-500/10 text-purple-600 border border-purple-500/20'}`}>
+                                                    Semester {readOnlyDetailItem.semester}
+                                                </span>
+                                                {readOnlyDetailItem.is_active ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500 text-white shadow-sm shadow-emerald-500/20">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse"></span>Aktif
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[var(--color-surface)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
+                                                        Nonaktif
+                                                    </span>
+                                                )}
+                                                {ts && (
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${ts.cls.replace(/bg-.*?\s/, '').replace('border-', 'border ')}`}>
+                                                        {ts.label}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black shrink-0 ${readOnlyDetailItem.is_active ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                            {readOnlyDetailItem.name?.slice(2, 4) || '??'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Periode</p>
+                                        <div className="flex items-center gap-2 text-sm font-bold text-[var(--color-text)]">
+                                            <FontAwesomeIcon icon={faCalendar} className="opacity-40 text-xs" />
+                                            <span className="leading-snug">{formatDate(readOnlyDetailItem.start_date)} — {formatDate(readOnlyDetailItem.end_date)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Durasi</p>
+                                        <div className="flex items-center gap-2 text-sm font-black text-[var(--color-text)]">
+                                            <FontAwesomeIcon icon={faClock} className="opacity-40 text-xs" />
+                                            <span>{getDuration(readOnlyDetailItem.start_date, readOnlyDetailItem.end_date)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Mode Read-only</p>
+                                    <p className="text-xs font-bold text-amber-700/80 mt-1 leading-relaxed">
+                                        Anda dapat melihat detail, namun tidak bisa mengedit/mengubah status tahun pelajaran.
+                                    </p>
+                                </div>
+
+                                <button
+                                    onClick={() => { setIsReadOnlyDetailOpen(false); handleOpenHistory(readOnlyDetailItem) }}
+                                    className="w-full h-12 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-500/20 text-indigo-600 font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                    aria-label="Lihat riwayat perubahan"
+                                >
+                                    <FontAwesomeIcon icon={faHistory} />
+                                    Riwayat Perubahan
+                                </button>
+
+                                <button
+                                    onClick={() => { setIsReadOnlyDetailOpen(false); setReadOnlyDetailItem(null) }}
+                                    className="w-full h-12 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all"
+                                >
+                                    Tutup
+                                </button>
                             </div>
-                            <div>
-                                <p className="text-[11px] font-black uppercase tracking-wider">Arsipkan {selectedIds.length} Data</p>
-                                <p className="text-[10px] font-bold opacity-70 mt-0.5">Data bisa dipulihkan kembali.</p>
+                        )
+                    })()}
+                </Modal>
+
+                {/* ── Audit History Modal ── */}
+                <Modal
+                    isOpen={isHistoryOpen}
+                    onClose={() => { setIsHistoryOpen(false); setHistoryItem(null) }}
+                    title={`Riwayat · ${historyItem?.year_name || ''}`}
+                    description="Seluruh aktivitas perubahan data pada periode ini dicatat secara otomatis untuk transparansi audit."
+                    icon={faFingerprint}
+                    iconBg="bg-orange-500/10"
+                    iconColor="text-orange-500"
+                    size="lg"
+                    noPadding={true}
+                    footer={historyItem && (
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--color-text-muted)] opacity-70 bg-[var(--color-surface)] px-3 py-1 rounded-xl border border-[var(--color-border)]/50">
+                                <span className="opacity-50 tracking-tight">Record ID</span>
+                                <span className="font-mono text-[var(--color-text)] tracking-tighter">{historyItem.id}</span>
+                            </div>
+                            <div className="flex-1" />
+                            {['admin', 'developer'].includes(profile?.role) ? (
+                                <button
+                                    onClick={() => {
+                                        const u = new URL('/admin/logs', window.location.origin)
+                                        u.searchParams.set('table', 'academic_years')
+                                        u.searchParams.set('recordId', historyItem.id)
+                                        window.open(u.toString(), '_blank', 'noopener,noreferrer')
+                                    }}
+                                    className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2"
+                                    aria-label="Buka di Audit Center"
+                                >
+                                    <FontAwesomeIcon icon={faFingerprint} className="text-[9px]" />
+                                    Buka di Audit Center
+                                </button>
+                            ) : (
+                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-50 italic">
+                                    Audit Center Restricted
+                                </span>
+                            )}
+                        </div>
+                    )}
+                >
+                    <div className="flex flex-col min-h-0 h-[62vh]">
+                        {/* Forensic Thread Card - Scrollable Content */}
+                        <div className="flex-1 min-h-0 p-4 pt-2 pb-2">
+                            <div className="h-full flex flex-col rounded-2xl border border-[var(--color-border)] bg-white dark:bg-gray-900 shadow-xl shadow-black/[0.03] overflow-hidden">
+                                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                    {historyItem && (
+                                        <AuditTimeline
+                                            tableName="academic_years"
+                                            recordId={historyItem.id}
+                                            limit={30}
+                                            showSearch={true}
+                                            stickyHeader={true}
+                                        />
+                                    )}
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </Modal>
+
+                {/* ── Bulk Delete Modal ── */}
+                <Modal
+                    isOpen={isBulkDeleteOpen}
+                    onClose={() => setIsBulkDeleteOpen(false)}
+                    title="Arsipkan Massal"
+                    description={`Pindahkan ${selectedIds.length} data terpilih ke daftar arsip secara massal.`}
+                    icon={faBoxArchive}
+                    iconBg="bg-red-500/10"
+                    iconColor="text-red-500"
+                    size="sm"
+                    footer={
                         <div className="flex gap-3">
-                            <button onClick={() => setIsBulkDeleteOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">
+                            <button onClick={() => setIsBulkDeleteOpen(false)} className="h-9 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
                                 Batal
                             </button>
-                            <button onClick={handleBulkDelete} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faBoxArchive} className="text-[10px]" />Arsipkan {selectedIds.length} Data</>}
+                            <div className="flex-1" />
+                            <button onClick={handleBulkDelete} disabled={submitting} className="h-9 px-5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-50">
+                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin text-[9px]" /> : <FontAwesomeIcon icon={faBoxArchive} className="text-[9px]" />}
+                                {submitting ? 'Memproses...' : 'Arsipkan Sekarang'}
                             </button>
+                        </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 text-[11px] font-bold text-red-700/70 leading-relaxed shadow-sm">
+                            Anda akan mengarsipkan <span className="font-black text-red-600">{selectedIds.length} tahun pelajaran</span> secara bersamaan. Laporan terkait tetap tersimpan dan dapat dipulihkan kapan saja.
                         </div>
                     </div>
                 </Modal>
 
                 {/* ── Arsip Modal ── */}
-                <Modal isOpen={isArchivedOpen} onClose={() => setIsArchivedOpen(false)} title="Arsip Tahun Pelajaran" size="lg">
-                    <div className="space-y-4">
-                        <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/20">
-                            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest leading-relaxed">
-                                Data di bawah telah diarsipkan. Anda dapat memulihkan atau menghapus permanen.
-                            </p>
+                <Modal
+                    isOpen={isArchivedOpen}
+                    onClose={() => setIsArchivedOpen(false)}
+                    title="Manajemen Arsip"
+                    description="Daftar tahun pelajaran yang telah dinonaktifkan dari sistem."
+                    icon={faBoxArchive}
+                    iconBg="bg-amber-500/10"
+                    iconColor="text-amber-600"
+                    size="lg"
+                    footer={
+                        <div className="flex justify-end w-full">
+                            <button onClick={() => setIsArchivedOpen(false)} className="h-9 px-6 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                                Tutup
+                            </button>
                         </div>
-                        <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
+                    }
+                >
+                    <div className="space-y-4">
+                        <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/20 text-[10px] font-bold text-amber-600 uppercase tracking-widest leading-relaxed shadow-sm">
+                            Data di bawah telah diarsipkan. Anda dapat memulihkan (unarchive) atau menghapus secara permanen.
+                        </div>
+                        <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                             {archivedYears.length === 0 ? (
                                 <div className="py-12 text-center opacity-40">
                                     <FontAwesomeIcon icon={faBoxArchive} className="text-4xl mb-3" />
@@ -1333,35 +1607,35 @@ export default function AcademicYearsPage() {
                                 </div>
                             ))}
                         </div>
-                        <button onClick={() => setIsArchivedOpen(false)} className="w-full h-12 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">
-                            Tutup
-                        </button>
                     </div>
                 </Modal>
 
                 {/* ── Hapus Permanen Modal ── */}
-                <Modal isOpen={isPermanentDeleteOpen} onClose={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} title="Hapus Permanen" size="sm">
-                    <div className="space-y-4">
-                        <div className="p-3 bg-red-500/10 rounded-2xl flex items-center gap-3 text-red-500 border border-red-500/20">
-                            <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30 animate-pulse">
-                                <FontAwesomeIcon icon={faTrash} className="text-sm" />
-                            </div>
-                            <div>
-                                <p className="text-[11px] font-black uppercase tracking-wider">Hapus Permanen</p>
-                                <p className="text-[10px] font-bold opacity-70 mt-0.5">Tindakan ini tidak dapat dibatalkan.</p>
-                            </div>
-                        </div>
-                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-medium px-1">
-                            Yakin hapus permanen <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToPermanentDelete?.name} {itemToPermanentDelete?.semester}</span>?
-                            <span className="block text-[10px] text-[var(--color-text-muted)] mt-1.5 opacity-60">Data tidak dapat dipulihkan kembali setelah dihapus.</span>
-                        </p>
+                <Modal
+                    isOpen={isPermanentDeleteOpen}
+                    onClose={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }}
+                    title="Hapus Permanen"
+                    description="Tindakan ini tidak dapat dibatalkan."
+                    icon={faTrash}
+                    iconBg="bg-red-500/10"
+                    iconColor="text-red-500"
+                    size="sm"
+                    footer={
                         <div className="flex gap-3">
-                            <button onClick={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-widest transition-all">
+                            <button onClick={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} className="h-9 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
                                 Batal
                             </button>
-                            <button onClick={() => handlePermanentDelete(itemToPermanentDelete)} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faTrash} className="text-[10px]" />Hapus Permanen</>}
+                            <div className="flex-1" />
+                            <button onClick={() => handlePermanentDelete(itemToPermanentDelete)} disabled={submitting} className="h-9 px-6 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-50">
+                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin text-[9px]" /> : <FontAwesomeIcon icon={faTrash} className="text-[9px]" />}
+                                {submitting ? 'Menghapus...' : 'Hapus Sekarang'}
                             </button>
+                        </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 text-[11px] font-bold text-red-700/70 leading-relaxed shadow-sm">
+                            Yakin menghapus permanen <span className="text-red-600 font-black">{itemToPermanentDelete?.name} {itemToPermanentDelete?.semester}</span>? Seluruh data terkait akan hilang selamanya.
                         </div>
                     </div>
                 </Modal>
