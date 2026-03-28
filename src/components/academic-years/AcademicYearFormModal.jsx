@@ -111,8 +111,13 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
         const startYear = match[1]
         const endYear = match[2]
 
-        handleChange('startDate', `${startYear}-07-01`)
-        handleChange('endDate', `${endYear}-06-30`)
+        if (formData.semester === 'Ganjil') {
+            handleChange('startDate', `${startYear}-07-14`)
+            handleChange('endDate', `${startYear}-12-22`)
+        } else {
+            handleChange('startDate', `${endYear}-01-05`)
+            handleChange('endDate', `${endYear}-06-20`)
+        }
     }
 
     const handleChange = (key, value) => {
@@ -188,7 +193,7 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
                                 className="mt-2 ml-1 text-[10px] font-black text-[var(--color-primary)] hover:text-[var(--color-primary-600)] transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/10 animate-in fade-in slide-in-from-top-1"
                             >
                                 <FontAwesomeIcon icon={faCalendar} className="text-[9px]" />
-                                Gunakan tanggal standar (1 Juli – 30 Juni)
+                                Gunakan tanggal standar ({formData.semester === 'Ganjil' ? '14 Jul – 22 Des' : '5 Jan – 20 Jun'})
                             </button>
                         )}
                         {formErrors.name && (
