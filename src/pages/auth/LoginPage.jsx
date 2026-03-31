@@ -20,7 +20,11 @@ export default function LoginPage() {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const sessionReason = searchParams.get('reason')
+    const [showHelpModal, setShowHelpModal] = useState(false)
+    const [showDemoDrawer, setShowDemoDrawer] = useState(false)
+    const [isShaking, setIsShaking] = useState(false)
     const emailInputRef = useRef(null)
+    const passwordInputRef = useRef(null)
 
     const MAX_ATTEMPTS = 5;
     const COOLDOWN_DURATION = 60 * 1000; // 60 seconds
@@ -75,10 +79,14 @@ export default function LoginPage() {
 
         if (!email || !password) {
             setErrorMessage('Silakan isi email dan password')
+            setIsShaking(true)
+            setTimeout(() => setIsShaking(false), 500)
             return
         }
         if (!/\S+@\S+\.\S+/.test(email)) {
             setErrorMessage('Format email tidak valid')
+            setIsShaking(true)
+            setTimeout(() => setIsShaking(false), 500)
             return
         }
 
@@ -87,6 +95,8 @@ export default function LoginPage() {
         setLoading(false)
 
         if (error) {
+            setIsShaking(true)
+            setTimeout(() => setIsShaking(false), 500)
             const newAttempts = loginAttempts + 1;
             setLoginAttempts(newAttempts);
             localStorage.setItem('loginAttempts', newAttempts.toString());
@@ -147,35 +157,16 @@ export default function LoginPage() {
                     <p className="text-sm text-[var(--color-text-muted)]">Portal khusus staff & guru sekolah</p>
                 </div>
 
-                {/* Demo Mode */}
-                {isDemoMode && (
-                    <div className="p-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 rounded-xl text-xs space-y-2.5">
-                        <div className="flex items-center justify-between">
-                            <p className="font-black text-amber-600 dark:text-amber-400 text-[11px] uppercase tracking-widest">🎮 Mode Demo</p>
-                            <span className="text-[9px] font-bold text-amber-500/70 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">password: demo123</span>
-                        </div>
-                        <div className="grid grid-cols-1 gap-1">
-                            {[
-                                { role: 'Developer', email: 'dev@laporanmu.id', desc: 'Akses penuh semua fitur', color: 'hover:border-rose-400/50   hover:bg-rose-500/5   hover:text-rose-600' },
-                                { role: 'Admin', email: 'admin@laporanmu.id', desc: 'Kelola data & user', color: 'hover:border-purple-400/50 hover:bg-purple-500/5 hover:text-purple-600' },
-                                { role: 'Guru', email: 'guru@laporanmu.id', desc: 'Laporan & presensi', color: 'hover:border-indigo-400/50 hover:bg-indigo-500/5 hover:text-indigo-600' },
-                                { role: 'Satpam', email: 'satpam@laporanmu.id', desc: 'Portal keluar masuk', color: 'hover:border-blue-400/50   hover:bg-blue-500/5   hover:text-blue-600' },
-                                { role: 'Viewer', email: 'viewer@laporanmu.id', desc: 'Hanya dashboard (read-only)', color: 'hover:border-gray-400/50   hover:bg-gray-500/5   hover:text-gray-500' },
-                            ].map(u => (
-                                <button
-                                    key={u.role}
-                                    type="button"
-                                    onClick={() => { setEmail(u.email); setPassword('demo123') }}
-                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border border-transparent bg-amber-100/50 dark:bg-amber-900/20 transition-all group ${u.color}`}>
-                                    <div className="flex items-center gap-2 text-left">
-                                        <span className="text-[10px] font-black text-amber-700 dark:text-amber-300 group-hover:text-inherit transition-colors w-16">{u.role}</span>
-                                        <span className="text-[9px] text-amber-600/60 dark:text-amber-400/60 font-medium">{u.desc}</span>
-                                    </div>
-                                    <code className="text-[9px] font-mono text-amber-600/70 dark:text-amber-400/70 shrink-0">{u.email}</code>
-                                </button>
-                            ))}
-                        </div>
-                        <p className="text-[9px] text-amber-500/60 text-center font-medium">Klik baris untuk isi otomatis</p>
+                {/* Demo Trigger Button (Subtle) */}
+                {isDemoMode && !showDemoDrawer && (
+                    <div className="flex justify-center animate-in fade-in slide-in-from-top-4 duration-1000">
+                        <button
+                            onClick={() => setShowDemoDrawer(true)}
+                            className="text-[10px] font-black uppercase tracking-widest text-amber-600/60 hover:text-amber-600 bg-amber-500/5 hover:bg-amber-500/10 border border-amber-500/10 px-4 py-1.5 rounded-full transition-all flex items-center gap-2 group"
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 group-hover:scale-125 transition-transform animate-pulse" />
+                            Punya Akun Demo? Klik di sini
+                        </button>
                     </div>
                 )}
 
@@ -195,7 +186,10 @@ export default function LoginPage() {
                 )}
 
                 {/* Form Card */}
-                <div className="glass rounded-[2rem] p-6 sm:p-8">
+                <div className={`glass rounded-[2rem] p-6 sm:p-8 animate-in fade-in zoom-in duration-700 overflow-hidden relative shadow-2xl shadow-indigo-500/10 ${isShaking ? 'animate-shake' : ''}`}>
+                    {/* Visual Accent */}
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-accent)] to-[var(--color-primary)] opacity-30" />
+
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider pl-1">Email</label>
@@ -207,6 +201,13 @@ export default function LoginPage() {
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="nama@laporan.mu"
                                     ref={emailInputRef}
+                                    onKeyDown={(e) => {
+                                        setCapsLockOn(e.getModifierState('CapsLock'))
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                            passwordInputRef.current?.focus()
+                                        }
+                                    }}
                                     className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-50 transition-all outline-none"
                                 />
                             </div>
@@ -221,23 +222,33 @@ export default function LoginPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     onKeyDown={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
+                                    ref={passwordInputRef}
                                     placeholder="••••••••"
                                     className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl pl-11 pr-12 py-3.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-50 transition-all outline-none"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(prev => !prev)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors p-2"
                                     aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
                                 >
                                     <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="text-sm" />
                                 </button>
                             </div>
-                            {capsLockOn && (
-                                <p className="text-xs text-amber-500 font-medium pl-1 mt-1 animate-pulse flex items-center gap-1.5">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" /> Caps Lock aktif
-                                </p>
-                            )}
+                            <div className="flex items-center justify-between px-1">
+                                {capsLockOn ? (
+                                    <p className="text-[10px] text-amber-500 font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
+                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" /> Caps Lock Aktif
+                                    </p>
+                                ) : <div />}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowHelpModal(true)}
+                                    className="text-[11px] font-bold text-[var(--color-primary)] hover:text-[var(--color-accent)] transition-colors hover:underline"
+                                >
+                                    Lupa password?
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-2 pl-1 select-none">
@@ -279,15 +290,84 @@ export default function LoginPage() {
                 </div>
 
                 {/* Footer Links */}
-                <div className="flex items-center justify-between text-xs">
-                    <Link to="/check" className="text-gray-400 hover:text-indigo-500 transition-colors">
-                        Wali murid? <span className="font-medium text-indigo-500">Cek data anak</span>
-                    </Link>
-                    <Link to="/" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                        ← Beranda
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+                    <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                        <Link to="/check" className="hover:text-[var(--color-primary)] transition-colors">Wali Murid</Link>
+                        <span className="w-1 h-1 rounded-full bg-[var(--color-border)]" />
+                        <Link to="/privacy" className="hover:text-[var(--color-primary)] transition-colors">Privasi</Link>
+                        <span className="w-1 h-1 rounded-full bg-[var(--color-border)]" />
+                        <Link to="/contact" className="hover:text-[var(--color-primary)] transition-colors">Bantuan</Link>
+                    </div>
+                    <Link to="/" className="text-[11px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2">
+                        <span>← Beranda</span>
                     </Link>
                 </div>
             </div>
+
+            {/* Help Modal */}
+            {showHelpModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 isolate">
+                    <div className="absolute inset-0 bg-[var(--color-surface)]/80 backdrop-blur-sm" onClick={() => setShowHelpModal(false)} />
+                    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] w-full max-w-sm rounded-[2rem] p-8 shadow-2xl relative z-10 animate-in zoom-in fade-in duration-300">
+                        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto mb-6">
+                            <FontAwesomeIcon icon={faKey} size="2x" />
+                        </div>
+                        <h3 className="text-xl font-black font-heading text-center mb-2">Bantuan Login</h3>
+                        <p className="text-sm text-[var(--color-text-muted)] text-center mb-8 leading-relaxed">
+                            Akses ditangguhkan atau lupa kata sandi? Silakan hubungi <span className="font-bold text-[var(--color-text)]">Admin Sekolah</span> atau <span className="font-bold text-[var(--color-text)]">Staf IT</span> melalui WhatsApp atau datang langsung ke ruang administrasi untuk mereset akun Anda.
+                        </p>
+                        <button
+                            onClick={() => setShowHelpModal(false)}
+                            className="btn btn-primary w-full py-4 text-xs font-black uppercase tracking-widest"
+                        >
+                            Saya Mengerti
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Demo Access Drawer/Modal */}
+            {showDemoDrawer && (
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 isolate">
+                    <div className="absolute inset-0 bg-[var(--color-surface)]/80 backdrop-blur-sm" onClick={() => setShowDemoDrawer(false)} />
+                    <div className="bg-[var(--color-surface)] border-t sm:border border-[var(--color-border)] w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl relative z-10 animate-in slide-in-from-bottom duration-500">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-black font-heading">Akun Demo</h3>
+                                <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Gunakan password: demo123</p>
+                            </div>
+                            <button onClick={() => setShowDemoDrawer(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 transition-all">
+                                <FontAwesomeIcon icon={faXmark} />
+                            </button>
+                        </div>
+                        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                            {[
+                                { role: 'Developer', email: 'dev@laporanmu.id', desc: 'Akses penuh fitur sistem', icon: '💻' },
+                                { role: 'Admin', email: 'admin@laporanmu.id', desc: 'Manajemen data & user', icon: '🛡️' },
+                                { role: 'Guru', email: 'guru@laporanmu.id', desc: 'Input nilai & presensi', icon: '👨‍🏫' },
+                                { role: 'Satpam', email: 'satpam@laporanmu.id', desc: 'Buku tamu & izin keluar', icon: '👮' },
+                                { role: 'Viewer', email: 'viewer@laporanmu.id', desc: 'Hanya melihat dashboard', icon: '👁️' },
+                            ].map(u => (
+                                <button
+                                    key={u.role}
+                                    type="button"
+                                    onClick={() => { setEmail(u.email); setPassword('demo123'); setShowDemoDrawer(false) }}
+                                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all group text-left"
+                                >
+                                    <span className="text-2xl grayscale group-hover:grayscale-0 transition-all">{u.icon}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between mb-0.5">
+                                            <span className="text-xs font-black uppercase tracking-wider">{u.role}</span>
+                                            <code className="text-[9px] font-mono text-[var(--color-text-muted)]">{u.email}</code>
+                                        </div>
+                                        <p className="text-[11px] text-[var(--color-text-muted)]">{u.desc}</p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
