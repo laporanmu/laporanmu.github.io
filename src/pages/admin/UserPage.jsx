@@ -65,6 +65,9 @@ export default function UserManagementPage() {
     const [loadingUnlinked, setLoadingUnlinked] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [stats, setStats] = useState({ total: 0, guru: 0, karyawan: 0, admin: 0, noAccount: 0 })
+    const statsScrollRef = useRef(null)
+    const [activeStatIdx, setActiveStatIdx] = useState(0)
+    const STAT_CARD_COUNT = 5
     const [profileIdExists, setProfileIdExists] = useState(true)  // whether teachers.profile_id column exists
     const [resetPassword, setResetPassword] = useState('')
     const [showResetPw, setShowResetPw] = useState(false)
@@ -634,25 +637,53 @@ export default function UserManagementPage() {
                     </div>
                 </div>
 
-                {/* ── Stats Cards ── */}
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                    {[
-                        { label: 'Total Akun', val: stats.total, color: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10', border: 'border-t-[var(--color-primary)]', icon: faUsers },
-                        { label: 'Guru', val: stats.guru, color: 'text-indigo-600', bg: 'bg-indigo-500/10', border: 'border-t-indigo-500', icon: faChalkboardTeacher },
-                        { label: 'Karyawan', val: stats.karyawan, color: 'text-teal-600', bg: 'bg-teal-500/10', border: 'border-t-teal-500', icon: faBriefcase },
-                        { label: 'Admin / Staff', val: stats.admin, color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-t-purple-500', icon: faUserShield },
-                        { label: 'Belum Ada Akun', val: stats.noAccount, color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-t-amber-500', icon: faUserSlash },
-                    ].map((s, i) => (
-                        <div key={i} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.border} flex items-center gap-3 hover:border-t-4 transition-all cursor-default`}>
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 ${s.bg}`}>
-                                <FontAwesomeIcon icon={s.icon} className={s.color} />
+                {/* ── Stats Carousel ── */}
+                <div className="relative mb-6 -mx-3 sm:mx-0 group/scroll">
+                    <div
+                        ref={statsScrollRef}
+                        onScroll={() => {
+                            const el = statsScrollRef.current
+                            if (!el) return
+                            const cardWidth = el.scrollWidth / STAT_CARD_COUNT
+                            const idx = Math.round(el.scrollLeft / cardWidth)
+                            setActiveStatIdx(Math.min(idx, STAT_CARD_COUNT - 1))
+                        }}
+                        className="flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0 lg:snap-none"
+                    >
+                        {[
+                            { label: 'Total Akun', val: stats.total, color: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10', icon: faUsers },
+                            { label: 'Guru', val: stats.guru, color: 'text-indigo-600', bg: 'bg-indigo-500/10', icon: faChalkboardTeacher },
+                            { label: 'Karyawan', val: stats.karyawan, color: 'text-teal-600', bg: 'bg-teal-500/10', icon: faBriefcase },
+                            { label: 'Admin / Staff', val: stats.admin, color: 'text-purple-600', bg: 'bg-purple-500/10', icon: faUserShield },
+                            { label: 'Belum Ada Akun', val: stats.noAccount, color: 'text-amber-600', bg: 'bg-amber-500/10', icon: faUserSlash },
+                        ].map((s, i) => (
+                            <div key={i} className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border border-[var(--color-border)] flex items-center gap-3 hover:shadow-lg transition-all cursor-default group">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm shrink-0 ${s.bg} group-hover:scale-110 transition-transform`}>
+                                    <FontAwesomeIcon icon={s.icon} className={s.color} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 leading-none mb-1">{s.label}</p>
+                                    <p className={`text-xl font-black font-heading leading-none tabular-nums ${s.color}`}>{loading ? '…' : s.val}</p>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 leading-none mb-1">{s.label}</p>
-                                <p className={`text-xl font-black font-heading leading-none tabular-nums ${s.color}`}>{loading ? '…' : s.val}</p>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+
+                    {/* Dot Indicators - Mobile Only */}
+                    <div className="flex justify-center gap-1.5 mt-2 sm:hidden">
+                        {Array.from({ length: STAT_CARD_COUNT }).map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => {
+                                    const el = statsScrollRef.current
+                                    if (!el) return
+                                    const cardWidth = el.scrollWidth / STAT_CARD_COUNT
+                                    el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
+                                }}
+                                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === activeStatIdx ? 'bg-[var(--color-primary)] w-3' : 'bg-[var(--color-border)]'}`}
+                            />
+                        ))}
+                    </div>
                 </div>
 
                 {/* ── Toolbar ── */}

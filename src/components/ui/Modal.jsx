@@ -50,7 +50,8 @@ export default function Modal({
         lg: 'max-w-2xl',
         xl: 'max-w-4xl',
         xxl: 'max-w-5xl',
-        full: 'max-w-[95vw]',
+        xxxl: 'max-w-7xl',
+        full: 'max-w-[98vw]',
     }
 
     const container = getPortalContainer('portal-modals-system')
