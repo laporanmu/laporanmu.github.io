@@ -33,7 +33,8 @@ const DatabasePage = lazy(() => import('./pages/admin/DatabasePage'))
 const StoragePage = lazy(() => import('./pages/admin/StoragePage'))
 const TasksPage = lazy(() => import('./pages/admin/TasksPage'))
 const PlaygroundPage = lazy(() => import('./pages/admin/PlaygroundPage'))
-const AdminNewsPage = lazy(() => import('./pages/admin/NewsPage'))
+const NewsListPage = lazy(() => import('./pages/admin/news/NewsListPage'))
+const NewsEditorPage = lazy(() => import('./pages/admin/news/NewsEditorPage'))
 
 // Master Data
 const StudentsPage = lazy(() => import('./pages/master/StudentsPage'))
@@ -427,7 +428,17 @@ function AppRoutes() {
             {/* Master Data */}
             <Route path="/admin/news" element={
               <RoleFlagRoute roles={DEV_ADMIN}>
-                <AdminNewsPage />
+                <NewsListPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/news/create" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <NewsEditorPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/news/edit/:id" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <NewsEditorPage />
               </RoleFlagRoute>
             } />
 
