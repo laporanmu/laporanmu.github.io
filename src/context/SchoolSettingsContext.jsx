@@ -8,6 +8,8 @@ export const DEFAULT_SETTINGS = {
     school_name_ar: 'معهد محمدية الإسلامي تانجول',
     school_subtitle_ar: 'المجلس التعليمي للمرحلتين الابتدائية والمتوسطة التابع للرئاسة الفرعية للجمعية المحمدية',
     school_address: 'Jl. Pemandian no. 88 RT 002 RW 003 Patemon, Tanggul, Jember 68155',
+    school_domain: 'smpmuh4tanggul.sch.id',
+    app_domain: 'laporanmu.vercel.app',
     logo_url: '/src/assets/mbs.png',
 
     // Kepala sekolah / direktur

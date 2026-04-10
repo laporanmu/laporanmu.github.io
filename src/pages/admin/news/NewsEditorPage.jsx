@@ -8,7 +8,7 @@ import {
     faArrowUpRightFromSquare, faMagicWandSparkles, faChevronLeft,
     faCloudArrowUp, faTriangleExclamation, faTrash, faAlignLeft,
     faBookOpen, faNewspaper, faFloppyDisk, faUser, faChevronDown,
-    faEyeSlash
+    faEyeSlash, faShareNodes, faRotateLeft, faCheckCircle
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../../components/layout/DashboardLayout'
 import Breadcrumb from '../../../components/ui/Breadcrumb'
@@ -17,23 +17,38 @@ import { supabase } from '../../../lib/supabase'
 import { logAudit } from '../../../lib/auditLogger'
 import ReactQuill from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
+import { useSchoolSettings } from '../../../context/SchoolSettingsContext'
+import MediaLibraryModal from './MediaLibraryModal'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 const slugify = (text) => text.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 80)
 const getReadTime = (html) => {
     if (!html) return 1
     const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim()
-    const words = text.match(/\S+/g)
-    const wordCount = words ? words.length : 0
-    return Math.max(1, Math.ceil(wordCount / 180))
+    const words = text.split(/\s+/).filter(Boolean).length
+    const images = (html.match(/<img/g) || []).length
+
+    // Standard: 200 words per minute
+    // Plus 12 seconds for first image, 11 for second, ..., 3 for tenth+
+    const imageTime = Array.from({ length: images }, (_, i) => Math.max(3, 12 - i))
+        .reduce((acc, curr) => acc + curr, 0) / 60
+
+    const wordTime = words / 200
+    return Math.max(1, Math.ceil(wordTime + imageTime))
 }
 const decodeEntities = (html = '') => html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim()
 const getExcerpt = (html, maxLen = 160) => { const text = decodeEntities(html); return text.length > maxLen ? text.slice(0, maxLen).trimEnd() + '…' : text }
+const isFormEmpty = (form) => {
+    const cleanTitle = (form.title || '').trim()
+    const cleanContent = (form.content || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim()
+    return !cleanTitle && !cleanContent
+}
 
 export default function NewsEditorPage() {
     const { id } = useParams()
     const navigate = useNavigate()
     const { addToast } = useToast()
+    const { settings } = useSchoolSettings()
     const isEdit = Boolean(id)
 
     const [form, setForm] = useState({
@@ -50,6 +65,8 @@ export default function NewsEditorPage() {
         meta_description: '',
         slug: '',
         display_name: '',
+        focus_keyword: '',
+        seo_score: 0,
     })
 
     const [isLoading, setIsLoading] = useState(isEdit)
@@ -60,6 +77,7 @@ export default function NewsEditorPage() {
     const [activeTab, setActiveTab] = useState('content') // content | settings | seo
     const [isGeneratingSeo, setIsGeneratingSeo] = useState(false)
     const [isSidePreview, setIsSidePreview] = useState(window.innerWidth > 1024)
+    const [seoView, setSeoView] = useState('search') // search | social
     const fileInputRef = useRef(null)
     const quillRef = useRef(null)
     const [isDragging, setIsDragging] = useState(false)
@@ -67,6 +85,11 @@ export default function NewsEditorPage() {
     const [hasDraft, setHasDraft] = useState(false)
     const [isDraftDismissed, setIsDraftDismissed] = useState(false)
     const [showExitModal, setShowExitModal] = useState(false)
+    const [isMediaModalOpen, setIsMediaModalOpen] = useState(false)
+    const [isZenMode, setIsZenMode] = useState(false)
+    const [existingTags, setExistingTags] = useState([])
+    const [showTagSuggestions, setShowTagSuggestions] = useState(false)
+    const [seoAnalysis, setSeoAnalysis] = useState([])
 
     // ── Auto-save to LocalStorage (Create Mode Only) ──
     useEffect(() => {
@@ -74,8 +97,8 @@ export default function NewsEditorPage() {
         const draft = localStorage.getItem('news_draft')
         if (draft && !isDraftDismissed) {
             const parsed = JSON.parse(draft)
-            // Only show if current form is empty and draft has something
-            if ((parsed.title || parsed.content) && !form.title && !form.content) {
+            // Only show if draft has meaningful content and current form is effectively empty
+            if (!isFormEmpty(parsed) && isFormEmpty(form)) {
                 setHasDraft(true)
             }
         }
@@ -84,8 +107,11 @@ export default function NewsEditorPage() {
     useEffect(() => {
         if (isEdit || isSaving) return
         const timer = setTimeout(() => {
-            if (form.title || form.content) {
+            if (!isFormEmpty(form)) {
                 localStorage.setItem('news_draft', JSON.stringify(form))
+            } else {
+                // If form becomes empty (e.g. user deleted everything), clean up potential ghost draft
+                localStorage.removeItem('news_draft')
             }
         }, 1000)
         return () => clearTimeout(timer)
@@ -153,16 +179,25 @@ export default function NewsEditorPage() {
         }
     }), [imageHandler])
 
-    // ── Fetch Profile for default display_name ──
+    // ── Fetch Profile & Existing Tags ──
     useEffect(() => {
-        if (!isEdit) {
-            supabase.auth.getUser().then(({ data: { user } }) => {
-                if (user) {
-                    supabase.from('profiles').select('full_name').eq('id', user.id).single()
-                        .then(({ data }) => { if (data?.full_name) setForm(f => ({ ...f, display_name: data.full_name })) })
+        const fetchData = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                // Fetch Profile
+                if (!isEdit) {
+                    const { data } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+                    if (data?.full_name) setForm(f => ({ ...f, display_name: data.full_name }))
                 }
-            })
+                // Fetch Tags for suggestion
+                const { data: tags } = await supabase.from('news').select('tag')
+                if (tags) {
+                    const uniqueTags = [...new Set(tags.map(t => t.tag))].filter(Boolean)
+                    setExistingTags(uniqueTags)
+                }
+            }
         }
+        fetchData()
     }, [isEdit])
 
     // ── Inject Quill Tooltips ──
@@ -222,6 +257,8 @@ export default function NewsEditorPage() {
                     meta_description: data.meta_description || '',
                     slug: data.slug || '',
                     display_name: data.display_name || '',
+                    focus_keyword: data.focus_keyword || '',
+                    seo_score: data.seo_score || 0,
                 })
                 setImagePreview(data.image_url || null)
             }
@@ -270,12 +307,60 @@ export default function NewsEditorPage() {
         return () => document.removeEventListener('keydown', handler, true)
     }, [form.title, form.content, isSaving]) // Simplified dependencies since handleSave is defined inside
 
-    // ── AI Helpers ──
+    // ── SEO Logic ──
+    const analyzeSeo = useCallback(() => {
+        const text = decodeEntities(form.content)
+        const wordCount = text.split(/\s+/).filter(Boolean).length
+        const kw = form.focus_keyword.toLowerCase()
+        const metaDesc = form.meta_description.toLowerCase()
+        const title = form.title.toLowerCase()
+        const slug = form.slug.toLowerCase()
+
+        let score = 0
+        const checks = []
+
+        // Title Checks
+        if (form.title.length >= 50 && form.title.length <= 60) { score += 15; checks.push({ label: 'Panjang Judul Ideal', st: 'success' }) }
+        else { checks.push({ label: 'Judul sebaiknya 50-60 karakter', st: 'warning' }) }
+
+        // Meta Checks
+        if (form.meta_description.length >= 120 && form.meta_description.length <= 160) { score += 15; checks.push({ label: 'Panjang Meta Deskripsi Ideal', st: 'success' }) }
+        else { checks.push({ label: 'Meta deskripsi sebaiknya 120-160 karakter', st: 'warning' }) }
+
+        // Keyword Checks
+        if (kw) {
+            if (title.includes(kw)) { score += 20; checks.push({ label: 'Keyword ada di Judul', st: 'success' }) }
+            else { checks.push({ label: 'Keyword tidak ditemukan di Judul', st: 'error' }) }
+
+            if (slug.includes(kw)) { score += 15; checks.push({ label: 'Keyword ada di Slug URL', st: 'success' }) }
+            else { checks.push({ label: 'Keyword tidak ditemukan di Slug', st: 'error' }) }
+
+            if (metaDesc.includes(kw)) { score += 15; checks.push({ label: 'Keyword ada di Meta Deskripsi', st: 'success' }) }
+            else { checks.push({ label: 'Keyword tidak ditemukan di Meta', st: 'error' }) }
+            
+            if (text.toLowerCase().slice(0, 500).includes(kw)) { score += 10; checks.push({ label: 'Keyword ada di paragraf pembuka', st: 'success' }) }
+            else { checks.push({ label: 'Keyword tidak ada di awal konten', st: 'warning' }) }
+        } else {
+            checks.push({ label: 'Tentukan kata kunci utama!', st: 'info' })
+        }
+
+        // Length
+        if (wordCount > 300) { score += 10; checks.push({ label: 'Panjang konten memadai (>300 kata)', st: 'success' }) }
+        else { checks.push({ label: 'Konten terlalu pendek untuk SEO', st: 'warning' }) }
+
+        setSeoAnalysis(checks)
+        setForm(f => ({ ...f, seo_score: score }))
+    }, [form.content, form.title, form.meta_description, form.slug, form.focus_keyword])
+
+    useEffect(() => {
+        const timer = setTimeout(() => analyzeSeo(), 1000)
+        return () => clearTimeout(timer)
+    }, [analyzeSeo])
+
     const generateAiSeo = () => {
         if (!form.content || isGeneratingSeo) return
         setIsGeneratingSeo(true)
 
-        // Artificial delay for "Premium AI Experience"
         setTimeout(() => {
             const text = decodeEntities(form.content)
             const sentences = text.split(/[.!?]\s+/).filter(s => s.length > 20)
@@ -288,10 +373,13 @@ export default function NewsEditorPage() {
                 meta_title: f.title.trim().slice(0, 60),
                 meta_description: metaDesc,
                 excerpt: f.excerpt || metaDesc,
-                slug: f.slug || slugify(f.title)
+                slug: f.slug || slugify(f.title),
+                // Try to guess keyword from title (first 2 words)
+                focus_keyword: f.focus_keyword || f.title.split(' ').slice(0, 2).join(' ')
             }))
 
             setIsGeneratingSeo(false)
+            addToast('SEO Metadata & Keyword berhasil di-generate', 'success')
         }, 1200)
     }
 
@@ -303,6 +391,12 @@ export default function NewsEditorPage() {
             slug: (f.slug && isEdit) ? f.slug : slugify(val),
             meta_title: f.meta_title || val.slice(0, 60),
         }))
+    }
+
+    const refreshSlug = () => {
+        if (!form.title) return
+        setForm(f => ({ ...f, slug: slugify(f.title) }))
+        addToast('Slug URL diperbarui dari judul', 'info')
     }
 
     // ── Handlers ──
@@ -332,7 +426,6 @@ export default function NewsEditorPage() {
         if (!form.title.trim()) { addToast('Judul tidak boleh kosong', 'warning'); setIsSaving(false); return }
         if (form.title.length > 60) { addToast('Judul terlalu panjang (Maks 60)', 'warning'); setIsSaving(false); return }
         if (!form.content.trim() || form.content === '<p><br></p>') { addToast('Konten informasi belum diisi', 'warning'); setIsSaving(false); return }
-        if (!imagePreview) { addToast('Harap pilih thumbnail utama', 'warning'); setIsSaving(false); return }
 
         try {
             const user = (await supabase.auth.getUser()).data.user
@@ -381,6 +474,8 @@ export default function NewsEditorPage() {
                 meta_title: form.meta_title || form.title,
                 meta_description: form.meta_description || finalExcerpt,
                 read_time: calculatedReadTime,
+                focus_keyword: form.focus_keyword || null,
+                seo_score: form.seo_score || 0,
                 display_name: form.display_name || null,
                 author: user?.email || 'Admin',
                 updated_at: new Date().toISOString()
@@ -423,24 +518,24 @@ export default function NewsEditorPage() {
         return createPortal(
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-[4px] animate-in fade-in duration-300" onClick={onClose} />
-                <div className="relative w-full max-w-md bg-[var(--color-surface)] rounded-[3rem] border border-[var(--color-border)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                    <div className="p-8 md:p-10 text-center">
-                        <div className="w-20 h-20 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 text-3xl mx-auto mb-8">
+                <div className="relative w-full max-w-[380px] bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="p-8 text-center pb-6">
+                        <div className="w-14 h-14 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 text-xl mx-auto mb-6">
                             <FontAwesomeIcon icon={faTriangleExclamation} />
                         </div>
-                        <h3 className="text-2xl font-black text-[var(--color-text)] mb-4 tracking-tight">Batalkan Penulisan?</h3>
-                        <p className="text-sm font-medium text-[var(--color-text-muted)] leading-relaxed px-6">
-                            Ada perubahan yang belum disimpan. Jika keluar sekarang, konten yang baru saja kamu tulis akan hilang secara permanen.
+                        <h3 className="text-xl font-black text-[var(--color-text)] mb-3 tracking-tight">Batalkan Penulisan?</h3>
+                        <p className="text-[12px] font-bold text-[var(--color-text-muted)] leading-relaxed px-4 opacity-80">
+                            Ada perubahan yang belum disimpan. Konten yang baru saja kamu tulis akan hilang secara permanen.
                         </p>
                     </div>
-                    <div className="flex gap-3 p-8 md:p-10 pt-0">
-                        <button onClick={onClose} 
-                            className="flex-1 h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] active:scale-95 transition-all">
+                    <div className="flex gap-3 px-8 pb-8 pt-2">
+                        <button onClick={onClose}
+                            className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] active:scale-95 transition-all">
                             Batal
                         </button>
-                        <button onClick={onConfirm} 
-                            className="flex-1 h-12 rounded-2xl bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 hover:brightness-110 active:scale-95 transition-all">
-                            Ya, Buang Perubahan
+                        <button onClick={onConfirm}
+                            className="flex-1 h-11 rounded-xl bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 hover:brightness-110 active:scale-95 transition-all">
+                            Ya, Buang
                         </button>
                     </div>
                 </div>
@@ -636,33 +731,101 @@ export default function NewsEditorPage() {
                                                     <FontAwesomeIcon icon={isSidePreview ? faEyeSlash : faEye} />
                                                     {isSidePreview ? 'Tutup Preview' : 'Live Preview'}
                                                 </button>
+                                                <button type="button" onClick={() => setIsZenMode(true)}
+                                                    className="w-8 h-8 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center justify-center transition-all"
+                                                    title="Zen Mode (Full Screen)">
+                                                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="text-xs" />
+                                                </button>
                                             </div>
                                         </div>
-                                        <ReactQuill theme="snow" value={form.content} ref={quillRef}
-                                            onChange={handleContentChange}
-                                            placeholder="Ceritakan detail informasi secara lengkap..."
-                                            modules={modules}
-                                        />
+                                            <div className="flex-1 flex flex-col group relative bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] overflow-hidden shadow-sm focus-within:border-[var(--color-primary)]/50 focus-within:ring-4 focus-within:ring-[var(--color-primary)]/5 transition-all duration-300">
+                                                <style>{`
+                                                    .ql-container.ql-snow { border: none !important; }
+                                                    .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid var(--color-border) !important; background: var(--color-surface-alt) !important; }
+                                                    .ql-editor { min-height: 400px; padding: 1.5rem !important; }
+                                                `}</style>
+                                                <ReactQuill theme="snow" value={form.content} ref={quillRef}
+                                                    placeholder="Tulis detail informasi di sini..."
+                                                    onChange={handleContentChange}
+                                                    modules={modules}
+                                                    className="flex-1"
+                                                />
+                                                {/* Premium Editor Status Bar */}
+                                                <div className="flex items-center justify-between px-6 py-3 bg-[var(--color-surface-alt)] border-t border-[var(--color-border)] text-[9px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)] animate-in fade-in slide-in-from-bottom-1 duration-500">
+                                                    <div className="flex items-center gap-6">
+                                                        <div className="flex items-center gap-2 group/stat cursor-default">
+                                                            <div className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-primary)] shadow-sm">
+                                                                <FontAwesomeIcon icon={faAlignLeft} className="text-[8px]" />
+                                                            </div>
+                                                            <span className="opacity-70 group-hover/stat:opacity-100 transition-opacity whitespace-nowrap">
+                                                                {form.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').split(/\s+/).filter(Boolean).length} Kata
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 group/stat cursor-default">
+                                                            <div className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-amber-500 shadow-sm">
+                                                                <FontAwesomeIcon icon={faHashtag} className="text-[8px]" />
+                                                            </div>
+                                                            <span className="opacity-70 group-hover/stat:opacity-100 transition-opacity whitespace-nowrap">
+                                                                {form.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').length} Karakter
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-5">
+                                                        {lastSaved && (
+                                                            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-emerald-500/5 text-emerald-500">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                                <span className="whitespace-nowrap">Saved {new Date(lastSaved).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' })}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-2 pl-4 border-l border-[var(--color-border)]">
+                                                            <div className="w-5 h-5 rounded-lg bg-[var(--color-primary)] text-white flex items-center justify-center shadow-lg shadow-[var(--color-primary)]/20">
+                                                                <FontAwesomeIcon icon={faUserPen} className="text-[8px]" />
+                                                            </div>
+                                                            <span className="truncate max-w-[80px] opacity-80">{form.display_name?.split(' ')[0] || 'Admin'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                     </div>
                                 </div>
                             )}
 
                             {/* ── SETTINGS TAB ── */}
                             {activeTab === 'settings' && (
-                                <div className="space-y-8 animate-in fade-in duration-300 max-w-3xl">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-5 animate-in fade-in duration-300 max-w-3xl">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kategori</label>
                                             <div className="relative group">
-                                                <select value={form.tag}
-                                                    onChange={e => setForm(f => ({ ...f, tag: e.target.value }))}
-                                                    className="w-full h-10 px-4 pr-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] text-sm font-bold appearance-none cursor-pointer outline-none transition-all">
-                                                    <option value="Umum">Informasi Umum</option>
-                                                    <option value="Akademik">Akademik</option>
-                                                    <option value="Event">Kegiatan & Event</option>
-                                                    <option value="Prestasi">Prestasi</option>
-                                                </select>
-                                                <FontAwesomeIcon icon={faChevronDown} className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
+                                                <input type="text" value={form.tag}
+                                                    onChange={e => { setForm(f => ({ ...f, tag: e.target.value })); setShowTagSuggestions(true) }}
+                                                    onFocus={() => setShowTagSuggestions(true)}
+                                                    placeholder="Pilih atau ketik kategori..."
+                                                    className="w-full h-10 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] text-sm font-bold outline-none transition-all"
+                                                />
+                                                <FontAwesomeIcon icon={faTags} className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] opacity-40 pointer-events-none" />
+                                                
+                                                {showTagSuggestions && existingTags.length > 0 && (
+                                                    <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white border border-[var(--color-border)] rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                        <div className="px-3 pb-2 mb-1 border-b border-[var(--color-border)]">
+                                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Saran Kategori</p>
+                                                        </div>
+                                                        <div className="max-h-[160px] overflow-y-auto">
+                                                            {['Informasi', 'Pengumuman', 'Akademik', 'Event', 'Prestasi', ...existingTags.filter(t => !['Informasi', 'Pengumuman', 'Akademik', 'Event', 'Prestasi'].includes(t))]
+                                                                .filter(t => t.toLowerCase().includes(form.tag.toLowerCase()))
+                                                                .map((t, idx) => (
+                                                                    <button key={idx} type="button" onClick={() => { setForm(f => ({ ...f, tag: t })); setShowTagSuggestions(false) }}
+                                                                        className="w-full px-4 py-2 text-left text-xs font-bold text-[var(--color-text)] hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)] transition-colors">
+                                                                        {t}
+                                                                    </button>
+                                                                ))}
+                                                        </div>
+                                                        <div className="mx-3 mt-1 pt-2 border-t border-[var(--color-border)]">
+                                                            <button type="button" onClick={() => setShowTagSuggestions(false)} className="text-[9px] font-black uppercase tracking-widest text-rose-500">Tutup</button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="space-y-2">
@@ -675,10 +838,15 @@ export default function NewsEditorPage() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Slug */}
                                         <div className="space-y-2">
-                                            <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Slug URL</label>
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Slug URL</label>
+                                                <button type="button" onClick={refreshSlug} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-primary)] hover:underline flex items-center gap-1">
+                                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[8px]" /> Sinkron Judul
+                                                </button>
+                                            </div>
                                             <div className="flex group">
                                                 <div className="h-10 px-4 flex items-center bg-[var(--color-surface)] border border-r-0 border-[var(--color-border)] rounded-l-xl text-xs font-black text-[var(--color-text-muted)] opacity-60">/news/</div>
                                                 <input type="text" value={form.slug}
@@ -698,13 +866,13 @@ export default function NewsEditorPage() {
                                     </div>
 
                                     {/* Thumbnail Upload */}
-                                    <div className="space-y-3">
+                                    <div className="space-y-2.5">
                                         <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Thumbnail Utama</label>
                                         <div onClick={() => fileInputRef.current?.click()}
                                             onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
                                             onDragLeave={() => setIsDragging(false)}
                                             onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleImageChange({ target: { files: [f] } }) }}
-                                            className={`h-40 relative group cursor-pointer overflow-hidden rounded-[1.5rem] border-2 border-dashed transition-all duration-300 ${isDragging ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 scale-[1.01]' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 bg-[var(--color-surface-alt)]/50'}`}>
+                                            className={`h-32 relative group cursor-pointer overflow-hidden rounded-[1.25rem] border-2 border-dashed transition-all duration-300 ${isDragging ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 scale-[1.01]' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 bg-[var(--color-surface-alt)]/50'}`}>
                                             {imagePreview ? (
                                                 <>
                                                     <img src={imagePreview} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Thumbnail" />
@@ -713,12 +881,14 @@ export default function NewsEditorPage() {
                                                     </div>
                                                 </>
                                             ) : (
-                                                <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                                                    <div className="w-16 h-16 rounded-[1.5rem] bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] mb-4 group-hover:scale-110 group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)] group-hover:border-[var(--color-primary)]/30 transition-all shadow-sm">
-                                                        <FontAwesomeIcon icon={faCloudArrowUp} className="text-2xl" />
+                                                <div className="h-full flex items-center justify-center p-6 text-center gap-6">
+                                                    <div className="w-12 h-12 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:scale-110 group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)] group-hover:border-[var(--color-primary)]/30 transition-all shadow-sm">
+                                                        <FontAwesomeIcon icon={faCloudArrowUp} className="text-xl" />
                                                     </div>
-                                                    <p className="text-sm font-black text-[var(--color-text)] uppercase tracking-widest mb-1.5">{isDragging ? 'Lepas Gambar' : 'Klik atau Seret Gambar'}</p>
-                                                    <p className="text-xs font-bold text-[var(--color-text-muted)] opacity-60">Format JPG, PNG atau WEBP (Maksimal 5MB)</p>
+                                                    <div className="text-left">
+                                                        <p className="text-[11px] font-black text-[var(--color-text)] uppercase tracking-widest mb-1">{isDragging ? 'Lepas Gambar' : 'Klik atau Seret Gambar'}</p>
+                                                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60">Format JPG, PNG atau WEBP (Maksimal 5MB)</p>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -729,7 +899,11 @@ export default function NewsEditorPage() {
                                                 <p className="text-xs font-bold text-rose-500 flex items-center gap-1.5">
                                                     <FontAwesomeIcon icon={faTriangleExclamation} /> {imageError}
                                                 </p>
-                                            ) : <div />}
+                                            ) : <div className="flex items-center gap-2">
+                                                <button type="button" onClick={() => setIsMediaModalOpen(true)} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--color-primary)] bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 rounded-xl transition-colors flex items-center gap-2">
+                                                    <FontAwesomeIcon icon={faImage} /> Pilih dari Galeri
+                                                </button>
+                                            </div>}
 
                                             {imagePreview && (
                                                 <button type="button" onClick={(e) => { e.stopPropagation(); setImagePreview(null); setImageFile(null); setForm(f => ({ ...f, image_url: '' })) }}
@@ -739,127 +913,198 @@ export default function NewsEditorPage() {
                                             )}
                                         </div>
 
-                                        {/* Image Alt Text */}
-                                        <div className="space-y-2 pt-4 border-t border-[var(--color-border)]">
+                                        <div className="space-y-2 pt-3 border-t border-[var(--color-border)]">
                                             <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Alt Text Gambar</label>
                                             <input type="text" value={form.image_alt}
                                                 onChange={e => setForm(f => ({ ...f, image_alt: e.target.value }))}
                                                 placeholder="Deskripsi gambar untuk aksesibilitas netra & SEO..."
-                                                className="w-full h-10 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] text-sm outline-none transition-all"
+                                                className="w-full h-10 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] text-sm font-bold outline-none transition-all"
                                             />
                                         </div>
                                     </div>
 
-                                    {/* Publish & Featured Toggles */}
-                                    <div className="flex flex-wrap gap-6 p-6 rounded-3xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)]">
-                                        <label className="flex items-center gap-4 cursor-pointer">
-                                            <button type="button" onClick={() => setForm(f => ({ ...f, is_published: !f.is_published }))}
-                                                className={`w-12 h-[26px] rounded-full transition-all duration-300 relative ${form.is_published ? 'bg-emerald-500 shadow-md shadow-emerald-500/30' : 'bg-[var(--color-border)]'}`}>
-                                                <div className={`absolute top-[3px] w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 ${form.is_published ? 'left-[25px]' : 'left-[3px]'}`} />
-                                            </button>
-                                            <div>
-                                                <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text)] mb-0.5">Visibilitas</p>
-                                                <p className="text-[10px] font-bold text-[var(--color-text-muted)]">{form.is_published ? 'Publik' : 'Disembunyikan / Draft'}</p>
+                                    {/* Visibility Switches */}
+                                    <div className="p-3.5 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex flex-col md:flex-row gap-6 md:divide-x md:divide-[var(--color-border)]">
+                                        <div className="flex items-center gap-4 pr-6 min-w-[200px]">
+                                            <label className="relative inline-flex items-center cursor-pointer scale-90">
+                                                <input type="checkbox" checked={form.is_published}
+                                                    onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))}
+                                                    className="sr-only peer" />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                            </label>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Visibilitas</p>
+                                                <p className="text-[10px] font-bold text-[var(--color-text-muted)] truncate">{form.is_published ? 'Publik' : 'Draft Pribadi'}</p>
                                             </div>
-                                        </label>
-                                        <div className="w-px h-8 bg-[var(--color-border)] hidden sm:block" />
-                                        <label className="flex items-center gap-4 cursor-pointer">
-                                            <button type="button" onClick={() => setForm(f => ({ ...f, is_featured: !f.is_featured }))}
-                                                className={`w-12 h-[26px] rounded-full transition-all duration-300 relative ${form.is_featured ? 'bg-amber-500 shadow-md shadow-amber-500/30' : 'bg-[var(--color-border)]'}`}>
-                                                <div className={`absolute top-[3px] w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 ${form.is_featured ? 'left-[25px]' : 'left-[3px]'}`} />
-                                            </button>
-                                            <div>
-                                                <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text)] mb-0.5">Hot News</p>
-                                                <p className="text-[10px] font-bold text-[var(--color-text-muted)]">{form.is_featured ? 'Berita Unggulan (Top)' : 'Berita Standar'}</p>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 md:pl-6 min-w-[200px]">
+                                            <label className="relative inline-flex items-center cursor-pointer scale-90">
+                                                <input type="checkbox" checked={form.is_featured}
+                                                    onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))}
+                                                    className="sr-only peer" />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
+                                            </label>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Urutan</p>
+                                                <p className="text-[10px] font-bold text-[var(--color-text-muted)] truncate">{form.is_featured ? 'Hot News (Top)' : 'Berita Standar'}</p>
                                             </div>
-                                        </label>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
                             {/* ── SEO TAB ── */}
                             {activeTab === 'seo' && (
-                                <div className="space-y-6 animate-in fade-in duration-300 max-w-3xl">
-                                    <div className="p-4 rounded-3xl bg-[var(--color-primary)]/[0.03] border border-[var(--color-primary)]/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                        <div className="flex items-center gap-4">
-                                            {(() => {
-                                                const seoChecks = [form.title?.length >= 15, form.excerpt?.length >= 80, !!form.slug && form.slug.length > 5, form.meta_title?.length >= 50 && form.meta_title?.length <= 60, form.meta_description?.length >= 150 && form.meta_description?.length <= 160, !!imagePreview]
-                                                const seoScore = Math.round((seoChecks.filter(Boolean).length / seoChecks.length) * 100)
-                                                const scoreColor = seoScore >= 80 ? 'text-emerald-500 bg-emerald-500/10' : seoScore >= 50 ? 'text-amber-500 bg-amber-500/10' : 'text-rose-500 bg-rose-500/10'
-                                                return (
-                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-black ${scoreColor}`}>
-                                                        {seoScore}
+                                <div className="space-y-4 animate-in fade-in duration-300 max-w-5xl pb-5">
+                                    <div className="flex flex-col lg:flex-row items-stretch gap-4">
+                                        {/* Score Card */}
+                                        <div className="lg:w-[310px] p-4 rounded-[1.5rem] bg-indigo-50 border border-indigo-100 flex flex-col gap-4 shadow-sm relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full -mr-12 -mt-12" />
+                                            
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center text-lg font-black shadow-inner ${form.seo_score >= 80 ? 'bg-emerald-500 text-white' : form.seo_score >= 50 ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white'}`}>
+                                                    {form.seo_score}
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-900/60 mb-0.5">Overall SEO Health</p>
+                                                    <p className="text-xs font-black text-indigo-950 uppercase tracking-tight leading-tight">
+                                                        {form.seo_score >= 80 ? 'Sangat Optimal' : form.seo_score >= 50 ? 'Butuh Perbaikan' : 'Buruk (Segera Perbaiki)'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-indigo-900/40">Focus Keyword</label>
+                                                <input type="text" value={form.focus_keyword}
+                                                    onChange={e => setForm(f => ({ ...f, focus_keyword: e.target.value }))}
+                                                    placeholder="Contoh: PPDB 2024..."
+                                                    className="w-full h-10 px-4 rounded-xl bg-white border border-indigo-100 focus:border-indigo-400 text-sm font-bold text-indigo-950 outline-none transition-all placeholder:text-indigo-900/20"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Real-time Checklist */}
+                                        <div className="flex-1 p-4 rounded-[1.5rem] bg-[var(--color-surface-alt)]/30 border border-[var(--color-border)] flex flex-col gap-3.5">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">SEO Analysis Checklist</h4>
+                                                <button type="button" onClick={generateAiSeo} disabled={isGeneratingSeo || !form.content}
+                                                    className="h-8 px-4 rounded-lg bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap">
+                                                    {isGeneratingSeo ? <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[8px]" /> : <FontAwesomeIcon icon={faMagicWandSparkles} className="text-[8px]" />}
+                                                    {isGeneratingSeo ? 'Gen...' : 'AI Optimizer'}
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2.5 overflow-y-auto pr-2 custom-scrollbar">
+                                                {seoAnalysis.map((item, idx) => (
+                                                    <div key={idx} className="flex items-start gap-2.5 text-[9px] sm:text-[10px]">
+                                                        <div className={`w-3.5 h-3.5 shrink-0 mt-0.5 rounded-full flex items-center justify-center text-[6px] ${item.st === 'success' ? 'bg-emerald-500 text-white' : item.st === 'error' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white'}`}>
+                                                            <FontAwesomeIcon icon={item.st === 'success' ? faCheck : item.st === 'error' ? faXmark : faTriangleExclamation} />
+                                                        </div>
+                                                        <span className={`font-bold leading-tight ${item.st === 'success' ? 'text-emerald-700/80' : item.st === 'error' ? 'text-rose-700/80' : 'text-amber-700/80'}`}>{item.label}</span>
                                                     </div>
-                                                )
-                                            })()}
-                                            <div>
-                                                <p className="text-sm font-black uppercase tracking-widest text-[var(--color-text)]">SEO Score</p>
-                                                <p className="text-xs font-bold text-[var(--color-text-muted)] leading-relaxed mt-0.5 max-w-sm">
-                                                    Skor dihitung berdasarkan panjang title, meta, gambar dan kelengkapan slug url secara real-time.
+                                                ))}
+                                            </div>
+                                            <div className="flex items-center gap-4 pt-2 border-t border-[var(--color-border)]">
+                                                <div className="flex items-center h-7 gap-1 p-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg w-fit">
+                                                    <button type="button" onClick={() => setSeoView('search')}
+                                                        className={`h-full px-3 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${seoView === 'search' ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>Google</button>
+                                                    <button type="button" onClick={() => setSeoView('social')}
+                                                        className={`h-full px-3 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${seoView === 'social' ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>Social</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                        <div className="space-y-6">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">SEO Title</label>
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${form.meta_title?.length > 60 ? 'bg-rose-500/10 text-rose-500' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
+                                                        {form.meta_title?.length || 0}/60
+                                                    </span>
+                                                </div>
+                                                <input type="text" value={form.meta_title}
+                                                    onChange={e => setForm(f => ({ ...f, meta_title: e.target.value }))}
+                                                    placeholder="Headline untuk hasil pencarian..."
+                                                    className="w-full h-12 px-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] text-sm font-bold outline-none transition-all shadow-sm"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Meta Description</label>
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${form.meta_description?.length > 160 ? 'bg-rose-500/10 text-rose-500' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
+                                                        {form.meta_description?.length || 0}/160
+                                                    </span>
+                                                </div>
+                                                <textarea value={form.meta_description}
+                                                    onChange={e => setForm(f => ({ ...f, meta_description: e.target.value }))}
+                                                    placeholder="Tulis ringkasan konten yang informatif..."
+                                                    className="w-full h-32 p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] text-sm font-medium outline-none transition-all resize-none shadow-sm leading-relaxed"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
+                                                <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+                                                    <FontAwesomeIcon icon={seoView === 'search' ? faGlobe : faShareNodes} className="opacity-50" />
+                                                    {seoView === 'search' ? 'Google Search Preview' : 'Social Media Card Preview'}
                                                 </p>
+                                                <span className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-tighter whitespace-nowrap">Live Simulation</span>
                                             </div>
-                                        </div>
-                                        <button type="button" onClick={generateAiSeo} disabled={isGeneratingSeo || !form.content}
-                                            className="px-6 h-11 shrink-0 rounded-2xl bg-[var(--color-primary)] text-white text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-[var(--color-primary)]/30 disabled:opacity-50 flex items-center justify-center gap-2">
-                                            {isGeneratingSeo ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faMagicWandSparkles} />}
-                                            {isGeneratingSeo ? 'Generating AI...' : 'Auto Generate By AI'}
-                                        </button>
-                                    </div>
 
-                                    <div className="space-y-4">
-                                        {/* Meta Title */}
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Meta Title (SEO)</label>
-                                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${form.meta_title?.length > 60 ? 'bg-rose-500/10 text-rose-500' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
-                                                    {form.meta_title?.length || 0}/60
-                                                </span>
-                                            </div>
-                                            <input type="text" value={form.meta_title}
-                                                onChange={e => setForm(f => ({ ...f, meta_title: e.target.value }))}
-                                                placeholder="Judul SEO untuk Google (Otomatis dari judul jika kosong)..."
-                                                className="w-full h-10 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] text-sm font-bold outline-none transition-all"
-                                            />
-                                        </div>
-
-                                        {/* Meta Description */}
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Meta Description</label>
-                                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${form.meta_description?.length > 160 ? 'bg-rose-500/10 text-rose-500' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
-                                                    {form.meta_description?.length || 0}/160
-                                                </span>
-                                            </div>
-                                            <textarea value={form.meta_description}
-                                                onChange={e => setForm(f => ({ ...f, meta_description: e.target.value }))}
-                                                placeholder="Deskripsi untuk pengoptimalan hasil pencarian Google..."
-                                                className="w-full px-4 py-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] text-sm font-medium min-h-[100px] outline-none transition-all resize-y leading-relaxed"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Google Search Preview Card */}
-                                    <div className="mt-8">
-                                        <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-3">
-                                            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="mr-2" />Google Search Preview
-                                        </label>
-                                        <div className="p-6 rounded-3xl bg-white dark:bg-[#1f1f33] border border-[var(--color-border)] shadow-sm">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center">
-                                                    {/* Globe/Favicon placeholder */}
-                                                    <FontAwesomeIcon icon={faGlobe} className="text-gray-400 dark:text-gray-500" />
+                                            {seoView === 'search' ? (
+                                                <div className="p-6 rounded-[2rem] bg-white dark:bg-[#1f1f33] border border-[var(--color-border)] shadow-xl animate-in zoom-in-95 duration-500">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 overflow-hidden shadow-sm">
+                                                            {settings.logo_url ? (
+                                                                <img src={settings.logo_url} className="w-full h-full object-contain p-0.5" alt="Favicon" />
+                                                            ) : (
+                                                                <FontAwesomeIcon icon={faGlobe} className="text-xs text-gray-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="text-[12px] font-medium text-[#202124] dark:text-[#dadce0] truncate uppercase tracking-tighter">{settings.school_name_id}</span>
+                                                            <span className="text-[11px] text-[#4d5156] dark:text-[#bdc1c6] truncate">
+                                                                https://{settings.app_domain} › news › {form.slug || 'slug'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <h3 className="text-xl text-[#1a0dab] dark:text-[#8ab4f8] font-normal hover:underline cursor-pointer mb-1 truncate">
+                                                        {form.meta_title || form.title || 'Judul Halaman...'}
+                                                    </h3>
+                                                    <p className="text-[13px] text-[#4d5156] dark:text-[#bdc1c6] line-clamp-2 leading-relaxed">
+                                                        <span className="text-gray-400 mr-1">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} —</span>
+                                                        {form.meta_description || form.excerpt || 'Ringkasan berita akan tampil di sini saat pengunjung mencari melalui Google...'}
+                                                    </p>
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-medium text-[#202124] dark:text-[#dadce0] leading-tight">Mutiara Harapan Islamic School</span>
-                                                    <span className="text-xs text-[#4d5156] dark:text-[#bdc1c6] truncate max-w-sm">yoursite.com › news › {form.slug || 'contoh-slug-berita'}</span>
+                                            ) : (
+                                                <div className="max-w-[380px] rounded-xl bg-white dark:bg-[#202c33] border border-gray-200 dark:border-gray-700 overflow-hidden shadow-xl animate-in zoom-in-95 duration-500">
+                                                    {imagePreview ? (
+                                                        <img src={imagePreview} className="w-full aspect-[2/1] object-cover" alt="Card" />
+                                                    ) : (
+                                                        <div className="w-full aspect-[2/1] bg-gray-100 flex items-center justify-center text-gray-300">
+                                                            <FontAwesomeIcon icon={faImage} size="2x" />
+                                                        </div>
+                                                    )}
+                                                    <div className="p-3 border-l-4 border-emerald-500 bg-[#f0f2f5] dark:bg-[#111b21]/50 space-y-0.5">
+                                                        <h4 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 truncate">
+                                                            {form.meta_title || form.title || 'Judul Konten'}
+                                                        </h4>
+                                                        <p className="text-[12px] text-gray-500 dark:text-gray-400 truncate">
+                                                            {form.meta_description || form.excerpt || 'Dapatkan informasi selengkapnya...'}
+                                                        </p>
+                                                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                                                            {settings.app_domain?.toUpperCase()}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <h3 className="text-xl text-[#1a0dab] dark:text-[#8ab4f8] font-normal hover:underline cursor-pointer mb-2 line-clamp-1 group">
-                                                {form.meta_title || form.title || 'Judul Halaman Informasi akan tampil disini'}
-                                            </h3>
-                                            <p className="text-sm text-[#4d5156] dark:text-[#bdc1c6] line-clamp-2 leading-relaxed">
-                                                {form.scheduled_at ? <span className="font-bold text-gray-500 mr-2">{new Date(form.scheduled_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} —</span> : null}
-                                                {form.meta_description || form.excerpt || 'Deskripsi yang menarik dan representatif dari informasi yang dibagikan untuk meningkatkan rasio klik-tayang pengunjung...'}
+                                            )}
+
+                                            <p className="text-[10px] text-[var(--color-text-muted)] italic font-medium leading-relaxed">
+                                                * Pratinjau di atas adalah simulasi metadata OpenGraph (OG) saat link artikel dibagikan di WhatsApp, Facebook, atau LinkedIn.
                                             </p>
                                         </div>
                                     </div>
@@ -941,12 +1186,73 @@ export default function NewsEditorPage() {
                         </div>
                     )}
                 </form>
+
                 <ConfirmExitModal
                     isOpen={showExitModal}
                     onClose={() => setShowExitModal(false)}
-                    onConfirm={() => {
-                        setShowExitModal(false)
-                        navigate('/admin/news')
+                    onConfirm={() => navigate('/admin/news')}
+                />
+
+                {/* ── Zen Mode Editor Portal ── */}
+                {isZenMode && createPortal(
+                    <div className="fixed inset-0 z-[99999] bg-[var(--color-surface)] flex flex-col animate-in fade-in duration-500 overflow-y-auto custom-scrollbar">
+                        <div className="sticky top-0 z-20 bg-[var(--color-surface)]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-[var(--color-border)]">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-[var(--color-text)] tracking-tight">Focus Zen Mode</h2>
+                                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Editor Bebas Gangguan</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${form.seo_score >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                                    SEO: {form.seo_score}/100
+                                </div>
+                                <button onClick={() => setIsZenMode(false)}
+                                    className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                                    Simpan & Keluar Zen
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 flex flex-col space-y-6">
+                            <input type="text" value={form.title} onChange={e => handleTitleChange(e.target.value)}
+                                placeholder="Judul Informasi..."
+                                className="w-full text-4xl font-black font-heading bg-transparent outline-none border-none placeholder:opacity-20 text-[var(--color-text)] mb-4"
+                            />
+                            <div className="flex-1 flex flex-col">
+                                <ReactQuill theme="snow" value={form.content} ref={quillRef}
+                                    onChange={handleContentChange}
+                                    modules={modules}
+                                    className="flex-1"
+                                />
+                                <style>{`
+                                    .fixed .ql-container.ql-snow { border: none !important; min-height: 500px !important; }
+                                    .fixed .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid var(--color-border) !important; border-radius: 0 !important; background: var(--color-surface) !important; margin-bottom: 1rem; position: sticky; top: 78px; z-index: 10; padding-left: 0 !important;}
+                                    .fixed .ql-editor { font-size: 1.15rem; padding: 2rem 0 !important; line-height: 1.8; color: var(--color-text); }
+                                `}</style>
+                            </div>
+                            
+                            <div className="text-center pt-20 pb-10 text-[9px] font-bold text-[var(--color-text-muted)] opacity-30 uppercase tracking-[0.2em]">
+                                Tekan Ctrl + S untuk menyimpan progres • Laporanmu CMS Enterprise
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
+                <MediaLibraryModal
+                    isOpen={isMediaModalOpen}
+                    onClose={() => setIsMediaModalOpen(false)}
+                    currentSelection={form.image_url}
+                    onSelect={(url) => {
+                        setForm(f => ({ ...f, image_url: url }))
+                        setImagePreview(url)
+                        setImageFile(null)
+                        setIsMediaModalOpen(false)
+                        addToast('Gambar dari galeri dipilih', 'success')
                     }}
                 />
             </div>

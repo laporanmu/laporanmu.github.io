@@ -12,7 +12,8 @@ import {
     faChevronRight, faCheckSquare, faSquare,
     faBookOpen, faHashtag, faAlignLeft, faImage,
     faArrowUpRightFromSquare, faArchive, faRotateLeft,
-    faTags, faUserPen, faMagicWandSparkles, faSliders
+    faTags, faUserPen, faMagicWandSparkles, faSliders,
+    faList, faGrip, faTableList
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../../components/layout/DashboardLayout'
 import Breadcrumb from '../../../components/ui/Breadcrumb'
@@ -30,9 +31,18 @@ const slugify = (text) =>
         .slice(0, 80)
 
 const getReadTime = (html) => {
-    const text = html.replace(/<[^>]*>/g, ' ')
-    const words = text.trim().split(/\s+/).filter(Boolean).length
-    return Math.max(1, Math.ceil(words / 200))
+    if (!html) return 1
+    const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim()
+    const words = text.split(/\s+/).filter(Boolean).length
+    const images = (html.match(/<img/g) || []).length
+    
+    // Standard: 200 words per minute
+    // Plus 12 seconds for first image, 11 for second, ..., 3 for tenth+
+    const imageTime = Array.from({ length: images }, (_, i) => Math.max(3, 12 - i))
+        .reduce((acc, curr) => acc + curr, 0) / 60
+        
+    const wordTime = words / 200
+    return Math.max(1, Math.ceil(wordTime + imageTime))
 }
 
 const decodeEntities = (html = '') => html
@@ -289,24 +299,30 @@ NewsCard.displayName = 'NewsCard'
 
 // ─── Bulk Action Bar ─────────────────────────────────────────────────────────────
 
-const BulkActionBar = memo(({ count, onPublish, onArchive, onDelete, onClear }) => {
+const BulkActionBar = memo(({ count, onPublish, onArchive, onSetFeatured, onRemoveFeatured, onDelete, onClear }) => {
     if (count === 0) return null
     return (
         <div className="flex items-center gap-3 px-4 py-3 bg-[var(--color-primary)] rounded-2xl shadow-lg shadow-[var(--color-primary)]/30 animate-in slide-in-from-bottom-4 duration-200 overflow-x-auto scrollbar-hide relative max-w-full">
             <span className="text-white text-[11px] font-black shrink-0 whitespace-nowrap">{count} dipilih</span>
             <div className="h-4 w-px bg-white/20 shrink-0" />
-            <button onClick={onPublish} className="shrink-0 text-white text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity flex items-center gap-1.5">
+            <button onClick={onPublish} className="shrink-0 text-white text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity flex items-center gap-1.5 px-2">
                 <FontAwesomeIcon icon={faEye} className="text-[9px]" /> Publikasikan
             </button>
-            <button onClick={onArchive} className="shrink-0 text-white text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity flex items-center gap-1.5">
+            <button onClick={onArchive} className="shrink-0 text-white text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity flex items-center gap-1.5 px-2">
                 <FontAwesomeIcon icon={faArchive} className="text-[9px]" /> Arsipkan
             </button>
-            <button onClick={onDelete} className="shrink-0 text-rose-200 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1.5">
+            <button onClick={onSetFeatured} className="shrink-0 text-white text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity flex items-center gap-1.5 px-2">
+                <FontAwesomeIcon icon={faStar} className="text-[9px]" /> Highlight
+            </button>
+            <button onClick={onRemoveFeatured} className="shrink-0 text-white text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity flex items-center gap-1.5 px-2">
+                <FontAwesomeIcon icon={faStar} className="text-[9px] opacity-40" /> Unhighlight
+            </button>
+            <div className="h-4 w-px bg-white/20 shrink-0 mx-1" />
+            <button onClick={onDelete} className="shrink-0 text-rose-200 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1.5 px-2">
                 <FontAwesomeIcon icon={faTrash} className="text-[9px]" /> Hapus
             </button>
-            <div className="sticky right-0 ml-auto bg-[var(--color-primary)] pl-4 flex items-center shrink-0">
-                <div className="absolute left-0 top-0 bottom-0 w-8 -ml-8 bg-gradient-to-r from-transparent to-[var(--color-primary)] pointer-events-none" />
-                <button onClick={onClear} className="w-6 h-6 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+            <div className="ml-auto flex items-center shrink-0">
+                <button onClick={onClear} className="w-8 h-8 flex items-center justify-center rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors">
                     <FontAwesomeIcon icon={faXmark} className="text-sm" />
                 </button>
             </div>
@@ -330,8 +346,13 @@ export default function NewsListPage() {
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, data: null, isDeleting: false })
     const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, data: null, isDuplicating: false })
     const [selectedIds, setSelectedIds] = useState(new Set())
+    const [totalCount, setTotalCount] = useState(0)
     const [currentUserName, setCurrentUserName] = useState('')
     const [showFilter, setShowFilter] = useState(false)
+    const [viewMode, setViewMode] = useState('grid') // grid | list
+    const [globalStats, setGlobalStats] = useState({
+        all: 0, published: 0, draft: 0, scheduled: 0, featured: 0, total_views: 0, avg_read_time: 0
+    })
 
     // ── Debounced search ──
     useEffect(() => {
@@ -355,58 +376,89 @@ export default function NewsListPage() {
 
     const fetchNews = useCallback(async () => {
         setLoading(true)
-        const { data, error } = await supabase
-            .from('news').select('*').order('created_at', { ascending: false })
+        let query = supabase.from('news').select('*', { count: 'exact' })
+
+        // Apply Search
+        if (search) {
+            query = query.or(`title.ilike.%${search}%,tag.ilike.%${search}%,author.ilike.%${search}%`)
+        }
+
+        // Apply Status Filters
+        if (filterStatus === 'published') query = query.eq('is_published', true)
+        else if (filterStatus === 'draft') query = query.eq('is_published', false).is('scheduled_at', null)
+        else if (filterStatus === 'scheduled') query = query.not('scheduled_at', 'is', null).eq('is_published', false)
+        else if (filterStatus === 'featured') query = query.eq('is_featured', true)
+
+        // Apply Sorting
+        if (sortBy === 'oldest') query = query.order('created_at', { ascending: true })
+        else if (sortBy === 'az') query = query.order('title', { ascending: true })
+        else if (sortBy === 'views') query = query.order('view_count', { ascending: false })
+        else query = query.order('created_at', { ascending: false })
+
+        // Apply Pagination
+        const from = page * PAGE_SIZE
+        const to = from + PAGE_SIZE - 1
+        query = query.range(from, to)
+
+        const { data, error, count } = await query
+
         if (error) addToast('Gagal memuat Informasi: ' + error.message, 'error')
-        else setNewsList(data || [])
+        else {
+            setNewsList(data || [])
+            setTotalCount(count || 0)
+        }
         setLoading(false)
-    }, [addToast])
+    }, [addToast, page, search, filterStatus, sortBy])
 
     useEffect(() => { fetchNews() }, [fetchNews])
 
-    // ── Filter + Sort ──────────────────────────────────────────────────────────
+    // ── Fetch Global Stats ────────────────────────────────────────────────────
+    const fetchGlobalStats = useCallback(async () => {
+        try {
+            const [
+                { count: all },
+                { count: published },
+                { count: featured },
+                { data: statsData }
+            ] = await Promise.all([
+                supabase.from('news').select('*', { count: 'exact', head: true }),
+                supabase.from('news').select('*', { count: 'exact', head: true }).eq('is_published', true),
+                supabase.from('news').select('*', { count: 'exact', head: true }).eq('is_featured', true),
+                supabase.from('news').select('view_count, read_time, content')
+            ])
 
-    const filteredNews = useMemo(() => {
-        let list = newsList.filter(n => {
-            const q = search.toLowerCase()
-            if (q && !n.title?.toLowerCase().includes(q) &&
-                !n.tag?.toLowerCase().includes(q) &&
-                !decodeEntities(n.content || '').toLowerCase().includes(q) &&
-                !(n.display_name || n.author?.split('@')[0] || '').toLowerCase().includes(q)) return false
-            if (filterStatus === 'published' && !n.is_published) return false
-            if (filterStatus === 'draft' && (n.is_published || n.scheduled_at)) return false
-            if (filterStatus === 'scheduled' && !n.scheduled_at) return false
-            if (filterStatus === 'featured' && !n.is_featured) return false
-            return true
-        })
-        if (sortBy === 'oldest') list = [...list].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-        else if (sortBy === 'az') list = [...list].sort((a, b) => a.title?.localeCompare(b.title))
-        else if (sortBy === 'featured') list = [...list].sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0))
-        else if (sortBy === 'views') list = [...list].sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
-        return list
-    }, [newsList, search, filterStatus, sortBy])
+            const totalViews = statsData?.reduce((acc, curr) => acc + (curr.view_count || 0), 0) || 0
+            const totalReadTime = statsData?.reduce((acc, curr) => {
+                const rTime = curr.read_time || getReadTime(curr.content || '')
+                return acc + rTime
+            }, 0) || 0
+            const avgReadTimeValue = statsData?.length ? Math.round(totalReadTime / statsData.length) : 0
+            
+            setGlobalStats({
+                all: all || 0,
+                published: published || 0,
+                featured: featured || 0,
+                draft: (all || 0) - (published || 0),
+                scheduled: 0, // Placeholder
+                total_views: totalViews,
+                avg_read_time: avgReadTimeValue
+            })
+        } catch (err) {
+            console.error('Error fetching global stats:', err)
+        }
+    }, [])
 
-    const paginatedNews = useMemo(() => filteredNews.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [filteredNews, page])
-    const totalPages = Math.ceil(filteredNews.length / PAGE_SIZE)
+    useEffect(() => { fetchGlobalStats() }, [fetchGlobalStats, newsList])
+
+    // Cleanup Memo logic - now we use state directly
+    const paginatedNews = newsList
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
     const statsScrollRef = useRef(null)
     const [activeStatIdx, setActiveStatIdx] = useState(0)
     const STAT_CARD_COUNT = 4
 
-    const statusCounts = useMemo(() => {
-        const totalViews = newsList.reduce((acc, curr) => acc + (curr.view_count || 0), 0)
-        const avgReadTime = newsList.length ? Math.round(newsList.reduce((acc, curr) => acc + (curr.read_time || 0), 0) / newsList.length) : 0
-
-        return {
-            all: newsList.length,
-            published: newsList.filter(n => n.is_published).length,
-            draft: newsList.filter(n => !n.is_published && !n.scheduled_at).length,
-            scheduled: newsList.filter(n => n.scheduled_at && !n.is_published).length,
-            featured: newsList.filter(n => n.is_featured).length,
-            totalViews,
-            avgReadTime
-        }
-    }, [newsList])
+    const statusCounts = useMemo(() => globalStats, [globalStats])
 
     // ── Save ───────────────────────────────────────────────────────────────────
 
@@ -608,10 +660,10 @@ export default function NewsListPage() {
                             className="flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0 lg:snap-none"
                         >
                             {[
-                                { label: 'Total Artikel', val: statusCounts.all, color: 'text-blue-500', bg: 'bg-blue-500/10', icon: faNewspaper },
-                                { label: 'Total Pembaca', val: statusCounts.totalViews.toLocaleString('id-ID'), color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: faEye },
-                                { label: 'Terpublikasi', val: statusCounts.published, color: 'text-indigo-500', bg: 'bg-indigo-500/10', icon: faGlobe },
-                                { label: 'Rata-rata Baca', val: `${statusCounts.avgReadTime} Menit`, color: 'text-amber-500', bg: 'bg-amber-500/10', icon: faClock },
+                                { label: 'Total Artikel', val: statusCounts.all || 0, color: 'text-blue-500', bg: 'bg-blue-500/10', icon: faNewspaper },
+                                { label: 'Total Pembaca', val: (statusCounts.total_views || 0).toLocaleString('id-ID'), color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: faEye },
+                                { label: 'Terpublikasi', val: statusCounts.published || 0, color: 'text-indigo-500', bg: 'bg-indigo-500/10', icon: faGlobe },
+                                { label: 'Rata-rata Baca', val: `${statusCounts.avg_read_time || 0} Menit`, color: 'text-amber-500', bg: 'bg-amber-500/10', icon: faClock },
                             ].map((s, i) => (
                                 <div key={i} className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border border-[var(--color-border)] flex items-center gap-3 hover:shadow-lg transition-all cursor-default group">
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm shrink-0 ${s.bg} group-hover:scale-110 transition-transform`}>
@@ -667,7 +719,7 @@ export default function NewsListPage() {
                         {/* Compact action buttons */}
                         <div className="flex items-center gap-1.5 shrink-0">
                             {/* Select All */}
-                            {filteredNews.length > 0 && (
+                            {newsList.length > 0 && (
                                 <button onClick={() => selectedIds.size === paginatedNews.length ? clearSelection() : selectAll()}
                                     className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedIds.size > 0 ? 'bg-indigo-500 border-indigo-500 text-white shadow-md' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
                                     <FontAwesomeIcon icon={selectedIds.size > 0 ? faCheckSquare : faSquare} className="text-[9px]" />
@@ -693,6 +745,20 @@ export default function NewsListPage() {
                                     </span>
                                 )}
                             </button>
+
+                            {/* View Switcher */}
+                            <div className="flex items-center bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)]">
+                                <button onClick={() => setViewMode('grid')}
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${viewMode === 'grid' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm border border-[var(--color-border)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                    title="Tampilan Grid">
+                                    <FontAwesomeIcon icon={faGrip} className="text-[10px]" />
+                                </button>
+                                <button onClick={() => setViewMode('list')}
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${viewMode === 'list' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm border border-[var(--color-border)]' : 'text-[var(--color-text-muted)] hover:text(--color-text)'}`}
+                                    title="Tampilan List">
+                                    <FontAwesomeIcon icon={faTableList} className="text-[10px]" />
+                                </button>
+                            </div>
 
                             {/* Reset filters */}
                             {(filterStatus !== 'all' || sortBy !== 'newest' || search) && (
@@ -724,7 +790,7 @@ export default function NewsListPage() {
                             {/* Result count + Sort — pushed right */}
                             <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
                                 <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-50 whitespace-nowrap hidden sm:inline">
-                                    {filteredNews.length} dari {newsList.length} artikel
+                                    Menampilkan {newsList.length} dari {totalCount} artikel
                                 </span>
                                 <div className="w-px h-6 bg-[var(--color-border)] hidden sm:block" />
                                 <select value={sortBy} onChange={e => setSortBy(e.target.value)}
@@ -761,7 +827,7 @@ export default function NewsListPage() {
                                     </button>
                                 )}
                                 <span className="ml-auto text-[9px] font-black text-[var(--color-text-muted)] opacity-40 uppercase tracking-widest">
-                                    {filteredNews.length} hasil
+                                    {totalCount} hasil total
                                 </span>
                             </div>
                         </div>
@@ -775,6 +841,8 @@ export default function NewsListPage() {
                             count={selectedIds.size}
                             onPublish={() => bulkUpdate({ is_published: true }, `${selectedIds.size} Informasi dipublikasikan`)}
                             onArchive={() => bulkUpdate({ is_published: false }, `${selectedIds.size} Informasi diarsipkan`)}
+                            onSetFeatured={() => bulkUpdate({ is_featured: true }, `${selectedIds.size} Informasi dijadikan Unggulan`)}
+                            onRemoveFeatured={() => bulkUpdate({ is_featured: false }, `${selectedIds.size} Status Unggulan dihapus`)}
                             onDelete={bulkDelete}
                             onClear={clearSelection}
                         />
@@ -784,9 +852,9 @@ export default function NewsListPage() {
                 {/* ── Content Section ── */}
                 {loading ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {Array.from({ length: Math.min(PAGE_SIZE, newsList.length || PAGE_SIZE) }).map((_, i) => <NewsSkeleton key={i} />)}
+                        {Array.from({ length: PAGE_SIZE }).map((_, i) => <NewsSkeleton key={i} />)}
                     </div>
-                ) : filteredNews.length === 0 ? (
+                ) : newsList.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 px-6 glass rounded-[3rem] border border-dashed border-[var(--color-border)] animate-in fade-in zoom-in-95 duration-500">
                         <div className="relative mb-6">
                             <div className="w-24 h-24 rounded-full bg-blue-500/5 flex items-center justify-center text-blue-500/20 text-5xl">
@@ -818,20 +886,118 @@ export default function NewsListPage() {
                     </div>
                 ) : (
                     <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in slide-in-from-bottom-4 duration-700">
-                            {paginatedNews.map(news => (
-                                <NewsCard
-                                    key={news.id}
-                                    news={news}
-                                    isSelected={selectedIds.has(news.id)}
-                                    onSelect={toggleSelect}
-                                    onEdit={n => navigate(`/admin/news/edit/${n.id}`)}
-                                    onDelete={n => setDeleteModal({ isOpen: true, data: n, isDeleting: false })}
-                                    onToggleStatus={handleToggleStatus}
-                                    onDuplicate={openDuplicateModal}
-                                />
-                            ))}
-                        </div>
+                        {viewMode === 'grid' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in slide-in-from-bottom-4 duration-700">
+                                {paginatedNews.map(news => (
+                                    <NewsCard
+                                        key={news.id}
+                                        news={news}
+                                        isSelected={selectedIds.has(news.id)}
+                                        onSelect={toggleSelect}
+                                        onEdit={n => navigate(`/admin/news/edit/${n.id}`)}
+                                        onDelete={n => setDeleteModal({ isOpen: true, data: n, isDeleting: false })}
+                                        onToggleStatus={handleToggleStatus}
+                                        onDuplicate={openDuplicateModal}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] overflow-hidden animate-in slide-in-from-bottom-4 duration-700">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/50">
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-12 text-center">
+                                                    <button onClick={() => selectedIds.size === paginatedNews.length ? clearSelection() : selectAll()}>
+                                                        <FontAwesomeIcon icon={selectedIds.size > 0 ? faCheckSquare : faSquare} className={selectedIds.size > 0 ? 'text-[var(--color-primary)]' : ''} />
+                                                    </button>
+                                                </th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Informasi</th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hidden md:table-cell">
+                                                    <div className="flex justify-center">KATEGORI</div>
+                                                </th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hidden lg:table-cell">
+                                                    <div className="flex justify-center">STATUS</div>
+                                                </th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hidden xl:table-cell">
+                                                    <div className="flex justify-center">SEO</div>
+                                                </th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hidden xl:table-cell">
+                                                    <div className="flex justify-center">VIEWS</div>
+                                                </th>
+                                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                                    <div className="flex justify-center">AKSI</div>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[var(--color-border)]">
+                                            {paginatedNews.map(news => (
+                                                <tr key={news.id} className={`hover:bg-[var(--color-surface-alt)]/30 transition-colors ${selectedIds.has(news.id) ? 'bg-[var(--color-primary)]/5' : ''}`}>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <button onClick={() => toggleSelect(news.id)}>
+                                                            <FontAwesomeIcon icon={selectedIds.has(news.id) ? faCheckSquare : faSquare} className={selectedIds.has(news.id) ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] opacity-30'} />
+                                                        </button>
+                                                    </td>
+                                                    <td className="px-6 py-4 min-w-[300px]">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 rounded-xl bg-[var(--color-surface-alt)] overflow-hidden shrink-0 border border-[var(--color-border)]">
+                                                                {news.image_url ? <img src={news.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><FontAwesomeIcon icon={faNewspaper} /></div>}
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-[13px] font-black text-[var(--color-text)] line-clamp-1 mb-0.5">{news.title}</h4>
+                                                                <div className="flex items-center gap-3 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+                                                                    <span>{new Date(news.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                                                                    <span className="w-1 h-1 rounded-full bg-[var(--color-border)]" />
+                                                                    <span>{news.display_name || news.author?.split('@')[0] || 'Admin'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 hidden md:table-cell">
+                                                        <div className="flex justify-center">
+                                                            <span className="px-2.5 py-1 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-primary)]">
+                                                                {news.tag}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 hidden lg:table-cell">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <div className={`w-2 h-2 rounded-full ${news.is_published ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 animate-pulse'}`} />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">
+                                                                {news.is_published ? 'Publik' : 'Draft'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 hidden xl:table-cell text-center">
+                                                        <div className="flex items-center justify-center">
+                                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-black shadow-sm ${news.seo_score >= 80 ? 'bg-emerald-500/10 text-emerald-600' : news.seo_score >= 50 ? 'bg-amber-500/10 text-amber-600' : 'bg-rose-500/10 text-rose-600'}`} title={`SEO Score: ${news.seo_score || 0}/100`}>
+                                                                {news.seo_score || 0}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 hidden xl:table-cell text-center">
+                                                        <div className="flex items-center justify-center gap-1.5 text-[10px] font-black text-[var(--color-text-muted)]">
+                                                            <FontAwesomeIcon icon={faEye} className="opacity-40" />
+                                                            {news.view_count || 0}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <button onClick={() => navigate(`/admin/news/edit/${news.id}`)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm" title="Edit">
+                                                                <FontAwesomeIcon icon={faPen} className="text-xs" />
+                                                            </button>
+                                                            <button onClick={() => setDeleteModal({ isOpen: true, data: news, isDeleting: false })} className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-500 hover:bg-rose-500/10 transition-all text-sm" title="Hapus">
+                                                                <FontAwesomeIcon icon={faTrash} className="text-xs" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Pagination Section */}
                         {totalPages > 1 && (
