@@ -8,7 +8,9 @@ import {
     faArrowUpRightFromSquare, faMagicWandSparkles, faChevronLeft,
     faCloudArrowUp, faTriangleExclamation, faTrash, faAlignLeft,
     faBookOpen, faNewspaper, faFloppyDisk, faUser, faChevronDown,
-    faEyeSlash, faShareNodes, faRotateLeft, faCheckCircle
+    faEyeSlash, faShareNodes, faRotateLeft, faCheckCircle,
+    faMoon, faCloudRain, faCoffee, faLeaf,
+    faBackward, faPlay, faPause, faForward, faMusic, faKeyboard, faRepeat
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../../components/layout/DashboardLayout'
 import Breadcrumb from '../../../components/ui/Breadcrumb'
@@ -168,7 +170,7 @@ export default function NewsEditorPage() {
                     const quill = quillRef.current.getEditor()
                     const range = quill.getSelection(true) // Get cursor position
                     quill.insertEmbed(range.index, 'image', publicUrl)
-                    
+
                     // Sultan Feature: Auto-Alt Text based on Title
                     setTimeout(() => {
                         const images = quill.root.querySelectorAll('img');
@@ -192,7 +194,7 @@ export default function NewsEditorPage() {
         editor.root.addEventListener('paste', (e) => {
             const clipboardData = e.clipboardData || window.clipboardData;
             const pastedText = clipboardData.getData('Text');
-            
+
             // Regex to identify URL
             const urlRegex = /^(https?:\/\/[^\s]+)$/;
             if (urlRegex.test(pastedText.trim())) {
@@ -207,13 +209,181 @@ export default function NewsEditorPage() {
         });
     }, [addToast]);
 
+    // ── Sultans Feature: Zen Ambience ──
+    const ambienceOptions = [
+        { id: 'none', label: 'None', icon: faMoon },
+        { id: 'rain', label: 'Rainy Day', icon: faCloudRain, url: 'https://actions.google.com/sounds/v1/weather/rain_on_roof.ogg' },
+        { id: 'cafe', label: 'Library', icon: faCoffee, url: 'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg' },
+        { id: 'forest', label: 'Nature', icon: faLeaf, url: 'https://assets.mixkit.co/active_storage/sfx/2431/2431-preview.mp3' } // Better Forest birds
+    ];
+
+    const [ambience, setAmbience] = useState({ type: 'none', playing: false, url: '', title: '', volume: 0.4, repeat: true });
+    const [isTyping, setIsTyping] = useState(false);
+    const typingTimerRef = useRef(null);
+    const [typewriterEnabled, setTypewriterEnabled] = useState(true);
+    const [customMusic, setCustomMusic] = useState('');
+    const audioRef = useRef(null);
+    const typewriterRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2550/2550-preview.mp3')); // Real Mechanical KB
+    const ytPlayerRef = useRef(null);
+
+    // YT Player Loader
+    useEffect(() => {
+        if (!window.YT) {
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            document.body.appendChild(tag);
+        }
+    }, []);
+
+    // YouTube API Setup
+    const setupYTPlayer = useCallback((videoId) => {
+        const createPlayer = () => {
+            if (ytPlayerRef.current && ytPlayerRef.current.destroy) ytPlayerRef.current.destroy();
+            ytPlayerRef.current = new window.YT.Player('yt-player-container', {
+                height: '0', width: '0', videoId: videoId,
+                playerVars: { autoplay: 1, controls: 0, loop: ambience.repeat ? 1 : 0, playlist: videoId },
+                events: {
+                    onReady: (e) => { 
+                        e.target.mute();
+                        e.target.playVideo();
+                        setTimeout(() => e.target.unMute(), 500);
+                    },
+                    onStateChange: (e) => {
+                        if (e.data === window.YT.PlayerState.ENDED && ambience.repeat) e.target.playVideo();
+                    }
+                }
+            });
+        };
+
+        if (window.YT && window.YT.Player) {
+            createPlayer();
+        } else {
+            // Wait for API if not ready
+            window.onYouTubeIframeAPIReady = createPlayer;
+        }
+    }, []);
+
+    // Effect for Audio & YT synchronization
+    useEffect(() => {
+        if (audioRef.current) {
+            if (ambience.playing && ambience.type !== 'none' && ambience.type !== 'custom_yt') {
+                const opt = ambienceOptions.find(o => o.id === ambience.type);
+                const sourceUrl = ambience.type === 'custom_audio' ? ambience.url : opt?.url;
+                if (sourceUrl) {
+                    audioRef.current.src = sourceUrl;
+                    audioRef.current.volume = ambience.volume ?? 0.4;
+                    audioRef.current.load();
+                    audioRef.current.play().catch(e => console.warn('Autoplay blocked'));
+                }
+            } else { 
+                audioRef.current.pause(); 
+            }
+        }
+        
+        if (ytPlayerRef.current && ytPlayerRef.current.playVideo) {
+            if (ambience.type === 'custom_yt' && ambience.playing) {
+                ytPlayerRef.current.setVolume((ambience.volume ?? 0.4) * 100);
+                ytPlayerRef.current.playVideo();
+            } else if (ytPlayerRef.current.pauseVideo) {
+                ytPlayerRef.current.pauseVideo();
+            }
+        }
+    }, [ambience.type, ambience.playing, ambience.url, ambience.volume]);
+
+    // Mechanical Typewriter Feedback
+    const playTypewriter = useCallback(() => {
+        if (!typewriterEnabled || !isZenMode) return;
+        typewriterRef.current.currentTime = 0;
+        typewriterRef.current.volume = 0.15;
+        typewriterRef.current.play().catch(() => {});
+    }, [typewriterEnabled, isZenMode]);
+
+    // Immersive Ghost UI logic
+    const handleActiveTyping = useCallback(() => {
+        if (!isZenMode) return;
+        setIsTyping(true);
+        playTypewriter();
+        if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = setTimeout(() => setIsTyping(false), 2500);
+    }, [isZenMode, playTypewriter]);
+
+    // ── Table of Contents Generator ──
+    const [toc, setToc] = useState([]);
+    useEffect(() => {
+        const doc = new DOMParser().parseFromString(form.content, 'text/html');
+        const headers = Array.from(doc.querySelectorAll('h2, h3')).map(h => ({
+            text: h.innerText,
+            level: h.tagName.toLowerCase(),
+            id: h.innerText.toLowerCase().replace(/\s+/g, '-')
+        }));
+        setToc(headers);
+    }, [form.content]);
+
+    // Custom Toolbar Handlers
+    const calculateSEOScore = useCallback((content, title, excerpt, keyword) => {
+        let score = 0;
+        const text = content.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
+        const words = text.split(/\s+/).filter(Boolean).length;
+
+        if (title.length >= 20 && title.length <= 60) score += 15;
+        if (excerpt && excerpt.length >= 100 && excerpt.length <= 160) score += 15;
+        if (words >= 300) score += 20;
+        if (content.includes('<img')) score += 15;
+        if (content.includes('<a href=')) score += 10;
+        if (keyword && title.toLowerCase().includes(keyword.toLowerCase())) score += 15;
+        if (keyword && text.toLowerCase().slice(0, 500).includes(keyword.toLowerCase())) score += 10;
+
+        return Math.min(score, 100);
+    }, []);
+
+    // ── Sultans Feature: Drag & Drop Image ──
+    const setupDragAndDrop = useCallback((editor) => {
+        editor.root.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if (files && files[0] && files[0].type.startsWith('image/')) {
+                const range = editor.getSelection(true);
+                // Trigger the same upload logic as imageHandler
+                const file = files[0];
+                const ext = file.name.split('.').pop();
+                const filePath = `content/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+                const { error } = await supabase.storage.from('news').upload(filePath, file);
+
+                if (!error) {
+                    const { data: { publicUrl } } = supabase.storage.from('news').getPublicUrl(filePath);
+                    editor.insertEmbed(range.index, 'image', publicUrl);
+                    addToast('Gambar berhasil di-drop & upload!', 'success');
+                }
+            }
+        });
+    }, [addToast]);
+
+    // ── Bubble Menu State ──
+    const [bubbleMenu, setBubbleMenu] = useState({ show: false, x: 0, y: 0 });
+
+    const setupBubbleMenu = useCallback((editor) => {
+        editor.on('selection-change', (range) => {
+            if (range && range.length > 0) {
+                const bounds = editor.getBounds(range.index, range.length);
+                const editorBounds = editor.root.getBoundingClientRect();
+                setBubbleMenu({
+                    show: true,
+                    x: bounds.left + (bounds.width / 2) - 60, // Center bubble
+                    y: bounds.top - 45
+                });
+            } else {
+                setBubbleMenu(s => ({ ...s, show: false }));
+            }
+        });
+    }, []);
+
     // Custom Toolbar Handlers
     const handlers = useMemo(() => ({
-        link: function() {
+        link: function () {
             const range = this.quill.getSelection();
             let url = '';
             let text = '';
-            
+
             if (range) {
                 text = this.quill.getText(range.index, range.length);
                 // Detect if current selection is already a link
@@ -230,7 +400,7 @@ export default function NewsEditorPage() {
                 url: url
             }));
         },
-        video: function() {
+        video: function () {
             setCommandStrip(curr => ({
                 open: curr.type === 'video' ? !curr.open : true,
                 type: 'video',
@@ -486,6 +656,7 @@ export default function NewsEditorPage() {
             slug: (f.slug && isEdit) ? f.slug : slugify(val),
             meta_title: f.meta_title || val.slice(0, 60),
         }))
+        handleActiveTyping();
     }
 
     const refreshSlug = () => {
@@ -500,6 +671,7 @@ export default function NewsEditorPage() {
             ...f,
             content
         }))
+        handleActiveTyping();
     }
 
     const handleImageChange = (e) => {
@@ -639,17 +811,29 @@ export default function NewsEditorPage() {
         )
     }
 
-    // Setup Smart Paste
+    // Setup Smart Features
     useEffect(() => {
         if (quillRef.current && typeof quillRef.current.getEditor === 'function') {
             try {
                 const editor = quillRef.current.getEditor();
-                if (editor) setupSmartPaste(editor);
+                if (editor) {
+                    setupSmartPaste(editor);
+                    setupDragAndDrop(editor);
+                    setupBubbleMenu(editor);
+                }
             } catch (e) {
-                console.warn('Quill not ready for smart paste yet');
+                console.warn('Quill not ready for smart features yet');
             }
         }
-    }, [setupSmartPaste]);
+    }, [setupSmartPaste, setupDragAndDrop, setupBubbleMenu]);
+
+    // Update SEO Score on changes
+    useEffect(() => {
+        setForm(f => ({
+            ...f,
+            seo_score: calculateSEOScore(form.content, form.title, form.excerpt, form.focus_keyword)
+        }));
+    }, [form.content, form.title, form.excerpt, form.focus_keyword, calculateSEOScore]);
 
     if (isLoading) {
         return (
@@ -848,10 +1032,10 @@ export default function NewsEditorPage() {
                                                 <FontAwesomeIcon icon={faAlignLeft} className="mr-2" />Ringkasan Singkat
                                             </label>
                                             <div className="flex items-center gap-3">
-                                                <button type="button" 
+                                                <button type="button"
                                                     onClick={() => {
                                                         const plainText = (form.content || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
-                                                        
+
                                                         if (plainText.length < 50) {
                                                             addToast('Konten terlalu pendek untuk dirangkum secara efektif.', 'info');
                                                             return;
@@ -921,22 +1105,22 @@ export default function NewsEditorPage() {
                         pointer-events: none !important;
                     }
                                                 `}</style>
-                                            
+
                                             {/* Command Strip UI (Enterprise Style) */}
                                             <div className={`absolute top-[42px] inset-x-0 z-[30] flex justify-center transition-all duration-300 ease-out ${commandStrip.open ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
                                                 <div className="mx-4 mt-2 p-2 flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl rounded-2xl min-w-[400px] max-w-[600px] w-full animate-in zoom-in-95">
                                                     <div className={`w-8 h-8 shrink-0 rounded-xl flex items-center justify-center text-[10px] shadow-sm ${commandStrip.type === 'link' ? 'bg-blue-500/10 text-blue-500' : 'bg-rose-500/10 text-rose-500'}`}>
                                                         <FontAwesomeIcon icon={commandStrip.type === 'link' ? faPen : faBookOpen} />
                                                     </div>
-                                                    
+
                                                     {commandStrip.type === 'link' && (
-                                                        <input type="text" value={commandStrip.text} 
+                                                        <input type="text" value={commandStrip.text}
                                                             onChange={e => setCommandStrip(s => ({ ...s, text: e.target.value }))}
                                                             placeholder="Teks tautan..."
                                                             className="w-28 h-8 px-3 text-[11px] font-bold rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] outline-none focus:border-blue-500/50 transition-all" />
                                                     )}
-                                                    
-                                                    <input type="url" value={commandStrip.url} 
+
+                                                    <input type="url" value={commandStrip.url}
                                                         onChange={e => setCommandStrip(s => ({ ...s, url: e.target.value }))}
                                                         autoFocus={commandStrip.open}
                                                         placeholder={commandStrip.type === 'link' ? "Masukkan URL (https://...)" : "Tempel link video YouTube..."}
@@ -944,7 +1128,7 @@ export default function NewsEditorPage() {
                                                             if (e.key === 'Enter') {
                                                                 const editor = quillRef.current.getEditor();
                                                                 const range = editor.getSelection() || { index: editor.getLength() - 1, length: 0 };
-                                                                
+
                                                                 if (commandStrip.type === 'link') {
                                                                     if (commandStrip.text && (!range || range.length === 0)) {
                                                                         editor.insertText(range.index, commandStrip.text, 'link', commandStrip.url);
@@ -964,7 +1148,7 @@ export default function NewsEditorPage() {
                                                             }
                                                         }}
                                                         className="flex-1 h-8 px-3 text-[11px] font-black rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] outline-none focus:border-[var(--color-primary)]/50 transition-all" />
-                                                    
+
                                                     <div className="flex items-center gap-1 shrink-0">
                                                         <button type="button" onClick={() => setCommandStrip(s => ({ ...s, open: false }))}
                                                             className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 transition-all text-[10px]" title="Batal (Esc)"><FontAwesomeIcon icon={faRotateLeft} /></button>
@@ -990,6 +1174,42 @@ export default function NewsEditorPage() {
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            {/* Bubble Contextual Menu (Medium Style) */}
+                                            {bubbleMenu.show && (
+                                                <div className="absolute z-[40] flex items-center gap-1 p-1 bg-slate-900 shadow-xl rounded-xl border border-white/10 animate-in fade-in zoom-in-95 duration-200"
+                                                    style={{ left: bubbleMenu.x, top: bubbleMenu.y }}>
+                                                    <button type="button" onClick={() => quillRef.current.getEditor().format('bold', !quillRef.current.getEditor().getFormat().bold)}
+                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faBold} /></button>
+                                                    <button type="button" onClick={() => quillRef.current.getEditor().format('italic', !quillRef.current.getEditor().getFormat().italic)}
+                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faItalic} /></button>
+                                                    <button type="button" onClick={() => handlers.link.call({ quill: quillRef.current.getEditor() })}
+                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faLink} /></button>
+                                                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                                                    <button type="button" onClick={() => quillRef.current.getEditor().format('header', 2)}
+                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-[10px] font-black">H2</button>
+                                                </div>
+                                            )}
+
+                                            {/* Bubble Contextual Menu (Medium Style selection toolbar) */}
+                                            {bubbleMenu.show && (
+                                                <div className="absolute z-[100] flex items-center gap-1 p-1 bg-slate-900 shadow-2xl rounded-xl border border-white/10 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto"
+                                                    style={{
+                                                        left: `${bubbleMenu.x}px`,
+                                                        top: `${bubbleMenu.y}px`,
+                                                        transform: 'translateY(-100%)'
+                                                    }}>
+                                                    <button type="button" onClick={() => quillRef.current.getEditor().format('bold', !quillRef.current.getEditor().getFormat().bold)}
+                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faBold} /></button>
+                                                    <button type="button" onClick={() => quillRef.current.getEditor().format('italic', !quillRef.current.getEditor().getFormat().italic)}
+                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faItalic} /></button>
+                                                    <button type="button" onClick={() => handlers.link.call({ quill: quillRef.current.getEditor() })}
+                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faLink} /></button>
+                                                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                                                    <button type="button" onClick={() => quillRef.current.getEditor().format('header', 2)}
+                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-[10px] font-black">H2</button>
+                                                </div>
+                                            )}
 
                                             <ReactQuill theme="snow" value={form.content} ref={quillRef}
                                                 placeholder="Tulis detail informasi di sini..."
@@ -1459,7 +1679,7 @@ export default function NewsEditorPage() {
                                         </div>
                                     </div>
                                     <div className="preview-content mt-4 max-w-none prose prose-sm dark:prose-invert prose-headings:font-black prose-headings:tracking-tight prose-a:text-[var(--color-primary)] prose-img:rounded-xl text-[var(--color-text)] opacity-90"
-                                        dangerouslySetInnerHTML={{ 
+                                        dangerouslySetInnerHTML={{
                                             __html: (form.content || '<p class="opacity-30 italic">Tulis di editor untuk melihat simulasi hasil akhir...</p>')
                                                 // Convert YouTube embed URLs to static "Unplayable" Premium Placeholders
                                                 .replace(/<p>(https?:\/\/www\.youtube\.com\/embed\/([^<]+))<\/p>/g, (match, url, id) => `
@@ -1498,7 +1718,7 @@ export default function NewsEditorPage() {
                             <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,var(--color-surface)_100%)] opacity-40 z-[1]" />
 
                             {/* Header - Adaptive & Translucent */}
-                            <div className="sticky top-0 z-[30] bg-[var(--color-surface)]/80 backdrop-blur-xl px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between border-b border-[var(--color-border)]">
+                            <div className={`sticky top-0 z-[30] bg-[var(--color-surface)]/80 backdrop-blur-xl px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between border-b border-[var(--color-border)] transition-all duration-700 ${isTyping ? 'opacity-10 pointer-events-none translate-y-[-10px]' : 'opacity-100'}`}>
                                 <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
                                     <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] shrink-0">
                                         <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="text-sm sm:text-base" />
@@ -1509,26 +1729,232 @@ export default function NewsEditorPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                                    <div className={`hidden xs:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${form.seo_score >= 80 ? 'bg-emerald-500/5 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/5 text-amber-500 border-amber-500/20'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${form.seo_score >= 80 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                        SEO: {form.seo_score}
+                                <div className="flex items-center gap-6 shrink-0">
+                                    {/* Zen Ambience - mood factor */}
+                                    <div className="hidden md:flex items-center gap-1.5 bg-slate-500/5 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-inner">
+                                        {ambienceOptions.map(opt => (
+                                            <button key={opt.id} onClick={() => setAmbience({ ...ambience, type: opt.id, playing: opt.id === 'none' ? false : true, title: opt.label, url: '' })}
+                                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${ambience.type === opt.id ? 'bg-[var(--color-primary)] text-white shadow-lg' : 'text-slate-400 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5'}`}
+                                                title={opt.label}>
+                                                <FontAwesomeIcon icon={opt.icon} className="text-sm" />
+                                            </button>
+                                        ))}
+
+                                        <div className="w-[1px] h-4 bg-slate-200 dark:bg-white/10 mx-1" />
+
+                                        <button 
+                                            onClick={() => setTypewriterEnabled(!typewriterEnabled)}
+                                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${typewriterEnabled ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'text-slate-400 opacity-40'}`}
+                                            title="Typewriter Sound">
+                                            <FontAwesomeIcon icon={faKeyboard} className="text-xs" />
+                                        </button>
+
+                                        <div className="w-[1px] h-4 bg-slate-200 dark:bg-white/10 mx-1" />
+
+                                        <div className="hidden pointer-events-none opacity-0 invisible" id="yt-player-container"></div>
+                                        
+                                        <input
+                                            type="text"
+                                            placeholder="Paste Link..."
+                                            value={customMusic}
+                                            onChange={async (e) => {
+                                                const val = e.target.value;
+                                                setCustomMusic(val);
+                                                const ytMatch = val.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/user\/\S+|\/ytscreeningroom\?v=))([\w\-]{11})/);
+                                                
+                                                if (ytMatch && ytMatch[1]) {
+                                                    const videoId = ytMatch[1];
+                                                    setAmbience({ type: 'custom_yt', url: videoId, playing: true, title: 'Loading Sultan Music...' });
+                                                    
+                                                    if (setupYTPlayer) setupYTPlayer(videoId);
+
+                                                    // Fetch Title
+                                                    try {
+                                                        const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+                                                        const data = await res.json();
+                                                        setAmbience(prev => ({ ...prev, title: data.title }));
+                                                    } catch (err) {
+                                                        setAmbience(prev => ({ ...prev, title: 'YouTube Track' }));
+                                                    }
+                                                } else if (val.match(/\.(mp3|ogg|wav)$/) || val.includes('stream')) {
+                                                    setAmbience({ type: 'custom_audio', url: val, playing: true, title: val.split('/').pop() });
+                                                }
+                                            }}
+                                            className="w-32 h-8 px-3 rounded-lg bg-white/50 dark:bg-black/20 border border-slate-200 dark:border-white/10 text-[9px] font-bold text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]/50 transition-all placeholder:opacity-30"
+                                        />
+
+                                        {ambience.type !== 'none' && ambience.type !== 'custom_yt' && (
+                                            <audio ref={audioRef} loop crossOrigin="anonymous" />
+                                        )}
+                                    </div>
+
+                                    <div className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${form.seo_score >= 80 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
+                                        <div className={`w-2 h-2 rounded-full animate-pulse ${form.seo_score >= 80 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                        Score: {form.seo_score}
                                     </div>
                                     <button onClick={() => setIsZenMode(false)}
-                                        className="h-9 sm:h-11 px-4 sm:px-7 rounded-2xl bg-[var(--color-primary)] text-white text-[10px] sm:text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 active:scale-95 transition-all">
-                                        <span className="sm:hidden">Selesai</span>
-                                        <span className="hidden sm:inline">Simpan & Keluar Zen</span>
+                                        className="h-11 px-7 rounded-2xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-[var(--color-primary)]/20 active:scale-95 transition-all">
+                                        Simpan & Keluar Zen
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Editor Canvas */}
-                            <div className="relative z-[10] flex-1 max-w-4xl mx-auto w-full px-6 pt-12 pb-32 sm:pt-20 sm:pb-44 flex flex-col items-center">
+                            {/* Editor Canvas Container */}
+                            <div className="relative z-[10] flex-1 max-w-5xl mx-auto w-full px-6 pt-12 pb-32 sm:pt-20 sm:pb-44 flex flex-col items-center">
+                                {/* Floating Navigation Map (ToC) */}
+                                {toc.length > 0 && (
+                                    <div className="fixed left-8 top-32 w-64 hidden xl:block z-[20] animate-in slide-in-from-left-8 duration-700">
+                                        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-3xl p-6 border border-white/20 shadow-2xl">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className="w-8 h-8 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)]">
+                                                    <FontAwesomeIcon icon={faAlignLeft} className="text-sm" />
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Navigate article</span>
+                                            </div>
+                                            <div className="space-y-4">
+                                                {toc.map((item, idx) => (
+                                                    <a key={idx} href={`#${item.id}`} 
+                                                       className={`block text-xs font-bold transition-all hover:text-[var(--color-primary)] leading-relaxed ${item.level === 'h3' ? 'pl-4 opacity-70' : ''}`}>
+                                                        {item.text}
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── Sultan Mini-Player (The Folding Sultan) ── */}
+                                {ambience.type !== 'none' && (
+                                    <div className={`fixed right-8 bottom-8 z-[100] transition-all duration-700 group ${isTyping ? 'opacity-5 blur-sm scale-90 translate-x-4' : 'opacity-100'}`}>
+                                        <div className="relative flex items-center bg-slate-950 dark:bg-black backdrop-blur-3xl rounded-full border border-white/10 shadow-[0_20px_80px_rgba(0,0,0,0.9)] transition-all duration-500 ease-out w-14 h-14 hover:w-auto hover:h-[72px] hover:px-6 overflow-hidden group-hover:rounded-[2.5rem]">
+                                            
+                                            {/* Vinyl Wrapper - Fixed Center */}
+                                            <div className="flex items-center justify-center shrink-0 w-14 h-14 relative z-10">
+                                                {/* Dynamic Aura Glow */}
+                                                {ambience.playing && (
+                                                    <div className={`absolute inset-2 rounded-full blur-md opacity-40 animate-pulse transition-all duration-1000 ${
+                                                        ambience.type === 'rain' ? 'bg-blue-500' :
+                                                        ambience.type === 'cafe' ? 'bg-amber-500' :
+                                                        ambience.type === 'forest' ? 'bg-emerald-500' :
+                                                        'bg-purple-500'
+                                                    }`} />
+                                                )}
+
+                                                {/* Vinyl / Record Disk */}
+                                                <div className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border-2 transition-all duration-1000 ${
+                                                    ambience.playing ? 'animate-[spin_4s_linear_infinite]' : 'rotate-45'
+                                                } ${
+                                                    ambience.type === 'rain' ? 'border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.3)]' :
+                                                    ambience.type === 'cafe' ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.3)]' :
+                                                    ambience.type === 'forest' ? 'border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
+                                                    'border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                                                }`}>
+                                                    <div className="absolute inset-1 rounded-full border border-white/10" />
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-slate-950 border border-white/40 z-10" />
+                                                    <FontAwesomeIcon icon={faMusic} className={`text-white transition-all ${
+                                                        ambience.playing ? 'scale-110 opacity-70' : 'scale-90 opacity-20'
+                                                    } ${
+                                                        ambience.type === 'rain' ? 'text-blue-400' :
+                                                        ambience.type === 'cafe' ? 'text-amber-400' :
+                                                        ambience.type === 'forest' ? 'text-emerald-400' :
+                                                        'text-purple-400'
+                                                    }`} />
+                                                </div>
+                                                
+                                                {/* Sultan Visualizer (Bars) - Color Matched */}
+                                                {ambience.playing && (
+                                                    <div className="absolute right-0.5 flex gap-0.5 h-4 items-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {[0.8, 1.2, 1.0].map((speed, i) => (
+                                                            <div key={i} className={`w-0.5 animate-[bounce_ease-in-out_infinite] ${
+                                                                ambience.type === 'rain' ? 'bg-blue-400' :
+                                                                ambience.type === 'cafe' ? 'bg-amber-400' :
+                                                                ambience.type === 'forest' ? 'bg-emerald-400' :
+                                                                'bg-purple-400'
+                                                            }`} style={{ 
+                                                                animationDuration: `${speed}s`,
+                                                                animationDelay: `${i * 0.15}s`
+                                                            }} />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Controls & Info - Expands on Hover */}
+                                            <div className="flex items-center gap-6 opacity-0 group-hover:opacity-100 transition-all duration-500 delay-150 whitespace-nowrap">
+                                                <div className="flex flex-col -space-y-0.5 min-w-[150px]">
+                                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest leading-none mb-1">Now Playing</span>
+                                                    <span className="text-sm font-black text-white truncate max-w-[200px] leading-none">
+                                                        {ambience.title || (ambienceOptions.find(o => o.id === ambience.type)?.label || 'Ambience')}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-5 focus:outline-none">
+                                                    <button 
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation();
+                                                            if (ambience.type === 'custom_yt' && ytPlayerRef.current) ytPlayerRef.current.seekTo(ytPlayerRef.current.getCurrentTime() - 10);
+                                                            else if(audioRef.current) audioRef.current.currentTime -= 10;
+                                                        }} 
+                                                        className="text-white opacity-40 hover:opacity-100 transition-colors text-[11px]">
+                                                        <FontAwesomeIcon icon={faBackward} />
+                                                    </button>
+                                                    
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setAmbience({ ...ambience, playing: !ambience.playing });
+                                                        }} 
+                                                        className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center text-[11px] shadow-lg hover:scale-110 active:scale-95 transition-all">
+                                                        <FontAwesomeIcon icon={ambience.playing ? faPause : faPlay} />
+                                                    </button>
+                                                    
+                                                    <button 
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation();
+                                                            if (ambience.type === 'custom_yt' && ytPlayerRef.current) ytPlayerRef.current.seekTo(ytPlayerRef.current.getCurrentTime() + 10);
+                                                            else if(audioRef.current) audioRef.current.currentTime += 10;
+                                                        }} 
+                                                        className="text-white opacity-40 hover:opacity-100 transition-colors text-[11px]">
+                                                        <FontAwesomeIcon icon={faForward} />
+                                                    </button>
+
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setAmbience({ ...ambience, repeat: !ambience.repeat });
+                                                        }} 
+                                                        className={`text-[11px] transition-all ${ambience.repeat ? 'text-[var(--color-primary)]' : 'text-white opacity-30 hover:opacity-100'}`}>
+                                                        <FontAwesomeIcon icon={faRepeat} />
+                                                    </button>
+
+                                                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+                                                    <div className="flex items-center gap-2">
+                                                        <FontAwesomeIcon icon={faMusic} className="text-[10px] text-white/20" />
+                                                        <input 
+                                                            type="range" min="0" max="1" step="0.05"
+                                                            value={ambience.volume ?? 0.4}
+                                                            onChange={(e) => {
+                                                                e.stopPropagation();
+                                                                setAmbience({ ...ambience, volume: parseFloat(e.target.value) });
+                                                            }}
+                                                            className="w-20 h-1 accent-white bg-white/20 rounded-lg appearance-none cursor-pointer"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="w-full max-w-[720px] space-y-8">
                                     <textarea
                                         ref={zenTitleRef}
                                         value={form.title}
-                                        onChange={e => handleTitleChange(e.target.value)}
+                                        onChange={e => {
+                                            handleTitleChange(e.target.value);
+                                            handleActiveTyping();
+                                        }}
                                         onInput={e => {
                                             e.target.style.height = 'auto'
                                             e.target.style.height = e.target.scrollHeight + 'px'
