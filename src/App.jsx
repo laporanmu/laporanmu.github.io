@@ -370,6 +370,7 @@ function AppRoutes() {
         <Route path="/login" element={
           <PublicRoute><LoginPage /></PublicRoute>
         } />
+        <Route path="/informasi" element={<InformationPage />} />
 
         {/* ── Protected ── */}
         <Route element={<ProtectedRoute />}>
@@ -381,7 +382,6 @@ function AppRoutes() {
             <Route path="/perilaku" element={<FlagRoute flag="module.poin" label="Laporan Perilaku"><BehaviorPage /></FlagRoute>} />
             <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AttendancePage /></FlagRoute>} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/informasi" element={<InformationPage />} />
 
             {/* Role + flag guarded */}
             <Route path="/gate" element={

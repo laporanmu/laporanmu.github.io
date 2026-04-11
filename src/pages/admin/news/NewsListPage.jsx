@@ -11,13 +11,14 @@ import {
     faStar, faFilter, faChevronLeft,
     faChevronRight, faCheckSquare, faSquare,
     faBookOpen, faHashtag, faAlignLeft, faImage,
-    faArrowUpRightFromSquare, faArchive, faRotateLeft,
+    faArrowUpRightFromSquare, faArchive, faRotateLeft, faRocket,
     faTags, faUserPen, faMagicWandSparkles, faSliders,
     faList, faGrip, faTableList
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../../components/layout/DashboardLayout'
 import Breadcrumb from '../../../components/ui/Breadcrumb'
 import { useToast } from '../../../context/ToastContext'
+import { useAuth } from '../../../context/AuthContext'
 import { supabase } from '../../../lib/supabase'
 import { logAudit } from '../../../lib/auditLogger'
 
@@ -221,10 +222,10 @@ const NewsCard = memo(({ news, isSelected, onSelect, onEdit, onDelete, onToggleS
                     )}
                     <button onClick={() => onToggleStatus(news)}
                         className={`w-8 h-8 rounded-xl flex items-center justify-center backdrop-blur-md shadow-lg transition-all border ${news.is_published
-                            ? 'bg-blue-500 border-blue-600/20 text-white shadow-blue-500/20'
+                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)]/20 text-white shadow-[var(--color-primary)]/20'
                             : 'bg-white border-[var(--color-border)] text-[var(--color-text-muted)] shadow-black/5'}`}
                         title={news.is_published ? 'Arsipkan' : 'Publikasikan'}>
-                        <FontAwesomeIcon icon={news.is_published ? faEye : faEyeSlash} className="text-[10px]" />
+                        <FontAwesomeIcon icon={faRocket} className="text-[10px]" />
                     </button>
                 </div>
                 <div className="absolute bottom-4 left-4">
@@ -256,7 +257,7 @@ const NewsCard = memo(({ news, isSelected, onSelect, onEdit, onDelete, onToggleS
                         <div className="w-6 h-6 rounded-lg bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] border border-[var(--color-border)]">
                             <FontAwesomeIcon icon={faUser} className="text-[8px]" />
                         </div>
-                        <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60">
+                        <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 capitalize">
                             {news.display_name || news.author?.split('@')[0] || 'Admin'}
                         </span>
                     </div>
@@ -306,7 +307,7 @@ const BulkActionBar = memo(({ count, onPublish, onArchive, onSetFeatured, onRemo
             <span className="text-white text-[11px] font-black shrink-0 whitespace-nowrap">{count} dipilih</span>
             <div className="h-4 w-px bg-white/20 shrink-0" />
             <button onClick={onPublish} className="shrink-0 text-white text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity flex items-center gap-1.5 px-2">
-                <FontAwesomeIcon icon={faEye} className="text-[9px]" /> Publikasikan
+                <FontAwesomeIcon icon={faRocket} className="text-[9px]" /> Publikasikan
             </button>
             <button onClick={onArchive} className="shrink-0 text-white text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity flex items-center gap-1.5 px-2">
                 <FontAwesomeIcon icon={faArchive} className="text-[9px]" /> Arsipkan
@@ -335,6 +336,7 @@ BulkActionBar.displayName = 'BulkActionBar'
 
 export default function NewsListPage() {
     const navigate = useNavigate()
+    const { profile: authProfile } = useAuth()
     const { addToast } = useToast()
     const [newsList, setNewsList] = useState([])
     const [loading, setLoading] = useState(true)
@@ -361,16 +363,12 @@ export default function NewsListPage() {
     }, [searchInput])
 
     // ── Fetch current user name from profiles ──────────────────────────────────
+    // ── Get Current User Name for Filter ──
     useEffect(() => {
-        const fetchProfile = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
-            const { data } = await supabase
-                .from('profiles').select('name').eq('id', user.id).single()
-            setCurrentUserName(data?.name || user.email?.split('@')[0] || 'Admin')
+        if (authProfile) {
+            setCurrentUserName(authProfile.name || authProfile.full_name || authProfile.email?.split('@')[0] || 'Admin')
         }
-        fetchProfile()
-    }, [])
+    }, [authProfile])
 
     // ── Fetch ──────────────────────────────────────────────────────────────────
 

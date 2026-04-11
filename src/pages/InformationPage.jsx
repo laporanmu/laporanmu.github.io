@@ -8,6 +8,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { supabase } from '../lib/supabase'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 
 const PAGE_SIZE = 9
 const CATEGORIES = ['Semua', 'Informasi', 'Kegiatan', 'Prestasi', 'Pengumuman']
@@ -23,6 +24,7 @@ const stripHtml = (html = '') => html
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 const Navbar = memo(() => {
+    const { user } = useAuth()
     const { isDark, toggleTheme } = useTheme()
     const [scrolled, setScrolled] = useState(false)
     const [menuOpen, setMenuOpen] = useState(false)
@@ -55,8 +57,8 @@ const Navbar = memo(() => {
                         <button onClick={toggleTheme} className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 transition-all">
                             <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
                         </button>
-                        <Link to="/login" className="inline-flex items-center px-5 py-2 text-[13px] font-black rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all">
-                            Login Staff
+                        <Link to={user ? "/dashboard" : "/login"} className="inline-flex items-center px-5 py-2 text-[13px] font-black rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all">
+                            {user ? 'Ke Dashboard' : 'Login Staff'}
                         </Link>
                     </div>
 
@@ -75,7 +77,7 @@ const Navbar = memo(() => {
             {/* Mobile Menu */}
             {menuOpen && (
                 <div className="md:hidden absolute top-full left-4 right-4 mt-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl p-3 space-y-1 animate-in fade-in duration-200">
-                    {[['/', 'Beranda'], ['/informasi', 'Informasi'], ['/check', 'Cek Poin'], ['/login', 'Login Staff']].map(([to, label]) => (
+                    {[['/', 'Beranda'], ['/informasi', 'Informasi'], ['/check', 'Cek Poin'], [user ? '/dashboard' : '/login', user ? 'Ke Dashboard' : 'Login Staff']].map(([to, label]) => (
                         <Link key={to} to={to} onClick={() => setMenuOpen(false)} className="flex items-center px-4 py-3 rounded-xl text-sm font-semibold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors">{label}</Link>
                     ))}
                 </div>
@@ -246,6 +248,7 @@ NewsCard.displayName = 'NewsCard'
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function InformationPage() {
+    const { user } = useAuth()
     const [news, setNews] = useState([])
     const [loading, setLoading] = useState(true)
     const [totalCount, setTotalCount] = useState(0)
@@ -434,7 +437,7 @@ export default function InformationPage() {
                     <div className="flex items-center gap-4">
                         <Link to="/" className="hover:text-[var(--color-primary)] transition-colors">Beranda</Link>
                         <Link to="/check" className="hover:text-[var(--color-primary)] transition-colors">Cek Poin</Link>
-                        <Link to="/login" className="hover:text-[var(--color-primary)] transition-colors">Login</Link>
+                        <Link to={user ? "/dashboard" : "/login"} className="hover:text-[var(--color-primary)] transition-colors">{user ? 'Ke Dashboard' : 'Login'}</Link>
                     </div>
                 </div>
             </footer>

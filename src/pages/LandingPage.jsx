@@ -21,6 +21,7 @@ import {
     faPrint
 } from '@fortawesome/free-solid-svg-icons'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
 const ChatAssistant = lazy(() => import('../components/ui/ChatAssistant'))
@@ -195,6 +196,7 @@ function NewsDetailModal({ news, onClose }) {
 
 /* ───────────────────────────── Landing Page ───────────────────────────── */
 export default function LandingPage() {
+    const { user } = useAuth()
     const { isDark, toggleTheme } = useTheme()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [scrolled, setScrolled] = useState(false)
@@ -291,8 +293,8 @@ export default function LandingPage() {
                             <Link to="/check" className="inline-flex items-center px-4 py-2 text-[13px] font-bold rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
                                 Cek Poin & Raport
                             </Link>
-                            <Link to="/login" className="inline-flex items-center px-5 py-2 text-[13px] font-black rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all">
-                                Login Staff
+                            <Link to={user ? "/dashboard" : "/login"} className="inline-flex items-center px-5 py-2 text-[13px] font-black rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all">
+                                {user ? 'Ke Dashboard' : 'Login Staff'}
                             </Link>
                         </div>
 
@@ -326,8 +328,8 @@ export default function LandingPage() {
                             <Link to="/check" className="flex items-center justify-center px-4 py-3.5 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-semibold text-sm border border-[var(--color-border)] active:scale-95 transition-all w-full" onClick={() => setIsMobileMenuOpen(false)}>
                                 Cek Data Siswa
                             </Link>
-                            <Link to="/login" className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold text-sm shadow-lg shadow-[var(--color-primary)]/20 active:scale-95 transition-all w-full mt-2" onClick={() => setIsMobileMenuOpen(false)}>
-                                Login Staff
+                            <Link to={user ? "/dashboard" : "/login"} className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold text-sm shadow-lg shadow-[var(--color-primary)]/20 active:scale-95 transition-all w-full mt-2" onClick={() => setIsMobileMenuOpen(false)}>
+                                {user ? 'Ke Dashboard' : 'Login Staff'}
                                 <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
                             </Link>
                         </div>
@@ -360,8 +362,8 @@ export default function LandingPage() {
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-5 w-full sm:w-auto animate-[fadeIn_1s_ease-out_0.6s_both]">
-                        <Link to="/login" className="btn btn-primary w-full sm:w-auto group text-base px-8 py-4">
-                            Mulai Sekarang
+                        <Link to={user ? "/dashboard" : "/login"} className="btn btn-primary w-full sm:w-auto group text-base px-8 py-4">
+                            {user ? 'Ke Dashboard' : 'Mulai Sekarang'}
                             <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                         </Link>
                         <Link to="/check" className="btn btn-secondary w-full sm:w-auto text-base px-8 py-4 bg-[var(--color-surface)]/80 backdrop-blur">
@@ -680,8 +682,8 @@ export default function LandingPage() {
                                     Tinggalkan buku catatan manual. Beralih ke Laporanmu untuk pencatatan perilaku yang berintegritas dan transparan.
                                 </p>
                                 <div className="flex flex-col sm:flex-row justify-center gap-4">
-                                    <Link to="/login" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-[var(--color-primary-dark)] font-bold text-lg hover:scale-105 transition-transform shadow-xl w-full sm:w-auto">
-                                        Login Staff / Guru
+                                    <Link to={user ? "/dashboard" : "/login"} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-[var(--color-primary-dark)] font-bold text-lg hover:scale-105 transition-transform shadow-xl w-full sm:w-auto">
+                                        {user ? 'Ke Dashboard' : 'Login Staff / Guru'}
                                     </Link>
                                     <Link to="/check" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl border-2 border-white/30 hover:bg-white/10 text-white font-bold text-lg transition-colors w-full sm:w-auto">
                                         <FontAwesomeIcon icon={faSearch} className="text-sm" />
@@ -716,7 +718,7 @@ export default function LandingPage() {
                                         {item.name}
                                     </a>
                                 ))}
-                                <Link to="/login" className="text-[var(--color-primary)] hover:opacity-80">Akses Portal</Link>
+                                <Link to={user ? "/dashboard" : "/login"} className="text-[var(--color-primary)] hover:opacity-80">{user ? 'Ke Dashboard' : 'Akses Portal'}</Link>
                             </div>
                         </div>
 
