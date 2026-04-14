@@ -405,7 +405,7 @@ const StudentRow = memo(({
                                                     </div>
                                                     <div className="p-2 rounded-xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)]">
                                                         <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Profil</p>
-                                                        <p className="text-xs font-black text-[var(--color-primary)]">{completeness}%</p>
+                                                        <p className="text-xs font-black text-[var(--color-primary)]">{calculateCompleteness(student)}%</p>
                                                     </div>
                                                 </div>
                                                 {student.phone && (

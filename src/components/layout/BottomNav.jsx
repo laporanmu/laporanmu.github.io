@@ -74,7 +74,7 @@ export default function BottomNav() {
                                 <NavItem to="/dashboard" icon={faHouse} label="Home" />
                                 <MenuButton icon={faClipboardList} label="Reports" onClick={() => open('reports')} active={openSheet === 'reports'} />
                                 <MenuButton icon={faLayerGroup} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
-                                <MenuButton icon={faUserGear} label="Admin" onClick={() => open('admin')} active={openSheet === 'admin'} />
+                                <NavItem to="/admin" icon={faUserGear} label="Admin" />
                             </div>
                         )}
 

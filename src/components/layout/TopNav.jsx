@@ -9,7 +9,7 @@ import {
     faClipboardList, faCalendarWeek, faShieldHalved,
     faUsers, faChalkboardTeacher, faSchool, faExclamationTriangle, faCalendarAlt,
     faPersonWalkingArrowRight, faUserGear, faClockRotateLeft, faScrewdriverWrench,
-    faDatabase, faBoxArchive, faServer, faPalette, faNewspaper, faRobot,
+    faDatabase, faBoxArchive, faServer, faPalette, faNewspaper, faRobot, faCube
 } from "@fortawesome/free-solid-svg-icons"
 import { useTheme } from "../../context/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
@@ -69,6 +69,7 @@ const REPORTS_ITEMS = [
 
 // Admin-only items — hanya tampil untuk developer & admin
 const ADMIN_ITEMS = [
+    { to: "/admin", label: "Admin Dashboard Center", icon: faCube, desc: "Pusat monitoring teknis & integrasi sistem", color: "bg-indigo-600/10 text-indigo-600" },
     { to: "/admin/news", label: "Manajemen Informasi", icon: faNewspaper, desc: "Update Informasi & info terbaru ke landing page", color: "bg-emerald-500/10 text-emerald-600" },
     { to: "/admin/ai-insights", label: "AI Insights Center", icon: faRobot, desc: "Audit perckapan AI dan analisis performa mesin", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/admin/logs", label: "Audit Logs", icon: faClockRotateLeft, desc: "Log historis aktivitas user dan perubahan data", color: "bg-purple-500/10 text-purple-600" },
