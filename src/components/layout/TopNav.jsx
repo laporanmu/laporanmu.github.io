@@ -554,27 +554,34 @@ export default function TopNav({ title, subtitle }) {
                                             </button>
 
                                             {adminOpen && (
-                                                <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
-                                                    <div className="px-3 py-2 text-[11px] font-extrabold tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">
-                                                        Admin Panel
+                                                <div className="absolute right-0 lg:left-auto lg:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[480px] rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 origin-top-right z-50">
+                                                    <div className="px-5 py-3.5 text-[10px] font-black tracking-[0.2em] text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]/50 bg-[var(--color-surface-alt)]/30">
+                                                        Infrastructure & Control
                                                     </div>
-                                                    <div className="p-2">
-                                                        {ADMIN_ITEMS.map(it => (
+                                                    <div className="p-3 grid grid-cols-2 gap-1.5">
+                                                        {ADMIN_ITEMS.map((it, idx) => (
                                                             <button
                                                                 key={it.to}
                                                                 onClick={() => { setAdminOpen(false); navigate(it.to) }}
-                                                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group"
+                                                                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--color-surface-alt)] transition-all group border border-transparent hover:border-[var(--color-border)] ${idx === 0 ? 'col-span-2 bg-indigo-500/5 !border-indigo-500/20' : ''}`}
                                                                 type="button"
                                                             >
-                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${it.color}`}>
-                                                                    <FontAwesomeIcon icon={it.icon} className="text-xs" />
+                                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${it.color} shadow-sm`}>
+                                                                    <FontAwesomeIcon icon={it.icon} className="text-sm" />
                                                                 </div>
-                                                                <div className="text-left">
-                                                                    <p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p>
-                                                                    <p className="text-[9px] text-[var(--color-text-muted)] font-medium leading-tight mt-0.5">{it.desc}</p>
+                                                                <div className="text-left min-w-0">
+                                                                    <p className={`text-[11px] font-black text-[var(--color-text)] leading-tight truncate ${idx === 0 ? 'text-indigo-600' : ''}`}>{it.label}</p>
+                                                                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold leading-tight mt-0.5 opacity-60 line-clamp-1">{it.desc}</p>
                                                                 </div>
                                                             </button>
                                                         ))}
+                                                    </div>
+                                                    <div className="px-5 py-3 bg-[var(--color-surface-alt)]/50 flex justify-between items-center border-t border-[var(--color-border)]/50">
+                                                        <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">v2.4.0 Engine</span>
+                                                        <div className="flex gap-1">
+                                                            <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                                            <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">All Systems Operational</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}

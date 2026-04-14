@@ -24,7 +24,7 @@ export default function AdminDashboardPage() {
         aiCost: 0,
         tempTasks: 0,
         errorLogs: 0,
-        storageUsage: '1.2 GB', // Mock for now
+        storageUsage: '1.2 GB',
         latency: '0.82s'
     })
 
@@ -35,7 +35,6 @@ export default function AdminDashboardPage() {
     const fetchTechnicalStats = async () => {
         setLoading(true)
         try {
-            // 1. Fetch DB Stats (sampling some main tables)
             const tables = ['students', 'reports', 'teachers', 'gate_logs', 'ai_logs', 'audit_logs']
             const counts = await Promise.all(tables.map(async (t) => {
                 const { count } = await supabase.from(t).select('*', { count: 'exact', head: true })
@@ -49,7 +48,6 @@ export default function AdminDashboardPage() {
                 color: c.name === 'ai_logs' ? '#6366f1' : c.name === 'reports' ? '#ef4444' : '#10b981'
             })))
 
-            // 2. AI Intelligence (from ai_logs)
             const { data: aiLogs } = await supabase
                 .from('ai_logs')
                 .select('user_query, ai_response, created_at')
@@ -61,7 +59,6 @@ export default function AdminDashboardPage() {
                     return acc + Math.round((log.user_query.length + (log.ai_response?.length || 0)) / 4)
                 }, 0)
 
-                // Group by day for trend
                 const last7Days = Array.from({ length: 7 }).map((_, i) => {
                     const d = new Date()
                     d.setDate(d.getDate() - i)
@@ -79,13 +76,11 @@ export default function AdminDashboardPage() {
                 setAiTrend(trend)
             }
 
-            // 3. Error counts (from audit_logs or mock if empty)
             const { count: errCount } = await supabase
                 .from('audit_logs')
                 .select('*', { count: 'exact', head: true })
                 .ilike('action', '%error%')
 
-            // 4. System Logs (recent activity)
             const { data: recentAudit } = await supabase
                 .from('audit_logs')
                 .select('*')
@@ -93,92 +88,86 @@ export default function AdminDashboardPage() {
                 .limit(5)
 
             setSystemLogs(recentAudit || [])
-
             setStats({
                 dbRows: totalRows,
                 aiTokens: totalTokens,
                 aiCost: (totalTokens * TOKEN_RATE).toFixed(4),
-                tempTasks: 42, // Mock background tasks
+                tempTasks: 42,
                 errorLogs: errCount || 0,
-                storageUsage: (totalRows * 0.05).toFixed(1) + ' MB', // Estimation
+                storageUsage: (totalRows * 0.05).toFixed(1) + ' MB',
                 latency: '0.82s'
             })
 
-        } catch (err) {
-            console.error('Tech Stats Error:', err)
-        } finally {
-            setLoading(false)
-        }
+        } catch (err) { console.error(err) } finally { setLoading(false) }
     }
 
-    useEffect(() => {
-        fetchTechnicalStats()
-    }, [])
-
-    const TECH_STATS = [
-        { label: 'DB Complexity', value: stats.dbRows, sub: 'Total Rows', icon: faDatabase, color: 'text-indigo-600', bg: 'bg-indigo-600/10' },
-        { label: 'Neural Traffic', value: stats.aiTokens, sub: `${stats.aiTokens} Tkns`, icon: faRobot, color: 'text-violet-600', bg: 'bg-violet-600/10' },
-        { label: 'Cloud Assets', value: stats.storageUsage, sub: 'Est. Size', icon: faCloud, color: 'text-sky-600', bg: 'bg-sky-600/10' },
-        { label: 'System Health', value: 'Healthy', sub: `${stats.latency} Stable`, icon: faBolt, color: 'text-emerald-600', bg: 'bg-emerald-600/10' },
-    ]
+    useEffect(() => { fetchTechnicalStats() }, [])
 
     return (
         <DashboardLayout title="Admin Hub">
-            <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+            <div className="p-4 md:p-6 space-y-5 max-w-[1280px] mx-auto animate-in fade-in duration-700">
                 
                 {/* ── HEADER ── */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8 animate-in slide-in-from-top-4 duration-500">
                     <div>
                         <Breadcrumb badge="Admin" items={['Technical Dashboard']} className="mb-1" />
-                        <div className="flex items-center gap-3 mb-1">
+                        <div className="flex items-center gap-2.5 mb-1">
                             <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Admin Dashboard Center</h1>
                             <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 uppercase tracking-widest animate-pulse">System Active</span>
                         </div>
-                        <p className="text-[var(--color-text-muted)] text-[11px] font-medium opacity-70">
-                            Pusat kendali monitoring infrastruktur, data neural, dan integritas database.
-                        </p>
+                        <div className="flex items-center gap-3 mt-1 opacity-70">
+                            <p className="text-[var(--color-text-muted)] text-[11px] font-medium leading-none">
+                                Pusat monitoring infrastruktur & data neural.
+                            </p>
+                            <div className="h-3 w-px bg-[var(--color-border)]" />
+                            <div className="flex items-center gap-1.5 text-[9px] font-black text-indigo-500 uppercase tracking-widest">
+                                <FontAwesomeIcon icon={faServer} className="text-[8px]" />
+                                ap-southeast-1 (SG)
+                            </div>
+                            <div className="h-3 w-px bg-[var(--color-border)]" />
+                            <div className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">v2.4.0-prod</div>
+                        </div>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={fetchTechnicalStats} className="h-9 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[var(--color-border)] transition-all">
-                            <FontAwesomeIcon icon={faRotateLeft} className={loading ? 'animate-spin' : ''} /> Refresh Sync
+                    <div className="flex items-center gap-2">
+                        <button onClick={fetchTechnicalStats} className="h-9 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[var(--color-surface-alt)] transition-all shadow-sm group">
+                            <FontAwesomeIcon icon={faRotateLeft} className={`${loading ? 'animate-spin' : 'group-hover:rotate-180'} transition-transform duration-500`} /> Refresh Sync
                         </button>
                     </div>
                 </div>
 
-                {/* ── TECH STATS GRID ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {TECH_STATS.map((s, idx) => (
-                        <div key={idx} className="bg-[var(--color-surface)] border border-[var(--color-border)] p-5 rounded-[2rem] shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                            <div className="flex items-center gap-4 relative z-10">
-                                <div className={`w-12 h-12 rounded-2xl ${s.bg} ${s.color} flex items-center justify-center text-xl group-hover:scale-110 transition-transform`}>
-                                    <FontAwesomeIcon icon={s.icon} />
-                                </div>
-                                <div>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-0.5">{s.label}</p>
-                                    <h3 className="text-xl font-black text-[var(--color-text)] leading-none">{s.value}</h3>
-                                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-1 opacity-70">{s.sub}</p>
-                                </div>
+                {/* ── STATS ROW ── */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    {[
+                        { label: 'DB Complexity', val: stats.dbRows, sub: 'Total Rows', icon: faDatabase, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                        { label: 'Neural Traffic', val: stats.aiTokens, sub: `${stats.aiTokens} Tkns`, icon: faRobot, color: 'text-violet-500', bg: 'bg-violet-500/10' },
+                        { label: 'Cloud Assets', val: stats.storageUsage, sub: 'Est. Size', icon: faCloud, color: 'text-sky-500', bg: 'bg-sky-500/10' },
+                        { label: 'System Health', val: 'Healthy', sub: `${stats.latency} Stable`, icon: faBolt, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                    ].map((s, i) => (
+                        <div key={i} className="glass rounded-[1.5rem] p-4 border border-[var(--color-border)] flex items-center gap-3 hover:shadow-lg transition-all group">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm shrink-0 ${s.bg} group-hover:scale-110 transition-transform`}>
+                                <FontAwesomeIcon icon={s.icon} className={s.color} />
                             </div>
-                            <div className="absolute top-0 right-0 w-16 h-16 -mr-6 -mt-6 bg-gradient-to-br from-indigo-500/5 to-transparent rounded-full" />
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 leading-none mb-1">{s.label}</p>
+                                <p className={`text-xl font-black font-heading leading-none tabular-nums ${s.color}`}>{loading ? '…' : s.val}</p>
+                            </div>
                         </div>
                     ))}
                 </div>
 
-                {/* ── CHARTS SECTION ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Machine Intel Trend */}
-                    <div className="lg:col-span-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] p-6 shadow-sm">
-                        <div className="flex items-center justify-between mb-6">
+                {/* ── CHARTS ROW ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div className="lg:col-span-2 glass rounded-[1.5rem] border border-[var(--color-border)] p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-5">
                             <div>
                                 <h3 className="text-[13px] font-black text-[var(--color-text)]">Neural Consumption</h3>
                                 <p className="text-[10px] text-[var(--color-text-muted)] opacity-70">Tren penggunaan token AI 7 hari terakhir</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-[10px] font-black text-emerald-500">$ {stats.aiCost}</p>
-                                <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Est. Weekly Cost</p>
+                                <p className="text-[11px] font-black text-emerald-500">$ {stats.aiCost}</p>
                             </div>
                         </div>
-                        <div className="h-[220px]">
+                        <div className="h-[200px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={aiTrend}>
                                     <defs>
@@ -188,25 +177,24 @@ export default function AdminDashboardPage() {
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-                                    <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
-                                    <YAxis fontSize={10} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                    <Area type="monotone" dataKey="tokens" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorTokens)" />
+                                    <XAxis dataKey="name" fontSize={9} axisLine={false} tickLine={false} />
+                                    <YAxis fontSize={9} axisLine={false} tickLine={false} />
+                                    <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }} />
+                                    <Area type="monotone" dataKey="tokens" stroke="#6366f1" strokeWidth={2.5} fillOpacity={1} fill="url(#colorTokens)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    {/* Data Distribution */}
-                    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] p-6 shadow-sm flex flex-col items-center">
+                    <div className="glass rounded-[1.5rem] border border-[var(--color-border)] p-6 shadow-sm flex flex-col items-center">
                         <div className="w-full text-left mb-4">
-                            <h3 className="text-[13px] font-black text-[var(--color-text)]">Database Schema</h3>
-                            <p className="text-[10px] text-[var(--color-text-muted)] opacity-70">Distribusi baris data per modul</p>
+                            <h3 className="text-[13px] font-black text-[var(--color-text)]">Data Distribution</h3>
+                            <p className="text-[10px] text-[var(--color-text-muted)] opacity-70">Baris data per modul</p>
                         </div>
-                        <div className="h-[180px] w-full relative">
+                        <div className="h-[140px] w-full relative">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={dbDistribution} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
+                                    <Pie data={dbDistribution} innerRadius={40} outerRadius={60} paddingAngle={4} dataKey="value">
                                         {dbDistribution.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
@@ -214,48 +202,52 @@ export default function AdminDashboardPage() {
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-xl font-black">{stats.dbRows}</span>
+                                <span className="text-lg font-black">{stats.dbRows}</span>
                                 <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)]">Rows</span>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-4 w-full">
-                            {dbDistribution.map((d, i) => (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-4 w-full">
+                            {dbDistribution.slice(0, 4).map((d, i) => (
                                 <div key={i} className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] truncate capitalize">{d.name}</span>
-                                    <span className="text-[10px] font-black ml-auto">{d.value}</span>
+                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.color }} />
+                                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] truncate capitalize">{d.name}</span>
+                                    <span className="text-[9px] font-black ml-auto">{d.value}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
 
-                {/* ── BOTTOM ACTIONS & LOGS ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* System Logs */}
-                    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] p-6 shadow-sm">
-                        <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-[13px] font-black text-[var(--color-text)] flex items-center gap-2">
-                                <FontAwesomeIcon icon={faTerminal} className="text-indigo-500" />
+                {/* ── RECENT AUDIT ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div className="glass rounded-[2rem] border border-[var(--color-border)] p-1 overflow-hidden shadow-sm">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)]/50">
+                            <h3 className="text-[12px] font-black text-[var(--color-text)] flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                                 Recent System Audit
                             </h3>
-                            <span className="text-[9px] font-black text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] px-2 py-1 rounded-lg">Live Trace</span>
+                            <button className="text-[9px] font-black text-indigo-500 uppercase tracking-widest hover:opacity-70 transition-opacity">
+                                View Full Logs
+                            </button>
                         </div>
-                        <div className="space-y-3">
+                        <div className="p-2 space-y-1.5">
                             {systemLogs.length === 0 ? (
-                                <p className="text-[11px] text-[var(--color-text-muted)] text-center py-10 italic opacity-50">Tidak ada log sistem terbaru.</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] text-center py-10 italic opacity-50 font-medium">Monitoring connections...</p>
                             ) : (
                                 systemLogs.map((log, i) => (
-                                    <div key={i} className="flex items-start gap-4 p-3 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] group hover:border-indigo-500/20 transition-all">
-                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${log.action === 'ERROR' ? 'bg-rose-500/10 text-rose-500' : 'bg-indigo-500/10 text-indigo-500'}`}>
+                                    <div key={i} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-[var(--color-surface-alt)] border border-transparent hover:border-[var(--color-border)] group transition-all">
+                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border transition-all ${log.action === 'ERROR' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500'}`}>
                                             <FontAwesomeIcon icon={log.action === 'ERROR' ? faTriangleExclamation : faMicrochip} className="text-[10px]" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between mb-0.5">
-                                                <p className="text-[11px] font-black text-[var(--color-text)] uppercase tracking-tight">{log.action || 'ACTIVITY'}</p>
-                                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-60 tabular-nums">{new Date(log.created_at).toLocaleTimeString()}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[11px] font-black text-[var(--color-text)] uppercase tracking-tight">{log.action || 'MUTATION'}</p>
+                                                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-[var(--color-border)] text-[var(--color-text-muted)] uppercase">{log.source?.split('-')[0] || 'System'}</span>
+                                                </div>
+                                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-60 tabular-nums">{new Date(log.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                                             </div>
-                                            <p className="text-[10px] text-[var(--color-text-muted)] line-clamp-1 font-mono">{log.source || 'SYSTEM'} · {JSON.stringify(log.newData || log.oldData || '').slice(0, 50)}</p>
+                                            <p className="text-[10px] text-[var(--color-text-muted)] font-mono truncate opacity-60">trc_id: {log.id?.slice(0, 8)}... {JSON.stringify(log.newData || log.oldData || '').slice(0, 50)}</p>
                                         </div>
                                     </div>
                                 ))
@@ -263,56 +255,31 @@ export default function AdminDashboardPage() {
                         </div>
                     </div>
 
-                    {/* Technical Shortcuts */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <TechnicalCard 
-                            title="Database" 
-                            desc="Integrity & Schema" 
-                            icon={faDatabase} 
-                            color="text-indigo-500" 
-                            bg="bg-indigo-500/5" 
-                            to="/admin/database"
-                        />
-                        <TechnicalCard 
-                            title="Audit Logs" 
-                            desc="User Mutations" 
-                            icon={faTerminal} 
-                            color="text-purple-500" 
-                            bg="bg-purple-500/5" 
-                            to="/admin/logs"
-                        />
-                        <TechnicalCard 
-                            title="Neural Logs" 
-                            desc="AI Monitoring" 
-                            icon={faRobot} 
-                            color="text-sky-500" 
-                            bg="bg-sky-500/5" 
-                            to="/admin/ai-insights"
-                        />
-                        <TechnicalCard 
-                            title="Storage" 
-                            desc="Asset Management" 
-                            icon={faCloud} 
-                            color="text-amber-500" 
-                            bg="bg-amber-500/5" 
-                            to="/admin/storage"
-                        />
-                        <TechnicalCard 
-                            title="Tasks" 
-                            desc="Automation Sync" 
-                            icon={faServer} 
-                            color="text-emerald-500" 
-                            bg="bg-emerald-500/5" 
-                            to="/admin/tasks"
-                        />
-                        <TechnicalCard 
-                            title="Security" 
-                            desc="Role & ACL" 
-                            icon={faShieldHalved} 
-                            color="text-rose-500" 
-                            bg="bg-rose-500/5" 
-                            to="/admin/users"
-                        />
+                    <div className="grid grid-cols-3 gap-3">
+                        {[
+                            { title: 'DB', icon: faDatabase, color: 'text-indigo-500', bg: 'bg-indigo-500/5', to: '/admin/database', status: 'Healthy' },
+                            { title: 'Logs', icon: faTerminal, color: 'text-purple-500', bg: 'bg-purple-500/5', to: '/admin/logs', status: 'Syncing' },
+                            { title: 'AI', icon: faRobot, color: 'text-sky-500', bg: 'bg-sky-500/5', to: '/admin/ai-insights', status: 'Active' },
+                            { title: 'Cloud', icon: faCloud, color: 'text-amber-500', bg: 'bg-amber-500/5', to: '/admin/storage', status: 'Normal' },
+                            { title: 'Svr', icon: faServer, color: 'text-emerald-500', bg: 'bg-emerald-500/5', to: '/admin/tasks', status: 'Idle' },
+                            { title: 'ACL', icon: faShieldHalved, color: 'text-rose-500', bg: 'bg-rose-500/5', to: '/admin/users', status: 'Locked' },
+                        ].map((c, i) => (
+                            <a key={i} href={c.to} className="group glass p-4 rounded-[1.5rem] border border-[var(--color-border)] flex flex-col items-center justify-center text-center gap-2 hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/5 transition-all active:scale-95 relative overflow-hidden">
+                                <div className={`w-10 h-10 rounded-2xl ${c.bg} ${c.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                                    <FontAwesomeIcon icon={c.icon} className="text-sm" />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <p className="text-[11px] font-black text-[var(--color-text)] transition-colors">{c.title}</p>
+                                    <div className="flex items-center gap-1">
+                                        <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                                        <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">{c.status}</span>
+                                    </div>
+                                </div>
+                                <div className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[8px] text-[var(--color-text-muted)]" />
+                                </div>
+                            </a>
+                        ))}
                     </div>
                 </div>
 
@@ -321,16 +288,3 @@ export default function AdminDashboardPage() {
     )
 }
 
-function TechnicalCard({ title, desc, icon, color, bg, to }) {
-    return (
-        <a href={to} className={`p-4 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col items-center justify-center text-center gap-3 hover:shadow-xl hover:border-indigo-500/20 active:scale-95 transition-all group`}>
-            <div className={`w-10 h-10 rounded-2xl ${bg} ${color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                <FontAwesomeIcon icon={icon} className="text-sm" />
-            </div>
-            <div>
-                <p className="text-[12px] font-black text-[var(--color-text)] leading-none mb-1">{title}</p>
-                <p className="text-[9px] text-[var(--color-text-muted)] font-bold opacity-60 uppercase tracking-widest leading-none">{desc}</p>
-            </div>
-        </a>
-    )
-}

@@ -13,13 +13,13 @@ const ACTIVE = "text-indigo-600"
 const INACTIVE = "text-[var(--color-text-muted)] hover:text-indigo-500"
 
 // NavItem: pakai NavLink → active state otomatis + dot indicator
-function NavItem({ to, icon, label }) {
+function NavItem({ to, icon, label, activeColor = ACTIVE }) {
     return (
         <NavLink
             to={to}
             className={({ isActive }) =>
                 `py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors relative
-                 ${isActive ? ACTIVE : INACTIVE}`
+                 ${isActive ? activeColor : INACTIVE}`
             }
         >
             {({ isActive }) => (
@@ -74,7 +74,7 @@ export default function BottomNav() {
                                 <NavItem to="/dashboard" icon={faHouse} label="Home" />
                                 <MenuButton icon={faClipboardList} label="Reports" onClick={() => open('reports')} active={openSheet === 'reports'} />
                                 <MenuButton icon={faLayerGroup} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
-                                <NavItem to="/admin" icon={faUserGear} label="Admin" />
+                                <MenuButton icon={faUserGear} label="Admin" onClick={() => open('admin')} active={openSheet === 'admin'} />
                             </div>
                         )}
 

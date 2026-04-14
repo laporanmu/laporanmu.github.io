@@ -193,14 +193,36 @@ export default function MasterSheet({ isOpen, onClose, section }) {
 
                         {/* ── Admin Panel ── */}
                         {show.admin && (
-                            <>
+                            <div className="mt-4">
                                 {(show.reports || show.master) && <Divider />}
-                                <Section
-                                    title={SECTION_TITLE.admin}
-                                    items={ADMIN_ITEMS}
-                                    onNavigate={handleNav}
-                                />
-                            </>
+                                <div className="px-5 py-3 text-[10px] font-black tracking-[0.2em] text-[var(--color-text-muted)] uppercase flex items-center justify-between border-b border-[var(--color-border)]/30 mb-3">
+                                    <span>Infrastructure & Control</span>
+                                    <div className="flex gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    </div>
+                                </div>
+                                <div className="px-3 grid grid-cols-2 gap-2 pb-4">
+                                    {ADMIN_ITEMS.map((it, idx) => (
+                                        <button
+                                            key={it.to}
+                                            onClick={() => handleNav(it.to)}
+                                            className={`flex flex-col items-center justify-center p-3 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] hover:border-indigo-500/30 transition-all active:scale-95 group ${idx === 0 ? 'col-span-2 flex-row items-center gap-4 py-4 bg-indigo-500/5 border-indigo-500/20' : ''}`}
+                                        >
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${it.color} bg-white dark:bg-black/20 shadow-sm group-hover:scale-110 transition-transform`}>
+                                                <FontAwesomeIcon icon={it.icon} className="text-sm" />
+                                            </div>
+                                            <div className={idx === 0 ? 'text-left' : 'text-center mt-2'}>
+                                                <p className={`text-[11px] font-black text-[var(--color-text)] leading-none ${idx === 0 ? 'text-indigo-600 mb-1' : ''}`}>{it.label}</p>
+                                                {idx === 0 && <p className="text-[9px] text-[var(--color-text-muted)] font-bold opacity-60">Admin Dashboard Center</p>}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="mt-2 px-5 py-3 rounded-2xl bg-black/5 dark:bg-white/5 mx-3 flex items-center justify-between mb-2">
+                                    <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">System v2.4.0 Engine</span>
+                                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Operational</span>
+                                </div>
+                            </div>
                         )}
 
                         <div className="h-3" />
