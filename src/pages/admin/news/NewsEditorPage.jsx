@@ -10,7 +10,8 @@ import {
     faBookOpen, faNewspaper, faFloppyDisk, faUser, faChevronDown,
     faEyeSlash, faShareNodes, faRotateLeft, faCheckCircle,
     faMoon, faCloudRain, faCoffee, faLeaf,
-    faBackward, faPlay, faPause, faForward, faMusic, faKeyboard, faRepeat
+    faBackward, faPlay, faPause, faForward, faMusic, faKeyboard, faRepeat,
+    faArrowRight, faCircleInfo, faMaximize
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../../components/layout/DashboardLayout'
 import Breadcrumb from '../../../components/ui/Breadcrumb'
@@ -22,6 +23,8 @@ import ReactQuill from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import { useSchoolSettings } from '../../../context/SchoolSettingsContext'
 import MediaLibraryModal from './MediaLibraryModal'
+import Modal from '../../../components/ui/Modal'
+import { askAi } from '../../../lib/ai'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 const slugify = (text) => text.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 80)
@@ -104,6 +107,76 @@ export default function NewsEditorPage() {
     const [existingTags, setExistingTags] = useState([])
     const [showTagSuggestions, setShowTagSuggestions] = useState(false)
     const [seoAnalysis, setSeoAnalysis] = useState([])
+
+    // ── Enterprise Sultan Features ──
+    const [showCommandPalette, setShowCommandPalette] = useState(false)
+    const [isAiModalOpen, setIsAiModalOpen] = useState(false)
+    const [showRevisionHistory, setShowRevisionHistory] = useState(false)
+    const [revisions, setRevisions] = useState([])
+    const [isGeneratingAi, setIsGeneratingAi] = useState(false)
+
+    // Safety check: ensure modal is closed on mount
+    useEffect(() => {
+        setIsAiModalOpen(false);
+    }, []);
+
+    // ── Real-time Presence State ──
+    const [collaborators, setCollaborators] = useState([])
+    const presenceChannel = useRef(null)
+
+    // ── Supabase Presence Logic ──
+    useEffect(() => {
+        if (!id || !authProfile) return
+
+        // Initialize Channel
+        const channelId = `news_editor_${id}`
+        presenceChannel.current = supabase.channel(channelId, {
+            config: { presence: { key: authProfile.id } }
+        })
+
+        // Handle Presence Sync
+        presenceChannel.current
+            .on('presence', { event: 'sync' }, () => {
+                const state = presenceChannel.current.presenceState()
+                const users = []
+                for (const key in state) {
+                    const presence = state[key][0]
+                    if (presence.user_id !== authProfile.id) {
+                        users.push(presence)
+                    }
+                }
+                setCollaborators(users)
+            })
+            .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+                const user = newPresences[0]
+                if (user.user_id !== authProfile.id) {
+                    addToast(`${user.name} bergabung mengedit`, 'info')
+                }
+            })
+            .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+                const user = leftPresences[0]
+                if (user.user_id !== authProfile.id) {
+                    // Optional: No toast for leaving to avoid noise
+                }
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await presenceChannel.current.track({
+                        user_id: authProfile.id,
+                        name: authProfile.name || authProfile.email?.split('@')[0] || 'Editor',
+                        email: authProfile.email,
+                        avatar_url: authProfile.avatar_url || null,
+                        last_active: new Date().toISOString()
+                    })
+                }
+            })
+
+        return () => {
+            if (presenceChannel.current) {
+                presenceChannel.current.unsubscribe()
+            }
+        }
+    }, [id, authProfile, addToast])
 
     // ── Auto-save to LocalStorage (Create Mode Only) ──
     useEffect(() => {
@@ -243,7 +316,7 @@ export default function NewsEditorPage() {
                 height: '0', width: '0', videoId: videoId,
                 playerVars: { autoplay: 1, controls: 0, loop: ambience.repeat ? 1 : 0, playlist: videoId },
                 events: {
-                    onReady: (e) => { 
+                    onReady: (e) => {
                         e.target.mute();
                         e.target.playVideo();
                         setTimeout(() => e.target.unMute(), 500);
@@ -275,11 +348,11 @@ export default function NewsEditorPage() {
                     audioRef.current.load();
                     audioRef.current.play().catch(e => console.warn('Autoplay blocked'));
                 }
-            } else { 
-                audioRef.current.pause(); 
+            } else {
+                audioRef.current.pause();
             }
         }
-        
+
         if (ytPlayerRef.current && ytPlayerRef.current.playVideo) {
             if (ambience.type === 'custom_yt' && ambience.playing) {
                 ytPlayerRef.current.setVolume((ambience.volume ?? 0.4) * 100);
@@ -295,7 +368,7 @@ export default function NewsEditorPage() {
         if (!typewriterEnabled || !isZenMode) return;
         typewriterRef.current.currentTime = 0;
         typewriterRef.current.volume = 0.15;
-        typewriterRef.current.play().catch(() => {});
+        typewriterRef.current.play().catch(() => { });
     }, [typewriterEnabled, isZenMode]);
 
     // Immersive Ghost UI logic
@@ -411,24 +484,38 @@ export default function NewsEditorPage() {
         image: imageHandler
     }), [imageHandler]);
 
-    // ── Sultans Feature: Ctrl + K Shortcut ──
+    // ── Sultans Feature: Global Keyboard Shortcuts ──
     useEffect(() => {
         const handleKeyDown = (e) => {
+            // Ctrl+K -> Command Palette
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
-                if (quillRef.current && typeof quillRef.current.getEditor === 'function') {
-                    try {
-                        const editor = quillRef.current.getEditor();
-                        if (editor) handlers.link.call({ quill: editor });
-                    } catch (err) {
-                        console.error('Shortcut failed: Editor not ready');
-                    }
+                setShowCommandPalette(curr => !curr);
+            }
+            // Ctrl+L -> Link (Internal Quill Link)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                e.preventDefault();
+                if (quillRef.current) {
+                    const editor = quillRef.current.getEditor();
+                    handlers.link.call({ quill: editor });
                 }
+            }
+            // Ctrl+J -> AI Assistant
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+                e.preventDefault();
+                setIsAiModalOpen(true);
+            }
+            // Esc -> Close Modals
+            if (e.key === 'Escape') {
+                setShowCommandPalette(false);
+                setIsAiModalOpen(false);
+                setShowExitModal(false);
+                setIsMediaModalOpen(false);
             }
         };
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [handlers]);
+    }, [handlers, isZenMode]);
 
     const modules = useMemo(() => ({
         toolbar: {
@@ -661,7 +748,7 @@ export default function NewsEditorPage() {
 
     const refreshSlug = () => {
         if (!form.title) return
-        setForm(f => ({ ...f, slug: slugify(f.title) }))
+        setForm(f => ({ ...f, slug: slugify(form.title) }))
         addToast('Slug URL diperbarui dari judul', 'info')
     }
 
@@ -761,6 +848,21 @@ export default function NewsEditorPage() {
             if (!data?.length) { addToast('Gagal menyimpan — cek RLS policy', 'error'); return }
 
             addToast(isEdit ? 'Informasi diperbarui' : 'Informasi ditambahkan', 'success')
+            setLastSaved(new Date())
+
+            // ── Save Revision (Enterprise) ──
+            if (isEdit) {
+                try {
+                    await supabase.from('news_revisions').insert({
+                        news_id: id,
+                        content: form.content,
+                        title: form.title,
+                        author_id: authProfile.id,
+                        author_name: authProfile.name || authProfile.email?.split('@')[0]
+                    })
+                } catch (revErr) { console.warn('Revision failed:', revErr) }
+            }
+
             // Clear draft after success
             if (!isEdit) localStorage.removeItem('news_draft')
 
@@ -893,6 +995,37 @@ export default function NewsEditorPage() {
                             </h1>
                         </div>
 
+                        {/* ── Collaborators Presence ── */}
+                        {isEdit && (
+                            <div className="hidden md:flex items-center -space-x-2 ml-4 mr-auto border-l border-[var(--color-border)] pl-6">
+                                {collaborators.map((user, idx) => (
+                                    <div key={idx} className="relative group cursor-help">
+                                        {user.avatar_url ? (
+                                            <img src={user.avatar_url} className="w-8 h-8 rounded-full border-2 border-[var(--color-surface)] shadow-sm object-cover" alt={user.name} />
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-black shadow-sm">
+                                                {user.name.charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                        {/* Status Glow */}
+                                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[var(--color-surface)]" />
+
+                                        {/* Tooltip */}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[110] shadow-xl">
+                                            {user.name} sedang mengedit
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {collaborators.length > 0 && (
+                                    <div className="ml-4 flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Kolaborasi Aktif</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
                             <button type="button" onClick={handleGoBack}
                                 className="h-9 md:h-10 px-3 md:px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-[10px] md:text-[11px] font-black uppercase tracking-widest active:scale-95 transition-all">
@@ -957,6 +1090,8 @@ export default function NewsEditorPage() {
                     .ql-active .ql-stroke { stroke: var(--color-primary) !important; }
                     .ql-active .ql-fill { fill: var(--color-primary) !important; }
                     .preview-content { overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+                    .preview-content p { margin-bottom: 1.25rem; }
+                    .preview-content p:last-child { margin-bottom: 0; }
                     .preview-content img { max-width: 100%; height: auto; border-radius: 12px; margin: 16px 0; }
                     .preview-content pre, .preview-content code { white-space: pre-wrap; word-break: break-all; }
                     
@@ -1012,9 +1147,19 @@ export default function NewsEditorPage() {
                                 <div className="space-y-5 animate-in fade-in duration-300">
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-80">
-                                                <FontAwesomeIcon icon={faNewspaper} className="mr-2" />Judul Informasi <span className="text-rose-500">*</span>
-                                            </label>
+                                            <div className="flex items-center gap-3">
+                                                <label className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-80">
+                                                    <FontAwesomeIcon icon={faNewspaper} className="mr-2" />Judul Informasi <span className="text-rose-500">*</span>
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsAiModalOpen(true)}
+                                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95 animate-pulse-slow"
+                                                >
+                                                    <FontAwesomeIcon icon={faMagicWandSparkles} className="text-[8px]" />
+                                                    ASISTEN AI
+                                                </button>
+                                            </div>
                                             <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${(form.title?.length || 0) > 60 ? 'bg-rose-500/10 text-rose-500' : (form.title?.length || 0) >= 50 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
                                                 {form.title?.length || 0}/60
                                             </span>
@@ -1082,7 +1227,7 @@ export default function NewsEditorPage() {
                                                 <button type="button" onClick={() => setIsZenMode(true)}
                                                     className="flex items-center gap-2 px-4 h-9 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20 hover:bg-[var(--color-primary)] hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest group"
                                                     title="Focus Zen Mode">
-                                                    <FontAwesomeIcon icon={faMagicWandSparkles} className="text-xs group-hover:animate-pulse" />
+                                                    <FontAwesomeIcon icon={faMaximize} className="text-xs group-hover:scale-110 transition-transform" />
                                                     <span>Focus Mode</span>
                                                 </button>
                                             </div>
@@ -1178,7 +1323,7 @@ export default function NewsEditorPage() {
                                             {/* Bubble Contextual Menu (Medium Style) */}
                                             {bubbleMenu.show && (
                                                 <div className="absolute z-[40] flex items-center gap-1 p-1 bg-slate-900 shadow-xl rounded-xl border border-white/10 animate-in fade-in zoom-in-95 duration-200"
-                                                    style={{ left: bubbleMenu.x, top: bubbleMenu.y }}>
+                                                    style={{ left: bubbleMenu.x, top: bubbleMenu.y, transform: 'translateY(-100%)' }}>
                                                     <button type="button" onClick={() => quillRef.current.getEditor().format('bold', !quillRef.current.getEditor().getFormat().bold)}
                                                         className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faBold} /></button>
                                                     <button type="button" onClick={() => quillRef.current.getEditor().format('italic', !quillRef.current.getEditor().getFormat().italic)}
@@ -1191,25 +1336,6 @@ export default function NewsEditorPage() {
                                                 </div>
                                             )}
 
-                                            {/* Bubble Contextual Menu (Medium Style selection toolbar) */}
-                                            {bubbleMenu.show && (
-                                                <div className="absolute z-[100] flex items-center gap-1 p-1 bg-slate-900 shadow-2xl rounded-xl border border-white/10 animate-in fade-in zoom-in-95 duration-200 pointer-events-auto"
-                                                    style={{
-                                                        left: `${bubbleMenu.x}px`,
-                                                        top: `${bubbleMenu.y}px`,
-                                                        transform: 'translateY(-100%)'
-                                                    }}>
-                                                    <button type="button" onClick={() => quillRef.current.getEditor().format('bold', !quillRef.current.getEditor().getFormat().bold)}
-                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faBold} /></button>
-                                                    <button type="button" onClick={() => quillRef.current.getEditor().format('italic', !quillRef.current.getEditor().getFormat().italic)}
-                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faItalic} /></button>
-                                                    <button type="button" onClick={() => handlers.link.call({ quill: quillRef.current.getEditor() })}
-                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-xs"><FontAwesomeIcon icon={faLink} /></button>
-                                                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
-                                                    <button type="button" onClick={() => quillRef.current.getEditor().format('header', 2)}
-                                                        className="w-8 h-8 rounded-lg text-white hover:bg-white/20 transition-all flex items-center justify-center text-[10px] font-black">H2</button>
-                                                </div>
-                                            )}
 
                                             <ReactQuill theme="snow" value={form.content} ref={quillRef}
                                                 placeholder="Tulis detail informasi di sini..."
@@ -1742,7 +1868,7 @@ export default function NewsEditorPage() {
 
                                         <div className="w-[1px] h-4 bg-slate-200 dark:bg-white/10 mx-1" />
 
-                                        <button 
+                                        <button
                                             onClick={() => setTypewriterEnabled(!typewriterEnabled)}
                                             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${typewriterEnabled ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'text-slate-400 opacity-40'}`}
                                             title="Typewriter Sound">
@@ -1752,7 +1878,7 @@ export default function NewsEditorPage() {
                                         <div className="w-[1px] h-4 bg-slate-200 dark:bg-white/10 mx-1" />
 
                                         <div className="hidden pointer-events-none opacity-0 invisible" id="yt-player-container"></div>
-                                        
+
                                         <input
                                             type="text"
                                             placeholder="Paste Link..."
@@ -1761,11 +1887,11 @@ export default function NewsEditorPage() {
                                                 const val = e.target.value;
                                                 setCustomMusic(val);
                                                 const ytMatch = val.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/user\/\S+|\/ytscreeningroom\?v=))([\w\-]{11})/);
-                                                
+
                                                 if (ytMatch && ytMatch[1]) {
                                                     const videoId = ytMatch[1];
-                                                    setAmbience({ type: 'custom_yt', url: videoId, playing: true, title: 'Loading Sultan Music...' });
-                                                    
+                                                    setAmbience({ type: 'custom_yt', url: videoId, playing: true, title: 'Loading Music...' });
+
                                                     if (setupYTPlayer) setupYTPlayer(videoId);
 
                                                     // Fetch Title
@@ -1813,8 +1939,8 @@ export default function NewsEditorPage() {
                                             </div>
                                             <div className="space-y-4">
                                                 {toc.map((item, idx) => (
-                                                    <a key={idx} href={`#${item.id}`} 
-                                                       className={`block text-xs font-bold transition-all hover:text-[var(--color-primary)] leading-relaxed ${item.level === 'h3' ? 'pl-4 opacity-70' : ''}`}>
+                                                    <a key={idx} href={`#${item.id}`}
+                                                        className={`block text-xs font-bold transition-all hover:text-[var(--color-primary)] leading-relaxed ${item.level === 'h3' ? 'pl-4 opacity-70' : ''}`}>
                                                         {item.text}
                                                     </a>
                                                 ))}
@@ -1823,57 +1949,51 @@ export default function NewsEditorPage() {
                                     </div>
                                 )}
 
-                                {/* ── Sultan Mini-Player (The Folding Sultan) ── */}
+                                {/* ── Zen Player ── */}
                                 {ambience.type !== 'none' && (
                                     <div className={`fixed right-8 bottom-8 z-[100] transition-all duration-700 group ${isTyping ? 'opacity-5 blur-sm scale-90 translate-x-4' : 'opacity-100'}`}>
                                         <div className="relative flex items-center bg-slate-950 dark:bg-black backdrop-blur-3xl rounded-full border border-white/10 shadow-[0_20px_80px_rgba(0,0,0,0.9)] transition-all duration-500 ease-out w-14 h-14 hover:w-auto hover:h-[72px] hover:px-6 overflow-hidden group-hover:rounded-[2.5rem]">
-                                            
+
                                             {/* Vinyl Wrapper - Fixed Center */}
                                             <div className="flex items-center justify-center shrink-0 w-14 h-14 relative z-10">
                                                 {/* Dynamic Aura Glow */}
                                                 {ambience.playing && (
-                                                    <div className={`absolute inset-2 rounded-full blur-md opacity-40 animate-pulse transition-all duration-1000 ${
-                                                        ambience.type === 'rain' ? 'bg-blue-500' :
+                                                    <div className={`absolute inset-2 rounded-full blur-md opacity-40 animate-pulse transition-all duration-1000 ${ambience.type === 'rain' ? 'bg-blue-500' :
                                                         ambience.type === 'cafe' ? 'bg-amber-500' :
-                                                        ambience.type === 'forest' ? 'bg-emerald-500' :
-                                                        'bg-purple-500'
-                                                    }`} />
+                                                            ambience.type === 'forest' ? 'bg-emerald-500' :
+                                                                'bg-purple-500'
+                                                        }`} />
                                                 )}
 
                                                 {/* Vinyl / Record Disk */}
-                                                <div className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border-2 transition-all duration-1000 ${
-                                                    ambience.playing ? 'animate-[spin_4s_linear_infinite]' : 'rotate-45'
-                                                } ${
-                                                    ambience.type === 'rain' ? 'border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.3)]' :
-                                                    ambience.type === 'cafe' ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.3)]' :
-                                                    ambience.type === 'forest' ? 'border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
-                                                    'border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
-                                                }`}>
+                                                <div className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border-2 transition-all duration-1000 ${ambience.playing ? 'animate-[spin_4s_linear_infinite]' : 'rotate-45'
+                                                    } ${ambience.type === 'rain' ? 'border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.3)]' :
+                                                        ambience.type === 'cafe' ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.3)]' :
+                                                            ambience.type === 'forest' ? 'border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
+                                                                'border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                                                    }`}>
                                                     <div className="absolute inset-1 rounded-full border border-white/10" />
                                                     <div className="w-2.5 h-2.5 rounded-full bg-slate-950 border border-white/40 z-10" />
-                                                    <FontAwesomeIcon icon={faMusic} className={`text-white transition-all ${
-                                                        ambience.playing ? 'scale-110 opacity-70' : 'scale-90 opacity-20'
-                                                    } ${
-                                                        ambience.type === 'rain' ? 'text-blue-400' :
-                                                        ambience.type === 'cafe' ? 'text-amber-400' :
-                                                        ambience.type === 'forest' ? 'text-emerald-400' :
-                                                        'text-purple-400'
-                                                    }`} />
+                                                    <FontAwesomeIcon icon={faMusic} className={`text-white transition-all ${ambience.playing ? 'scale-110 opacity-70' : 'scale-90 opacity-20'
+                                                        } ${ambience.type === 'rain' ? 'text-blue-400' :
+                                                            ambience.type === 'cafe' ? 'text-amber-400' :
+                                                                ambience.type === 'forest' ? 'text-emerald-400' :
+                                                                    'text-purple-400'
+                                                        }`} />
                                                 </div>
-                                                
-                                                {/* Sultan Visualizer (Bars) - Color Matched */}
+
+                                                {/* Zen Visualizer (Bars) */}
                                                 {ambience.playing && (
                                                     <div className="absolute right-0.5 flex gap-0.5 h-4 items-end opacity-0 group-hover:opacity-100 transition-opacity">
                                                         {[0.8, 1.2, 1.0].map((speed, i) => (
-                                                            <div key={i} className={`w-0.5 animate-[bounce_ease-in-out_infinite] ${
-                                                                ambience.type === 'rain' ? 'bg-blue-400' :
+                                                            <div key={i} className={`w-0.5 animate-[bounce_ease-in-out_infinite] ${ambience.type === 'rain' ? 'bg-blue-400' :
                                                                 ambience.type === 'cafe' ? 'bg-amber-400' :
-                                                                ambience.type === 'forest' ? 'bg-emerald-400' :
-                                                                'bg-purple-400'
-                                                            }`} style={{ 
-                                                                animationDuration: `${speed}s`,
-                                                                animationDelay: `${i * 0.15}s`
-                                                            }} />
+                                                                    ambience.type === 'forest' ? 'bg-emerald-400' :
+                                                                        'bg-purple-400'
+                                                                }`} style={{
+                                                                    animationDuration: `${speed}s`,
+                                                                    animationDelay: `${i * 0.15}s`
+                                                                }} />
                                                         ))}
                                                     </div>
                                                 )}
@@ -1887,42 +2007,42 @@ export default function NewsEditorPage() {
                                                         {ambience.title || (ambienceOptions.find(o => o.id === ambience.type)?.label || 'Ambience')}
                                                     </span>
                                                 </div>
-                                                
+
                                                 <div className="flex items-center gap-5 focus:outline-none">
-                                                    <button 
-                                                        onClick={(e) => { 
+                                                    <button
+                                                        onClick={(e) => {
                                                             e.stopPropagation();
                                                             if (ambience.type === 'custom_yt' && ytPlayerRef.current) ytPlayerRef.current.seekTo(ytPlayerRef.current.getCurrentTime() - 10);
-                                                            else if(audioRef.current) audioRef.current.currentTime -= 10;
-                                                        }} 
+                                                            else if (audioRef.current) audioRef.current.currentTime -= 10;
+                                                        }}
                                                         className="text-white opacity-40 hover:opacity-100 transition-colors text-[11px]">
                                                         <FontAwesomeIcon icon={faBackward} />
                                                     </button>
-                                                    
-                                                    <button 
+
+                                                    <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setAmbience({ ...ambience, playing: !ambience.playing });
-                                                        }} 
+                                                        }}
                                                         className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center text-[11px] shadow-lg hover:scale-110 active:scale-95 transition-all">
                                                         <FontAwesomeIcon icon={ambience.playing ? faPause : faPlay} />
                                                     </button>
-                                                    
-                                                    <button 
-                                                        onClick={(e) => { 
+
+                                                    <button
+                                                        onClick={(e) => {
                                                             e.stopPropagation();
                                                             if (ambience.type === 'custom_yt' && ytPlayerRef.current) ytPlayerRef.current.seekTo(ytPlayerRef.current.getCurrentTime() + 10);
-                                                            else if(audioRef.current) audioRef.current.currentTime += 10;
-                                                        }} 
+                                                            else if (audioRef.current) audioRef.current.currentTime += 10;
+                                                        }}
                                                         className="text-white opacity-40 hover:opacity-100 transition-colors text-[11px]">
                                                         <FontAwesomeIcon icon={faForward} />
                                                     </button>
 
-                                                    <button 
+                                                    <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setAmbience({ ...ambience, repeat: !ambience.repeat });
-                                                        }} 
+                                                        }}
                                                         className={`text-[11px] transition-all ${ambience.repeat ? 'text-[var(--color-primary)]' : 'text-white opacity-30 hover:opacity-100'}`}>
                                                         <FontAwesomeIcon icon={faRepeat} />
                                                     </button>
@@ -1931,7 +2051,7 @@ export default function NewsEditorPage() {
 
                                                     <div className="flex items-center gap-2">
                                                         <FontAwesomeIcon icon={faMusic} className="text-[10px] text-white/20" />
-                                                        <input 
+                                                        <input
                                                             type="range" min="0" max="1" step="0.05"
                                                             value={ambience.volume ?? 0.4}
                                                             onChange={(e) => {
@@ -2018,10 +2138,19 @@ export default function NewsEditorPage() {
                                         <FontAwesomeIcon icon={faCloudArrowUp} className="animate-pulse" />
                                         <span>Tersimpan Otomatis</span>
                                     </div>
+                                    <div className="w-px h-3 bg-[var(--color-border)]" />
+                                    <div className="flex items-center gap-2 text-[9px] font-black text-[var(--color-text-muted)] opacity-40">
+                                        <span className="px-1.5 py-0.5 rounded border border-[var(--color-border)] uppercase">Ctrl+K</span>
+                                        <span>Palette</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[9px] font-black text-[var(--color-text-muted)] opacity-40">
+                                        <span className="px-1.5 py-0.5 rounded border border-[var(--color-border)] uppercase">Ctrl+J</span>
+                                        <span>AI</span>
+                                    </div>
                                 </div>
 
                                 <div className="text-center pt-16 pb-16 text-[9px] font-black text-[var(--color-text-muted)] opacity-20 uppercase tracking-[0.4em] pointer-events-none">
-                                    Laporanmu Focus Mode • Kedamaian dalam Tulisan
+                                    Focus Mode • Kedamaian dalam Tulisan
                                 </div>
                             </div>
                         </div>,
@@ -2048,8 +2177,229 @@ export default function NewsEditorPage() {
                         addToast('Gambar dari galeri dipilih', 'success')
                     }}
                 />
+
+                <CommandPalette
+                    isOpen={showCommandPalette}
+                    onClose={() => setShowCommandPalette(false)}
+                    actions={[
+                        { id: 'save', label: 'Simpan Informasi', icon: faFloppyDisk, shortcut: 'Ctrl+S', action: () => handleSave() },
+                        { id: 'media', label: 'Buka Media Library', icon: faImage, shortcut: 'M', action: () => setIsMediaModalOpen(true) },
+                        { id: 'zen', label: 'Toggle Zen Mode', icon: faMoon, shortcut: 'Z', action: () => setIsZenMode(!isZenMode) },
+                        { id: 'ai', label: 'Buka AI Assistant', icon: faMagicWandSparkles, shortcut: 'Ctrl+J', action: () => setIsAiModalOpen(true) },
+                        { id: 'history', label: 'Riwayat Revisi', icon: faRotateLeft, action: () => setShowRevisionHistory(true) },
+                        { id: 'back', label: 'Kembali ke Daftar', icon: faChevronLeft, action: handleGoBack },
+                    ]}
+                />
+
+                <AiAssistant
+                    isOpen={isAiModalOpen}
+                    onClose={() => setIsAiModalOpen(false)}
+                    content={form.content}
+                    title={form.title}
+                    onApply={(newContent) => setForm(f => ({ ...f, content: newContent }))}
+                />
+
+                <RevisionHistoryModal
+                    isOpen={showRevisionHistory}
+                    onClose={() => setShowRevisionHistory(false)}
+                    id={id}
+                />
             </div>
         </DashboardLayout>
     )
 }
+
+// ─── Sub-Components (Internal) ──────────────────────────────────────────────────
+
+function CommandPalette({ isOpen, onClose, actions }) {
+    const [search, setSearch] = useState('')
+    const [activeIndex, setActiveIndex] = useState(0)
+    const filtered = actions.filter(a => a.label.toLowerCase().includes(search.toLowerCase()))
+    useEffect(() => { if (isOpen) { setSearch(''); setActiveIndex(0) } }, [isOpen])
+    useEffect(() => {
+        const handleKeys = (e) => {
+            if (!isOpen) return
+            if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(prev => (prev + 1) % filtered.length) }
+            if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(prev => (prev - 1 + filtered.length) % filtered.length) }
+            if (e.key === 'Enter') { e.preventDefault(); filtered[activeIndex]?.action(); onClose() }
+        }
+        window.addEventListener('keydown', handleKeys); return () => window.removeEventListener('keydown', handleKeys)
+    }, [isOpen, activeIndex, filtered, onClose])
+    if (!isOpen) return null
+    return createPortal(
+        <div className="fixed inset-0 z-[11000] flex items-start justify-center pt-24 px-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="w-full max-w-xl bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b border-[var(--color-border)] flex items-center gap-3">
+                    <FontAwesomeIcon icon={faFilter} className="text-[var(--color-text-muted)] opacity-30" />
+                    <input autoFocus placeholder="Ketik perintah atau navigasi..." className="flex-1 bg-transparent border-none outline-none text-sm font-bold text-[var(--color-text)]" value={search} onChange={e => setSearch(e.target.value)} />
+                    <div className="px-2 py-1 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">ESC</div>
+                </div>
+                <div className="max-h-80 overflow-y-auto p-2">
+                    {filtered.map((opt, i) => (
+                        <div key={opt.id} onClick={() => { opt.action(); onClose() }} className={`group flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all ${i === activeIndex ? 'bg-[var(--color-primary)] text-white' : 'hover:bg-[var(--color-surface-alt)] text-[var(--color-text)]'}`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${i === activeIndex ? 'bg-white/20' : 'bg-[var(--color-surface-alt)] group-hover:bg-white/10 opacity-70'}`}>
+                                    <FontAwesomeIcon icon={opt.icon} className="text-sm" />
+                                </div>
+                                <span className="text-[13px] font-bold">{opt.label}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>, document.body
+    )
+}
+
+function AiAssistant({ isOpen, onClose, content, title, onApply }) {
+    const [prompt, setPrompt] = useState('')
+    const [result, setResult] = useState('')
+    const [loading, setLoading] = useState(false)
+
+    const handleGenerate = async (presetTone = null) => {
+        if (!prompt && !presetTone) return
+        setLoading(true)
+
+        const instruction = presetTone
+            ? `Rewrite artikel ini dengan gaya ${presetTone}.`
+            : prompt;
+
+        const fullPrompt = `Konteks Artikel Saat Ini:\nJudul: ${title}\nKonten: ${content}\n\nInstruksi Editor: ${instruction}`
+        const res = await askAi(fullPrompt, "editor")
+
+        setResult(res)
+        setLoading(false)
+    }
+
+    const tones = [
+        { label: 'Formal', val: 'FORMAL', icon: faUserPen, color: 'text-blue-500', bg: 'bg-blue-500/5', hover: 'hover:bg-blue-500/10' },
+        { label: 'Santai', val: 'SANTAI', icon: faCoffee, color: 'text-amber-500', bg: 'bg-amber-500/5', hover: 'hover:bg-amber-500/10' },
+        { label: 'Prof-Zen', val: 'PROFESSIONAL-ZEN', icon: faMoon, color: 'text-purple-500', bg: 'bg-purple-500/5', hover: 'hover:bg-purple-500/10' },
+    ]
+
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Asisten Penulisan AI"
+            description="Mesin Penulisan Cerdas Enterprise"
+            icon={faMagicWandSparkles}
+            size="md"
+            footer={
+                <div className="flex items-center justify-center gap-2 w-full opacity-60">
+                    <FontAwesomeIcon icon={faCircleInfo} className="text-indigo-500 text-[9px]" />
+                    <span className="text-[9px] font-black text-[var(--color-text-muted)] tracking-tight">
+                        Hasil AI perlu ditinjau kembali oleh manusia.
+                    </span>
+                </div>
+            }
+        >
+            <div className="space-y-5">
+                {/* Tone Presets Strategy - More Compact */}
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 ml-1">
+                        <div className="w-1 h-1 rounded-full bg-indigo-500"></div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Gaya Bahasa</label>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {tones.map(t => (
+                            <button key={t.val} onClick={() => handleGenerate(t.val)} className={`group relative h-9 rounded-xl border border-[var(--color-border)] ${t.bg} flex items-center justify-center gap-2 transition-all duration-300 ${t.hover} hover:border-indigo-500/30 active:scale-95`}>
+                                <FontAwesomeIcon icon={t.icon} className={`text-[10px] ${t.color} opacity-40 group-hover:opacity-100 transition-opacity`} />
+                                <span className="text-[9px] font-black uppercase tracking-tight text-[var(--color-text)]">{t.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-[var(--color-border)] opacity-30"></span></div>
+                    <div className="relative flex justify-center">
+                        <span className="bg-[var(--color-surface)] px-3 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] italic">Instruksi Kustom</span>
+                    </div>
+                </div>
+
+                {/* Input Area - More Compact */}
+                <div className="space-y-3">
+                    <div className="group relative">
+                        <textarea
+                            autoFocus
+                            value={prompt}
+                            onChange={e => setPrompt(e.target.value)}
+                            placeholder="Contoh: Buat konten lebih singkat, padat, dan gunakan bahasa yang lebih persuasif..."
+                            className="w-full h-24 p-5 rounded-2xl bg-[var(--color-surface-alt)] border border-transparent outline-none focus:border-indigo-500/20 focus:bg-[var(--color-surface)] text-[13px] font-medium leading-relaxed transition-all duration-300 resize-none shadow-inner scrollbar-none"
+                        />
+                        <div className="absolute bottom-3 right-5 text-[8px] font-black uppercase tracking-widest text-slate-300 opacity-30 group-focus-within:opacity-100 transition-opacity">
+                            Ghost Prompt
+                        </div>
+                    </div>
+
+                    <button
+                        disabled={!prompt || loading}
+                        onClick={() => handleGenerate()}
+                        className="group relative w-full h-10 rounded-xl bg-indigo-600 overflow-hidden shadow-lg hover:shadow-indigo-500/20 transition-all duration-300 active:scale-95 disabled:opacity-50"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600"></div>
+                        <div className="relative flex items-center justify-center gap-2">
+                            {loading ? (
+                                <FontAwesomeIcon icon={faSpinner} className="animate-spin text-white text-xs" />
+                            ) : (
+                                <>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white">Olah Konten</span>
+                                    <FontAwesomeIcon icon={faArrowRight} className="text-white/40 text-[10px] group-hover:translate-x-1 transition-transform" />
+                                </>
+                            )}
+                        </div>
+                    </button>
+                </div>
+
+                {/* Result Card - Optimized Padding */}
+                {result && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
+                        <div className="flex items-center justify-between px-1">
+                            <div className="flex items-center gap-2">
+                                <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-emerald-600/80">AI Response</label>
+                            </div>
+                        </div>
+
+                        <div className="relative group p-6 rounded-3xl bg-emerald-500/5 border border-emerald-500/10 text-[12px] font-medium leading-relaxed shadow-inner">
+                            <div className="text-[var(--color-text)] opacity-90 whitespace-pre-wrap">{result}</div>
+                            <div className="mt-5 flex justify-end">
+                                <button
+                                    onClick={() => { onApply(result); onClose(); }}
+                                    className="h-9 px-6 rounded-lg bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-600/10"
+                                >
+                                    Terapkan Perubahan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </Modal>
+    )
+}
+
+function RevisionHistoryModal({ isOpen, onClose, id }) {
+    if (!isOpen) return null
+    return createPortal(
+        <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}>
+            <div className="w-full max-w-lg bg-[var(--color-surface)] rounded-[2rem] border border-[var(--color-border)] shadow-2xl p-8 animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 text-xl"><FontAwesomeIcon icon={faRotateLeft} /></div>
+                    <div>
+                        <h3 className="text-lg font-black text-[var(--color-text)]">Riwayat Revisi</h3>
+                        <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest">Snapshot konten artikel ini</p>
+                    </div>
+                </div>
+                <div className="space-y-3 opacity-40 text-center py-12 border-2 border-dashed border-[var(--color-border)] rounded-2xl">
+                    <p className="text-[11px] font-black uppercase tracking-widest">Belum ada riwayat revisi</p>
+                    <p className="text-[9px]">Revisi akan tercatat otomatis setiap kali Anda klik Simpan.</p>
+                </div>
+                <button onClick={onClose} className="w-full h-11 mt-6 rounded-xl border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)]">Tutup</button>
+            </div>
+        </div>, document.body
+    )
+}
+
 

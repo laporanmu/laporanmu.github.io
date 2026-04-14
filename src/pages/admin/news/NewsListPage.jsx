@@ -300,7 +300,7 @@ NewsCard.displayName = 'NewsCard'
 
 // ─── Bulk Action Bar ─────────────────────────────────────────────────────────────
 
-const BulkActionBar = memo(({ count, onPublish, onArchive, onSetFeatured, onRemoveFeatured, onDelete, onClear }) => {
+const BulkActionBar = memo(({ count, onPublish, onArchive, onSetFeatured, onRemoveFeatured, onDelete, onClear, tags, onBulkChangeTag }) => {
     if (count === 0) return null
     return (
         <div className="flex items-center gap-3 px-4 py-3 bg-[var(--color-primary)] rounded-2xl shadow-lg shadow-[var(--color-primary)]/30 animate-in slide-in-from-bottom-4 duration-200 overflow-x-auto scrollbar-hide relative max-w-full">
@@ -322,6 +322,24 @@ const BulkActionBar = memo(({ count, onPublish, onArchive, onSetFeatured, onRemo
             <button onClick={onDelete} className="shrink-0 text-rose-200 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1.5 px-2">
                 <FontAwesomeIcon icon={faTrash} className="text-[9px]" /> Hapus
             </button>
+            <div className="h-4 w-px bg-white/20 shrink-0 mx-1" />
+            
+            <div className="relative flex items-center shrink-0">
+                <select 
+                    onChange={(e) => {
+                        if (e.target.value) {
+                            onBulkChangeTag(e.target.value)
+                            e.target.value = ""
+                        }
+                    }}
+                    className="h-8 pl-3 pr-8 rounded-xl bg-white/10 border border-white/20 text-white text-[9px] font-black uppercase tracking-widest outline-none focus:bg-white/20 transition-all appearance-none cursor-pointer min-w-[120px]"
+                >
+                    <option value="" className="text-slate-900">Ubah Kategori...</option>
+                    {tags.map(t => <option key={t} value={t} className="text-slate-900">{t}</option>)}
+                </select>
+                <FontAwesomeIcon icon={faChevronDown} className="absolute right-3 top-1/2 -translate-y-1/2 text-[8px] text-white/50 pointer-events-none" />
+            </div>
+
             <div className="ml-auto flex items-center shrink-0">
                 <button onClick={onClear} className="w-8 h-8 flex items-center justify-center rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors">
                     <FontAwesomeIcon icon={faXmark} className="text-sm" />
@@ -355,6 +373,12 @@ export default function NewsListPage() {
     const [globalStats, setGlobalStats] = useState({
         all: 0, published: 0, draft: 0, scheduled: 0, featured: 0, total_views: 0, avg_read_time: 0
     })
+    
+    // ── Advanced Filters State ──
+    const [filterAuthor, setFilterAuthor] = useState('all')
+    const [filterDateRange, setFilterDateRange] = useState('all') // all | today | week | month
+    const [authorsList, setAuthorsList] = useState([])
+    const [uniqueTags, setUniqueTags] = useState([])
 
     // ── Debounced search ──
     useEffect(() => {
@@ -386,6 +410,22 @@ export default function NewsListPage() {
         else if (filterStatus === 'draft') query = query.eq('is_published', false).is('scheduled_at', null)
         else if (filterStatus === 'scheduled') query = query.not('scheduled_at', 'is', null).eq('is_published', false)
         else if (filterStatus === 'featured') query = query.eq('is_featured', true)
+
+        // Apply Advanced Filters
+        if (filterAuthor !== 'all') query = query.eq('display_name', filterAuthor)
+        
+        if (filterDateRange !== 'all') {
+            const now = new Date()
+            let dateLimit
+            if (filterDateRange === 'today') {
+                dateLimit = new Date(now.setHours(0,0,0,0)).toISOString()
+            } else if (filterDateRange === 'week') {
+                dateLimit = new Date(now.setDate(now.getDate() - 7)).toISOString()
+            } else if (filterDateRange === 'month') {
+                dateLimit = new Date(now.setMonth(now.getMonth() - 1)).toISOString()
+            }
+            if (dateLimit) query = query.gte('created_at', dateLimit)
+        }
 
         // Apply Sorting
         if (sortBy === 'oldest') query = query.order('created_at', { ascending: true })
@@ -447,6 +487,20 @@ export default function NewsListPage() {
     }, [])
 
     useEffect(() => { fetchGlobalStats() }, [fetchGlobalStats, newsList])
+
+    // ── Fetch Authors & Tags for Filter ──
+    useEffect(() => {
+        const fetchFilters = async () => {
+            const { data, error } = await supabase.from('news').select('display_name, tag')
+            if (data && !error) {
+                const authors = [...new Set(data.map(d => d.display_name))].filter(Boolean)
+                const tags = [...new Set(data.map(d => d.tag))].filter(Boolean)
+                setAuthorsList(authors)
+                setUniqueTags(tags)
+            }
+        }
+        fetchFilters()
+    }, [])
 
     // Cleanup Memo logic - now we use state directly
     const paginatedNews = newsList
@@ -759,9 +813,13 @@ export default function NewsListPage() {
                             </div>
 
                             {/* Reset filters */}
-                            {(filterStatus !== 'all' || sortBy !== 'newest' || search) && (
+                            {(filterStatus !== 'all' || sortBy !== 'newest' || search || filterAuthor !== 'all' || filterDateRange !== 'all') && (
                                 <button
-                                    onClick={() => { setSearchInput(''); setSearch(''); setFilterStatus('all'); setSortBy('newest') }}
+                                    onClick={() => { 
+                                        setSearchInput(''); setSearch(''); 
+                                        setFilterStatus('all'); setSortBy('newest');
+                                        setFilterAuthor('all'); setFilterDateRange('all');
+                                    }}
                                     className="h-9 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-red-500/10 active:scale-95 flex items-center gap-1.5"
                                 >
                                     <FontAwesomeIcon icon={faXmark} />
@@ -773,30 +831,57 @@ export default function NewsListPage() {
 
                     {/* Row 2: Collapsible filter panel */}
                     {showFilter && (
-                        <div className="px-3 pb-3 -mt-1 flex flex-col sm:flex-row items-start sm:items-center gap-2 animate-in slide-in-from-top-2 fade-in duration-300">
-                            {/* Filter status tabs - Wraps on mobile so all are visible without scrolling */}
-                            <div className="flex gap-1.5 flex-wrap flex-1 w-full sm:w-auto pb-1 sm:pb-0">
-                                {[{k:'all',l:'Semua'},{k:'published',l:'Terpublikasi'},{k:'draft',l:'Draf'},{k:'scheduled',l:'Terjadwal'},{k:'featured',l:'Unggulan'}].map(({k:s,l}) => (
-                                    <button key={s} onClick={() => { setFilterStatus(s); setPage(0) }}
-                                        className={`h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterStatus === s ? 'bg-[var(--color-primary)] text-white shadow-md' : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                        {l}
-                                        <span className="ml-1.5 opacity-50 px-1.5 py-0.5 rounded-lg bg-black/5">{statusCounts[s] || 0}</span>
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="px-3 pb-3 -mt-1 flex flex-col gap-3 animate-in slide-in-from-top-2 fade-in duration-300 border-t border-[var(--color-border)] pt-3 mx-3">
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Status Publikasi</label>
+                                    <div className="flex gap-1.5 flex-wrap">
+                                        {[{k:'all',l:'Semua'},{k:'published',l:'Terpublikasi'},{k:'draft',l:'Draf'},{k:'scheduled',l:'Terjadwal'},{k:'featured',l:'Unggulan'}].map(({k:s,l}) => (
+                                            <button key={s} onClick={() => { setFilterStatus(s); setPage(0) }}
+                                                className={`h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${filterStatus === s ? 'bg-[var(--color-primary)] text-white shadow-md' : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                                {l}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
 
-                            {/* Result count + Sort — pushed right */}
-                            <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
-                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-50 whitespace-nowrap hidden sm:inline">
-                                    Menampilkan {newsList.length} dari {totalCount} artikel
+                                <div className="h-8 w-px bg-[var(--color-border)] hidden lg:block" />
+
+                                <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Penulis</label>
+                                    <select value={filterAuthor} onChange={e => setFilterAuthor(e.target.value)}
+                                        className="h-8 pl-3 pr-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-all appearance-none cursor-pointer">
+                                        <option value="all">Semua Penulis</option>
+                                        {authorsList.map(a => <option key={a} value={a}>{a}</option>)}
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Rentang Waktu</label>
+                                    <select value={filterDateRange} onChange={e => setFilterDateRange(e.target.value)}
+                                        className="h-8 pl-3 pr-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-all appearance-none cursor-pointer">
+                                        <option value="all">Semua Waktu</option>
+                                        <option value="today">Hari Ini</option>
+                                        <option value="week">7 Hari Terakhir</option>
+                                        <option value="month">30 Hari Terakhir</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Urutan</label>
+                                    <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                                        className="h-8 pl-3 pr-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-all appearance-none cursor-pointer">
+                                        <option value="newest">Terbaru</option>
+                                        <option value="oldest">Terlama</option>
+                                        <option value="views">Paling Banyak Dilihat</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)] border-dashed">
+                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-50 uppercase tracking-widest">
+                                    Hasil Pencarian: {totalCount} Artikel ditemukan
                                 </span>
-                                <div className="w-px h-6 bg-[var(--color-border)] hidden sm:block" />
-                                <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-                                    className="h-8 pl-3 pr-8 w-full sm:w-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-all appearance-none cursor-pointer">
-                                    <option value="newest">Terbaru</option>
-                                    <option value="oldest">Terlama</option>
-                                    <option value="views">Paling Banyak Dilihat</option>
-                                </select>
                             </div>
                         </div>
                     )}
@@ -843,6 +928,8 @@ export default function NewsListPage() {
                             onRemoveFeatured={() => bulkUpdate({ is_featured: false }, `${selectedIds.size} Status Unggulan dihapus`)}
                             onDelete={bulkDelete}
                             onClear={clearSelection}
+                            tags={uniqueTags.length ? uniqueTags : ['Berita', 'Prestasi', 'Agenda']}
+                            onBulkChangeTag={(newTag) => bulkUpdate({ tag: newTag }, `Kategori diubah menjadi ${newTag}`)}
                         />
                     </div>
                 )}

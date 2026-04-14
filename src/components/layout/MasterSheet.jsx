@@ -7,7 +7,7 @@ import {
     faExclamationTriangle, faCalendarAlt,
     faClipboardList, faCalendarWeek, faShieldHalved,
     faPersonWalkingArrowRight, faClockRotateLeft, faUserGear,
-    faScrewdriverWrench, faDatabase, faBoxArchive, faServer, faPalette, faNewspaper
+    faScrewdriverWrench, faDatabase, faBoxArchive, faServer, faPalette, faNewspaper, faRobot
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "../../context/AuthContext"
 import { useFeatureFlags } from "../../context/FeatureFlagsContext"
@@ -32,29 +32,30 @@ function getPortalContainer(id) {
 
 // ─── Items ────────────────────────────────────────────────────────────────────
 const REPORTS_ITEMS = [
-    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Izin keluar guru & kunjungan tamu", color: "bg-red-50 dark:bg-red-900/20 text-red-500" },
-    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Nilai & perilaku per bulan", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
-    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekap kehadiran per bulan", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" },
-    { to: "/perilaku", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Pelanggaran & prestasi siswa", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-500" },
+    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen izin keluar masuk area santri", color: "bg-red-500/10 text-red-500" },
+    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Laporan perkembangan poin & prestasi bulanan", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
+    { to: "/perilaku", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
 ]
 
 const MASTER_ITEMS = [
-    { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Kelola data santri aktif", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
-    { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Daftar musyrif & pengajar", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
-    { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Manajemen kelas & kamar", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
-    { to: "/master/poin", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Kategori & bobot pelanggaran", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
-    { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Periode tahun ajaran aktif", color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600" },
+    { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Pusat database seluruh santri aktif dalam sistem", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Data akun pengajar, musyrif, dan staf sekolah", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Pengaturan struktur kelas dan pembagian asrama", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/master/poin", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Konfigurasi kategori poin prestasi & pelanggaran", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Manajemen semester dan periode kalender akademik", color: "bg-indigo-500/10 text-indigo-600" },
 ]
 
 const ADMIN_ITEMS = [
-    { to: "/admin/logs", label: "Audit Logs", icon: faClockRotateLeft, desc: "Riwayat aktivitas sistem", color: "bg-purple-500/10 text-purple-600" },
-    { to: "/admin/users", label: "User Management", icon: faUserGear, desc: "Kelola akun & hak akses", color: "bg-rose-500/10 text-rose-600" },
-    { to: "/admin/database", label: "Database Health", icon: faDatabase, desc: "Monitoring data & integritas", color: "bg-cyan-500/10 text-cyan-600" },
-    { to: "/admin/storage", label: "Storage Manager", icon: faBoxArchive, desc: "Kelola file & bucket storage", color: "bg-amber-500/10 text-amber-600" },
-    { to: "/admin/tasks", label: "Background Tasks", icon: faServer, desc: "Monitor edge functions", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/admin/news", label: "Manajemen Informasi", icon: faNewspaper, desc: "Update konten Informasi", color: "bg-emerald-500/10 text-emerald-600" },
-    { to: "/admin/settings", label: "Pengaturan", icon: faScrewdriverWrench, desc: "Konfigurasi sistem & aplikasi", color: "bg-slate-500/10 text-slate-600" },
-    { to: "/admin/playground", label: "UI Playground", icon: faPalette, desc: "Katalog design system", color: "bg-pink-500/10 text-pink-600" },
+    { to: "/admin/news", label: "Manajemen Informasi", icon: faNewspaper, desc: "Update Informasi & info terbaru ke landing page", color: "bg-emerald-500/10 text-emerald-600" },
+    { to: "/admin/ai-insights", label: "AI Insights Center", icon: faRobot, desc: "Audit perckapan AI dan analisis performa mesin", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/admin/logs", label: "Audit Logs", icon: faClockRotateLeft, desc: "Log historis aktivitas user dan perubahan data", color: "bg-purple-500/10 text-purple-600" },
+    { to: "/admin/users", label: "User Management", icon: faUserGear, desc: "Pengaturan hak akses, role, dan kredensial user", color: "bg-rose-500/10 text-rose-600" },
+    { to: "/admin/database", label: "Database Health", icon: faDatabase, desc: "Pemantauan status database & kesehatan tabel", color: "bg-cyan-500/10 text-cyan-600" },
+    { to: "/admin/storage", label: "Storage Manager", icon: faBoxArchive, desc: "Manajemen media, foto siswa, dan berkas sistem", color: "bg-amber-500/10 text-amber-600" },
+    { to: "/admin/tasks", label: "Background Tasks", icon: faServer, desc: "Status sinkronisasi background & automasi sistem", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/admin/settings", label: "Pengaturan", icon: faScrewdriverWrench, desc: "Panel pusat pengaturan parameter aplikasi utama", color: "bg-slate-500/10 text-slate-600" },
+    { to: "/admin/playground", label: "UI Playground", icon: faPalette, desc: "Panduan visual komponen dan dokumentasi desain", color: "bg-pink-500/10 text-pink-600" },
 ]
 
 // ─── Section titles per key ───────────────────────────────────────────────────

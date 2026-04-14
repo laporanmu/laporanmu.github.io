@@ -16,7 +16,10 @@ const MediaLibraryModal = memo(({ isOpen, onClose, onSelect, currentSelection })
     const [search, setSearch] = useState('')
     const [filter, setFilter] = useState('all') // all | thumbnails | content
     const [uploading, setUploading] = useState(false)
+    const [uploadProgress, setUploadProgress] = useState(0)
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, img: null, isDeleting: false })
+    const [selectedAsset, setSelectedAsset] = useState(null)
+    const [isDragging, setIsDragging] = useState(false)
 
     const fetchMedia = useCallback(async () => {
         setLoading(true)
@@ -40,7 +43,9 @@ const MediaLibraryModal = memo(({ isOpen, onClose, onSelect, currentSelection })
                 name: f.name,
                 type: 'thumbnails',
                 url: supabase.storage.from('news').getPublicUrl(`thumbnails/${f.name}`).data.publicUrl,
-                created_at: f.created_at
+                created_at: f.created_at,
+                size: f.metadata?.size,
+                mimetype: f.metadata?.mimetype
             }))
 
             const mappedContent = (contentData || []).map(f => ({
@@ -48,10 +53,17 @@ const MediaLibraryModal = memo(({ isOpen, onClose, onSelect, currentSelection })
                 name: f.name,
                 type: 'content',
                 url: supabase.storage.from('news').getPublicUrl(`content/${f.name}`).data.publicUrl,
-                created_at: f.created_at
+                created_at: f.created_at,
+                size: f.metadata?.size,
+                mimetype: f.metadata?.mimetype
             }))
 
             setImages([...mappedThumbs, ...mappedContent].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)))
+            
+            // Auto-select first image if nothing selected
+            if (!currentSelection && images.length > 0 && !selectedAsset) {
+                // Not auto-selecting to avoid confusion, but we could
+            }
         } catch (err) {
             addToast(err.message, 'error')
         } finally {
@@ -63,24 +75,55 @@ const MediaLibraryModal = memo(({ isOpen, onClose, onSelect, currentSelection })
         if (isOpen) fetchMedia()
     }, [isOpen, fetchMedia])
 
-    const handleUpload = async (e) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-        if (file.size > 5 * 1024 * 1024) return addToast('Maks 5MB', 'error')
-
+    const handleFiles = async (files) => {
+        if (!files || files.length === 0) return
         setUploading(true)
-        const ext = file.name.split('.').pop()
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
-        
-        const { error } = await supabase.storage.from('news').upload(`thumbnails/${fileName}`, file)
-        
-        if (error) {
-            addToast('Upload gagal: ' + error.message, 'error')
-        } else {
-            addToast('Gambar berhasil diunggah', 'success')
+        let successCount = 0
+        for (let i = 0; i < files.length; i++) {
+            setUploadProgress(Math.round(((i) / files.length) * 100))
+            const file = files[i]
+            if (file.size > 5 * 1024 * 1024) {
+                addToast(`${file.name} terlalu besar (Maks 5MB)`, 'error')
+                continue
+            }
+            if (!file.type.startsWith('image/')) {
+                addToast(`${file.name} bukan file gambar`, 'error')
+                continue
+            }
+            const ext = file.name.split('.').pop()
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
+            const { error } = await supabase.storage.from('news').upload(`thumbnails/${fileName}`, file)
+            if (error) addToast(`Gagal: ${file.name}`, 'error')
+            else successCount++
+        }
+        if (successCount > 0) {
+            addToast(`${successCount} gambar berhasil diunggah`, 'success')
             fetchMedia()
         }
         setUploading(false)
+        setUploadProgress(0)
+    }
+
+    const handleDragOver = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!uploading) setIsDragging(true)
+    }
+
+    const handleDragLeave = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(false)
+    }
+
+    const handleDrop = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(false)
+        if (uploading) return
+        
+        const files = Array.from(e.dataTransfer.files)
+        handleFiles(files)
     }
 
     const handleDelete = async () => {
@@ -119,7 +162,21 @@ const MediaLibraryModal = memo(({ isOpen, onClose, onSelect, currentSelection })
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
             
-            <div className="relative w-full max-w-5xl bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
+            <div 
+                className="relative w-full max-w-5xl bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
+                {/* Drag Overlay */}
+                {isDragging && (
+                    <div className="absolute inset-0 z-[12000] bg-[var(--color-primary)]/10 backdrop-blur-sm border-4 border-dashed border-[var(--color-primary)] m-4 rounded-[2rem] flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-200">
+                        <div className="w-20 h-20 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center text-3xl shadow-2xl animate-bounce">
+                            <FontAwesomeIcon icon={faCloudArrowUp} />
+                        </div>
+                        <p className="mt-4 text-lg font-black text-[var(--color-primary)] uppercase tracking-widest">Lepaskan untuk Upload</p>
+                    </div>
+                )}
                 
                 {/* Header */}
                 <div className="p-6 border-b border-[var(--color-border)] flex items-center justify-between shrink-0 bg-[var(--color-surface-alt)]/30">
@@ -136,8 +193,8 @@ const MediaLibraryModal = memo(({ isOpen, onClose, onSelect, currentSelection })
                     <div className="flex items-center gap-3">
                         <label className={`h-10 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-widest flex items-center gap-2 cursor-pointer hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-[var(--color-primary)]/20 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
                             {uploading ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faCloudArrowUp} />}
-                            {uploading ? 'Uploading...' : 'Upload Baru'}
-                            <input type="file" className="hidden" accept="image/*" onChange={handleUpload} />
+                            {uploading ? `Uploading ${uploadProgress}%` : 'Upload Baru'}
+                            <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleFiles(Array.from(e.target.files || []))} />
                         </label>
                         <button onClick={onClose} className="w-10 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-rose-500 transition-colors">
                             <FontAwesomeIcon icon={faXmark} />
@@ -175,55 +232,115 @@ const MediaLibraryModal = memo(({ isOpen, onClose, onSelect, currentSelection })
                     </div>
                 </div>
 
-                {/* Grid */}
-                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-[var(--color-surface)]">
-                    {loading ? (
-                        <div className="h-full flex flex-col items-center justify-center gap-4 text-[var(--color-text-muted)]">
-                            <FontAwesomeIcon icon={faSpinner} className="text-4xl animate-spin text-[var(--color-primary)]" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Memuat Library...</p>
-                        </div>
-                    ) : filteredImages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center gap-4 text-[var(--color-text-muted)] opacity-40">
-                            <FontAwesomeIcon icon={faImage} size="5x" />
-                            <p className="font-bold text-center">Belum ada gambar {search ? 'yang cocok' : 'di folder ini'}.</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            {filteredImages.map(img => (
-                                <div 
-                                    key={img.url}
-                                    onClick={() => onSelect(img.url)}
-                                    className={`group relative aspect-square rounded-2xl border-2 overflow-hidden cursor-pointer transition-all duration-300 ${currentSelection === img.url ? 'border-[var(--color-primary)] ring-4 ring-[var(--color-primary)]/10' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'}`}
-                                >
-                                    <img src={img.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={img.name} />
-                                    
-                                    {/* Overlay on hover/select */}
-                                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentSelection === img.url ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-xl transform transition-transform ${currentSelection === img.url ? 'bg-[var(--color-primary)] scale-100' : 'bg-white/20 backdrop-blur-md scale-75 group-hover:scale-100'}`}>
-                                            <FontAwesomeIcon icon={faCheck} />
+                {/* Main Content Area */}
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Grid */}
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-[var(--color-surface)]">
+                        {loading ? (
+                            <div className="h-full flex flex-col items-center justify-center gap-4 text-[var(--color-text-muted)]">
+                                <FontAwesomeIcon icon={faSpinner} className="text-4xl animate-spin text-[var(--color-primary)]" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Memuat Library...</p>
+                            </div>
+                        ) : filteredImages.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center gap-4 text-[var(--color-text-muted)] opacity-40">
+                                <FontAwesomeIcon icon={faImage} size="5x" />
+                                <p className="font-bold text-center">Belum ada gambar {search ? 'yang cocok' : 'di folder ini'}.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                {filteredImages.map(img => (
+                                    <div 
+                                        key={img.url}
+                                        onClick={() => setSelectedAsset(img)}
+                                        onDoubleClick={() => onSelect(img.url)}
+                                        className={`group relative aspect-square rounded-2xl border-2 overflow-hidden cursor-pointer transition-all duration-300 ${selectedAsset?.url === img.url ? 'border-[var(--color-primary)] ring-4 ring-[var(--color-primary)]/10' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'} ${currentSelection === img.url ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[var(--color-surface)]' : ''}`}
+                                    >
+                                        <img src={img.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={img.name} />
+                                        
+                                        {/* Select Indicator */}
+                                        {currentSelection === img.url && (
+                                            <div className="absolute top-2 left-2 w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-lg animate-in zoom-in-50">
+                                                <FontAwesomeIcon icon={faCheck} />
+                                            </div>
+                                        )}
+
+                                        {/* Delete Button */}
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setDeleteConfirm({ isOpen: true, img, isDeleting: false })
+                                            }}
+                                            className="absolute top-2 right-2 w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600 shadow-lg active:scale-95"
+                                            title="Hapus aset"
+                                        >
+                                            <FontAwesomeIcon icon={faTrash} className="text-xs" />
+                                        </button>
+
+                                        {/* Type Badge */}
+                                        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[8px] font-black text-white uppercase tracking-tighter opacity-70">
+                                            {img.type}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Details Sidebar */}
+                    <div className={`border-l border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 overflow-hidden hidden md:flex flex-col transition-all duration-300 ${selectedAsset ? 'w-80 opacity-100' : 'w-0 opacity-0'}`}>
+                        {selectedAsset ? (
+                            <div className="p-6 space-y-6 w-80 shrink-0">
+                                <div className="aspect-video rounded-xl overflow-hidden border border-[var(--color-border)] shadow-sm bg-white">
+                                    <img src={selectedAsset.url} className="w-full h-full object-contain bg-slate-50" />
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    <div className="pb-4 border-b border-[var(--color-border)]">
+                                        <h3 className="text-xs font-black text-[var(--color-text)] uppercase tracking-widest mb-1 truncate" title={selectedAsset.name}>
+                                            {selectedAsset.name}
+                                        </h3>
+                                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-60">
+                                            Diunggah {new Date(selectedAsset.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                                            <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter mb-1">Ukuran</p>
+                                            <p className="text-[10px] font-black text-[var(--color-text)]">{(selectedAsset.size / 1024 / 1024).toFixed(2)} MB</p>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                                            <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter mb-1">Format</p>
+                                            <p className="text-[10px] font-black text-[var(--color-text)] uppercase">{selectedAsset.mimetype?.split('/')[1] || 'IMG'}</p>
                                         </div>
                                     </div>
 
-                                    {/* Delete Button */}
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            setDeleteConfirm({ isOpen: true, img, isDeleting: false })
-                                        }}
-                                        className="absolute top-2 right-2 w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600 shadow-lg active:scale-95"
-                                        title="Hapus aset dari server"
-                                    >
-                                        <FontAwesomeIcon icon={faTrash} className="text-xs" />
-                                    </button>
-
-                                    {/* Type Badge */}
-                                    <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[8px] font-black text-white uppercase tracking-tighter opacity-70">
-                                        {img.type}
+                                    <div className="space-y-2">
+                                        <label className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Asset URL</label>
+                                        <div className="flex gap-2">
+                                            <input readOnly value={selectedAsset.url} className="flex-1 h-9 px-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] font-medium outline-none" />
+                                            <button 
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(selectedAsset.url)
+                                                    addToast('URL disalin ke clipboard', 'success')
+                                                }}
+                                                className="w-9 h-9 shrink-0 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                            >
+                                                <FontAwesomeIcon icon={faCheck} className="text-xs" />
+                                            </button>
+                                        </div>
                                     </div>
+
+                                    <button 
+                                        onClick={() => onSelect(selectedAsset.url)}
+                                        className="w-full h-11 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-95 transition-all"
+                                    >
+                                        Pilih Gambar Ini
+                                    </button>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
 
                 {/* Footer Selection Info */}

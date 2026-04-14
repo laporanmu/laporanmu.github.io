@@ -35,6 +35,7 @@ const TasksPage = lazy(() => import('./pages/admin/TasksPage'))
 const PlaygroundPage = lazy(() => import('./pages/admin/PlaygroundPage'))
 const NewsListPage = lazy(() => import('./pages/admin/news/NewsListPage'))
 const NewsEditorPage = lazy(() => import('./pages/admin/news/NewsEditorPage'))
+const AiInsightsPage = lazy(() => import('./pages/admin/ai/AiInsightsPage'))
 
 // Master Data
 const StudentsPage = lazy(() => import('./pages/master/StudentsPage'))
@@ -439,6 +440,11 @@ function AppRoutes() {
             <Route path="/admin/news/edit/:id" element={
               <RoleFlagRoute roles={DEV_ADMIN}>
                 <NewsEditorPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/admin/ai-insights" element={
+              <RoleFlagRoute roles={DEV_ADMIN}>
+                <AiInsightsPage />
               </RoleFlagRoute>
             } />
 
