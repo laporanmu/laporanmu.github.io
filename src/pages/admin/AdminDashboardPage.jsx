@@ -125,7 +125,7 @@ export default function AdminDashboardPage() {
                                 ap-southeast-1 (SG)
                             </div>
                             <div className="h-3 w-px bg-[var(--color-border)]" />
-                            <div className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">v2.4.0-prod</div>
+                            <div className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Production Build</div>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">

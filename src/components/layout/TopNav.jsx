@@ -577,7 +577,7 @@ export default function TopNav({ title, subtitle }) {
                                                         ))}
                                                     </div>
                                                     <div className="px-5 py-3 bg-[var(--color-surface-alt)]/50 flex justify-between items-center border-t border-[var(--color-border)]/50">
-                                                        <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">v2.4.0 Engine</span>
+                                                        <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">LaporanMu Engine</span>
                                                         <div className="flex gap-1">
                                                             <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
                                                             <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">All Systems Operational</span>
