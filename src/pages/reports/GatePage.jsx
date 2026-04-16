@@ -86,14 +86,37 @@ function LiveClock() {
         return () => clearInterval(t)
     }, [])
     return (
-        <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
-            <FontAwesomeIcon icon={faClock} className="text-[9px] opacity-60" />
-            <span className="text-[11px] font-black tabular-nums">
-                {time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </span>
-            <span className="text-[9px] opacity-50">
+        <div className="flex flex-col items-end">
+            <div className="flex items-center gap-2 text-[var(--color-text)]">
+                <FontAwesomeIcon icon={faClock} className="text-[10px] text-[var(--color-primary)] animate-pulse" />
+                <span className="text-[15px] font-black tabular-nums tracking-tight">
+                    {time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+            </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50 mt-0.5">
                 {fmtDate(time)}
-            </span>
+            </div>
+        </div>
+    )
+}
+
+function EmptyPlaceholder({ icon, title, desc, color = 'emerald' }) {
+    const colors = {
+        emerald: { bg: 'bg-emerald-500/10', icon: 'text-emerald-500', border: 'border-emerald-500/20' },
+        blue: { bg: 'bg-blue-500/10', icon: 'text-blue-500', border: 'border-blue-500/20' },
+        amber: { bg: 'bg-amber-500/10', icon: 'text-amber-500', border: 'border-amber-500/20' },
+        slate: { bg: 'bg-slate-500/10', icon: 'text-slate-500', border: 'border-slate-500/20' }
+    }[color]
+
+    return (
+        <div className="flex flex-col items-center justify-center py-10 px-4 text-center group animate-in fade-in zoom-in duration-500">
+            <div className={`w-16 h-16 rounded-[2rem] ${colors.bg} border ${colors.border} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 shadow-xl shadow-transparent hover:shadow-${color}-500/10`}>
+                <FontAwesomeIcon icon={icon} className={`text-xl ${colors.icon}`} />
+            </div>
+            <h4 className="text-[12px] font-black text-[var(--color-text)] mb-1 uppercase tracking-wider">{title}</h4>
+            <p className="text-[10px] text-[var(--color-text-muted)] font-medium leading-relaxed max-w-[180px] opacity-70">
+                {desc}
+            </p>
         </div>
     )
 }
@@ -127,6 +150,42 @@ function DateTimeInput({ dateValue, timeValue, onDateChange, onTimeChange, label
                         className="w-full h-10 pl-8 pr-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-all"
                     />
                 </div>
+            </div>
+        </div>
+    )
+}
+
+function QuickGuide({ mode = 'internal' }) {
+    const isTamu = mode === 'tamu'
+    const items = isTamu 
+        ? [
+            { icon: faPlus, text: 'Isi nama & keperluan tamu, lalu Catat Masuk', color: 'bg-emerald-400' },
+            { icon: faSignOutAlt, text: 'Saat tamu keluar, klik tombol Keluar di panel kanan', color: 'bg-red-400' },
+            { icon: faMotorcycle, text: 'No. kendaraan opsional, untuk keamanan pesantren', color: 'bg-amber-400' }
+          ]
+        : [
+            { icon: faSearch, text: 'Pilih orang dari daftar (Guru/Karyawan/Santri)', color: 'bg-[var(--color-primary)]' },
+            { icon: faTag, text: 'Pilih atau ketik keperluan keluar dari preset', color: 'bg-indigo-400' },
+            { icon: faClock, text: 'Sesuaikan jam jika perlu, lalu catat keluar', color: 'bg-emerald-400' },
+            { icon: faRotateLeft, text: 'Klik Kembali di panel kanan saat orang sudah kembali', color: 'bg-amber-400' }
+          ]
+
+    return (
+        <div className="animate-in slide-in-from-bottom-4 duration-500">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-4 flex items-center gap-2">
+                <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" /> Cara Penggunaan & Panduan
+            </p>
+            <div className="space-y-3">
+                {items.map((t, i) => (
+                    <div key={i} className="flex items-start gap-3 group">
+                        <div className={`w-6 h-6 rounded-lg ${t.color}/10 text-[10px] ${t.color.replace('bg-', 'text-')} flex items-center justify-center shrink-0 font-black group-hover:scale-110 transition-transform`}>
+                            {i + 1}
+                        </div>
+                        <p className="text-[11px] text-[var(--color-text-muted)] font-medium leading-relaxed group-hover:text-[var(--color-text)] transition-colors">
+                            {t.text}
+                        </p>
+                    </div>
+                ))}
             </div>
         </div>
     )
@@ -342,35 +401,9 @@ function FormInternal({ internalList, onSubmit, loading }) {
             </button>
 
             {/* Hint shortcut */}
-            <div className="flex items-center gap-1.5 justify-end opacity-40">
-                <FontAwesomeIcon icon={faKeyboard} className="text-[9px] text-[var(--color-text-muted)]" />
-                <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Enter untuk submit cepat</span>
-            </div>
-
-            {/* Panduan / tips */}
-            <div className="pt-3 border-t border-[var(--color-border)]">
-                {personId ? (
-                    <>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-2">Panduan Cepat</p>
-                        <div className="space-y-1.5 text-[10px] text-[var(--color-text-muted)]">
-                            <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />Pilih nama → isi keperluan → klik Catat Keluar</p>
-                            <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />Saat kembali, klik tombol <strong>Kembali</strong> di panel kanan</p>
-                            <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />Jam keluar bisa diubah jika terlambat mencatat</p>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-2">Cara Penggunaan</p>
-                        <div className="space-y-1.5 text-[10px] text-[var(--color-text-muted)]">
-                            {['Pilih orang dari daftar', 'Pilih atau ketik keperluan keluar', 'Sesuaikan jam jika perlu, lalu catat', 'Klik Kembali di panel kanan saat sudah kembali'].map((t, i) => (
-                                <p key={i} className="flex items-center gap-2">
-                                    <span className="w-5 h-5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[9px] font-black shrink-0">{i + 1}</span>
-                                    {t}
-                                </p>
-                            ))}
-                        </div>
-                    </>
-                )}
+            <div className="flex items-center gap-1.5 justify-end opacity-30 mt-2">
+                <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" />
+                <span className="text-[9px] font-bold">Tekan Enter untuk Catat</span>
             </div>
         </div>
     )
@@ -437,17 +470,37 @@ function FormTamu({ onSubmit, loading }) {
 
             {/* Menemui & Kendaraan */}
             <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="col-span-2 sm:col-span-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">Menemui / Tujuan</label>
                     <input value={destination} onChange={e => setDestination(e.target.value)} placeholder="Ustadz X, ruang TU..."
                         className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
                 </div>
-                <div>
+                <div className="col-span-2 sm:col-span-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">No. Kendaraan</label>
                     <div className="relative">
                         <FontAwesomeIcon icon={faMotorcycle} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
                         <input value={vehicle} onChange={e => setVehicle(e.target.value)} placeholder="P 1234 AB..."
                             className="w-full h-10 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Photo Capture Placeholder UI */}
+            <div className="p-3 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                        <FontAwesomeIcon icon={faIdCard} className="text-[10px] text-emerald-500" />
+                        <span className="text-[10px] font-black uppercase tracking-wider">Identitas Visual</span>
+                    </div>
+                    <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">Enterprise</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group cursor-pointer hover:border-emerald-500/30 transition-all">
+                        <FontAwesomeIcon icon={faPlus} className="text-[10px] opacity-40 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-[10px] font-bold text-[var(--color-text)] leading-tight">Ambil Foto / Scan KTP</p>
+                        <p className="text-[9px] text-[var(--color-text-muted)] opacity-60">Opsional, untuk database keamanan tamu.</p>
                     </div>
                 </div>
             </div>
@@ -469,19 +522,9 @@ function FormTamu({ onSubmit, loading }) {
             </button>
 
             {/* Hint shortcut */}
-            <div className="flex items-center gap-1.5 justify-end opacity-40">
-                <FontAwesomeIcon icon={faKeyboard} className="text-[9px] text-[var(--color-text-muted)]" />
-                <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Enter untuk submit cepat</span>
-            </div>
-
-            {/* Tips */}
-            <div className="pt-3 border-t border-[var(--color-border)]">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-2">Panduan</p>
-                <div className="space-y-1.5 text-[10px] text-[var(--color-text-muted)]">
-                    <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />Isi nama &amp; keperluan tamu, lalu Catat Masuk</p>
-                    <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />Saat tamu keluar, klik tombol <strong>Keluar</strong> di panel kanan</p>
-                    <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />No. kendaraan opsional, untuk keamanan pesantren</p>
-                </div>
+            <div className="flex items-center gap-1.5 justify-end opacity-30 mt-2">
+                <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" />
+                <span className="text-[9px] font-bold">Tekan Enter untuk Catat</span>
             </div>
         </div>
     )
@@ -703,6 +746,7 @@ export default function GatePage() {
     const [editSaving, setEditSaving] = useState(false)
     const [lastRefresh, setLastRefresh] = useState(Date.now())
     const [dismissedOvertime, setDismissedOvertime] = useState(false)
+    const [isRefreshing, setIsRefreshing] = useState(false)
 
     // ── Derived stats ──────────────────────────────────────────────────────────
 
@@ -751,17 +795,22 @@ export default function GatePage() {
 
     const internalList = useMemo(() => [...teacherList, ...studentList], [teacherList, studentList])
 
-    const loadTodayLogs = useCallback(async () => {
-        setLoadingLogs(true)
+    const loadTodayLogs = useCallback(async (isSilent = false) => {
+        if (!isSilent) setLoadingLogs(true)
+        else setIsRefreshing(true)
+        
         const t0 = startOfDay(new Date()), t1 = addDays(t0, 1)
         const { data, error } = await supabase
             .from('gate_logs').select('*')
             .gte('check_in', iso(t0))
             .lt('check_in', iso(t1))
             .order('check_in', { ascending: false })
+            
         if (error) console.error('[GatePage] loadTodayLogs error:', error)
         else setTodayLogs(data || [])
+        
         setLoadingLogs(false)
+        setIsRefreshing(false)
     }, [])
 
     useEffect(() => { loadTodayLogs() }, [loadTodayLogs])
@@ -769,7 +818,7 @@ export default function GatePage() {
     // Auto-refresh every 30s
     useEffect(() => {
         const interval = setInterval(() => {
-            loadTodayLogs()
+            loadTodayLogs(true)
             setLastRefresh(Date.now())
         }, 30000)
         return () => clearInterval(interval)
@@ -779,7 +828,7 @@ export default function GatePage() {
     useEffect(() => {
         const channel = supabase.channel('gate_logs_rt')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'gate_logs' }, () => {
-                loadTodayLogs()
+                loadTodayLogs(true)
                 setLastRefresh(Date.now())
             })
             .subscribe()
@@ -1300,11 +1349,9 @@ export default function GatePage() {
 
                 {/* ── TAB: INPUT ── */}
                 {activeTab === 'input' && (
-                    // FIX: items-stretch agar kedua kolom sama tingginya
-                    <div className="grid lg:grid-cols-2 gap-6 items-stretch">
-
-                        {/* Kolom kiri: Form — flex flex-col h-full agar mengisi penuh */}
-                        <div className="glass rounded-[1.5rem] p-5 flex flex-col h-full">
+                    <div className="grid lg:grid-cols-2 gap-6 items-start">
+                        {/* Kolom kiri: Form */}
+                        <div className="glass rounded-[1.5rem] p-5">
                             {/* Mode switcher Guru / Tamu */}
                             <div className="flex gap-2 mb-5">
                                 {[
@@ -1328,6 +1375,11 @@ export default function GatePage() {
                                     : <FormTamu onSubmit={handleSubmit} loading={submitting} />
                                 }
                             </div>
+
+                            {/* Cara Penggunaan / Guide moved back to Left Column below search/form */}
+                            <div className="mt-6 pt-6 border-t border-[var(--color-border)]">
+                                <QuickGuide mode={inputMode} />
+                            </div>
                         </div>
 
                         {/* Kolom kanan: Status — flex flex-col h-full agar mengisi penuh */}
@@ -1347,12 +1399,12 @@ export default function GatePage() {
                                 {loadingLogs
                                     ? <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
                                     : todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).length === 0
-                                        ? <div className="flex flex-col items-center gap-2 py-6 opacity-40">
-                                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                                                <FontAwesomeIcon icon={faCheck} className="text-emerald-500" />
-                                            </div>
-                                            <p className="text-[11px] text-[var(--color-text-muted)] font-bold">Semua guru &amp; karyawan ada di dalam</p>
-                                        </div>
+                                        ? <EmptyPlaceholder 
+                                            icon={faCheck} 
+                                            title="Zero Active Logs" 
+                                            desc="Semua guru & karyawan saat ini terdeteksi berada di dalam area sekolah." 
+                                            color="emerald"
+                                          />
                                         : <div className="space-y-2">
                                             {todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).map(log => (
                                                 <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />
@@ -1375,12 +1427,12 @@ export default function GatePage() {
                                 {loadingLogs
                                     ? <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
                                     : todayLogs.filter(l => l.visitor_type === 'tamu' && !l.check_out).length === 0
-                                        ? <div className="flex flex-col items-center gap-2 py-6 opacity-40">
-                                            <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-alt)] flex items-center justify-center">
-                                                <FontAwesomeIcon icon={faUserFriends} className="text-[var(--color-text-muted)]" />
-                                            </div>
-                                            <p className="text-[11px] text-[var(--color-text-muted)] font-bold">Tidak ada tamu</p>
-                                        </div>
+                                        ? <EmptyPlaceholder 
+                                            icon={faUserFriends} 
+                                            title="Tanpa Pengunjung" 
+                                            desc="Tidak ada tamu yang terdaftar di sistem sedang berada di dalam area." 
+                                            color="slate"
+                                          />
                                         : <div className="space-y-2">
                                             {todayLogs.filter(l => l.visitor_type === 'tamu' && !l.check_out).map(log => (
                                                 <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />
@@ -1400,22 +1452,33 @@ export default function GatePage() {
                                         { l: 'Total Aktivitas', v: stats.total, c: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10' },
                                         { l: 'Guru Kembali', v: dailySummary.selesai, c: 'text-emerald-600', bg: 'bg-emerald-500/10' },
                                         { l: 'Rata-rata Keluar', v: dailySummary.avgMin > 0 ? (dailySummary.avgMin >= 60 ? `${Math.floor(dailySummary.avgMin / 60)}j ${dailySummary.avgMin % 60}m` : `${dailySummary.avgMin}m`) : '-', c: 'text-indigo-600', bg: 'bg-indigo-500/10' },
-                                        { l: 'Perlu Perhatian', v: dailySummary.overTimeList.length, c: dailySummary.overTimeList.length > 0 ? 'text-amber-600' : 'text-emerald-600', bg: dailySummary.overTimeList.length > 0 ? 'bg-amber-500/10' : 'bg-emerald-500/10' },
+                                        { 
+                                            l: 'Perlu Perhatian', 
+                                            v: dailySummary.overTimeList.length, 
+                                            c: dailySummary.overTimeList.length > 0 ? 'text-red-600 animate-pulse' : 'text-emerald-600', 
+                                            bg: dailySummary.overTimeList.length > 0 ? 'bg-red-500/20 ring-2 ring-red-500/20' : 'bg-emerald-500/10' 
+                                        },
                                     ].map((s, i) => (
-                                        <div key={i} className={`rounded-xl p-3 ${s.bg}`}>
+                                        <div key={i} className={`rounded-xl p-3 ${s.bg} transition-all duration-500`}>
                                             <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-70 mb-1">{s.l}</p>
                                             <p className={`text-lg font-black font-heading tabular-nums ${s.c}`}>{s.v}</p>
                                         </div>
                                     ))}
                                 </div>
-                                <div className="mt-3 pt-3 border-t border-[var(--color-border)] flex items-center gap-2">
-                                    <button onClick={() => { loadTodayLogs(); setLastRefresh(Date.now()) }}
-                                        className="p-1 rounded-md hover:bg-[var(--color-surface-alt)] transition-all text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                                        <FontAwesomeIcon icon={faArrowsRotate} className="text-[9px]" />
-                                    </button>
-                                    <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Auto-refresh setiap 30 detik</span>
-                                    <span className="ml-auto text-[9px] text-[var(--color-text-muted)] tabular-nums">
-                                        {new Date(lastRefresh).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                <div className="mt-3 pt-3 border-t border-[var(--color-border)] flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/5 border border-emerald-500/10">
+                                            <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest whitespace-nowrap">Auto-refresh 30s</span>
+                                        </div>
+                                        <button onClick={() => { loadTodayLogs(true); setLastRefresh(Date.now()) }}
+                                            disabled={isRefreshing}
+                                            className={`w-6 h-6 rounded-lg flex items-center justify-center hover:bg-[var(--color-surface-alt)] transition-all text-[var(--color-text-muted)] hover:text-[var(--color-text)] ${isRefreshing ? 'opacity-50' : ''}`}>
+                                            <FontAwesomeIcon icon={faArrowsRotate} className={`text-[9px] ${isRefreshing ? 'animate-spin' : ''}`} />
+                                        </button>
+                                    </div>
+                                    <span className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-widest opacity-40 tabular-nums">
+                                        Sync: {new Date(lastRefresh).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                     </span>
                                 </div>
                             </div>
@@ -1756,7 +1819,7 @@ export default function GatePage() {
 
             {/* Overtime alert banner */}
             {dailySummary.overTimeList.length > 0 && !dismissedOvertime && (
-                <div className="fixed top-20 right-4 z-40 w-72 bg-amber-500/95 backdrop-blur-sm rounded-2xl shadow-2xl p-4 border border-amber-600/30">
+                <div className="fixed bottom-24 sm:bottom-6 right-4 sm:right-6 z-[100] w-auto max-w-[calc(100vw-2rem)] sm:w-72 bg-red-600/95 backdrop-blur-md rounded-2xl shadow-2xl p-4 border border-red-400/20 animate-in slide-in-from-right-8 duration-500">
                     <div className="flex items-center gap-2 mb-3">
                         <FontAwesomeIcon icon={faBell} className="text-white animate-bounce" />
                         <p className="text-[12px] font-black text-white">Guru Lama Keluar</p>
