@@ -55,9 +55,10 @@ function ErrorFallback({
     isOffline,
 }) {
     const errorType = error?.constructor?.name ?? 'Error'
+    const isModuleError = error?.message?.includes('Failed to fetch') || error?.message?.includes('dynamically imported module')
     const canRetry = retryCount < maxRetries
     const showRetryWarn = retryCount > 0
-    const isAmber = isOffline
+    const isAmber = isOffline || isModuleError
 
     // ── Handler: Salin detail error ke clipboard ──────────────────────────────
     const handleCopy = () => {
@@ -152,12 +153,14 @@ function ErrorFallback({
                 {/* Heading + subtext */}
                 <div className="text-center max-w-xs">
                     <p className="text-base font-black text-[var(--color-text)] tracking-tight mb-1.5">
-                        {isOffline ? 'Tidak ada koneksi' : 'Terjadi kesalahan'}
+                        {isOffline ? 'Tidak ada koneksi' : isModuleError ? 'Gagal memuat modul' : 'Terjadi kesalahan'}
                     </p>
                     <p className="text-[12px] text-[var(--color-text-muted)] leading-relaxed">
                         {isOffline
                             ? 'Periksa koneksi internet kamu, lalu coba lagi.'
-                            : 'Aplikasi menemui masalah yang tidak terduga. Coba lagi atau kembali ke beranda.'}
+                            : isModuleError
+                                ? 'Versi aplikasi telah diperbarui atau koneksi terputus. Silakan muat ulang halaman.'
+                                : 'Aplikasi menemui masalah yang tidak terduga. Coba lagi atau kembali ke beranda.'}
                     </p>
                 </div>
 
@@ -221,10 +224,10 @@ function ErrorFallback({
 
                     {/* Baris 1: primary full-width — gradient identik dengan button login/cta di page */}
                     <button
-                        onClick={onReset}
+                        onClick={isModuleError ? () => window.location.reload() : onReset}
                         disabled={!canRetry}
                         autoFocus
-                        aria-label={canRetry ? `Coba lagi, percobaan ke-${retryCount + 1}` : 'Batas percobaan tercapai'}
+                        aria-label={isModuleError ? 'Muat ulang halaman' : canRetry ? `Coba lagi, percobaan ke-${retryCount + 1}` : 'Batas percobaan tercapai'}
                         className={`
                             w-full h-10 rounded-xl
                             text-white text-[12px] font-black uppercase tracking-widest
@@ -237,8 +240,8 @@ function ErrorFallback({
                             }
                         `}
                     >
-                        <FontAwesomeIcon icon={faRotateRight} />
-                        {canRetry ? 'Coba Lagi' : 'Batas Tercapai'}
+                        <FontAwesomeIcon icon={isModuleError ? faRotateRight : faRotateRight} />
+                        {isModuleError ? 'Muat Ulang Halaman' : canRetry ? 'Coba Lagi' : 'Batas Tercapai'}
                     </button>
 
                     {/* Baris 2: tiga ghost button sejajar — identik dengan secondary button di page */}

@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faSignInAlt, faSignOutAlt, faUserFriends, faClipboardList,
-    faCalendarDay, faCalendarWeek, faPrint, faSearch, faPlus,
+    faCalendarDay, faCalendarWeek, faPrint, faSearch, faPlus, faPaperPlane,
     faChevronLeft, faChevronRight, faSpinner, faClock,
     faBuilding, faChalkboardTeacher, faBriefcase,
     faLock, faRotateLeft, faPersonWalkingArrowRight,
     faEdit, faTrash, faCheck,
     faArrowsRotate, faBell, faXmark, faTag, faKeyboard,
     faDownload, faFilter, faIdCard, faMotorcycle,
-    faFileCsv, faFilePdf, faCircleCheck, faCircleDot, faUserGraduate
+    faFileCsv, faFilePdf, faCircleCheck, faCircleDot, faUserGraduate, faUndo, faGear
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import StatsCarousel from '../../components/StatsCarousel'
@@ -56,8 +56,135 @@ function nowDateStr() { return new Date().toISOString().slice(0, 10) }
 
 /** Gabungkan date string (YYYY-MM-DD) + time string (HH:MM) → ISO */
 function dateTimeToISO(dateStr, timeStr) {
-    if (!dateStr || !timeStr) return new Date().toISOString()
+    if (!dateStr || !timeStr) return null
     return new Date(`${dateStr}T${timeStr}:00`).toISOString()
+}
+
+/** Simple Webhook Notification Helper (Discord/Telegram) */
+const sendLogNotification = async (log, type = 'OUT') => {
+    // TIPS: In production, move DISCORD_WEBHOOK_URL to .env
+    // Users can set this in their Supabase/App settings (GATE_WEBHOOK_URL)
+    // format: https://discord.com/api/webhooks/... or https://api.telegram.org/bot<token>/sendMessage?chat_id=<id>
+    const WEBHOOK_URL = localStorage.getItem('GATE_WEBHOOK_URL')
+    if (!WEBHOOK_URL) return { success: false, error: 'URL tidak ditemukan' }
+
+    try {
+        const isInternal = log.visitor_type !== 'tamu'
+
+        // Format Narasi Minimalis (Tanpa Emoji & Italic)
+        const timeStr = `<b>${fmtTime(new Date()).replace('.', ':')}</b>`
+        const nameStr = `<b>${log.visitor_name}</b>`
+        const purposeStr = `<b>${log.purpose || '-'}</b>`
+        const plateStr = log.vehicle_plate ? ` (${log.vehicle_plate})` : ''
+
+        let message = ''
+        if (type === 'OUT') {
+            message = isInternal
+                ? `${nameStr} izin keluar sekolah pada pukul ${timeStr} untuk ${purposeStr}${plateStr}.`
+                : `Tamu ${nameStr} telah masuk pada pukul ${timeStr} untuk ${purposeStr}${plateStr}.`
+            if (log.estimated_return) {
+                const etaTime = `<b>${fmtTime(log.estimated_return).replace('.', ':')}</b>`
+                message += `\nEstimasi kembali pukul ${etaTime}.`
+            }
+        } else {
+            message = isInternal
+                ? `${nameStr} sudah kembali ke sekolah pada pukul ${timeStr}${plateStr}.`
+                : `Tamu ${nameStr} telah keluar/meninggalkan sekolah pada pukul ${timeStr}${plateStr}.`
+        }
+
+        const contentHTML = message
+
+        // Simple check for Discord vs Telegram
+        if (WEBHOOK_URL.includes('discord.com')) {
+            await fetch(WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: contentHTML.replace(/<[^>]*>?/gm, '') })
+            })
+        } else if (WEBHOOK_URL.includes('api.telegram.org')) {
+            // Revert to GET for maximum compatibility, but with HTML
+            const url = new URL(WEBHOOK_URL.replace('/getUpdates', '/sendMessage'))
+            url.searchParams.set('text', contentHTML)
+            url.searchParams.set('parse_mode', 'HTML')
+
+            // Try adding simple button if possible via GET (limited but works)
+            // NOTE: Telegram will reject 'localhost' URLs in inline buttons.
+            if (!window.location.hostname.includes('localhost')) {
+                try {
+                    url.searchParams.set('reply_markup', JSON.stringify({
+                        inline_keyboard: [[{ text: '🌐 Dashboard', url: window.location.origin }]]
+                    }))
+                } catch (e) { }
+            }
+
+            const resp = await fetch(url.toString())
+            const result = await resp.json()
+
+            if (resp.ok) return { success: true }
+            return { success: false, error: `${resp.status} - ${result.description || 'Unknown error'}` }
+        }
+        return { success: false, error: 'URL tidak dikenali' }
+    } catch (err) {
+        console.error('Failed to send notification:', err)
+        return { success: false, error: err.message }
+    }
+}
+
+/** Sends a formatted summary of today's logs to Telegram/Discord */
+const sendDailySummary = async (logs) => {
+    const WEBHOOK_URL = localStorage.getItem('GATE_WEBHOOK_URL')
+    if (!WEBHOOK_URL) return { success: false, error: 'URL tidak ditemukan' }
+    if (!logs || logs.length === 0) return { success: false, error: 'Tidak ada data hari ini' }
+
+    try {
+        const dateStr = fmtDate(new Date())
+        const stats = {
+            total: logs.length,
+            internal: logs.filter(l => l.visitor_type !== 'tamu').length,
+            tamu: logs.filter(l => l.visitor_type === 'tamu').length,
+            selesai: logs.filter(l => l.check_out).length,
+            aktif: logs.filter(l => !l.check_out).length
+        }
+
+        const sep = '────────────────'
+        const header = `<b>📊 RINGKASAN HARIAN</b>\n<b>${dateStr.toUpperCase()}</b>`
+        
+        let detailText = logs.slice(0, 15).map(l => {
+            const time = fmtTime(l.check_in).replace('.', ':')
+            const type = l.visitor_type === 'tamu' ? 'Tamu' : 'Intrn'
+            const status = l.check_out ? '✓' : '...'
+            return `• ${time} | ${type} | ${l.visitor_name.split(' ')[0]} ${status}`
+        }).join('\n')
+
+        if (logs.length > 15) detailText += `\n...dan ${logs.length - 15} lainnya.`
+
+        const summaryHTML = `${header}\n${sep}\n` +
+            `Total Aktivitas: <b>${stats.total}</b>\n` +
+            `- Internal: ${stats.internal}\n` +
+            `- Tamu: ${stats.tamu}\n` +
+            `${sep}\n` +
+            `Status: ${stats.selesai} Selesai, ${stats.aktif} Aktif\n` +
+            `${sep}\n` +
+            `<b>Log Terakhir:</b>\n` +
+            `<code>${detailText}</code>\n` +
+            `${sep}`
+
+        if (WEBHOOK_URL.includes('discord.com')) {
+            await fetch(WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: summaryHTML.replace(/<[^>]*>?/gm, '') })
+            })
+        } else if (WEBHOOK_URL.includes('api.telegram.org')) {
+            const url = new URL(WEBHOOK_URL.replace('/getUpdates', '/sendMessage'))
+            url.searchParams.set('text', summaryHTML)
+            url.searchParams.set('parse_mode', 'HTML')
+            await fetch(url.toString())
+        }
+        return { success: true }
+    } catch (err) {
+        return { success: false, error: err.message }
+    }
 }
 
 /** Masih dipakai di EditLogModal & handleConfirmTime (edit log yang tanggalnya sudah diketahui) */
@@ -123,6 +250,33 @@ function EmptyPlaceholder({ icon, title, desc, color = 'emerald' }) {
 
 // ─── DateTimeInput — date + time picker berdampingan ──────────────────────────
 
+// ─── Skeletons ──────────────────────────────────────────────────────────────
+
+function CardSkeleton() {
+    return (
+        <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] animate-pulse">
+            <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[var(--color-surface-alt)] flex-shrink-0" />
+                <div className="flex-1 space-y-2 mt-1">
+                    <div className="h-3 bg-[var(--color-border)] rounded-md w-1/3" />
+                    <div className="h-2 bg-[var(--color-border)] rounded-md w-1/2" />
+                    <div className="h-2 bg-[var(--color-border)] rounded-md w-1/4" />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function StatSkeleton() {
+    return (
+        <div className="p-4 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] animate-pulse space-y-2">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-surface-alt)]" />
+            <div className="h-2 bg-[var(--color-border)] rounded-md w-1/2" />
+            <div className="h-3 bg-[var(--color-border)] rounded-md w-3/4" />
+        </div>
+    )
+}
+
 function DateTimeInput({ dateValue, timeValue, onDateChange, onTimeChange, label }) {
     return (
         <div>
@@ -157,18 +311,18 @@ function DateTimeInput({ dateValue, timeValue, onDateChange, onTimeChange, label
 
 function QuickGuide({ mode = 'internal' }) {
     const isTamu = mode === 'tamu'
-    const items = isTamu 
+    const items = isTamu
         ? [
             { icon: faPlus, text: 'Isi nama & keperluan tamu, lalu Catat Masuk', color: 'bg-emerald-400' },
             { icon: faSignOutAlt, text: 'Saat tamu keluar, klik tombol Keluar di panel kanan', color: 'bg-red-400' },
             { icon: faMotorcycle, text: 'No. kendaraan opsional, untuk keamanan pesantren', color: 'bg-amber-400' }
-          ]
+        ]
         : [
             { icon: faSearch, text: 'Pilih orang dari daftar (Guru/Karyawan/Santri)', color: 'bg-[var(--color-primary)]' },
             { icon: faTag, text: 'Pilih atau ketik keperluan keluar dari preset', color: 'bg-indigo-400' },
             { icon: faClock, text: 'Sesuaikan jam jika perlu, lalu catat keluar', color: 'bg-emerald-400' },
             { icon: faRotateLeft, text: 'Klik Kembali di panel kanan saat orang sudah kembali', color: 'bg-amber-400' }
-          ]
+        ]
 
     return (
         <div className="animate-in slide-in-from-bottom-4 duration-500">
@@ -252,6 +406,7 @@ function TeacherSearch({ teacherList, value, onChange, label }) {
         <div ref={ref} className="relative">
             <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">{label}</label>
             <div onClick={() => { setOpen(true); setFocusedIdx(0) }}
+                data-search-trigger
                 className={`w-full h-10 px-3 rounded-xl border bg-[var(--color-surface)] flex items-center gap-2 cursor-text transition-all ${open ? 'border-[var(--color-primary)] shadow-sm shadow-[var(--color-primary)]/20' : 'border-[var(--color-border)]'}`}>
                 <FontAwesomeIcon icon={faSearch} className="text-[10px] text-[var(--color-text-muted)] shrink-0" />
                 {open ? (
@@ -319,6 +474,7 @@ function FormInternal({ internalList, onSubmit, loading }) {
     const [purpose, setPurpose] = useState('')
     const [dateOut, setDateOut] = useState(() => nowDateStr())
     const [timeOut, setTimeOut] = useState(() => nowTimeStr())
+    const [timeEst, setTimeEst] = useState('') // ETA Time
 
     const filteredList = useMemo(
         () => internalList.filter(t => {
@@ -344,11 +500,13 @@ function FormInternal({ internalList, onSubmit, loading }) {
             purpose: purpose.trim(),
             dateOut,
             timeOut,
+            estimatedReturn: timeEst ? dateTimeToISO(dateOut, timeEst) : null,
         })
         setPersonId('')
         setPurpose('')
         setDateOut(nowDateStr())
         setTimeOut(nowTimeStr())
+        setTimeEst('')
     }
 
     const handleKeyDown = e => { if (e.key === 'Enter' && canSubmit && !loading) submit() }
@@ -384,12 +542,29 @@ function FormInternal({ internalList, onSubmit, loading }) {
                 <PresetPills presets={activePresets} value={purpose} onSelect={setPurpose} />
             </div>
 
-            {/* Tanggal & Jam Keluar */}
             <DateTimeInput
                 dateValue={dateOut} timeValue={timeOut}
                 onDateChange={setDateOut} onTimeChange={setTimeOut}
                 label="Tanggal & Jam Keluar"
             />
+
+            {/* Estimasi Kembali (ETA) */}
+            <div className={`p-4 rounded-xl border transition-all ${timeEst ? 'bg-indigo-500/5 border-indigo-500/30' : 'bg-[var(--color-surface-alt)]/30 border-dashed border-[var(--color-border)]'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                    <FontAwesomeIcon icon={faClock} className={`text-[10px] ${timeEst ? 'text-indigo-500' : 'text-[var(--color-text-muted)]'}`} />
+                    <span className="text-[10px] font-black uppercase tracking-wider">Estimasi Kembali (Opsional)</span>
+                </div>
+                <div className="relative">
+                    <input type="time" value={timeEst} onChange={e => setTimeEst(e.target.value)}
+                        className="w-full h-10 px-3 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-black text-[var(--color-text)] focus:outline-none focus:border-indigo-500 transition-all" />
+                    {timeEst && (
+                        <button onClick={() => setTimeEst('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-red-500 transition-all">
+                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                        </button>
+                    )}
+                </div>
+                <p className="text-[9px] text-[var(--color-text-muted)] mt-2 opacity-60">Sistem akan memberi alert jika belum kembali melewati jam ini.</p>
+            </div>
 
             {/* Submit */}
             <button onClick={submit} disabled={loading || !canSubmit}
@@ -647,19 +822,33 @@ function EditLogModal({ log, onSave, onDelete, onCancel, saving }) {
 
 // ─── LogCard ──────────────────────────────────────────────────────────────────
 
-function LogCard({ log, onReturn, onCheckout, onEdit }) {
+function LogCard({ log, onReturn, onCheckout, onEdit, isSelected, onToggleSelect, selectionMode }) {
     const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
     const isInternal = log.visitor_type !== 'tamu'
     const isActive = !log.check_out
     const dur = durasi(log.check_in, log.check_out)
     const overTime = isInternal && isActive && (Date.now() - new Date(log.check_in).getTime()) > 2 * 60 * 60 * 1000
 
+    // ETA Alert: Jika lewat dari jam estimasi
+    const etaPassed = isActive && log.estimated_return && new Date(log.estimated_return) < new Date()
+
     return (
-        <div className={`flex items-start gap-3 p-3 rounded-xl border transition-all group ${overTime
-            ? 'border-amber-500/40 bg-amber-500/[0.05]'
-            : isActive
-                ? (isInternal ? 'border-red-500/25 bg-red-500/[0.04]' : 'border-emerald-500/25 bg-emerald-500/[0.04]')
-                : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}>
+        <div className={`flex items-start gap-3 p-3 rounded-xl border transition-all group relative ${isSelected ? 'ring-2 ring-[var(--color-primary)] border-[var(--color-primary)]' : ''} ${etaPassed
+            ? 'border-red-500/70 bg-red-500/[0.08] shadow-lg shadow-red-500/10 animate-[pulse_2s_infinite]'
+            : overTime
+                ? 'border-amber-500/40 bg-amber-500/[0.05]'
+                : isActive
+                    ? (isInternal ? 'border-red-500/25 bg-red-500/[0.04]' : 'border-emerald-500/25 bg-emerald-500/[0.04]')
+                    : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}>
+
+            {/* Multi-select check */}
+            {selectionMode && isActive && (
+                <div className="absolute top-2 right-2 z-10">
+                    <input type="checkbox" checked={isSelected} onChange={() => onToggleSelect(log.id)}
+                        className="w-4 h-4 rounded-md border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer" />
+                </div>
+            )}
+
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${meta.bg}`}>
                 <FontAwesomeIcon icon={meta.icon} className={`text-[13px] ${meta.color}`} />
             </div>
@@ -669,25 +858,27 @@ function LogCard({ log, onReturn, onCheckout, onEdit }) {
                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span>
                     {isActive && isInternal && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 animate-pulse">● Sedang Keluar</span>}
                     {isActive && !isInternal && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 animate-pulse">● Di Dalam</span>}
-                    {overTime && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 flex items-center gap-1"><FontAwesomeIcon icon={faBell} className="text-[7px]" />Lama keluar</span>}
+                    {overTime && !etaPassed && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 flex items-center gap-1"><FontAwesomeIcon icon={faBell} className="text-[7px]" />Lama keluar</span>}
+                    {etaPassed && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-600 text-white flex items-center gap-1 animate-bounce shadow-lg"><FontAwesomeIcon icon={faClock} className="text-[7px]" />Lewat Estimasi</span>}
                 </div>
-                <p className="text-[10px] text-[var(--color-text-muted)] truncate mt-0.5">{log.purpose}</p>
+                <p className="text-[11px] font-bold text-[var(--color-text-muted)] mt-0.5 opacity-80 leading-tight">
+                    {log.purpose}
+                </p>
+
+                {/* Check-in / ETA info */}
+                <div className="mt-2 flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider opacity-60">
+                        <FontAwesomeIcon icon={isInternal ? faSignOutAlt : faSignInAlt} className="text-[8px]" />
+                        {fmtTime(log.check_in)}
+                    </div>
+                    {log.estimated_return && isActive && (
+                        <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider ${etaPassed ? 'text-red-600' : 'opacity-60'}`}>
+                            <FontAwesomeIcon icon={faClock} className="text-[8px]" />
+                            Estimasi {fmtTime(log.estimated_return)}
+                        </div>
+                    )}
+                </div>
                 <div className="flex items-center gap-4 mt-1.5 flex-wrap">
-                    {isInternal ? (<>
-                        <span className="text-[10px] font-bold text-red-500 flex items-center gap-1">
-                            <FontAwesomeIcon icon={faSignOutAlt} className="text-[8px]" />Keluar {fmtTime(log.check_in)}
-                        </span>
-                        <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                            <FontAwesomeIcon icon={faSignInAlt} className="text-[8px]" />Kembali {log.check_out ? fmtTime(log.check_out) : '—'}
-                        </span>
-                    </>) : (<>
-                        <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                            <FontAwesomeIcon icon={faSignInAlt} className="text-[8px]" />Masuk {fmtTime(log.check_in)}
-                        </span>
-                        <span className="text-[10px] font-bold text-red-500 flex items-center gap-1">
-                            <FontAwesomeIcon icon={faSignOutAlt} className="text-[8px]" />Keluar {log.check_out ? fmtTime(log.check_out) : '—'}
-                        </span>
-                    </>)}
                     {dur && <span className="text-[9px] text-[var(--color-text-muted)] font-bold bg-[var(--color-surface-alt)] px-1.5 py-0.5 rounded-md">{dur}</span>}
                     {log.vehicle_plate && <span className="text-[9px] text-[var(--color-text-muted)] font-bold">{log.vehicle_plate}</span>}
                 </div>
@@ -701,9 +892,9 @@ function LogCard({ log, onReturn, onCheckout, onEdit }) {
                 </button>
                 {isActive && (
                     <button onClick={() => isInternal ? onReturn(log) : onCheckout(log)}
-                        className={`h-8 px-2.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 transition-all active:scale-95 ${isInternal
-                            ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
-                            : 'border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20'}`}>
+                        className={`h-8 px-3 rounded-lg text-[10px] font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-lg ${isInternal
+                            ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/20'
+                            : 'bg-red-500 text-white hover:bg-red-600 shadow-red-500/20'}`}>
                         <FontAwesomeIcon icon={isInternal ? faSignInAlt : faSignOutAlt} className="text-[9px]" />
                         <span className="hidden sm:inline">{isInternal ? 'Kembali' : 'Keluar'}</span>
                     </button>
@@ -713,10 +904,68 @@ function LogCard({ log, onReturn, onCheckout, onEdit }) {
     )
 }
 
+// ─── ConfigModal ──────────────────────────────────────────────────────────────
+
+function ConfigModal({ onSave, onCancel, testNotification }) {
+    const [url, setUrl] = useState(localStorage.getItem('GATE_WEBHOOK_URL') || '')
+    const [testing, setTesting] = useState(false)
+
+    const handleSave = () => {
+        localStorage.setItem('GATE_WEBHOOK_URL', url.trim())
+        onSave()
+    }
+
+    const handleTest = async () => {
+        if (!url) return
+        setTesting(true)
+        localStorage.setItem('GATE_WEBHOOK_URL', url.trim()) // Save temporarily for test
+        const success = await testNotification()
+        setTesting(false)
+    }
+
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
+            <div className="w-full max-w-sm bg-[var(--color-surface)] rounded-[2rem] border border-[var(--color-border)] shadow-2xl overflow-hidden p-6 animate-in zoom-in duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faGear} />
+                    </div>
+                    <div>
+                        <h3 className="text-[14px] font-black text-[var(--color-text)]">Konfigurasi Notifikasi</h3>
+                        <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Telegram / Discord Webhook URL</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-2 block">Webhook URL</label>
+                        <textarea
+                            value={url}
+                            onChange={e => setUrl(e.target.value)}
+                            placeholder="https://api.telegram.org/bot<token>/sendMessage?chat_id=<id>"
+                            className="w-full h-24 p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[11px] font-mono text-[var(--color-text)] focus:outline-none focus:border-indigo-500 transition-all resize-none"
+                        />
+                        <button onClick={handleTest} disabled={testing || !url}
+                            className="w-full mt-2 h-8 rounded-xl border border-indigo-500/30 bg-indigo-500/5 text-[10px] font-black text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all disabled:opacity-40">
+                            {testing ? <><FontAwesomeIcon icon={faArrowsRotate} className="animate-spin mr-2" /> Mengirim...</> : 'Test Kirim Notifikasi'}
+                        </button>
+                    </div>
+
+                    <div className="pt-2 flex gap-3">
+                        <button onClick={onCancel} className="flex-1 h-10 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Batal</button>
+                        <button onClick={handleSave} className="flex-1 h-10 rounded-xl bg-indigo-500 text-white text-[11px] font-black shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 transition-all">Simpan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function GatePage() {
-    const { addToast } = useToast()
+    const { addToast, addUndoToast } = useToast()
     const { profile } = useAuth()
     const navigate = useNavigate()
 
@@ -724,6 +973,8 @@ export default function GatePage() {
     const isAllowed = profile ? ALLOWED_ROLES.includes(profile.role?.toLowerCase()) : null
 
     const [activeTab, setActiveTab] = useState('input')
+    const [selectionMode, setSelectionMode] = useState(false)
+    const [selectedIds, setSelectedIds] = useState([])
     const [inputMode, setInputMode] = useState('internal')
     const [teacherList, setTeacherList] = useState([])
     const [studentList, setStudentList] = useState([])
@@ -747,6 +998,36 @@ export default function GatePage() {
     const [lastRefresh, setLastRefresh] = useState(Date.now())
     const [dismissedOvertime, setDismissedOvertime] = useState(false)
     const [isRefreshing, setIsRefreshing] = useState(false)
+    const [showConfig, setShowConfig] = useState(false)
+
+    // ── Keyboard Shortcuts ─────────────────────────────────────────────────────
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Ignore if typing in an input/textarea
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                if (e.key === 'Escape') document.activeElement.blur()
+                return
+            }
+
+            const key = e.key.toLowerCase()
+            if (key === 'n') {
+                e.preventDefault()
+                setActiveTab('input')
+                // Wait for tab switch
+                setTimeout(() => {
+                    const searchBox = document.querySelector('[data-search-trigger]')
+                    if (searchBox) searchBox.click()
+                }, 50)
+            }
+            else if (key === 'l') { e.preventDefault(); setActiveTab('log') }
+            else if (key === 'r') { e.preventDefault(); setActiveTab('rekap') }
+            else if (key === 'i') { e.preventDefault(); setActiveTab('input') }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [])
 
     // ── Derived stats ──────────────────────────────────────────────────────────
 
@@ -798,17 +1079,17 @@ export default function GatePage() {
     const loadTodayLogs = useCallback(async (isSilent = false) => {
         if (!isSilent) setLoadingLogs(true)
         else setIsRefreshing(true)
-        
+
         const t0 = startOfDay(new Date()), t1 = addDays(t0, 1)
         const { data, error } = await supabase
             .from('gate_logs').select('*')
             .gte('check_in', iso(t0))
             .lt('check_in', iso(t1))
             .order('check_in', { ascending: false })
-            
+
         if (error) console.error('[GatePage] loadTodayLogs error:', error)
         else setTodayLogs(data || [])
-        
+
         setLoadingLogs(false)
         setIsRefreshing(false)
     }, [])
@@ -880,6 +1161,7 @@ export default function GatePage() {
                     purpose: form.purpose,
                     check_in: dateTimeToISO(form.dateOut, form.timeOut),
                     check_out: null,
+                    estimated_return: form.estimatedReturn || null,
                 }
             } else {
                 payload = {
@@ -906,7 +1188,20 @@ export default function GatePage() {
                 const insertedRow = data?.[0]
                 const who = form.flow === 'internal' ? form.name : `Tamu ${form.name}`
                 const act = form.flow === 'internal' ? 'keluar' : 'masuk'
-                addToast(`${who} ${act} berhasil dicatat`, 'success')
+
+                // addToast(`${who} ${act} berhasil dicatat`, 'success')
+
+                // Enhanced Undo implementation
+                addUndoToast(`${who} ${act} berhasil dicatat`, async () => {
+                    if (insertedRow?.id) {
+                        const { error: delErr } = await supabase.from('gate_logs').delete().eq('id', insertedRow.id)
+                        if (delErr) addToast('Gagal membatalkan log', 'error')
+                        else {
+                            addToast('Pencatatan dibatalkan', 'info')
+                            loadTodayLogs(true)
+                        }
+                    }
+                })
 
                 // Audit log untuk INSERT
                 await logAudit({
@@ -917,7 +1212,11 @@ export default function GatePage() {
                     newData: insertedRow || payload,
                 })
 
-                await loadTodayLogs()
+                await loadTodayLogs(true)
+                // Konsisten stay di tab input agar bisa lanjut catat orang lain
+
+                // Webhook Notification
+                sendLogNotification(insertedRow || payload, 'OUT')
             }
         } catch (err) {
             addToast(`Error tidak terduga: ${err.message}`, 'error')
@@ -957,6 +1256,9 @@ export default function GatePage() {
                 oldData: log,
                 newData: { ...log, check_out: checkOutISO }
             })
+
+            // Webhook notification
+            sendLogNotification({ ...log, check_out: checkOutISO }, action === 'return' ? 'IN' : 'OUT_TAMU')
 
             loadTodayLogs()
             if (activeTab === 'rekap') loadRekap()
@@ -1001,6 +1303,50 @@ export default function GatePage() {
             if (activeTab === 'rekap') loadRekap()
         }
     }, [editLog, loadTodayLogs, loadRekap, activeTab, addToast])
+
+    const handleBulkReturn = async () => {
+        if (selectedIds.length === 0) return
+        setSubmitting(true)
+        const now = new Date().toISOString()
+
+        // Fetch the logs first so we have the data for notifications
+        const { data: logsToUpdate } = await supabase.from('gate_logs')
+            .select('*')
+            .in('id', selectedIds)
+
+        const { error } = await supabase.from('gate_logs')
+            .update({ check_out: now })
+            .in('id', selectedIds)
+
+        if (error) addToast('Gagal update massal: ' + error.message, 'error')
+        else {
+            addToast(`${selectedIds.length} orang berhasil ditandai kembali`, 'success')
+
+            // Send notifications for each
+            if (logsToUpdate) {
+                logsToUpdate.forEach(log => {
+                    sendLogNotification({ ...log, check_out: now }, 'IN')
+                })
+            }
+
+            // Audit log for BULK UPDATE
+            await logAudit({
+                action: 'UPDATE',
+                source: 'OPERATIONAL',
+                tableName: 'gate_logs',
+                newData: { bulkCount: selectedIds.length, ids: selectedIds, action: 'Bulk Return' }
+            })
+
+            await loadTodayLogs(true)
+            setSelectedIds([])
+            setSelectionMode(false)
+        }
+        setSubmitting(false)
+    }
+
+    const toggleSelect = id => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+    }
 
     // ── Filters ────────────────────────────────────────────────────────────────
 
@@ -1303,6 +1649,11 @@ export default function GatePage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <LiveClock />
+                        <button onClick={() => setShowConfig(true)}
+                            className="h-9 w-9 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-indigo-500 hover:border-indigo-500/30 flex items-center justify-center transition-all shrink-0"
+                            title="Konfigurasi Bot">
+                            <FontAwesomeIcon icon={faGear} />
+                        </button>
                         <button onClick={handlePrint}
                             className="h-9 px-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-2 transition-all shrink-0">
                             <FontAwesomeIcon icon={faPrint} />Cetak
@@ -1312,7 +1663,7 @@ export default function GatePage() {
 
                 {/* STATS */}
                 <StatsCarousel count={4}>
-                    {[
+                    {loadingLogs ? [1, 2, 3, 4].map(i => <StatSkeleton key={i} />) : [
                         { label: 'Total Hari Ini', value: stats.total, icon: faClipboardList, bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]', border: 'border-t-[var(--color-primary)]' },
                         { label: 'Guru Sedang Keluar', value: stats.keluar, icon: faPersonWalkingArrowRight, bg: 'bg-red-500/10 text-red-500', border: 'border-t-red-500' },
                         { label: 'Tamu di Dalam', value: stats.dalamTamu, icon: faBuilding, bg: 'bg-emerald-500/10 text-emerald-500', border: 'border-t-emerald-500' },
@@ -1382,8 +1733,8 @@ export default function GatePage() {
                             </div>
                         </div>
 
-                        {/* Kolom kanan: Status — flex flex-col h-full agar mengisi penuh */}
-                        <div className="flex flex-col gap-4 h-full">
+                        {/* Kolom kanan: Status — Mengikuti konten agar tidak terlalu ditarik ke bawah */}
+                        <div className="flex flex-col gap-4">
 
                             {/* Sedang Keluar */}
                             <div className="glass rounded-[1.5rem] p-5">
@@ -1396,18 +1747,36 @@ export default function GatePage() {
                                         {stats.keluar} orang
                                     </span>
                                 </div>
+
+                                {/* Bulk Selection Toolbar */}
+                                {stats.keluar > 0 && (
+                                    <div className="flex items-center justify-between mb-3 px-1">
+                                        <button onClick={() => { setSelectionMode(!selectionMode); setSelectedIds([]) }}
+                                            className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md transition-all ${selectionMode ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                            {selectionMode ? 'Batal Pilih' : 'Pilih Multi'}
+                                        </button>
+                                        {selectionMode && selectedIds.length > 0 && (
+                                            <button onClick={handleBulkReturn} disabled={submitting}
+                                                className="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-emerald-500 text-white animate-in slide-in-from-right-2">
+                                                Selesaikan {selectedIds.length} Orang
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
                                 {loadingLogs
-                                    ? <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
+                                    ? <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
                                     : todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).length === 0
-                                        ? <EmptyPlaceholder 
-                                            icon={faCheck} 
-                                            title="Zero Active Logs" 
-                                            desc="Semua guru & karyawan saat ini terdeteksi berada di dalam area sekolah." 
+                                        ? <EmptyPlaceholder
+                                            icon={faCheck}
+                                            title="Zero Active Logs"
+                                            desc="Semua guru & karyawan saat ini terdeteksi berada di dalam area sekolah."
                                             color="emerald"
-                                          />
+                                        />
                                         : <div className="space-y-2">
                                             {todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).map(log => (
-                                                <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />
+                                                <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog}
+                                                    selectionMode={selectionMode} onToggleSelect={toggleSelect} isSelected={selectedIds.includes(log.id)} />
                                             ))}
                                         </div>
                                 }
@@ -1425,62 +1794,20 @@ export default function GatePage() {
                                     </span>
                                 </div>
                                 {loadingLogs
-                                    ? <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
+                                    ? <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
                                     : todayLogs.filter(l => l.visitor_type === 'tamu' && !l.check_out).length === 0
-                                        ? <EmptyPlaceholder 
-                                            icon={faUserFriends} 
-                                            title="Tanpa Pengunjung" 
-                                            desc="Tidak ada tamu yang terdaftar di sistem sedang berada di dalam area." 
+                                        ? <EmptyPlaceholder
+                                            icon={faUserFriends}
+                                            title="Tanpa Pengunjung"
+                                            desc="Tidak ada tamu yang terdaftar di sistem sedang berada di dalam area."
                                             color="slate"
-                                          />
+                                        />
                                         : <div className="space-y-2">
                                             {todayLogs.filter(l => l.visitor_type === 'tamu' && !l.check_out).map(log => (
                                                 <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />
                                             ))}
                                         </div>
                                 }
-                            </div>
-
-                            {/* Ringkasan Hari Ini — flex-1 agar mengisi sisa ruang */}
-                            <div className="glass rounded-[1.5rem] p-5 flex-1">
-                                <div className="mb-4">
-                                    <p className="text-[13px] font-black text-[var(--color-text)]">Ringkasan Hari Ini</p>
-                                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Statistik keluar masuk</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {[
-                                        { l: 'Total Aktivitas', v: stats.total, c: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10' },
-                                        { l: 'Guru Kembali', v: dailySummary.selesai, c: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-                                        { l: 'Rata-rata Keluar', v: dailySummary.avgMin > 0 ? (dailySummary.avgMin >= 60 ? `${Math.floor(dailySummary.avgMin / 60)}j ${dailySummary.avgMin % 60}m` : `${dailySummary.avgMin}m`) : '-', c: 'text-indigo-600', bg: 'bg-indigo-500/10' },
-                                        { 
-                                            l: 'Perlu Perhatian', 
-                                            v: dailySummary.overTimeList.length, 
-                                            c: dailySummary.overTimeList.length > 0 ? 'text-red-600 animate-pulse' : 'text-emerald-600', 
-                                            bg: dailySummary.overTimeList.length > 0 ? 'bg-red-500/20 ring-2 ring-red-500/20' : 'bg-emerald-500/10' 
-                                        },
-                                    ].map((s, i) => (
-                                        <div key={i} className={`rounded-xl p-3 ${s.bg} transition-all duration-500`}>
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-70 mb-1">{s.l}</p>
-                                            <p className={`text-lg font-black font-heading tabular-nums ${s.c}`}>{s.v}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="mt-3 pt-3 border-t border-[var(--color-border)] flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/5 border border-emerald-500/10">
-                                            <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                                            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest whitespace-nowrap">Auto-refresh 30s</span>
-                                        </div>
-                                        <button onClick={() => { loadTodayLogs(true); setLastRefresh(Date.now()) }}
-                                            disabled={isRefreshing}
-                                            className={`w-6 h-6 rounded-lg flex items-center justify-center hover:bg-[var(--color-surface-alt)] transition-all text-[var(--color-text-muted)] hover:text-[var(--color-text)] ${isRefreshing ? 'opacity-50' : ''}`}>
-                                            <FontAwesomeIcon icon={faArrowsRotate} className={`text-[9px] ${isRefreshing ? 'animate-spin' : ''}`} />
-                                        </button>
-                                    </div>
-                                    <span className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-widest opacity-40 tabular-nums">
-                                        Sync: {new Date(lastRefresh).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                    </span>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1557,25 +1884,30 @@ export default function GatePage() {
                         </div>
 
                         <div className="p-4">
-                            {loadingLogs
-                                ? <div className="space-y-2">{[1, 2, 3, 4].map(i => <div key={i} className="h-20 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
-                                : filteredLogs.length === 0
-                                    ? <div className="flex flex-col items-center gap-2 py-16 opacity-40">
-                                        <FontAwesomeIcon icon={faClipboardList} className="text-4xl" />
-                                        <p className="text-[12px] font-black">
-                                            {filterStatus !== 'all' || filterType !== 'all' || searchLog ? 'Tidak ada data yang cocok dengan filter' : 'Tidak ada data'}
-                                        </p>
-                                        {(filterStatus !== 'all' || filterType !== 'all' || searchLog) && (
-                                            <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setSearchLog('') }}
-                                                className="mt-1 h-7 px-3 rounded-lg border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
-                                                Reset Filter
-                                            </button>
-                                        )}
-                                    </div>
-                                    : <div className="space-y-2">
-                                        {filteredLogs.map(log => <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />)}
-                                    </div>
-                            }
+                            {loadingLogs ? (
+                                <div className="space-y-3">
+                                    <CardSkeleton />
+                                    <CardSkeleton />
+                                    <CardSkeleton />
+                                </div>
+                            ) : filteredLogs.length === 0 ? (
+                                <div className="flex flex-col items-center gap-2 py-16 opacity-40">
+                                    <FontAwesomeIcon icon={faClipboardList} className="text-4xl" />
+                                    <p className="text-[12px] font-black">
+                                        {filterStatus !== 'all' || filterType !== 'all' || searchLog ? 'Tidak ada data yang cocok dengan filter' : 'Tidak ada data'}
+                                    </p>
+                                    {(filterStatus !== 'all' || filterType !== 'all' || searchLog) && (
+                                        <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setSearchLog('') }}
+                                            className="mt-1 h-7 px-3 rounded-lg border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                                            Reset Filter
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {filteredLogs.map(log => <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />)}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -1613,6 +1945,13 @@ export default function GatePage() {
                                 <button onClick={() => handleExportPDF('rekap')}
                                     className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/5 flex items-center gap-2 transition-all">
                                     <FontAwesomeIcon icon={faFilePdf} className="text-[10px]" />PDF
+                                </button>
+                                <button onClick={async () => {
+                                    const res = await sendDailySummary(rekapData)
+                                    if (res.success) addToast('Rekapan berhasil dikirim ke Telegram', 'success')
+                                    else addToast('Gagal: ' + res.error, 'error')
+                                }} className="h-8 px-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all text-[10px] font-black flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faPaperPlane} />Kirim ke Telegram
                                 </button>
                                 <button onClick={handlePrint}
                                     className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-2 transition-all">
@@ -1863,6 +2202,18 @@ export default function GatePage() {
                     onDelete={handleDeleteLog}
                     onCancel={() => setEditLog(null)}
                     saving={editSaving}
+                />
+            )}
+            {showConfig && (
+                <ConfigModal
+                    onSave={() => { setShowConfig(false); addToast('Webhook URL berhasil disimpan', 'success') }}
+                    onCancel={() => setShowConfig(false)}
+                    testNotification={async () => {
+                        const res = await sendLogNotification({ visitor_name: 'Developer', purpose: 'Uji Coba Sistem', visitor_type: 'developer' }, 'OUT')
+                        if (res?.success) addToast('Pesan test berhasil dikirim!', 'success')
+                        else addToast('Gagal: ' + (res?.error || 'Unknown error'), 'error')
+                        return res?.success
+                    }}
                 />
             )}
         </DashboardLayout>

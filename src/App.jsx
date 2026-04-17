@@ -9,41 +9,62 @@ import DashboardLayout from './components/layout/DashboardLayout'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLock, faSpinner, faTools, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import GlobalErrorBoundary from './components/ui/GlobalErrorBoundary'
+import { Component } from 'react'
+
+// ─── Lazy Loading Guard ───────────────────────────────────────────────────────
+/**
+ * Helper to handle "Failed to fetch dynamically imported module".
+ * Happens during development (Vite HMR) or when a new version is deployed.
+ */
+function lazyRetry(componentImport) {
+  return lazy(async () => {
+    try {
+      return await componentImport()
+    } catch (error) {
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('dynamically imported module')) {
+        console.warn('[LazyRetry] Chunk load failed. Reloading window...')
+        window.location.reload()
+        return { default: () => null }
+      }
+      throw error
+    }
+  })
+}
 
 // ─── Lazy-loaded Pages ────────────────────────────────────────────────────────
 // Public
-const LandingPage = lazy(() => import('./pages/LandingPage'))
-const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
-const ParentCheckPage = lazy(() => import('./pages/auth/ParentCheckPage'))
-const InformationPage = lazy(() => import('./pages/InformationPage'))
+const LandingPage = lazyRetry(() => import('./pages/LandingPage.jsx'))
+const LoginPage = lazyRetry(() => import('./pages/auth/LoginPage.jsx'))
+const ParentCheckPage = lazyRetry(() => import('./pages/auth/ParentCheckPage.jsx'))
+const InformationPage = lazyRetry(() => import('./pages/InformationPage.jsx'))
 
 // Core
-const DashboardPage = lazy(() => import('./pages/DashboardPage'))
-const RaportPage = lazy(() => import('./pages/reports/RaportPage'))
-const BehaviorPage = lazy(() => import('./pages/reports/BehaviorPage'))
-const AttendancePage = lazy(() => import('./pages/reports/AttendancePage'))
-const GatePage = lazy(() => import('./pages/reports/GatePage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const DashboardPage = lazyRetry(() => import('./pages/DashboardPage.jsx'))
+const RaportPage = lazyRetry(() => import('./pages/reports/RaportPage.jsx'))
+const BehaviorPage = lazyRetry(() => import('./pages/reports/BehaviorPage.jsx'))
+const AttendancePage = lazyRetry(() => import('./pages/reports/AttendancePage.jsx'))
+const GatePage = lazyRetry(() => import('./pages/reports/GatePage.jsx'))
+const SettingsPage = lazyRetry(() => import('./pages/SettingsPage.jsx'))
 
 // Admin-only
-const UserPage = lazy(() => import('./pages/admin/UserPage'))
-const LogsPage = lazy(() => import('./pages/admin/LogsPage'))
-const AdminSettingsPage = lazy(() => import('./pages/admin/SettingsPage'))
-const DatabasePage = lazy(() => import('./pages/admin/DatabasePage'))
-const StoragePage = lazy(() => import('./pages/admin/StoragePage'))
-const TasksPage = lazy(() => import('./pages/admin/TasksPage'))
-const PlaygroundPage = lazy(() => import('./pages/admin/PlaygroundPage'))
-const NewsListPage = lazy(() => import('./pages/admin/news/NewsListPage'))
-const NewsEditorPage = lazy(() => import('./pages/admin/news/NewsEditorPage'))
-const AiInsightsPage = lazy(() => import('./pages/admin/ai/AiInsightsPage'))
-const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'))
+const UserPage = lazyRetry(() => import('./pages/admin/UserPage.jsx'))
+const LogsPage = lazyRetry(() => import('./pages/admin/LogsPage.jsx'))
+const AdminSettingsPage = lazyRetry(() => import('./pages/admin/SettingsPage.jsx'))
+const DatabasePage = lazyRetry(() => import('./pages/admin/DatabasePage.jsx'))
+const StoragePage = lazyRetry(() => import('./pages/admin/StoragePage.jsx'))
+const TasksPage = lazyRetry(() => import('./pages/admin/TasksPage.jsx'))
+const PlaygroundPage = lazyRetry(() => import('./pages/admin/PlaygroundPage.jsx'))
+const NewsListPage = lazyRetry(() => import('./pages/admin/news/NewsListPage.jsx'))
+const NewsEditorPage = lazyRetry(() => import('./pages/admin/news/NewsEditorPage.jsx'))
+const AiInsightsPage = lazyRetry(() => import('./pages/admin/ai/AiInsightsPage.jsx'))
+const AdminDashboardPage = lazyRetry(() => import('./pages/admin/AdminDashboardPage.jsx'))
 
 // Master Data
-const StudentsPage = lazy(() => import('./pages/master/StudentsPage'))
-const TeachersPage = lazy(() => import('./pages/master/TeachersPage'))
-const ClassesPage = lazy(() => import('./pages/master/ClassesPage'))
-const PoinPage = lazy(() => import('./pages/master/PoinPage'))
-const AcademicYearsPage = lazy(() => import('./pages/master/AcademicYearsPage'))
+const StudentsPage = lazyRetry(() => import('./pages/master/StudentsPage.jsx'))
+const TeachersPage = lazyRetry(() => import('./pages/master/TeachersPage.jsx'))
+const ClassesPage = lazyRetry(() => import('./pages/master/ClassesPage.jsx'))
+const PoinPage = lazyRetry(() => import('./pages/master/PoinPage.jsx'))
+const AcademicYearsPage = lazyRetry(() => import('./pages/master/AcademicYearsPage.jsx'))
 
 // ─── Role Hierarchy ───────────────────────────────────────────────────────────
 // developer > admin > guru = satpam > viewer
