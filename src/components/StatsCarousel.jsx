@@ -56,6 +56,7 @@ export default function StatsCarousel({ children, count, cols = 4, className = '
                             const cardWidth = el.scrollWidth / count
                             el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
                         }}
+                        aria-label={`Go to slide ${i + 1}`}
                         className={`rounded-full transition-all duration-300 ${
                             activeIdx === i
                                 ? 'w-5 h-1.5 bg-[var(--color-primary)]'

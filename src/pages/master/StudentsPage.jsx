@@ -101,6 +101,8 @@ import RaportBulananModal from '../../components/students/RaportBulananModal'
 import StudentFormModal from '../../components/students/StudentFormModal'
 import StudentInlineAddRow from '../../components/students/StudentInlineAddRow'
 import { StudentRow, StudentMobileCard, StudentSkeletonRow, StudentSkeletonCard } from '../../components/students/StudentRow'
+import StatsCarousel from '../../components/StatsCarousel'
+import { StatCard } from '../../components/ui/DataDisplay'
 
 const LazyQRCodeCanvas = React.lazy(() =>
     import('qrcode.react').then((m) => ({ default: m.QRCodeCanvas }))
@@ -702,111 +704,50 @@ export default function StudentsPage() {
                 </div>
 
                 {/* Stats Row Wrapper */}
-                <div className="relative mb-6 -mx-3 sm:mx-0 group/scroll">
-                    <div
-                        ref={statsScrollRef}
-                        onScroll={() => {
-                            const el = statsScrollRef.current
-                            if (!el) return
-                            const cardWidth = el.scrollWidth / STAT_CARD_COUNT
-                            const idx = Math.round(el.scrollLeft / cardWidth)
-                            setActiveStatIdx(Math.min(idx, STAT_CARD_COUNT - 1))
-                        }}
-                        className="flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0 lg:snap-none"
-                    >
-                        <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-[var(--color-primary)] flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-[var(--color-primary)]/5 overflow-hidden shadow-lg shadow-[var(--color-primary)]/5">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 flex items-center justify-center text-[var(--color-primary)] text-lg group-hover:scale-110 transition-transform shrink-0">
-                                <FontAwesomeIcon icon={faUsers} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">Total Siswa</p>
-                                <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{globalStats.total}</h3>
-                            </div>
-                        </div>
-
-                        <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-blue-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-blue-500/5 overflow-hidden shadow-lg shadow-blue-500/5">
-                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 text-lg group-hover:scale-110 transition-transform shrink-0">
-                                <FontAwesomeIcon icon={faMars} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">Putra</p>
-                                <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{globalStats.boys}</h3>
-                            </div>
-                        </div>
-
-                        <div className="w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-pink-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-pink-500/5 overflow-hidden shadow-lg shadow-pink-500/5">
-                            <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500 text-lg group-hover:scale-110 transition-transform shrink-0">
-                                <FontAwesomeIcon icon={faVenus} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">Putri</p>
-                                <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)]">{globalStats.girls}</h3>
-                            </div>
-                        </div>
-
-                        <div
-                            className="w-[210px] xs:w-[230px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-emerald-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-emerald-500/5 cursor-pointer active:scale-95 outline-none overflow-hidden shadow-lg shadow-emerald-500/5"
-                            onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
-                        >
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-lg group-hover:scale-110 transition-transform shrink-0">
-                                <FontAwesomeIcon icon={faTrophy} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">Rata-rata Poin</p>
-                                <div className="flex items-end gap-2 flex-wrap">
-                                    <h3 className={`text-xl font-black font-heading leading-none ${globalStats.avgPoints >= 0 ? 'text-[var(--color-text)]' : 'text-red-500'} `}>{globalStats.avgPoints}</h3>
-                                    {globalStats.avgPointsLastWeek !== null && (
-                                        <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-black shrink-0 ${globalStats.avgPointsLastWeek >= 0 ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
-                                            <FontAwesomeIcon icon={globalStats.avgPointsLastWeek >= 0 ? faArrowTrendUp : faArrowTrendDown} />
-                                            {Math.abs(globalStats.avgPointsLastWeek)}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Kelas Bermasalah */}
-                        <div
-                            className="w-[230px] xs:w-[250px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] border-t-red-500 flex items-center gap-3 group hover:border-t-4 transition-all hover:bg-red-500/5 cursor-pointer sm:col-span-2 lg:col-span-1 active:scale-95 outline-none overflow-hidden shadow-lg shadow-red-500/5"
-                            onClick={() => { if (globalStats.worstClass) { setFilterClass(''); setFilterPointMode('risk') } }}
-                            title="Klik untuk filter siswa risiko"
-                        >
-                            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 text-lg group-hover:scale-110 transition-transform shrink-0">
-                                <FontAwesomeIcon icon={faTriangleExclamation} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">Kelas Bermasalah</p>
-                                {globalStats.worstClass ? (
-                                    <>
-                                        <h3 className="text-[13px] font-black font-heading leading-tight text-red-500 line-clamp-2" title={globalStats.worstClass.name}>{globalStats.worstClass.name}</h3>
-                                        <p className="text-[9px] font-bold text-red-500/60 mt-0.5 whitespace-nowrap">Average {globalStats.worstClass.avg} poin</p>
-                                    </>
-                                ) : (
-                                    <h3 className="text-sm font-black text-[var(--color-text-muted)]">-</h3>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Dot Indicators - Mobile Only */}
-                    <div className="flex justify-center gap-1.5 mt-2 sm:hidden">
-                        {Array.from({ length: STAT_CARD_COUNT }).map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => {
-                                    const el = statsScrollRef.current
-                                    if (!el) return
-                                    const cardWidth = el.scrollWidth / STAT_CARD_COUNT
-                                    el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
-                                }}
-                                className={`rounded-full transition-all duration-300 ${activeStatIdx === i
-                                    ? 'w-5 h-1.5 bg-[var(--color-primary)]'
-                                    : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
-                                    }`}
-                            />
-                        ))}
-                    </div>
-                </div>
+                <StatsCarousel count={STAT_CARD_COUNT} cols={5}>
+                    <StatCard 
+                        icon={faUsers}
+                        label="Total Siswa"
+                        value={globalStats.total}
+                        iconBg="bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]"
+                    />
+                    <StatCard 
+                        icon={faMars}
+                        label="Putra"
+                        value={globalStats.boys}
+                        borderColor="border-t-blue-500"
+                        iconBg="bg-blue-500/10 text-blue-500"
+                    />
+                    <StatCard 
+                        icon={faVenus}
+                        label="Putri"
+                        value={globalStats.girls}
+                        borderColor="border-t-pink-500"
+                        iconBg="bg-pink-500/10 text-pink-500"
+                    />
+                    <StatCard 
+                        icon={faTrophy}
+                        label="Rata-rata Poin"
+                        value={globalStats.avgPoints}
+                        valueClassName={globalStats.avgPoints >= 0 ? 'text-2xl text-[var(--color-text)]' : 'text-2xl text-red-500'}
+                        trend={globalStats.avgPointsLastWeek !== null ? Math.abs(globalStats.avgPointsLastWeek) : null}
+                        trendUp={globalStats.avgPointsLastWeek >= 0}
+                        borderColor="border-t-emerald-500"
+                        iconBg="bg-emerald-500/10 text-emerald-500"
+                        onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
+                    />
+                    <StatCard 
+                        icon={faTriangleExclamation}
+                        label="Kelas Bermasalah"
+                        value={globalStats.worstClass ? globalStats.worstClass.name : '-'}
+                        valueClassName={globalStats.worstClass ? 'text-[13px] text-red-500' : 'text-2xl text-[var(--color-text-muted)]'}
+                        subValue={globalStats.worstClass ? `Average ${globalStats.worstClass.avg} poin` : undefined}
+                        borderColor="border-t-red-500"
+                        iconBg="bg-red-500/10 text-red-500"
+                        onClick={() => { if (globalStats.worstClass) { setFilterClass(''); setFilterPointMode('risk') } }}
+                        title="Klik untuk filter siswa risiko"
+                    />
+                </StatsCarousel>
 
                 {/* â”€â”€ INSIGHT ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                 {(globalStats.risk > 0 || globalStats.incompleteCount > 0 || globalStats.topPerformer || (globalStats.worstClass && globalStats.worstClass.avg < 0) || globalStats.avgPointsLastWeek !== null) && (
