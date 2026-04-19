@@ -349,11 +349,11 @@ export default function DashboardPage() {
                                 onClick={handleExportPDF}
                                 disabled={loading || isRefreshing}
                                 data-html2canvas-ignore="true"
-                                className="h-9 px-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-indigo-600 hover:border-indigo-500/30 transition-all flex items-center gap-2.5 group shadow-sm"
+                                className="h-9 w-9 sm:w-auto sm:px-3 rounded-lg border flex items-center justify-center sm:justify-start gap-2 transition-all active:scale-95 bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                                 title="Download Laporan PDF"
                             >
-                                <FontAwesomeIcon icon={faFilePdf} className="text-xs group-hover:scale-110 transition-transform" />
-                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">
+                                <FontAwesomeIcon icon={faFilePdf} className="text-sm" />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
                                     Export Summary
                                 </span>
                             </button>
@@ -363,12 +363,12 @@ export default function DashboardPage() {
                                 disabled={loading || isRefreshing}
                                 data-html2canvas-ignore="true"
                                 aria-label="Refresh Dashboard Data"
-                                className={`h-9 px-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 transition-all flex items-center gap-2.5 group ${isRefreshing ? 'opacity-50' : ''}`}
+                                className={`h-9 w-9 sm:w-auto sm:px-3 rounded-lg border flex items-center justify-center sm:justify-start gap-2 transition-all active:scale-95 bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] ${isRefreshing ? 'opacity-50 cursor-not-allowed scale-95' : ''}`}
                                 title="Refresh Data"
                             >
-                                <FontAwesomeIcon icon={faRotate} className={`text-xs ${isRefreshing ? 'fa-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-                                <span className="text-[10px] font-black uppercase tracking-widest">
-                                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                                <FontAwesomeIcon icon={faRotate} className={`text-sm ${isRefreshing ? 'animate-spin' : ''}`} />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                                    Refresh
                                 </span>
                             </button>
                         </div>

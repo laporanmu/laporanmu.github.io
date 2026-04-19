@@ -549,7 +549,7 @@ function FormInternal({ internalList, onSubmit, loading }) {
 
       {/* Submit */}
       <button onClick={submit} disabled={loading || !canSubmit}
-        className="w-full h-10 mt-1 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20">
+        className="w-full h-10 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20">
         {loading
           ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
           : <FontAwesomeIcon icon={faSignOutAlt} />}
@@ -648,7 +648,7 @@ function FormTamu({ onSubmit, loading }) {
       />
 
       {/* Photo Capture Placeholder UI - compact mode */}
-      <div className="p-2.5 mt-1 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center justify-between">
+      <div className="p-2.5 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center justify-between">
         <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group cursor-pointer hover:border-emerald-500/30 transition-all">
                <FontAwesomeIcon icon={faPlus} className="text-[9px] opacity-40 group-hover:scale-110 transition-transform" />
@@ -663,7 +663,7 @@ function FormTamu({ onSubmit, loading }) {
 
       {/* Submit */}
       <button onClick={submit} disabled={loading || !canSubmit}
-        className="w-full h-10 mt-1 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20">
+        className="w-full h-10 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20">
         {loading
           ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
           : <FontAwesomeIcon icon={faSignInAlt} />}
@@ -1632,17 +1632,17 @@ export default function GatePage() {
           actions={
             <div className="flex items-center gap-3">
               <LiveClock />
-              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
+              <div className="flex items-center gap-2">
                 <button onClick={() => setShowConfig(true)}
-                  className="h-8 w-8 rounded-lg text-[10px] text-[var(--color-text-muted)] hover:text-indigo-600 hover:bg-indigo-500/10 flex items-center justify-center transition-all"
+                  className="h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]"
                   title="Konfigurasi Bot">
                   <FontAwesomeIcon icon={faGear} />
                 </button>
                 <button onClick={handlePrint}
-                  className="h-8 px-3 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] flex items-center gap-2 transition-all shadow-sm"
+                  className="h-9 w-9 sm:w-auto sm:px-3 rounded-lg border flex items-center justify-center sm:justify-start gap-2 transition-all active:scale-95 bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                   title="Cetak Log">
-                  <FontAwesomeIcon icon={faPrint} />
-                  <span>CETAK</span>
+                  <FontAwesomeIcon icon={faPrint} className="text-sm" />
+                  <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">CETAK</span>
                 </button>
               </div>
             </div>
@@ -1760,8 +1760,8 @@ export default function GatePage() {
                         variant="plain"
                         color="emerald"
                         icon={faCheck}
-                        title="Area Sekolah Steril"
-                        description="Semua guru & karyawan terdeteksi berada di dalam area sekolah."
+                        title="Semua Hadir & Terdata"
+                        description="Tidak ada catatan guru atau karyawan yang sedang berada di luar area sekolah saat ini."
                       />
                     : <div className="space-y-2">
                       {todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).map(log => (
