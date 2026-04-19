@@ -41,6 +41,7 @@ function MenuButton({ icon, label, onClick, active = false }) {
         <button
             onClick={onClick}
             type="button"
+            aria-label={`Buka menu ${label}`}
             className={`py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors relative ${active ? ACTIVE : INACTIVE}`}
         >
             {active && <span className="absolute top-1.5 w-1 h-1 rounded-full bg-indigo-600" />}

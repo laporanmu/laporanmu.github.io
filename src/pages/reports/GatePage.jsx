@@ -16,7 +16,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import StatsCarousel from '../../components/StatsCarousel'
 import Breadcrumb from '../../components/ui/Breadcrumb'
 import PageHeader from '../../components/ui/PageHeader'
-import { StatCard } from '../../components/ui/DataDisplay'
+import { StatCard, EmptyState } from '../../components/ui/DataDisplay'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
@@ -230,26 +230,7 @@ function LiveClock() {
   )
 }
 
-function EmptyPlaceholder({ icon, title, desc, color = 'emerald' }) {
-  const colors = {
-    emerald: { bg: 'bg-emerald-500/10', icon: 'text-emerald-500', border: 'border-emerald-500/20' },
-    blue: { bg: 'bg-blue-500/10', icon: 'text-blue-500', border: 'border-blue-500/20' },
-    amber: { bg: 'bg-amber-500/10', icon: 'text-amber-500', border: 'border-amber-500/20' },
-    slate: { bg: 'bg-slate-500/10', icon: 'text-slate-500', border: 'border-slate-500/20' }
-  }[color]
 
-  return (
-    <div className="flex flex-col items-center justify-center py-10 px-4 text-center group animate-in fade-in zoom-in duration-500">
-      <div className={`w-16 h-16 rounded-[2rem] ${colors.bg} border ${colors.border} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 shadow-xl shadow-transparent hover:shadow-${color}-500/10`}>
-        <FontAwesomeIcon icon={icon} className={`text-xl ${colors.icon}`} />
-      </div>
-      <h4 className="text-[12px] font-black text-[var(--color-text)] mb-1 uppercase tracking-wider">{title}</h4>
-      <p className="text-[10px] text-[var(--color-text-muted)] font-medium leading-relaxed max-w-[180px] opacity-70">
-        {desc}
-      </p>
-    </div>
-  )
-}
 
 // ─── DateTimeInput — date + time picker berdampingan ──────────────────────────
 
@@ -284,27 +265,25 @@ function DateTimeInput({ dateValue, timeValue, onDateChange, onTimeChange, label
   return (
     <div>
       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">
-        {label} <span className="normal-case opacity-70">(otomatis, bisa diubah)</span>
+        {label} <span className="normal-case opacity-70">(Otomatis/Bisa diubah)</span>
       </label>
       <div className="grid grid-cols-2 gap-2">
-        {/* Tanggal */}
         <div className="relative">
           <FontAwesomeIcon icon={faCalendarDay} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
           <input
             type="date"
             value={dateValue}
             onChange={e => onDateChange(e.target.value)}
-            className="w-full h-10 pl-8 pr-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-all"
+            className="w-full h-9 pl-8 pr-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-all"
           />
         </div>
-        {/* Jam — force 24h lewat input type="time" (selalu 24h di semua browser) */}
         <div className="relative">
           <FontAwesomeIcon icon={faClock} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
           <input
             type="time"
             value={timeValue}
             onChange={e => onTimeChange(e.target.value)}
-            className="w-full h-10 pl-8 pr-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-all"
+            className="w-full h-9 pl-8 pr-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-all"
           />
         </div>
       </div>
@@ -410,13 +389,13 @@ function TeacherSearch({ teacherList, value, onChange, label }) {
       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">{label}</label>
       <div onClick={() => { setOpen(true); setFocusedIdx(0) }}
         data-search-trigger
-        className={`w-full h-10 px-3 rounded-xl border bg-[var(--color-surface)] flex items-center gap-2 cursor-text transition-all ${open ? 'border-[var(--color-primary)] shadow-sm shadow-[var(--color-primary)]/20' : 'border-[var(--color-border)]'}`}>
+        className={`w-full h-9 px-3 rounded-xl border bg-[var(--color-surface)] flex items-center gap-2 cursor-text transition-all ${open ? 'border-[var(--color-primary)] shadow-sm shadow-[var(--color-primary)]/20' : 'border-[var(--color-border)]'}`}>
         <FontAwesomeIcon icon={faSearch} className="text-[10px] text-[var(--color-text-muted)] shrink-0" />
         {open ? (
           <input autoFocus value={query}
             onChange={e => { setQuery(e.target.value); setFocusedIdx(0) }}
             onKeyDown={handleKeyDown}
-            placeholder={`Cari ${label.toLowerCase()} by nama / NIP...`}
+            placeholder={`Cari ${label.toLowerCase()} by nama...`}
             className="flex-1 text-[12px] font-bold text-[var(--color-text)] bg-transparent outline-none placeholder:text-[var(--color-text-muted)]/40"
             onClick={e => e.stopPropagation()} />
         ) : (
@@ -515,12 +494,12 @@ function FormInternal({ internalList, onSubmit, loading }) {
   const handleKeyDown = e => { if (e.key === 'Enter' && canSubmit && !loading) submit() }
 
   return (
-    <div className="space-y-4" onKeyDown={handleKeyDown}>
+    <div className="space-y-3" onKeyDown={handleKeyDown}>
       {/* Toggle Tipe Internal */}
       <div className="flex gap-2">
         {VISITOR_TYPES.filter(t => t.key !== 'tamu').map(t => (
           <button key={t.key} onClick={() => { setVisitorType(t.key); setPersonId('') }}
-            className={`flex-1 h-9 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 border transition-all ${visitorType === t.key
+            className={`flex-1 h-8 rounded-xl text-[10px] font-black flex items-center justify-center gap-1.5 border transition-all ${visitorType === t.key
               ? `${t.bg} ${t.color} ${t.border}`
               : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
             <FontAwesomeIcon icon={t.icon} className="text-[10px]" />{t.label}
@@ -540,7 +519,7 @@ function FormInternal({ internalList, onSubmit, loading }) {
           <FontAwesomeIcon icon={faTag} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
           <input value={purpose} onChange={e => setPurpose(e.target.value)}
             placeholder="Contoh: Keluar makan, urusan bank..."
-            className="w-full h-10 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+            className="w-full h-9 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
         </div>
         <PresetPills presets={activePresets} value={purpose} onSelect={setPurpose} />
       </div>
@@ -548,30 +527,29 @@ function FormInternal({ internalList, onSubmit, loading }) {
       <DateTimeInput
         dateValue={dateOut} timeValue={timeOut}
         onDateChange={setDateOut} onTimeChange={setTimeOut}
-        label="Tanggal & Jam Keluar"
+        label="Waktu Keluar"
       />
 
       {/* Estimasi Kembali (ETA) */}
-      <div className={`p-4 rounded-xl border transition-all ${timeEst ? 'bg-indigo-500/5 border-indigo-500/30' : 'bg-[var(--color-surface-alt)]/30 border-dashed border-[var(--color-border)]'}`}>
-        <div className="flex items-center gap-2 mb-3">
-          <FontAwesomeIcon icon={faClock} className={`text-[10px] ${timeEst ? 'text-indigo-500' : 'text-[var(--color-text-muted)]'}`} />
-          <span className="text-[10px] font-black uppercase tracking-wider">Estimasi Kembali (Opsional)</span>
+      <div className={`p-3 rounded-xl border transition-all ${timeEst ? 'bg-indigo-500/5 border-indigo-500/30' : 'bg-[var(--color-surface-alt)]/30 border-dashed border-[var(--color-border)]'}`}>
+        <div className="flex items-center gap-2 mb-2.5">
+          <FontAwesomeIcon icon={faClock} className={`text-[9px] ${timeEst ? 'text-indigo-500' : 'text-[var(--color-text-muted)]'}`} />
+          <span className="text-[9px] font-black uppercase tracking-wider">Estimasi Kembali</span>
         </div>
         <div className="relative">
           <input type="time" value={timeEst} onChange={e => setTimeEst(e.target.value)}
-            className="w-full h-10 px-3 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-black text-[var(--color-text)] focus:outline-none focus:border-indigo-500 transition-all" />
+            className="w-full h-9 px-3 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] focus:outline-none focus:border-indigo-500 transition-all" />
           {timeEst && (
             <button onClick={() => setTimeEst('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-red-500 transition-all">
               <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
             </button>
           )}
         </div>
-        <p className="text-[9px] text-[var(--color-text-muted)] mt-2 opacity-60">Sistem akan memberi alert jika belum kembali melewati jam ini.</p>
       </div>
 
       {/* Submit */}
       <button onClick={submit} disabled={loading || !canSubmit}
-        className="w-full h-11 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-red-500 hover:bg-red-600 active:scale-[0.98] text-white shadow-lg shadow-red-500/20">
+        className="w-full h-10 mt-1 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20">
         {loading
           ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
           : <FontAwesomeIcon icon={faSignOutAlt} />}
@@ -579,7 +557,7 @@ function FormInternal({ internalList, onSubmit, loading }) {
       </button>
 
       {/* Hint shortcut */}
-      <div className="flex items-center gap-1.5 justify-end opacity-30 mt-2">
+      <div className="flex items-center gap-1.5 justify-end opacity-30 mt-1.5 cursor-default hover:opacity-100 transition-opacity">
         <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" />
         <span className="text-[9px] font-bold">Tekan Enter untuk Catat</span>
       </div>
@@ -611,74 +589,53 @@ function FormTamu({ onSubmit, loading }) {
   const handleKeyDown = e => { if (e.key === 'Enter' && canSubmit && !loading) submit() }
 
   return (
-    <div className="space-y-4" onKeyDown={handleKeyDown}>
+    <div className="space-y-3" onKeyDown={handleKeyDown}>
       {/* Nama & Instansi */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">Nama Tamu <span className="text-red-400">*</span></label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1 block">Nama <span className="text-red-400">*</span></label>
           <div className="relative">
             <FontAwesomeIcon icon={faIdCard} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Nama lengkap..."
-              className="w-full h-10 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+              className="w-full h-9 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
           </div>
         </div>
         <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">Instansi / Asal</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1 block">Instansi</label>
           <div className="relative">
             <FontAwesomeIcon icon={faBuilding} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
-            <input value={institution} onChange={e => setInstitution(e.target.value)} placeholder="Asal instansi / desa..."
-              className="w-full h-10 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+            <input value={institution} onChange={e => setInstitution(e.target.value)} placeholder="Asal/Desa..."
+              className="w-full h-9 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
           </div>
         </div>
       </div>
 
       {/* Keperluan + presets tamu */}
       <div>
-        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">
+        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1 block">
           Keperluan <span className="text-red-400">*</span>
         </label>
         <div className="relative">
           <FontAwesomeIcon icon={faTag} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
           <input value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="Keperluan kunjungan..."
-            className="w-full h-10 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+            className="w-full h-9 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
         </div>
-        {/* FIX: Tambah preset keperluan untuk tamu */}
         <PresetPills presets={PRESETS_TAMU} value={purpose} onSelect={setPurpose} />
       </div>
 
       {/* Menemui & Kendaraan */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         <div className="col-span-2 sm:col-span-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">Menemui / Tujuan</label>
-          <input value={destination} onChange={e => setDestination(e.target.value)} placeholder="Ustadz X, ruang TU..."
-            className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1 block">Menemui / Tujuan</label>
+          <input value={destination} onChange={e => setDestination(e.target.value)} placeholder="Ustadz X, TU..."
+            className="w-full h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">No. Kendaraan</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1 block">Kendaraan</label>
           <div className="relative">
             <FontAwesomeIcon icon={faMotorcycle} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
-            <input value={vehicle} onChange={e => setVehicle(e.target.value)} placeholder="P 1234 AB..."
-              className="w-full h-10 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
-          </div>
-        </div>
-      </div>
-
-      {/* Photo Capture Placeholder UI */}
-      <div className="p-3 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faIdCard} className="text-[10px] text-emerald-500" />
-            <span className="text-[10px] font-black uppercase tracking-wider">Identitas Visual</span>
-          </div>
-          <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">Enterprise</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group cursor-pointer hover:border-emerald-500/30 transition-all">
-            <FontAwesomeIcon icon={faPlus} className="text-[10px] opacity-40 group-hover:scale-110 transition-transform" />
-          </div>
-          <div className="flex-1">
-            <p className="text-[10px] font-bold text-[var(--color-text)] leading-tight">Ambil Foto / Scan KTP</p>
-            <p className="text-[9px] text-[var(--color-text-muted)] opacity-60">Opsional, untuk database keamanan tamu.</p>
+            <input value={vehicle} onChange={e => setVehicle(e.target.value)} placeholder="Nopol opsional..."
+              className="w-full h-9 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
           </div>
         </div>
       </div>
@@ -687,12 +644,26 @@ function FormTamu({ onSubmit, loading }) {
       <DateTimeInput
         dateValue={dateIn} timeValue={timeIn}
         onDateChange={setDateIn} onTimeChange={setTimeIn}
-        label="Tanggal & Jam Masuk"
+        label="Waktu Masuk"
       />
+
+      {/* Photo Capture Placeholder UI - compact mode */}
+      <div className="p-2.5 mt-1 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group cursor-pointer hover:border-emerald-500/30 transition-all">
+               <FontAwesomeIcon icon={faPlus} className="text-[9px] opacity-40 group-hover:scale-110 transition-transform" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-[var(--color-text)] leading-tight">Foto Identitas (Opsional)</p>
+              <p className="text-[9px] text-[var(--color-text-muted)] opacity-60">Fitur di versi Enterprise</p>
+            </div>
+        </div>
+        <FontAwesomeIcon icon={faIdCard} className="text-[14px] text-emerald-500/20" />
+      </div>
 
       {/* Submit */}
       <button onClick={submit} disabled={loading || !canSubmit}
-        className="w-full h-11 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white shadow-lg shadow-emerald-500/20">
+        className="w-full h-10 mt-1 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20">
         {loading
           ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
           : <FontAwesomeIcon icon={faSignInAlt} />}
@@ -700,7 +671,7 @@ function FormTamu({ onSubmit, loading }) {
       </button>
 
       {/* Hint shortcut */}
-      <div className="flex items-center gap-1.5 justify-end opacity-30 mt-2">
+      <div className="flex items-center gap-1.5 justify-end opacity-30 mt-1.5 cursor-default hover:opacity-100 transition-opacity">
         <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" />
         <span className="text-[9px] font-bold">Tekan Enter untuk Catat</span>
       </div>
@@ -1654,41 +1625,37 @@ export default function GatePage() {
 
         {/* PAGE HEADER */}
         <PageHeader 
-          badge="Reports"
-          breadcrumbs={['Access Monitor']}
-          title="Portal Keluar Masuk"
-          subtitle={
-            <>
-              Pencatatan izin keluar guru/karyawan dan kunjungan tamu.
-              <br />
-              <span className="text-[10px] font-bold opacity-60">
-                Gunakan preset alasan agar pencatatan lebih cepat dan konsisten di laporan.
-              </span>
-            </>
-          }
+          badge="Operational"
+          breadcrumbs={['Gate Monitor']}
+          title="Log Keluar Masuk"
+          subtitle="Pencatatan real-time warga sekolah & tamu eksternal."
           actions={
-            <>
+            <div className="flex items-center gap-3">
               <LiveClock />
-              <button onClick={() => setShowConfig(true)}
-                className="h-9 w-9 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-indigo-500 hover:border-indigo-500/30 flex items-center justify-center transition-all shrink-0"
-                title="Konfigurasi Bot">
-                <FontAwesomeIcon icon={faGear} />
-              </button>
-              <button onClick={handlePrint}
-                className="h-9 px-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-2 transition-all shrink-0">
-                <FontAwesomeIcon icon={faPrint} />Cetak
-              </button>
-            </>
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
+                <button onClick={() => setShowConfig(true)}
+                  className="h-8 w-8 rounded-lg text-[10px] text-[var(--color-text-muted)] hover:text-indigo-600 hover:bg-indigo-500/10 flex items-center justify-center transition-all"
+                  title="Konfigurasi Bot">
+                  <FontAwesomeIcon icon={faGear} />
+                </button>
+                <button onClick={handlePrint}
+                  className="h-8 px-3 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] flex items-center gap-2 transition-all shadow-sm"
+                  title="Cetak Log">
+                  <FontAwesomeIcon icon={faPrint} />
+                  <span>CETAK</span>
+                </button>
+              </div>
+            </div>
           }
         />
 
         {/* STATS */}
-        <StatsCarousel count={4}>
-          {loadingLogs ? [1, 2, 3, 4].map(i => <StatSkeleton key={i} />) : [
-            { label: 'Total Hari Ini', value: stats.total, icon: faClipboardList, bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]', border: 'border-t-[var(--color-primary)]' },
-            { label: 'Guru Sedang Keluar', value: stats.keluar, icon: faPersonWalkingArrowRight, bg: 'bg-red-500/10 text-red-500', border: 'border-t-red-500' },
-            { label: 'Tamu di Dalam', value: stats.dalamTamu, icon: faBuilding, bg: 'bg-emerald-500/10 text-emerald-500', border: 'border-t-emerald-500' },
-            { label: 'Total Tamu', value: stats.tamu, icon: faUserFriends, bg: 'bg-amber-500/10 text-amber-500', border: 'border-t-amber-500' },
+        <StatsCarousel count={4} className="mb-4">
+          {[
+            { label: 'Total Hari Ini', value: stats.total, icon: faClipboardList, bg: 'bg-indigo-500/10 text-indigo-500', border: 'bg-indigo-500' },
+            { label: 'Siswa/Guru Keluar', value: stats.keluar, icon: faPersonWalkingArrowRight, bg: 'bg-rose-500/10 text-rose-500', border: 'bg-rose-500' },
+            { label: 'Tamu di Dalam', value: stats.dalamTamu, icon: faBuilding, bg: 'bg-emerald-500/10 text-emerald-500', border: 'bg-emerald-500' },
+            { label: 'Kunjungan Tamu', value: stats.tamu, icon: faUserFriends, bg: 'bg-amber-500/10 text-amber-500', border: 'bg-amber-500' },
           ].map((s, i) => (
             <StatCard 
               key={i}
@@ -1698,7 +1665,7 @@ export default function GatePage() {
               borderColor={s.border}
               iconBg={s.bg}
               loading={loadingLogs}
-              className="cursor-default"
+              className="min-w-[200px]"
             />
           ))}
         </StatsCarousel>
@@ -1760,14 +1727,14 @@ export default function GatePage() {
 
               {/* Sedang Keluar */}
               <div className="glass rounded-[1.5rem] p-5">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-5">
                   <div>
                     <p className="text-[13px] font-black text-[var(--color-text)]">Sedang Keluar</p>
-                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Guru &amp; karyawan belum kembali</p>
+                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Guru & karyawan belum kembali</p>
                   </div>
-                  <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${stats.keluar > 0 ? 'text-red-500 bg-red-500/10' : 'text-[var(--color-text-muted)] bg-[var(--color-surface-alt)]'}`}>
-                    {stats.keluar} orang
-                  </span>
+                  <div className={`px-2 py-1 rounded-lg text-[9px] font-black tabular-nums transition-all ${stats.keluar > 0 ? 'bg-rose-500/10 text-rose-600 shadow-sm' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]/50'}`}>
+                    {stats.keluar} ORANG
+                  </div>
                 </div>
 
                 {/* Bulk Selection Toolbar */}
@@ -1789,12 +1756,13 @@ export default function GatePage() {
                 {loadingLogs
                   ? <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
                   : todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).length === 0
-                    ? <EmptyPlaceholder
-                      icon={faCheck}
-                      title="Zero Active Logs"
-                      desc="Semua guru & karyawan saat ini terdeteksi berada di dalam area sekolah."
-                      color="emerald"
-                    />
+                    ? <EmptyState 
+                        variant="plain"
+                        color="emerald"
+                        icon={faCheck}
+                        title="Area Sekolah Steril"
+                        description="Semua guru & karyawan terdeteksi berada di dalam area sekolah."
+                      />
                     : <div className="space-y-2">
                       {todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).map(log => (
                         <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog}
@@ -1806,24 +1774,25 @@ export default function GatePage() {
 
               {/* Tamu di Dalam */}
               <div className="glass rounded-[1.5rem] p-5">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-5">
                   <div>
                     <p className="text-[13px] font-black text-[var(--color-text)]">Tamu di Dalam</p>
-                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Belum checkout</p>
+                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Kunjungan masih aktif</p>
                   </div>
-                  <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${stats.dalamTamu > 0 ? 'text-emerald-500 bg-emerald-500/10' : 'text-[var(--color-text-muted)] bg-[var(--color-surface-alt)]'}`}>
-                    {stats.dalamTamu} orang
-                  </span>
+                  <div className={`px-2 py-1 rounded-lg text-[9px] font-black tabular-nums transition-all ${stats.dalamTamu > 0 ? 'bg-emerald-500/10 text-emerald-600 shadow-sm' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]/50'}`}>
+                    {stats.dalamTamu} ORANG
+                  </div>
                 </div>
                 {loadingLogs
                   ? <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
                   : todayLogs.filter(l => l.visitor_type === 'tamu' && !l.check_out).length === 0
-                    ? <EmptyPlaceholder
-                      icon={faUserFriends}
-                      title="Tanpa Pengunjung"
-                      desc="Tidak ada tamu yang terdaftar di sistem sedang berada di dalam area."
-                      color="slate"
-                    />
+                    ? <EmptyState 
+                        variant="plain"
+                        color="slate"
+                        icon={faUserFriends}
+                        title="Belum Ada Tamu"
+                        description="Tidak ada kunjungan tamu eksternal yang terdaftar aktif di sistem saat ini."
+                      />
                     : <div className="space-y-2">
                       {todayLogs.filter(l => l.visitor_type === 'tamu' && !l.check_out).map(log => (
                         <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />

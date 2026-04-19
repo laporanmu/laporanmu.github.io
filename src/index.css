@@ -673,3 +673,21 @@ tr:hover td {
 
   .delay-300 { animation-delay: 300ms; }
 }
+
+/* ── PRINT STYLES (Professional Dashboard Export) ── */
+@media print {
+  @page { size: A4; margin: 15mm; }
+  nav, aside, button, footer, .no-print, [data-html2canvas-ignore="true"] {
+    display: none !important;
+  }
+  body { background: white !important; color: black !important; padding: 0 !important; }
+  .max-w-\[1800px\] { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .glass, .card {
+    background: white !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    border-radius: 12px !important;
+  }
+}

@@ -114,6 +114,7 @@ function NotifItem({ notif, onDismiss, onNavigate }) {
                     {notif.action && (
                         <button
                             onClick={() => onNavigate(notif.action.route)}
+                            aria-label={`Buka ${notif.action.label}`}
                             className={`mt-1.5 text-[9px] font-black uppercase tracking-widest flex items-center gap-1 ${s.text} hover:opacity-70 transition-opacity`}
                         >
                             {notif.action.label} <FontAwesomeIcon icon={faArrowRight} className="text-[7px]" />
@@ -124,6 +125,7 @@ function NotifItem({ notif, onDismiss, onNavigate }) {
                     onClick={() => onDismiss(notif.id)}
                     className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[9px]"
                     title="Tutup"
+                    aria-label="Tutup notifikasi"
                 >
                     <FontAwesomeIcon icon={faXmark} />
                 </button>
@@ -169,6 +171,7 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
                 <button
                     onClick={onRefresh}
                     title="Refresh"
+                    aria-label="Refresh notifikasi"
                     className={`p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition text-xs ${refreshing ? 'animate-spin pointer-events-none' : ''}`}
                 >
                     <FontAwesomeIcon icon={faRotateRight} />
@@ -341,8 +344,9 @@ export default function TopNav({ title, subtitle }) {
                         ? 'bg-[var(--color-surface-alt)] text-[var(--color-primary)]'
                         : 'hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'}
                     ${urgentCount > 0 ? 'animate-[bellShake_2s_ease-in-out_infinite]' : ''}`}
-                type="button"
+                aria-label="Notifikasi"
                 title="Notifikasi"
+                type="button"
             >
                 <FontAwesomeIcon icon={faBell} />
                 <NotifBadge count={urgentCount || (totalCount > 0 ? totalCount : 0)} />
@@ -387,6 +391,7 @@ export default function TopNav({ title, subtitle }) {
 
                                 <button
                                     onClick={toggleTheme}
+                                    aria-label={isDark ? "Aktifkan Mode Terang" : "Aktifkan Mode Gelap"}
                                     className="p-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition"
                                     type="button"
                                 >
@@ -396,6 +401,7 @@ export default function TopNav({ title, subtitle }) {
                                 <div className="relative flex-shrink-0" ref={mobileProfileRef}>
                                     <button
                                         onClick={() => setProfileOpen(v => !v)}
+                                        aria-label="Buka Menu Profil"
                                         className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-2xl hover:bg-[var(--color-surface-alt)] transition border border-transparent hover:border-[var(--color-border)]"
                                         type="button"
                                     >
@@ -437,8 +443,12 @@ export default function TopNav({ title, subtitle }) {
 
                             {/* Left: Logo */}
                             <div className="flex items-center gap-2">
-                                <div className="w-9 h-9 rounded-2xl bg-indigo-600 text-white font-black flex items-center justify-center">
-                                    L
+                                <div 
+                                    className="w-9 h-9 rounded-2xl bg-indigo-600 text-white font-black flex items-center justify-center shrink-0"
+                                    aria-label="Laporanmu Logo"
+                                    role="img"
+                                >
+                                    <span aria-hidden="true">L</span>
                                 </div>
                                 <div>
                                     <p className="text-sm font-extrabold text-[var(--color-text)] leading-tight">{title || "Dashboard"}</p>
@@ -456,11 +466,12 @@ export default function TopNav({ title, subtitle }) {
                                     {/* Reports Dropdown */}
                                     <div className="relative" ref={reportsRef}>
                                         <button
-                                            onClick={() => { setReportsOpen(v => !v); setMasterOpen(false) }}
+                                            onClick={() => setReportsOpen(v => !v)}
+                                            aria-label="Menu Laporan"
                                             className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2
                                                 ${reportsOpen
                                                     ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]"
-                                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`}
+                                                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`}
                                             type="button"
                                         >
                                             <FontAwesomeIcon icon={faClipboardList} />
@@ -498,7 +509,8 @@ export default function TopNav({ title, subtitle }) {
                                     {/* Master Dropdown */}
                                     <div className="relative" ref={masterRef}>
                                         <button
-                                            onClick={() => { setMasterOpen(v => !v); setReportsOpen(false) }}
+                                            onClick={() => setMasterOpen(v => !v)}
+                                            aria-label="Menu Master Data"
                                             className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2
                                                 ${masterOpen
                                                     ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]"
@@ -541,7 +553,8 @@ export default function TopNav({ title, subtitle }) {
                                     {['developer', 'admin'].includes(profile?.role?.toLowerCase()) && (
                                         <div className="relative" ref={adminRef}>
                                             <button
-                                                onClick={() => { setAdminOpen(v => !v); setReportsOpen(false); setMasterOpen(false) }}
+                                                onClick={() => setAdminOpen(v => !v)}
+                                                aria-label="Menu Admin"
                                                 className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2
                                                     ${adminOpen
                                                         ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]"
@@ -596,6 +609,7 @@ export default function TopNav({ title, subtitle }) {
 
                                 <button
                                     onClick={toggleTheme}
+                                    aria-label={isDark ? "Aktifkan Mode Terang" : "Aktifkan Mode Gelap"}
                                     className="p-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition"
                                     type="button"
                                 >
@@ -606,6 +620,7 @@ export default function TopNav({ title, subtitle }) {
                                 <div className="relative" ref={desktopProfileRef}>
                                     <button
                                         onClick={() => setProfileOpen(v => !v)}
+                                        aria-label="Menu Profil"
                                         className="flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-2xl hover:bg-[var(--color-surface-alt)] transition border border-transparent hover:border-[var(--color-border)]"
                                         type="button"
                                     >

@@ -1,24 +1,21 @@
-import { useEffect, useMemo, useState, useCallback, memo, lazy, Suspense } from 'react'
+import { useEffect, useMemo, useState, useCallback, memo, lazy, Suspense, useRef } from 'react'
 import StatsCarousel from '../components/StatsCarousel'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faUsers,
     faClipboardList,
-    faArrowUp,
-    faArrowDown,
-    faPlus,
-    faArrowRight,
     faExclamationTriangle,
     faTrophy,
-    faDoorOpen,
-    faClock,
     faRotate,
+    faDownload,
+    faFilePdf,
+    faSearch
 } from '@fortawesome/free-solid-svg-icons'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import Breadcrumb from '../components/ui/Breadcrumb'
 import PageHeader from '../components/ui/PageHeader'
-import { StatCard } from '../components/ui/DataDisplay'
+import { StatCard, EmptyState } from '../components/ui/DataDisplay'
 
 // Modular Components
 const AnalyticsRow = lazy(() => import('./dashboard/components/AnalyticsRow'))
@@ -70,6 +67,8 @@ function formatTrend(now, prev, unitLabel = '') {
 export default function DashboardPage() {
     const { profile } = useAuth()
 
+    const navigate = useNavigate()
+    const dashboardRef = useRef(null)
     const [loading, setLoading] = useState(true)
     const [lastUpdated, setLastUpdated] = useState(new Date())
     const [isRefreshing, setIsRefreshing] = useState(false)
@@ -254,10 +253,28 @@ export default function DashboardPage() {
 
     useEffect(() => {
         fetchDashboardData()
+
+        // ── REALTIME SUBSCRIPTION ──
+        const channel = supabase
+            .channel('dashboard-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => fetchDashboardData(true))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'gate_logs' }, () => fetchDashboardData(true))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => fetchDashboardData(true))
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [fetchDashboardData])
 
     const handleRefresh = () => {
         fetchDashboardData(true)
+    }
+
+    const handleExportPDF = () => {
+        // Native window.print() is more reliable for Tailwind v4 (oklch)
+        // and produces way higher quality (vector) PDF.
+        window.print()
     }
 
     // adapt ke StatCard kamu
@@ -266,43 +283,45 @@ export default function DashboardPage() {
             icon: faUsers,
             label: 'Total Siswa',
             value: loading ? '…' : String(stats.totalStudents),
-            trend: stats.trendStudents,
-            trendUp: true,
-            borderColor: 'border-t-[var(--color-primary)]',
-            iconBg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
+            subValue: stats.trendStudents,
+            borderColor: 'bg-indigo-500',
+            iconBg: 'bg-indigo-500/10 text-indigo-600',
+            onClick: () => navigate('/students')
         },
         {
             icon: faClipboardList,
             label: 'Laporan Hari Ini',
             value: loading ? '…' : String(stats.todayReports),
-            trend: stats.trendReports,
-            trendUp: true,
-            borderColor: 'border-t-blue-500',
-            iconBg: 'bg-blue-500/10 text-blue-500',
+            subValue: stats.trendReports,
+            borderColor: 'bg-blue-500',
+            iconBg: 'bg-blue-500/10 text-blue-600',
+            onClick: () => navigate('/reports')
         },
         {
             icon: faExclamationTriangle,
             label: 'Pelanggaran',
             value: loading ? '…' : String(stats.weekPoin),
             trend: stats.trendPoin,
-            trendUp: !stats.trendPoin.startsWith('+'),
-            borderColor: 'border-t-red-500',
-            iconBg: 'bg-red-500/10 text-red-500',
+            trendUp: false,
+            borderColor: 'bg-rose-500',
+            iconBg: 'bg-rose-500/10 text-rose-600',
+            onClick: () => navigate('/reports?type=pelanggaran')
         },
         {
             icon: faTrophy,
             label: 'Prestasi',
             value: loading ? '…' : String(stats.weekAchievements),
             trend: stats.trendAchievements,
-            trendUp: stats.trendAchievements.startsWith('+') || stats.weekAchievements > 0,
-            borderColor: 'border-t-emerald-500',
-            iconBg: 'bg-emerald-500/10 text-emerald-500',
-        },
-    ]), [loading, stats])
+            trendUp: true,
+            borderColor: 'bg-emerald-500',
+            iconBg: 'bg-emerald-500/10 text-emerald-600',
+            onClick: () => navigate('/reports?type=prestasi')
+        }
+    ]), [loading, stats, navigate])
 
     return (
         <DashboardLayout title="Dashboard">
-            <div className="p-4 md:p-6 max-w-[1800px] mx-auto">
+            <div ref={dashboardRef} className="p-4 md:p-6 max-w-[1800px] mx-auto">
 
                 {/* ── PAGE HEADER ── */}
                 <PageHeader
@@ -311,7 +330,7 @@ export default function DashboardPage() {
                     title={
                         <>
                             Selamat Datang, {profile?.name?.split(' ')[0] || 'User'}!
-                            <span className="text-amber-400">👋</span>
+                            <span className="inline-block ml-1" role="img" aria-label="waving hand">👋</span>
                         </>
                     }
                     subtitle={
@@ -324,56 +343,106 @@ export default function DashboardPage() {
                         </span>
                     }
                     actions={
-                        <button 
-                            onClick={handleRefresh}
-                            disabled={loading || isRefreshing}
-                            aria-label="Refresh Dashboard Data"
-                            className={`h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 transition-all flex items-center justify-center group ${isRefreshing ? 'opacity-50' : ''}`}
-                            title="Refresh Data"
-                        >
-                            <FontAwesomeIcon icon={faRotate} className={`text-xs ${isRefreshing ? 'fa-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {/* ── EXPORT SUMMARY ── */}
+                            <button
+                                onClick={handleExportPDF}
+                                disabled={loading || isRefreshing}
+                                data-html2canvas-ignore="true"
+                                className="h-9 px-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-indigo-600 hover:border-indigo-500/30 transition-all flex items-center gap-2.5 group shadow-sm"
+                                title="Download Laporan PDF"
+                            >
+                                <FontAwesomeIcon icon={faFilePdf} className="text-xs group-hover:scale-110 transition-transform" />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">
+                                    Export Summary
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={handleRefresh}
+                                disabled={loading || isRefreshing}
+                                data-html2canvas-ignore="true"
+                                aria-label="Refresh Dashboard Data"
+                                className={`h-9 px-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 transition-all flex items-center gap-2.5 group ${isRefreshing ? 'opacity-50' : ''}`}
+                                title="Refresh Data"
+                            >
+                                <FontAwesomeIcon icon={faRotate} className={`text-xs ${isRefreshing ? 'fa-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                                </span>
+                            </button>
+                        </div>
                     }
                 />
 
                 {/* ── STATS CAROUSEL ── */}
-                <StatsCarousel count={STATS.length}>
-                    {STATS.map((stat, idx) => (
-                        <StatCard 
-                            key={idx}
-                            icon={stat.icon}
-                            label={stat.label}
-                            value={stat.value}
-                            trend={stat.trend}
-                            trendUp={stat.trendUp}
-                            loading={loading}
-                            borderColor={stat.borderColor}
-                            iconBg={stat.iconBg}
-                        />
-                    ))}
-                </StatsCarousel>
+                <div className="min-h-[110px] mb-4">
+                    <StatsCarousel count={STATS.length}>
+                        {STATS.map((stat, idx) => (
+                            <StatCard
+                                key={idx}
+                                icon={stat.icon}
+                                label={stat.label}
+                                value={stat.value}
+                                trend={stat.trend}
+                                trendUp={stat.trendUp}
+                                loading={loading}
+                                borderColor={stat.borderColor}
+                                iconBg={stat.iconBg}
+                            />
+                        ))}
+                    </StatsCarousel>
+                </div>
 
                 <div className="flex flex-col lg:flex-row gap-4 mb-6">
                     {/* ── LEFT MAIN COLUMN ── */}
                     <div className="flex-1 min-w-0 flex flex-col gap-4">
-                        <Suspense fallback={<div className="flex flex-col gap-4"><div className="glass rounded-[1.5rem] p-5 h-[380px] animate-pulse bg-[var(--color-surface-alt)]" /><div className="glass rounded-[1.5rem] p-5 h-[400px] animate-pulse bg-[var(--color-surface-alt)]" /></div>}>
+                        <Suspense fallback={
+                            <div className="glass rounded-[1.5rem] p-6 h-[400px] animate-pulse bg-[var(--color-surface-alt)] flex flex-col gap-4">
+                                <div className="flex justify-between items-center"><div className="h-4 w-32 bg-gray-400/20 rounded" /><div className="h-4 w-24 bg-gray-400/20 rounded" /></div>
+                                <div className="flex-1 bg-gray-400/10 rounded-2xl" />
+                            </div>
+                        }>
                             <WeeklyTrendChart chartData={chartData} loading={loading} />
+                        </Suspense>
+                        <Suspense fallback={
+                            <div className="glass rounded-[1.5rem] p-6 h-[380px] animate-pulse bg-[var(--color-surface-alt)] flex flex-col gap-4">
+                                <div className="h-4 w-40 bg-gray-400/20 rounded mb-2" />
+                                {[1, 2, 3, 4].map(idx => (
+                                    <div key={idx} className="flex gap-4 items-center"><div className="w-10 h-10 bg-gray-400/20 rounded-xl" /><div className="flex-1 h-3 bg-gray-400/10 rounded" /></div>
+                                ))}
+                            </div>
+                        }>
                             <RecentReports recentReports={recentReports} loading={loading} />
                         </Suspense>
                     </div>
 
                     {/* ── RIGHT STICKY SIDEBAR ── */}
                     <div className="w-full lg:w-[320px] xl:w-[360px] shrink-0 flex flex-col gap-4 sticky top-6 self-start">
-                        <Suspense fallback={<div className="flex flex-col gap-4"><div className="glass rounded-[1.5rem] p-5 h-[280px] animate-pulse bg-[var(--color-surface-alt)]" /><div className="glass rounded-[1.5rem] p-5 h-[240px] animate-pulse bg-[var(--color-surface-alt)]" /><div className="glass rounded-[1.5rem] p-5 h-[300px] animate-pulse bg-[var(--color-surface-alt)]" /></div>}>
+                        <Suspense fallback={
+                            <div className="glass rounded-[1.5rem] p-6 h-[280px] animate-pulse bg-[var(--color-surface-alt)] flex flex-col items-center justify-center gap-4">
+                                <div className="w-40 h-40 rounded-full border-8 border-gray-400/10" />
+                                <div className="h-3 w-32 bg-gray-400/20 rounded" />
+                            </div>
+                        }>
                             <PointsConfigPie pieData={pieData} loading={loading} />
+                        </Suspense>
+                        <Suspense fallback={<div className="glass rounded-[1.5rem] p-5 h-[240px] animate-pulse bg-[var(--color-surface-alt)]" />}>
                             <QuickActions />
+                        </Suspense>
+                        <Suspense fallback={
+                            <div className="glass rounded-[1.5rem] p-5 h-[300px] animate-pulse bg-[var(--color-surface-alt)] flex flex-col gap-3">
+                                <div className="h-4 w-32 bg-gray-400/20 rounded mb-2" />
+                                {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-400/10 rounded-xl" />)}
+                            </div>
+                        }>
                             <GatePresence recentGate={recentGate} loading={loading} />
                         </Suspense>
                     </div>
                 </div>
 
                 {/* ── BOTTOM ROW: Analytics ── */}
-                <Suspense fallback={<div className="grid lg:grid-cols-2 gap-4"><div className="glass rounded-[1.5rem] p-5 h-[200px] animate-pulse bg-[var(--color-surface-alt)]" /><div className="glass rounded-[1.5rem] p-5 h-[200px] animate-pulse bg-[var(--color-surface-alt)]" /></div>}>
+                <Suspense fallback={<div className="grid lg:grid-cols-2 gap-4"><div className="glass rounded-[1.5rem] p-5 h-[220px] animate-pulse bg-[var(--color-surface-alt)]" /><div className="glass rounded-[1.5rem] p-5 h-[220px] animate-pulse bg-[var(--color-surface-alt)]" /></div>}>
                     <AnalyticsRow raportProgress={raportProgress} riskStudents={riskStudents} classRanking={classRanking} loading={loading} />
                 </Suspense>
             </div>
