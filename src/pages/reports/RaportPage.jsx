@@ -40,6 +40,7 @@ import RaportPrintCard from './components/RaportPrintCard'
 import StudentRow, { ExtraInput, ExtraTextarea } from './components/RaportRecordRow'
 import BulkActionBar from './components/BulkActionBar'
 import { ShortcutModalContent, TutorialModalContent, WaBlastConfirmContent, WaBlastProgressContent } from './components/RaportModals'
+import StatsCarousel from '../../components/StatsCarousel'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -1967,13 +1968,19 @@ export default function RaportPage() {
                     </div>
                 </div>
 
-                <div className="flex gap-4 pt-4 border-t border-[var(--color-border)]">
-                    <button onClick={() => { setSelectedClassId(''); setMusyrif('') }} className="h-12 px-6 rounded-2xl border border-[var(--color-border)] text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2">
-                        <FontAwesomeIcon icon={faArrowLeft} /> Kembali
+                <div className="flex gap-2 sm:gap-4 pt-4 border-t border-[var(--color-border)]">
+                    <button onClick={() => { setSelectedClassId(''); setMusyrif('') }} className="h-12 px-4 sm:px-6 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0">
+                        <FontAwesomeIcon icon={faArrowLeft} /> <span className="hidden xs:inline">Kembali</span>
                     </button>
-                    <button onClick={async () => { if (!selectedClassId) return; const ok = await loadStudents(); if (ok) setStep(2) }} disabled={!selectedClassId || loading} className="flex-1 h-12 rounded-2xl bg-emerald-500 text-white text-sm font-black shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3">
-                        {loading ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faChevronRight} />}
-                        {loading ? 'Memuat Santri...' : 'Mulai Input Nilai →'}
+                    <button onClick={async () => { if (!selectedClassId) return; const ok = await loadStudents(); if (ok) setStep(2) }} disabled={!selectedClassId || loading} className="flex-1 h-12 rounded-2xl bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 overflow-hidden px-2">
+                        {loading ? (
+                            <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                        ) : (
+                            <FontAwesomeIcon icon={faChevronRight} className="text-[10px] opacity-70" />
+                        )}
+                        <span className="whitespace-nowrap">
+                            {loading ? 'Memuat Santri...' : 'Mulai Input Nilai'}
+                        </span>
                     </button>
                 </div>
             </div>
@@ -2949,17 +2956,17 @@ export default function RaportPage() {
                     </div>
                 </div>
                 {/* Stats skeleton */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                <StatsCarousel count={4}>
                     {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="glass rounded-[1.5rem] p-4 flex items-center gap-3 animate-pulse">
-                            <div className="w-9 h-9 rounded-xl bg-[var(--color-border)] shrink-0" />
+                        <div key={i} className="glass rounded-[1.5rem] p-4 flex items-center gap-3 animate-pulse min-h-[90px]">
+                            <div className="w-12 h-12 rounded-xl bg-[var(--color-border)] shrink-0" />
                             <div className="flex-1">
                                 <div className="h-2.5 w-16 bg-[var(--color-border)] rounded mb-2" />
                                 <div className="h-5 w-10 bg-[var(--color-border)] rounded" />
                             </div>
                         </div>
                     ))}
-                </div>
+                </StatsCarousel>
                 {/* Kelas grid skeleton */}
                 <div className="h-3 w-24 bg-[var(--color-border)] rounded animate-pulse mb-3" />
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -3005,7 +3012,15 @@ export default function RaportPage() {
                             <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
                             Tutorial
                         </button>
-                        <button onClick={() => { setStep(4); loadArchive() }} className={`h-9 px-3 rounded-lg border text-[9px] font-black flex items-center gap-1.5 transition-all ${step === 4 ? 'bg-amber-500/15 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}><FontAwesomeIcon icon={faTableList} /> Riwayat</button>
+                        <button 
+                            onClick={() => { 
+                                if (step === 4) setStep(0)
+                                else { setStep(4); loadArchive() }
+                            }} 
+                            className={`h-9 px-3 rounded-lg border text-[9px] font-black flex items-center gap-1.5 transition-all ${step === 4 ? 'bg-amber-500/15 border-amber-500/30 text-amber-600 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        >
+                            <FontAwesomeIcon icon={faTableList} /> {step === 4 ? 'Tutup Riwayat' : 'Riwayat'}
+                        </button>
                         {step === 0 && (
                             <button onClick={() => { setSelectedClassId(''); setStep(1) }} className="btn btn-primary h-9 px-4 lg:px-5 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2">
                                 <FontAwesomeIcon icon={faPlus} className="text-sm" />
@@ -3017,22 +3032,37 @@ export default function RaportPage() {
 
                 {/* ── STATS ── */}
                 {step === 0 && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                        {[
-                            { label: 'Total Kelas', value: stats.totalKelas, icon: faSchool, bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]', border: 'border-t-[var(--color-primary)]' },
-                            { label: 'Total Siswa', value: stats.totalSiswa, icon: faUsers, bg: 'bg-emerald-500/10 text-emerald-500', border: 'border-t-emerald-500' },
-                            { label: 'Total Raport', value: stats.totalRaport, icon: faClipboardList, bg: 'bg-indigo-500/10 text-indigo-500', border: 'border-t-indigo-500' },
-                            { label: 'Bulan Berjalan', value: BULAN[stats.bulanIni - 1]?.id_str || '—', icon: faCalendarAlt, bg: 'bg-amber-500/10 text-amber-500', border: 'border-t-amber-500', isText: true },
-                        ].map(s => (
-                            <div key={s.label} className={`glass rounded-[1.5rem] p-4 border-t-[3px] ${s.border} flex items-center gap-3 hover:border-t-4 transition-all`}>
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${s.bg}`}><FontAwesomeIcon icon={s.icon} /></div>
-                                <div className="min-w-0">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 leading-none mb-1">{s.label}</p>
-                                    <h3 className={`font-black font-heading leading-none text-[var(--color-text)] ${s.isText ? 'text-sm' : 'text-xl tabular-nums'}`}>{s.value}</h3>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <StatsCarousel count={4}>
+                        <StatCard 
+                            icon={faSchool} 
+                            label="Total Kelas" 
+                            value={stats.totalKelas} 
+                            iconBg="bg-indigo-500/10 text-indigo-500"
+                            borderColor="border-indigo-500"
+                        />
+                        <StatCard 
+                            icon={faUsers} 
+                            label="Total Siswa" 
+                            value={stats.totalSiswa} 
+                            iconBg="bg-emerald-500/10 text-emerald-500"
+                            borderColor="border-emerald-500"
+                        />
+                        <StatCard 
+                            icon={faClipboardList} 
+                            label="Total Raport" 
+                            value={stats.totalRaport} 
+                            iconBg="bg-indigo-500/10 text-indigo-500"
+                            borderColor="border-indigo-500"
+                        />
+                        <StatCard 
+                            icon={faCalendarAlt} 
+                            label="Bulan Berjalan" 
+                            value={BULAN[stats.bulanIni - 1]?.id_str || '—'} 
+                            iconBg="bg-amber-500/10 text-amber-500"
+                            borderColor="border-amber-500"
+                            valueClassName="text-lg text-[var(--color-text)]"
+                        />
+                    </StatsCarousel>
                 )}
 
 
