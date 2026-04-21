@@ -7,7 +7,7 @@ import {
   faChevronLeft, faChevronRight, faSpinner, faClock,
   faBuilding, faChalkboardTeacher, faBriefcase,
   faLock, faRotateLeft, faPersonWalkingArrowRight,
-  faEdit, faTrash, faCheck,
+  faEdit, faTrash, faCheck, faCheckDouble, faMousePointer,
   faArrowsRotate, faBell, faXmark, faTag, faKeyboard,
   faDownload, faFilter, faIdCard, faMotorcycle,
   faFileCsv, faFilePdf, faCircleCheck, faCircleDot, faUserGraduate, faUndo, faGear
@@ -257,6 +257,31 @@ function StatSkeleton() {
       <div className="w-8 h-8 rounded-xl bg-[var(--color-surface-alt)]" />
       <div className="h-2 bg-[var(--color-border)] rounded-md w-1/2" />
       <div className="h-3 bg-[var(--color-border)] rounded-md w-3/4" />
+    </div>
+  )
+}
+
+function TableSkeleton({ cols = 5, rows = 6 }) {
+  return (
+    <div className="w-full overflow-hidden animate-pulse">
+      <div className="flex border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/50">
+        {Array.from({ length: cols }).map((_, i) => (
+          <div key={i} className="flex-1 px-4 py-3.5">
+            <div className="h-2 bg-[var(--color-border)] rounded-full w-12" />
+          </div>
+        ))}
+      </div>
+      <div className="divide-y divide-[var(--color-border)]">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="flex">
+            {Array.from({ length: cols }).map((_, j) => (
+              <div key={j} className="flex-1 px-4 py-5">
+                <div className={`h-2 bg-[var(--color-border)]/60 rounded-full ${j === 1 ? 'w-24' : j === 0 ? 'w-6' : 'w-16'}`} />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -650,13 +675,13 @@ function FormTamu({ onSubmit, loading }) {
       {/* Photo Capture Placeholder UI - compact mode */}
       <div className="p-2.5 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center justify-between">
         <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group cursor-pointer hover:border-emerald-500/30 transition-all">
-               <FontAwesomeIcon icon={faPlus} className="text-[9px] opacity-40 group-hover:scale-110 transition-transform" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-[var(--color-text)] leading-tight">Foto Identitas (Opsional)</p>
-              <p className="text-[9px] text-[var(--color-text-muted)] opacity-60">Fitur di versi Enterprise</p>
-            </div>
+          <div className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group cursor-pointer hover:border-emerald-500/30 transition-all">
+            <FontAwesomeIcon icon={faPlus} className="text-[9px] opacity-40 group-hover:scale-110 transition-transform" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-[var(--color-text)] leading-tight">Foto Identitas (Opsional)</p>
+            <p className="text-[9px] text-[var(--color-text-muted)] opacity-60">Fitur di versi Enterprise</p>
+          </div>
         </div>
         <FontAwesomeIcon icon={faIdCard} className="text-[14px] text-emerald-500/20" />
       </div>
@@ -707,11 +732,11 @@ function ConfirmTimeModal({ log, onConfirm, onCancel }) {
       }
     >
       <div className="space-y-4">
-          <div className="p-3 bg-[var(--color-surface-alt)]/30 border border-[var(--color-border)] rounded-xl">
-             <p className="text-[12px] font-black text-[var(--color-primary)] mb-1">{log.visitor_name}</p>
-             <p className="text-[10px] text-[var(--color-text-muted)] font-medium leading-snug">{log.purpose}</p>
-          </div>
-          <TimeInput value={time} onChange={setTime} label={`Jam ${label}`} />
+        <div className="p-3 bg-[var(--color-surface-alt)]/30 border border-[var(--color-border)] rounded-xl">
+          <p className="text-[12px] font-black text-[var(--color-primary)] mb-1">{log.visitor_name}</p>
+          <p className="text-[10px] text-[var(--color-text-muted)] font-medium leading-snug">{log.purpose}</p>
+        </div>
+        <TimeInput value={time} onChange={setTime} label={`Jam ${label}`} />
       </div>
     </Modal>
   )
@@ -754,30 +779,30 @@ function EditLogModal({ log, onSave, onDelete, onCancel, saving }) {
       size="md"
       footer={
         <div className="flex gap-2 items-center">
-            {onDelete && (
-              confirmDel ? (
-                <>
-                  <button onClick={() => setConfirmDel(false)} className="h-10 px-4 rounded-xl text-[11px] font-black text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] hover:text-[var(--color-text)] transition-all flex-1 sm:flex-none">Batal</button>
-                  <button onClick={onDelete} disabled={saving} className="flex-[1.5] h-10 rounded-xl text-white text-[11px] font-black bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2">
-                    {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faTrash} />}
-                    Yakin Hapus?
-                  </button>
-                </>
-              ) : (
-                <button onClick={() => setConfirmDel(true)} disabled={saving} className="h-10 px-4 rounded-xl border border-red-500/30 text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all flex items-center justify-center shrink-0">
-                  <FontAwesomeIcon icon={faTrash} />
-                </button>
-              )
-            )}
-            {!confirmDel && (
+          {onDelete && (
+            confirmDel ? (
               <>
-                <button onClick={onCancel} disabled={saving} className="flex-1 h-10 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Tutup</button>
-                <button onClick={handleSave} disabled={saving} className="flex-[2] h-10 rounded-xl text-white text-[11px] font-black bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center justify-center gap-2">
-                  {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faCheck} />}
-                  Simpan Perubahan
+                <button onClick={() => setConfirmDel(false)} className="h-10 px-4 rounded-xl text-[11px] font-black text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] hover:text-[var(--color-text)] transition-all flex-1 sm:flex-none">Batal</button>
+                <button onClick={onDelete} disabled={saving} className="flex-[1.5] h-10 rounded-xl text-white text-[11px] font-black bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2">
+                  {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faTrash} />}
+                  Yakin Hapus?
                 </button>
               </>
-            )}
+            ) : (
+              <button onClick={() => setConfirmDel(true)} disabled={saving} className="h-10 px-4 rounded-xl border border-red-500/30 text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all flex items-center justify-center shrink-0">
+                <FontAwesomeIcon icon={faTrash} />
+              </button>
+            )
+          )}
+          {!confirmDel && (
+            <>
+              <button onClick={onCancel} disabled={saving} className="flex-1 h-10 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Tutup</button>
+              <button onClick={handleSave} disabled={saving} className="flex-[2] h-10 rounded-xl text-white text-[11px] font-black bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center justify-center gap-2">
+                {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faCheck} />}
+                Simpan Perubahan
+              </button>
+            </>
+          )}
         </div>
       }
     >
@@ -832,9 +857,13 @@ function LogCard({ log, onReturn, onCheckout, onEdit, isSelected, onToggleSelect
 
       {/* Multi-select check */}
       {selectionMode && isActive && (
-        <div className="absolute top-2 right-2 z-10">
-          <input type="checkbox" checked={isSelected} onChange={() => onToggleSelect(log.id)}
-            className="w-4 h-4 rounded-md border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer" />
+        <div className="shrink-0 flex items-center h-9 pr-1 animate-in fade-in slide-in-from-left-2 duration-300">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(log.id)}
+            className="w-5 h-5 rounded-lg border-2 border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]/30 cursor-pointer transition-all bg-[var(--color-surface)] checked:bg-[var(--color-primary)]"
+          />
         </div>
       )}
 
@@ -924,26 +953,36 @@ function ConfigModal({ onSave, onCancel, testNotification }) {
       size="sm"
       footer={
         <div className="flex gap-2">
-            <button onClick={onCancel} className="flex-1 h-10 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Batal</button>
-            <button onClick={handleSave} className="flex-1 h-10 rounded-xl bg-indigo-500 text-white text-[11px] font-black shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 transition-all">Simpan</button>
+          <button onClick={onCancel} className="flex-1 h-10 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Batal</button>
+          <button onClick={handleSave} className="flex-1 h-10 rounded-xl bg-indigo-500 text-white text-[11px] font-black shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 transition-all">Simpan</button>
         </div>
       }
     >
-        <div className="space-y-4 pt-2">
-          <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-2 block">Webhook URL</label>
-            <textarea
+      <div className="space-y-4 pt-2">
+        <div>
+          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-2 block">Webhook URL</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
               value={url}
               onChange={e => setUrl(e.target.value)}
               placeholder="https://api.telegram.org/bot<token>/sendMessage?chat_id=<id>"
-              className="w-full h-24 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-mono text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-all resize-none shadow-inner"
+              className="flex-1 h-10 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-mono text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-all shadow-inner"
             />
             <button onClick={handleTest} disabled={testing || !url}
-              className="w-full mt-2 h-9 rounded-xl border border-indigo-500/30 bg-indigo-500/5 text-[10px] font-black text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2">
-              {testing ? <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Mengirim...</> : 'Test Kirim Notifikasi'}
+              className="h-10 px-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 text-[10px] font-black text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2 shrink-0 shadow-sm"
+              title="Test Kirim Notifikasi">
+              {testing ? (
+                <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[12px]" />
+              ) : (
+                <FontAwesomeIcon icon={faPaperPlane} className="text-[12px]" />
+              )}
+              <span className="hidden sm:inline">{testing ? 'Mengirim...' : 'Test'}</span>
             </button>
           </div>
+          <p className="mt-2 text-[9px] text-[var(--color-text-muted)] italic opacity-60">Pastikan URL webhook sudah benar (Telegram atau Discord).</p>
         </div>
+      </div>
     </Modal>
   )
 }
@@ -985,6 +1024,15 @@ export default function GatePage() {
   const [dismissedOvertime, setDismissedOvertime] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showConfig, setShowConfig] = useState(false)
+
+  // Responsive state for Floating Bar
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 1024 : false)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // ── Keyboard Shortcuts ─────────────────────────────────────────────────────
 
@@ -1125,6 +1173,64 @@ export default function GatePage() {
   }, [rekapMode, rekapDate])
 
   useEffect(() => { if (activeTab === 'rekap') loadRekap() }, [activeTab, loadRekap])
+
+  // ── Operational Audit Logging ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!searchLog.trim()) return
+    const t = setTimeout(() => {
+      logAudit({
+        action: 'SEARCH', source: 'OPERATIONAL', tableName: 'gate_logs',
+        newData: { query: searchLog, tab: 'log' }
+      })
+    }, 2000)
+    return () => clearTimeout(t)
+  }, [searchLog])
+
+  useEffect(() => {
+    if (!searchRekap.trim()) return
+    const t = setTimeout(() => {
+      logAudit({
+        action: 'SEARCH', source: 'OPERATIONAL', tableName: 'gate_logs',
+        newData: { query: searchRekap, tab: 'rekap' }
+      })
+    }, 2000)
+    return () => clearTimeout(t)
+  }, [searchRekap])
+
+  useEffect(() => {
+    if (filterType === 'all' && filterStatus === 'all') return
+    logAudit({
+      action: 'FILTER', source: 'OPERATIONAL', tableName: 'gate_logs',
+      newData: { type: filterType, status: filterStatus, tab: 'log' }
+    })
+  }, [filterType, filterStatus])
+
+  useEffect(() => {
+    if (filterRekap === 'all') return
+    logAudit({
+      action: 'FILTER', source: 'OPERATIONAL', tableName: 'gate_logs',
+      newData: { type: filterRekap, tab: 'rekap' }
+    })
+  }, [filterRekap])
+
+  // ── Manual Refresh Logic ──────────────────────────────────────────────────
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    const promises = [loadTodayLogs(true)]
+    if (activeTab === 'rekap') promises.push(loadRekap())
+
+    await Promise.all(promises)
+    setLastRefresh(Date.now())
+    setIsRefreshing(false)
+    addToast('Data berhasil diperbarui', 'success')
+
+    logAudit({
+      action: 'REFRESH',
+      source: 'OPERATIONAL',
+      tableName: 'gate_logs',
+      newData: { tab: activeTab }
+    })
+  }, [loadTodayLogs, loadRekap, activeTab, addToast])
 
   // ── Submit handler ─────────────────────────────────────────────────────────
   /**
@@ -1290,28 +1396,30 @@ export default function GatePage() {
     }
   }, [editLog, loadTodayLogs, loadRekap, activeTab, addToast])
 
-  const handleBulkReturn = async () => {
+  const handleBulkCheckout = async () => {
     if (selectedIds.length === 0) return
     setSubmitting(true)
     const now = new Date().toISOString()
 
-    // Fetch the logs first so we have the data for notifications
-    const { data: logsToUpdate } = await supabase.from('gate_logs')
-      .select('*')
-      .in('id', selectedIds)
+    try {
+      // Fetch the logs first so we have the data for notifications
+      const { data: logsToUpdate } = await supabase.from('gate_logs')
+        .select('*')
+        .in('id', selectedIds)
 
-    const { error } = await supabase.from('gate_logs')
-      .update({ check_out: now })
-      .in('id', selectedIds)
+      const { error } = await supabase.from('gate_logs')
+        .update({ check_out: now })
+        .in('id', selectedIds)
 
-    if (error) addToast('Gagal update massal: ' + error.message, 'error')
-    else {
-      addToast(`${selectedIds.length} orang berhasil ditandai kembali`, 'success')
+      if (error) throw error
+
+      addToast(`${selectedIds.length} entri berhasil diproses`, 'success')
 
       // Send notifications for each
       if (logsToUpdate) {
         logsToUpdate.forEach(log => {
-          sendLogNotification({ ...log, check_out: now }, 'IN')
+          const actionType = log.visitor_type === 'tamu' ? 'OUT_TAMU' : 'IN'
+          sendLogNotification({ ...log, check_out: now }, actionType)
         })
       }
 
@@ -1320,14 +1428,52 @@ export default function GatePage() {
         action: 'UPDATE',
         source: 'OPERATIONAL',
         tableName: 'gate_logs',
-        newData: { bulkCount: selectedIds.length, ids: selectedIds, action: 'Bulk Return' }
+        newData: { bulkCount: selectedIds.length, ids: selectedIds, action: 'Bulk Checkout/Return' }
       })
 
       await loadTodayLogs(true)
       setSelectedIds([])
       setSelectionMode(false)
+    } catch (err) {
+      addToast('Gagal update massal: ' + err.message, 'error')
     }
     setSubmitting(false)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return
+    if (!window.confirm(`Hapus ${selectedIds.length} log terpilih secara permanen?`)) return
+
+    setSubmitting(true)
+    try {
+      const { error } = await supabase.from('gate_logs').delete().in('id', selectedIds)
+      if (error) throw error
+
+      addToast(`${selectedIds.length} log berhasil dihapus`, 'success')
+
+      await logAudit({
+        action: 'DELETE',
+        source: 'OPERATIONAL',
+        tableName: 'gate_logs',
+        newData: { bulkCount: selectedIds.length, ids: selectedIds }
+      })
+
+      await loadTodayLogs(true)
+      setSelectedIds([])
+      setSelectionMode(false)
+    } catch (err) {
+      addToast('Gagal hapus massal: ' + err.message, 'error')
+    }
+    setSubmitting(false)
+  }
+
+  const handleSelectAll = (list) => {
+    const allIds = list.map(l => l.id)
+    if (selectedIds.length === allIds.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(allIds)
+    }
   }
 
   const toggleSelect = id => {
@@ -1624,8 +1770,8 @@ export default function GatePage() {
       <div className="p-4 md:p-6 max-w-[1800px] mx-auto">
 
         {/* PAGE HEADER */}
-        <PageHeader 
-          badge="Operational"
+        <PageHeader
+          badge="Reports"
           breadcrumbs={['Gate Monitor']}
           title="Log Keluar Masuk"
           subtitle="Pencatatan real-time warga sekolah & tamu eksternal."
@@ -1633,6 +1779,11 @@ export default function GatePage() {
             <div className="flex items-center gap-3">
               <LiveClock />
               <div className="flex items-center gap-2">
+                <button onClick={handleRefresh} disabled={isRefreshing}
+                  className={`h-9 w-10 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] ${isRefreshing ? 'opacity-50' : ''}`}
+                  title="Refresh Data">
+                  <FontAwesomeIcon icon={faArrowsRotate} className={isRefreshing ? 'animate-spin' : ''} />
+                </button>
                 <button onClick={() => setShowConfig(true)}
                   className="h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]"
                   title="Konfigurasi Bot">
@@ -1657,7 +1808,7 @@ export default function GatePage() {
             { label: 'Tamu di Dalam', value: stats.dalamTamu, icon: faBuilding, bg: 'bg-emerald-500/10 text-emerald-500', border: 'bg-emerald-500' },
             { label: 'Kunjungan Tamu', value: stats.tamu, icon: faUserFriends, bg: 'bg-amber-500/10 text-amber-500', border: 'bg-amber-500' },
           ].map((s, i) => (
-            <StatCard 
+            <StatCard
               key={i}
               icon={s.icon}
               label={s.label}
@@ -1744,25 +1895,19 @@ export default function GatePage() {
                       className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md transition-all ${selectionMode ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                       {selectionMode ? 'Batal Pilih' : 'Pilih Multi'}
                     </button>
-                    {selectionMode && selectedIds.length > 0 && (
-                      <button onClick={handleBulkReturn} disabled={submitting}
-                        className="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-emerald-500 text-white animate-in slide-in-from-right-2">
-                        Selesaikan {selectedIds.length} Orang
-                      </button>
-                    )}
                   </div>
                 )}
 
                 {loadingLogs
                   ? <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
                   : todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).length === 0
-                    ? <EmptyState 
-                        variant="plain"
-                        color="emerald"
-                        icon={faCheck}
-                        title="Semua Hadir & Terdata"
-                        description="Tidak ada catatan guru atau karyawan yang sedang berada di luar area sekolah saat ini."
-                      />
+                    ? <EmptyState
+                      variant="plain"
+                      color="emerald"
+                      icon={faCheck}
+                      title="Semua Hadir & Terdata"
+                      description="Tidak ada catatan guru atau karyawan yang sedang berada di luar area sekolah saat ini."
+                    />
                     : <div className="space-y-2">
                       {todayLogs.filter(l => (l.visitor_type !== 'tamu') && !l.check_out).map(log => (
                         <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog}
@@ -1786,13 +1931,13 @@ export default function GatePage() {
                 {loadingLogs
                   ? <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
                   : todayLogs.filter(l => l.visitor_type === 'tamu' && !l.check_out).length === 0
-                    ? <EmptyState 
-                        variant="plain"
-                        color="slate"
-                        icon={faUserFriends}
-                        title="Belum Ada Tamu"
-                        description="Tidak ada kunjungan tamu eksternal yang terdaftar aktif di sistem saat ini."
-                      />
+                    ? <EmptyState
+                      variant="plain"
+                      color="slate"
+                      icon={faUserFriends}
+                      title="Belum Ada Tamu"
+                      description="Tidak ada kunjungan tamu eksternal yang terdaftar aktif di sistem saat ini."
+                    />
                     : <div className="space-y-2">
                       {todayLogs.filter(l => l.visitor_type === 'tamu' && !l.check_out).map(log => (
                         <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />
@@ -1808,24 +1953,24 @@ export default function GatePage() {
         {activeTab === 'log' && (
           <div className="glass rounded-[1.5rem] overflow-hidden">
             {/* Toolbar baris 1: Search + filter jenis */}
-            <div className="px-4 pt-3 pb-2 border-b border-[var(--color-border)] flex items-center gap-2 flex-wrap">
-              <div className="relative flex-1 min-w-[160px]">
+            <div className="px-4 pt-3 pb-2 border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="relative flex-1">
                 <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
                 <input value={searchLog} onChange={e => setSearchLog(e.target.value)}
                   placeholder="Cari nama atau keperluan..."
-                  className="w-full h-8 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+                  className="w-full h-9 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
                 {searchLog && (
                   <button onClick={() => setSearchLog('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
                     <FontAwesomeIcon icon={faXmark} className="text-[9px]" />
                   </button>
                 )}
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide -mx-1 px-1">
                 {[{ k: 'all', l: 'Semua' }, ...VISITOR_TYPES.map(t => ({ k: t.key, l: t.label }))].map(f => (
                   <button key={f.k} onClick={() => setFilterType(f.k)}
-                    className={`h-8 px-3 rounded-xl text-[10px] font-black transition-all ${filterType === f.k
+                    className={`h-8 px-3 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${filterType === f.k
                       ? 'bg-[var(--color-primary)] text-white'
-                      : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                      : 'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                     {f.l}
                   </button>
                 ))}
@@ -1833,8 +1978,8 @@ export default function GatePage() {
             </div>
 
             {/* Toolbar baris 2: Filter status + export + counter */}
-            <div className="px-4 py-2 border-b border-[var(--color-border)] flex items-center gap-2 flex-wrap bg-[var(--color-surface-alt)]/40">
-              <div className="flex gap-1">
+            <div className="px-4 py-3 border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center gap-4 bg-[var(--color-surface-alt)]/40">
+              <div className="flex gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide -mx-1 px-1">
                 {[
                   { k: 'all', l: 'Semua Status', icon: faFilter },
                   { k: 'aktif', l: 'Masih Aktif', icon: faCircleDot },
@@ -1850,27 +1995,52 @@ export default function GatePage() {
                   const activeColor = f.k === 'aktif' ? 'bg-red-500 text-white' : f.k === 'selesai' ? 'bg-emerald-500 text-white' : 'bg-[var(--color-primary)] text-white'
                   return (
                     <button key={f.k} onClick={() => setFilterStatus(f.k)}
-                      className={`h-7 px-2.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 transition-all ${filterStatus === f.k
+                      className={`h-8 px-3 rounded-lg text-[10px] font-black flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 ${filterStatus === f.k
                         ? activeColor
                         : 'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                       <FontAwesomeIcon icon={f.icon} className="text-[8px]" />
                       {f.l}
-                      <span className={`text-[8px] font-black px-1 py-0.5 rounded-md min-w-[16px] text-center ${filterStatus === f.k ? 'bg-white/25' : 'bg-[var(--color-surface-alt)]'}`}>{count}</span>
+                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md min-w-[20px] text-center ${filterStatus === f.k ? 'bg-white/25' : 'bg-[var(--color-surface-alt)]'}`}>{count}</span>
                     </button>
                   )
                 })}
               </div>
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{filteredLogs.length} entri</span>
-                <div className="w-px h-4 bg-[var(--color-border)]" />
-                <button onClick={() => handleExportCSV('log')}
-                  className="h-7 px-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center gap-1.5 transition-all">
-                  <FontAwesomeIcon icon={faFileCsv} className="text-[9px]" />CSV
-                </button>
-                <button onClick={() => handleExportPDF('log')}
-                  className="h-7 px-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center gap-1.5 transition-all">
-                  <FontAwesomeIcon icon={faFilePdf} className="text-[9px]" />PDF
-                </button>
+              <div className="flex items-center justify-between sm:justify-end gap-2 sm:ml-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-[var(--color-border)]">
+                <div className="flex items-center gap-1.5 mr-auto sm:mr-0">
+                  <button
+                    onClick={() => {
+                      setSelectionMode(!selectionMode)
+                      if (selectionMode) setSelectedIds([])
+                    }}
+                    className={`h-8 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${selectionMode ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                  >
+                    <FontAwesomeIcon icon={selectionMode ? faCheckDouble : faMousePointer} className="text-[10px]" />
+                    <span className="hidden xs:inline">{selectionMode ? 'Batal Pilih' : 'Pilih Multiple'}</span>
+                  </button>
+
+                  {selectionMode && (
+                    <button
+                      onClick={() => handleSelectAll(filteredLogs)}
+                      className="h-8 px-3 rounded-xl border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2"
+                    >
+                      {selectedIds.length === filteredLogs.length ? 'Batal Semua' : 'Pilih Semua'}
+                    </button>
+                  )}
+                </div>
+
+                <span className="text-[10px] font-extrabold text-[var(--color-text-muted)] tabular-nums">{filteredLogs.length} Entri</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button onClick={() => handleExportCSV('log')}
+                    className="h-8 w-8 sm:w-auto sm:px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center justify-center gap-1.5 transition-all"
+                    title="Export CSV">
+                    <FontAwesomeIcon icon={faFileCsv} className="text-[10px]" /><span className="hidden sm:inline">CSV</span>
+                  </button>
+                  <button onClick={() => handleExportPDF('log')}
+                    className="h-8 w-8 sm:w-auto sm:px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center justify-center gap-1.5 transition-all"
+                    title="Export PDF">
+                    <FontAwesomeIcon icon={faFilePdf} className="text-[10px]" /><span className="hidden sm:inline">PDF</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1896,7 +2066,18 @@ export default function GatePage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredLogs.map(log => <LogCard key={log.id} log={log} onReturn={handleReturn} onCheckout={handleCheckout} onEdit={setEditLog} />)}
+                  {filteredLogs.map(log => (
+                    <LogCard
+                      key={log.id}
+                      log={log}
+                      onReturn={handleReturn}
+                      onCheckout={handleCheckout}
+                      onEdit={setEditLog}
+                      selectionMode={selectionMode}
+                      onToggleSelect={toggleSelect}
+                      isSelected={selectedIds.includes(log.id)}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -1907,241 +2088,263 @@ export default function GatePage() {
         {activeTab === 'rekap' && (
           <div className="space-y-4">
             {/* Baris 1: Mode + Navigasi + Export */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-              {/* Mode: Harian / Mingguan / Bulanan */}
-              <div className="flex gap-1 p-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-fit">
-                {[{ k: 'harian', l: 'Harian' }, { k: 'mingguan', l: 'Mingguan' }, { k: 'bulanan', l: 'Bulanan' }].map(m => (
-                  <button key={m.k} onClick={() => setRekapMode(m.k)}
-                    className={`h-7 px-3 rounded-lg text-[11px] font-black transition-all ${rekapMode === m.k ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                    {m.l}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                {/* Mode: Harian / Mingguan / Bulanan */}
+                <div className="flex gap-1 p-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full sm:w-fit overflow-x-auto scrollbar-hide">
+                  {[{ k: 'harian', l: 'Harian' }, { k: 'mingguan', l: 'Mingguan' }, { k: 'bulanan', l: 'Bulanan' }].map(m => (
+                    <button key={m.k} onClick={() => setRekapMode(m.k)}
+                      className={`h-8 flex-1 sm:flex-none sm:px-4 rounded-lg text-[11px] font-black transition-all whitespace-nowrap ${rekapMode === m.k ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                      {m.l}
+                    </button>
+                  ))}
+                </div>
+                {/* Navigasi tanggal */}
+                <div className="flex items-center justify-between sm:justify-start gap-2 bg-[var(--color-surface-alt)]/50 p-1 rounded-xl sm:bg-transparent sm:p-0">
+                  <button onClick={() => navRekap(-1)} className="w-9 h-9 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                    <FontAwesomeIcon icon={faChevronLeft} className="text-[11px]" />
                   </button>
-                ))}
+                  <span className="text-[13px] font-black text-[var(--color-text)] min-w-[140px] text-center">{rekapLabel}</span>
+                  <button onClick={() => navRekap(1)} className="w-9 h-9 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                    <FontAwesomeIcon icon={faChevronRight} className="text-[11px]" />
+                  </button>
+                </div>
               </div>
-              {/* Navigasi tanggal */}
-              <div className="flex items-center gap-2">
-                <button onClick={() => navRekap(-1)} className="w-8 h-8 rounded-lg border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
-                  <FontAwesomeIcon icon={faChevronLeft} className="text-[11px]" />
-                </button>
-                <span className="text-[13px] font-black text-[var(--color-text)] min-w-[180px] text-center">{rekapLabel}</span>
-                <button onClick={() => navRekap(1)} className="w-8 h-8 rounded-lg border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
-                  <FontAwesomeIcon icon={faChevronRight} className="text-[11px]" />
-                </button>
-              </div>
-              {/* Export */}
-              <div className="sm:ml-auto flex items-center gap-2">
+
+              {/* Export Actions Row */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
                 <button onClick={() => handleExportCSV('rekap')}
-                  className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 hover:bg-emerald-500/5 flex items-center gap-2 transition-all">
-                  <FontAwesomeIcon icon={faFileCsv} className="text-[10px]" />CSV
+                  className="h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center gap-2 transition-all whitespace-nowrap">
+                  <FontAwesomeIcon icon={faFileCsv} className="text-[11px]" />CSV
                 </button>
                 <button onClick={() => handleExportPDF('rekap')}
-                  className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/5 flex items-center gap-2 transition-all">
-                  <FontAwesomeIcon icon={faFilePdf} className="text-[10px]" />PDF
+                  className="h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center gap-2 transition-all whitespace-nowrap">
+                  <FontAwesomeIcon icon={faFilePdf} className="text-[11px]" />PDF
                 </button>
                 <button onClick={async () => {
                   const res = await sendDailySummary(rekapData)
                   if (res.success) addToast('Rekapan berhasil dikirim ke Telegram', 'success')
                   else addToast('Gagal: ' + res.error, 'error')
-                }} className="h-8 px-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all text-[10px] font-black flex items-center gap-2">
+                }} className="h-9 px-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all text-[10px] font-black flex items-center gap-2 whitespace-nowrap">
                   <FontAwesomeIcon icon={faPaperPlane} />Kirim ke Telegram
                 </button>
                 <button onClick={handlePrint}
-                  className="h-8 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-2 transition-all">
+                  className="h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center gap-2 transition-all whitespace-nowrap ml-auto">
                   <FontAwesomeIcon icon={faPrint} />Cetak
                 </button>
               </div>
             </div>
 
             {/* Summary cards */}
-            <StatsCarousel count={4} className="!mb-0">
+            <StatsCarousel count={4} className="mb-4">
               {[
-                { l: 'Total', v: rekapSummary.total, c: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10' },
-                { l: 'Guru', v: rekapSummary.guru, c: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                { l: 'Karyawan', v: rekapSummary.karyawan, c: 'text-blue-500', bg: 'bg-blue-500/10' },
-                { l: 'Tamu', v: rekapSummary.tamu, c: 'text-amber-500', bg: 'bg-amber-500/10' },
+                { label: 'TOTAL', value: rekapSummary.total, icon: faClipboardList, bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]', border: 'bg-[var(--color-primary)]', filterKey: 'all' },
+                { label: 'GURU', value: rekapSummary.guru, icon: faChalkboardTeacher, bg: 'bg-indigo-500/10 text-indigo-500', border: 'bg-indigo-500', filterKey: 'guru' },
+                { label: 'KARYAWAN', value: rekapSummary.karyawan, icon: faBriefcase, bg: 'bg-blue-500/10 text-blue-500', border: 'bg-blue-500', filterKey: 'karyawan' },
+                { label: 'TAMU', value: rekapSummary.tamu, icon: faUserFriends, bg: 'bg-amber-500/10 text-amber-500', border: 'bg-amber-500', filterKey: 'tamu' },
               ].map((s, i) => (
-                <div key={i} className={`shrink-0 snap-center w-[200px] xs:w-[220px] sm:w-auto glass rounded-2xl p-4 ${s.bg} cursor-pointer transition-all hover:scale-[1.02]`}
-                  onClick={() => setFilterRekap(filterRekap === (i === 0 ? 'all' : VISITOR_TYPES[i - 1]?.key) ? 'all' : (i === 0 ? 'all' : VISITOR_TYPES[i - 1]?.key))}>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-70 mb-1">{s.l}</p>
-                  <p className={`text-2xl font-black font-heading tabular-nums ${s.c}`}>{loadingRekap ? '…' : s.v}</p>
-                </div>
+                <StatCard
+                  key={i}
+                  icon={s.icon}
+                  label={s.label}
+                  value={s.value}
+                  borderColor={s.border}
+                  iconBg={s.bg}
+                  loading={loadingRekap}
+                  className={`min-w-[200px] ${filterRekap === s.filterKey ? 'ring-2 ring-[var(--color-primary)] border-[var(--color-primary)]' : ''}`}
+                  onClick={() => setFilterRekap(s.filterKey)}
+                />
               ))}
             </StatsCarousel>
 
-            {/* Baris 2: View toggle + Search + Filter type */}
-            <div className="glass rounded-2xl px-4 py-3 flex items-center gap-2 flex-wrap">
-              {/* View toggle */}
-              <div className="flex gap-1 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                {[{ k: 'log', l: 'Detail Log' }, { k: 'ringkasan', l: 'Ringkasan' }].map(v => (
-                  <button key={v.k} onClick={() => setRekapView(v.k)}
-                    className={`h-7 px-3 rounded-md text-[10px] font-black transition-all ${rekapView === v.k ? 'bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                    {v.l}
-                  </button>
-                ))}
+            <div className="glass rounded-[1.5rem] overflow-hidden">
+              {/* Baris 2: View toggle + Search + Filter type */}
+              <div className="px-4 py-3 border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center gap-3 bg-[var(--color-surface-alt)]/40">
+                <div className="flex items-center gap-2">
+                  {/* View toggle */}
+                  <div className="flex gap-1 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0">
+                    {[{ k: 'log', l: 'Detail Log' }, { k: 'ringkasan', l: 'Ringkasan' }].map(v => (
+                      <button key={v.k} onClick={() => setRekapView(v.k)}
+                        className={`h-7 px-3 rounded-md text-[10px] font-black transition-all ${rekapView === v.k ? 'bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                        {v.l}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-bold text-[var(--color-text-muted)] ml-auto sm:hidden shrink-0">
+                    {rekapView === 'log' ? `${filteredRekapData.length} entri` : `${rekapRingkasan.length} orang`}
+                  </span>
+                </div>
+                <div className="relative flex-1">
+                  <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
+                  <input value={searchRekap} onChange={e => setSearchRekap(e.target.value)}
+                    placeholder="Cari nama atau keperluan..."
+                    className="w-full h-9 pl-8 pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+                  {searchRekap && (
+                    <button onClick={() => setSearchRekap('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+                      <FontAwesomeIcon icon={faXmark} className="text-[9px]" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide -mx-1 px-1">
+                  {[{ k: 'all', l: 'Semua' }, ...VISITOR_TYPES.map(t => ({ k: t.key, l: t.label }))].map(f => (
+                    <button key={f.k} onClick={() => setFilterRekap(f.k)}
+                      className={`h-8 px-3 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${filterRekap === f.k
+                        ? 'bg-[var(--color-primary)] text-white'
+                        : 'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                      {f.l}
+                    </button>
+                  ))}
+                </div>
+                <span className="hidden sm:block text-[10px] font-bold text-[var(--color-text-muted)] ml-auto shrink-0">
+                  {rekapView === 'log' ? `${filteredRekapData.length} entri` : `${rekapRingkasan.length} orang`}
+                </span>
               </div>
-              <div className="relative flex-1 min-w-[180px]">
-                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] pointer-events-none" />
-                <input value={searchRekap} onChange={e => setSearchRekap(e.target.value)}
-                  placeholder="Cari nama atau keperluan..."
-                  className="w-full h-8 pl-8 pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
-                {searchRekap && (
-                  <button onClick={() => setSearchRekap('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                    <FontAwesomeIcon icon={faXmark} className="text-[9px]" />
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-1">
-                {[{ k: 'all', l: 'Semua' }, ...VISITOR_TYPES.map(t => ({ k: t.key, l: t.label }))].map(f => (
-                  <button key={f.k} onClick={() => setFilterRekap(f.k)}
-                    className={`h-8 px-3 rounded-xl text-[10px] font-black transition-all ${filterRekap === f.k
-                      ? 'bg-[var(--color-primary)] text-white'
-                      : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                    {f.l}
-                  </button>
-                ))}
-              </div>
-              <span className="text-[10px] font-bold text-[var(--color-text-muted)] ml-auto shrink-0">
-                {rekapView === 'log' ? `${filteredRekapData.length} entri` : `${rekapRingkasan.length} orang`}
-              </span>
+
+              {/* ── VIEW: DETAIL LOG ── */}
+              {rekapView === 'log' && (
+                <div>
+                  {loadingRekap
+                    ? <TableSkeleton cols={10} rows={8} />
+                    : filteredRekapData.length === 0
+                      ? <EmptyState
+                        variant="plain"
+                        color="slate"
+                        icon={faClipboardList}
+                        title={rekapData.length === 0 ? 'Belum Ada Data' : 'Pencarian Kosong'}
+                        description={rekapData.length === 0 ? `Tidak ada aktivitas tercatat pada ${rekapLabel}.` : 'Tidak ada hasil yang cocok dengan filter atau pencarian Anda.'}
+                        action={(filterRekap !== 'all' || searchRekap) && (
+                          <button onClick={() => { setFilterRekap('all'); setSearchRekap('') }}
+                            className="h-8 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                            Reset Filter
+                          </button>
+                        )}
+                      />
+                      : <div className="overflow-x-auto">
+                        <table className="w-full min-w-[750px]">
+                          <thead>
+                            <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                              {['#', 'Nama', 'Jenis', 'NIP / Instansi', 'Keperluan', 'Jam Keluar', 'Jam Kembali / Masuk', 'Jam Keluar (Tamu)', 'Durasi', 'Kendaraan'].map(h => (
+                                <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredRekapData.map((log, i) => {
+                              const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
+                              const isG = log.visitor_type !== 'tamu'
+                              const dur = durasi(log.check_in, log.check_out)
+                              return (
+                                <tr key={log.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors cursor-pointer"
+                                  onClick={() => setEditLog(log)}>
+                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
+                                  <td className="px-3 py-2.5 text-[12px] font-black text-[var(--color-text)]">{log.visitor_name}</td>
+                                  <td className="px-3 py-2.5"><span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span></td>
+                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.visitor_nip || '-'}</td>
+                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text)]">{log.purpose}</td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{isG ? fmtTime(log.check_in) : '-'}</td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-600">{isG ? fmtTime(log.check_out) : fmtTime(log.check_in)}</td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{!isG ? fmtTime(log.check_out) : '-'}</td>
+                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)] font-bold">{dur || '-'}</td>
+                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.vehicle_plate || '-'}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                  }
+                </div>
+              )}
+
+              {/* ── VIEW: RINGKASAN PER ORANG ── */}
+              {rekapView === 'ringkasan' && (
+                <div>
+                  {loadingRekap
+                    ? <TableSkeleton cols={8} rows={8} />
+                    : rekapRingkasan.length === 0
+                      ? <EmptyState
+                        variant="plain"
+                        color="slate"
+                        icon={faUserFriends}
+                        title="Data Kosong"
+                        description={`Belum ada ringkasan orang yang tercatat untuk periode ${rekapLabel}.`}
+                      />
+                      : <div className="overflow-x-auto">
+                        <table className="w-full min-w-[600px]">
+                          <thead>
+                            <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                              {['#', 'Nama', 'Jenis', 'Jml Keluar', 'Total Durasi Keluar', 'Rata-rata', 'Belum Kembali', 'Keperluan'].map(h => (
+                                <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
+                              ))}
+                              <th className="px-3 py-2.5 border-b border-[var(--color-border)]">
+                                <span className="text-[8px] text-[var(--color-text-muted)]/50 font-bold italic normal-case tracking-normal">klik baris → detail log</span>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rekapRingkasan.map((r, i) => {
+                              const meta = TYPE_META[r.type] || TYPE_META.tamu
+                              const isInternal = r.type !== 'tamu'
+                              const totalH = Math.floor(r.totalMs / 3600000)
+                              const totalM = Math.floor((r.totalMs % 3600000) / 60000)
+                              const totalStr = r.totalMs > 0 ? (totalH > 0 ? `${totalH}j ${totalM}m` : `${totalM}m`) : '-'
+                              // FIX: use completedCount variable — avoids (r.count - r.belumKembali || 1) precedence bug
+                              const completedCount = r.count - r.belumKembali
+                              const avgMs = completedCount > 0 ? r.totalMs / completedCount : 0
+                              const avgH = Math.floor(avgMs / 3600000)
+                              const avgM = Math.floor((avgMs % 3600000) / 60000)
+                              const avgStr = avgMs > 0 ? (avgH > 0 ? `${avgH}j ${avgM}m` : `${avgM}m`) : '-'
+                              // Bar visual proporsi total durasi
+                              const maxMs = rekapRingkasan[0]?.totalMs || 1
+                              const barPct = maxMs > 0 ? Math.round((r.totalMs / maxMs) * 100) : 0
+                              return (
+                                <tr key={r.id}
+                                  onClick={() => { setRekapView('log'); setSearchRekap(r.name) }}
+                                  className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/60 transition-colors cursor-pointer group"
+                                  title={`Klik untuk lihat detail log ${r.name}`}>
+                                  <td className="px-3 py-3 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
+                                  <td className="px-3 py-3">
+                                    <p className="text-[12px] font-black text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{r.name}</p>
+                                    {r.nip !== '-' && <p className="text-[9px] text-[var(--color-text-muted)]">{r.nip}</p>}
+                                  </td>
+                                  <td className="px-3 py-3">
+                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span>
+                                  </td>
+                                  <td className="px-3 py-3 text-[13px] font-black text-[var(--color-text)] tabular-nums">{r.count}×</td>
+                                  <td className="px-3 py-3">
+                                    {isInternal ? (
+                                      <div className="flex items-center gap-2">
+                                        <span className={`text-[12px] font-black tabular-nums ${r.totalMs > 0 ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>{totalStr}</span>
+                                        {barPct > 0 && (
+                                          <div className="flex-1 max-w-[60px] h-1.5 rounded-full bg-[var(--color-surface-alt)]">
+                                            <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${barPct}%` }} />
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : <span className="text-[11px] text-[var(--color-text-muted)]">-</span>}
+                                  </td>
+                                  <td className="px-3 py-3 text-[11px] font-bold text-[var(--color-text-muted)] tabular-nums">{isInternal ? avgStr : '-'}</td>
+                                  <td className="px-3 py-3">
+                                    {r.belumKembali > 0
+                                      ? <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600">{r.belumKembali}×</span>
+                                      : <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">-</span>}
+                                  </td>
+                                  <td className="px-3 py-3 text-[10px] text-[var(--color-text-muted)] max-w-[180px]">
+                                    <p className="truncate">{r.purposes.slice(0, 3).join(', ')}{r.purposes.length > 3 ? ` +${r.purposes.length - 3}` : ''}</p>
+                                  </td>
+                                  <td className="px-3 py-3">
+                                    <span className="text-[9px] text-[var(--color-primary)]/50 font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Detail →</span>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                  }
+                </div>
+              )}
             </div>
-
-            {/* ── VIEW: DETAIL LOG ── */}
-            {rekapView === 'log' && (
-              <div className="glass rounded-[1.5rem] overflow-hidden">
-                {loadingRekap
-                  ? <div className="p-4 space-y-2">{[1, 2, 3, 4].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
-                  : filteredRekapData.length === 0
-                    ? <div className="flex flex-col items-center gap-2 py-16 opacity-40">
-                      <FontAwesomeIcon icon={faClipboardList} className="text-4xl" />
-                      <p className="text-[12px] font-black">{rekapData.length === 0 ? 'Tidak ada data periode ini' : 'Tidak ada data yang cocok'}</p>
-                      {(filterRekap !== 'all' || searchRekap) && (
-                        <button onClick={() => { setFilterRekap('all'); setSearchRekap('') }}
-                          className="mt-1 h-7 px-3 rounded-lg border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
-                          Reset Filter
-                        </button>
-                      )}
-                    </div>
-                    : <div className="overflow-x-auto">
-                      <table className="w-full min-w-[750px]">
-                        <thead>
-                          <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-                            {['#', 'Nama', 'Jenis', 'NIP / Instansi', 'Keperluan', 'Jam Keluar', 'Jam Kembali / Masuk', 'Jam Keluar (Tamu)', 'Durasi', 'Kendaraan'].map(h => (
-                              <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredRekapData.map((log, i) => {
-                            const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
-                            const isG = log.visitor_type !== 'tamu'
-                            const dur = durasi(log.check_in, log.check_out)
-                            return (
-                              <tr key={log.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors cursor-pointer"
-                                onClick={() => setEditLog(log)}>
-                                <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
-                                <td className="px-3 py-2.5 text-[12px] font-black text-[var(--color-text)]">{log.visitor_name}</td>
-                                <td className="px-3 py-2.5"><span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span></td>
-                                <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.visitor_nip || '-'}</td>
-                                <td className="px-3 py-2.5 text-[11px] text-[var(--color-text)]">{log.purpose}</td>
-                                <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{isG ? fmtTime(log.check_in) : '-'}</td>
-                                <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-600">{isG ? fmtTime(log.check_out) : fmtTime(log.check_in)}</td>
-                                <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{!isG ? fmtTime(log.check_out) : '-'}</td>
-                                <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)] font-bold">{dur || '-'}</td>
-                                <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.vehicle_plate || '-'}</td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                }
-              </div>
-            )}
-
-            {/* ── VIEW: RINGKASAN PER ORANG ── */}
-            {rekapView === 'ringkasan' && (
-              <div className="glass rounded-[1.5rem] overflow-hidden">
-                {loadingRekap
-                  ? <div className="p-4 space-y-2">{[1, 2, 3, 4].map(i => <div key={i} className="h-14 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}</div>
-                  : rekapRingkasan.length === 0
-                    ? <div className="flex flex-col items-center gap-2 py-16 opacity-40">
-                      <FontAwesomeIcon icon={faClipboardList} className="text-4xl" />
-                      <p className="text-[12px] font-black">Tidak ada data periode ini</p>
-                    </div>
-                    : <div className="overflow-x-auto">
-                      <table className="w-full min-w-[600px]">
-                        <thead>
-                          <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-                            {['#', 'Nama', 'Jenis', 'Jml Keluar', 'Total Durasi Keluar', 'Rata-rata', 'Belum Kembali', 'Keperluan'].map(h => (
-                              <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
-                            ))}
-                            <th className="px-3 py-2.5 border-b border-[var(--color-border)]">
-                              <span className="text-[8px] text-[var(--color-text-muted)]/50 font-bold italic normal-case tracking-normal">klik baris → detail log</span>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rekapRingkasan.map((r, i) => {
-                            const meta = TYPE_META[r.type] || TYPE_META.tamu
-                            const isInternal = r.type !== 'tamu'
-                            const totalH = Math.floor(r.totalMs / 3600000)
-                            const totalM = Math.floor((r.totalMs % 3600000) / 60000)
-                            const totalStr = r.totalMs > 0 ? (totalH > 0 ? `${totalH}j ${totalM}m` : `${totalM}m`) : '-'
-                            // FIX: use completedCount variable — avoids (r.count - r.belumKembali || 1) precedence bug
-                            const completedCount = r.count - r.belumKembali
-                            const avgMs = completedCount > 0 ? r.totalMs / completedCount : 0
-                            const avgH = Math.floor(avgMs / 3600000)
-                            const avgM = Math.floor((avgMs % 3600000) / 60000)
-                            const avgStr = avgMs > 0 ? (avgH > 0 ? `${avgH}j ${avgM}m` : `${avgM}m`) : '-'
-                            // Bar visual proporsi total durasi
-                            const maxMs = rekapRingkasan[0]?.totalMs || 1
-                            const barPct = maxMs > 0 ? Math.round((r.totalMs / maxMs) * 100) : 0
-                            return (
-                              <tr key={r.id}
-                                onClick={() => { setRekapView('log'); setSearchRekap(r.name) }}
-                                className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/60 transition-colors cursor-pointer group"
-                                title={`Klik untuk lihat detail log ${r.name}`}>
-                                <td className="px-3 py-3 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
-                                <td className="px-3 py-3">
-                                  <p className="text-[12px] font-black text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{r.name}</p>
-                                  {r.nip !== '-' && <p className="text-[9px] text-[var(--color-text-muted)]">{r.nip}</p>}
-                                </td>
-                                <td className="px-3 py-3">
-                                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span>
-                                </td>
-                                <td className="px-3 py-3 text-[13px] font-black text-[var(--color-text)] tabular-nums">{r.count}×</td>
-                                <td className="px-3 py-3">
-                                  {isInternal ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className={`text-[12px] font-black tabular-nums ${r.totalMs > 0 ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>{totalStr}</span>
-                                      {barPct > 0 && (
-                                        <div className="flex-1 max-w-[60px] h-1.5 rounded-full bg-[var(--color-surface-alt)]">
-                                          <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${barPct}%` }} />
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : <span className="text-[11px] text-[var(--color-text-muted)]">-</span>}
-                                </td>
-                                <td className="px-3 py-3 text-[11px] font-bold text-[var(--color-text-muted)] tabular-nums">{isInternal ? avgStr : '-'}</td>
-                                <td className="px-3 py-3">
-                                  {r.belumKembali > 0
-                                    ? <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600">{r.belumKembali}×</span>
-                                    : <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">-</span>}
-                                </td>
-                                <td className="px-3 py-3 text-[10px] text-[var(--color-text-muted)] max-w-[180px]">
-                                  <p className="truncate">{r.purposes.slice(0, 3).join(', ')}{r.purposes.length > 3 ? ` +${r.purposes.length - 3}` : ''}</p>
-                                </td>
-                                <td className="px-3 py-3">
-                                  <span className="text-[9px] text-[var(--color-primary)]/50 font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Detail →</span>
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                }
-              </div>
-            )}
           </div>
         )}
 
@@ -2206,6 +2409,70 @@ export default function GatePage() {
             return res?.success
           }}
         />
+      )}
+
+      {selectedIds.length > 0 && (
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-[250] w-[95%] max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)"
+          style={{
+            bottom: isMobile
+              ? 'max(80px, calc(12px + env(safe-area-inset-bottom)))'
+              : '16px'
+          }}
+        >
+          <div className="relative group">
+            {/* Glow effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-[var(--color-primary)] to-emerald-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000" />
+
+            <div className="relative bg-[#0f172a]/90 backdrop-blur-3xl border border-white/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] px-2 py-2 flex items-center justify-between gap-2 text-white overflow-hidden">
+              {/* Count Indicator */}
+              <div className="flex items-center gap-3 pl-2 shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[var(--color-primary)] flex items-center justify-center font-black text-[14px] shadow-lg shadow-[var(--color-primary)]/30 shrink-0">
+                  {selectedIds.length}
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-[9px] font-black uppercase tracking-widest opacity-60 leading-none">Entri Terpilih</p>
+                  <p className="text-[11px] font-bold leading-none mt-0.5">Aksi Massal</p>
+                </div>
+              </div>
+
+              {/* Actions Area */}
+              <div className="flex items-center gap-1.5 flex-1 justify-center">
+                <button
+                  onClick={handleBulkCheckout}
+                  disabled={submitting}
+                  className="h-10 sm:h-9 px-3 sm:px-4 rounded-xl bg-indigo-500 text-white hover:bg-indigo-600 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest whitespace-nowrap shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+                >
+                  {submitting ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faCheckDouble} className="text-[12px]" />}
+                  <span className="hidden xs:inline">Check-out Massal</span>
+                  <span className="xs:hidden">Check-out</span>
+                </button>
+
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={submitting}
+                  className="h-10 sm:h-9 px-3 sm:px-4 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                  title="Hapus Terpilih"
+                >
+                  <FontAwesomeIcon icon={faTrash} className="text-[12px]" />
+                  <span className="inline">Hapus</span>
+                </button>
+              </div>
+
+              {/* Close Button */}
+              <div className="flex items-center pr-1 shrink-0">
+                <div className="w-px h-6 bg-white/10 mx-1.5 hidden sm:block" />
+                <button
+                  onClick={() => { setSelectedIds([]); setSelectionMode(false) }}
+                  className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all flex items-center justify-center translate-x-0 active:scale-90"
+                  title="Tutup & Batal"
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </DashboardLayout>
   )

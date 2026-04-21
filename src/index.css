@@ -28,6 +28,13 @@
   --color-border: #e2e8f0;
   /* Slate 200 */
   --sidebar-width: 260px;
+  --floating-bar-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --floating-bar-bottom: 80px;
+  }
 }
 
 .dark {
@@ -672,6 +679,21 @@ tr:hover td {
   .duration-1000 { animation-duration: 1000ms; }
 
   .delay-300 { animation-delay: 300ms; }
+}
+
+/* ── Custom Utilities for Reports Dashboard ── */
+
+/* Remove number input spinners (Chrome, Safari, Edge, Opera) */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Remove number input spinners (Firefox) */
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* ── PRINT STYLES (Professional Dashboard Export) ── */
