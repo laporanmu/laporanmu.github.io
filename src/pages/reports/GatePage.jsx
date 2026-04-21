@@ -574,11 +574,11 @@ function FormInternal({ internalList, onSubmit, loading }) {
 
       {/* Submit */}
       <button onClick={submit} disabled={loading || !canSubmit}
-        className="w-full h-10 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20">
+        className="w-full h-10 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20 px-4">
         {loading
           ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
           : <FontAwesomeIcon icon={faSignOutAlt} />}
-        Catat Keluar
+        <span className="whitespace-nowrap">Catat Keluar</span>
       </button>
 
       {/* Hint shortcut */}
@@ -688,11 +688,11 @@ function FormTamu({ onSubmit, loading }) {
 
       {/* Submit */}
       <button onClick={submit} disabled={loading || !canSubmit}
-        className="w-full h-10 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20">
+        className="w-full h-10 rounded-xl text-[12px] font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 active:scale-[0.98] text-white shadow-lg shadow-[var(--color-primary)]/20 px-4">
         {loading
           ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
           : <FontAwesomeIcon icon={faSignInAlt} />}
-        Catat Masuk Tamu
+        <span className="whitespace-nowrap">Catat Masuk Tamu</span>
       </button>
 
       {/* Hint shortcut */}
@@ -1840,7 +1840,7 @@ export default function GatePage() {
 
         {/* ── TAB: INPUT ── */}
         {activeTab === 'input' && (
-          <div className="grid lg:grid-cols-2 gap-6 items-start">
+          <div className="grid lg:grid-cols-2 gap-6 items-start animate-in fade-in slide-in-from-bottom-3 duration-500">
             {/* Kolom kiri: Form */}
             <div className="glass rounded-[1.5rem] p-5">
               {/* Mode switcher Guru / Tamu */}
@@ -1951,7 +1951,7 @@ export default function GatePage() {
 
         {/* ── TAB: LOG HARI INI ── */}
         {activeTab === 'log' && (
-          <div className="glass rounded-[1.5rem] overflow-hidden">
+          <div className="glass rounded-[1.5rem] overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-500">
             {/* Toolbar baris 1: Search + filter jenis */}
             <div className="px-4 pt-3 pb-2 border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="relative flex-1">
@@ -2052,18 +2052,19 @@ export default function GatePage() {
                   <CardSkeleton />
                 </div>
               ) : filteredLogs.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-16 opacity-40">
-                  <FontAwesomeIcon icon={faClipboardList} className="text-4xl" />
-                  <p className="text-[12px] font-black">
-                    {filterStatus !== 'all' || filterType !== 'all' || searchLog ? 'Tidak ada data yang cocok dengan filter' : 'Tidak ada data'}
-                  </p>
-                  {(filterStatus !== 'all' || filterType !== 'all' || searchLog) && (
-                    <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setSearchLog('') }}
-                      className="mt-1 h-7 px-3 rounded-lg border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                <EmptyState
+                  variant="plain"
+                  color="slate"
+                  icon={faClipboardList}
+                  title={todayLogs.length === 0 ? 'Belum Ada Data' : 'Pencarian Kosong'}
+                  description={todayLogs.length === 0 ? 'Tidak ada aktivitas tercatat untuk hari ini.' : 'Tidak ada hasil yang cocok dengan filter atau pencarian Anda.'}
+                  action={(filterType !== 'all' || filterStatus !== 'all' || searchLog) && (
+                    <button onClick={() => { setFilterType('all'); setFilterStatus('all'); setSearchLog('') }}
+                      className="h-8 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
                       Reset Filter
                     </button>
                   )}
-                </div>
+                />
               ) : (
                 <div className="space-y-2">
                   {filteredLogs.map(log => (
@@ -2086,7 +2087,7 @@ export default function GatePage() {
 
         {/* ── TAB: REKAP ── */}
         {activeTab === 'rekap' && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
             {/* Baris 1: Mode + Navigasi + Export */}
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">

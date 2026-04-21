@@ -86,6 +86,7 @@ export default function RaportPage() {
     const [isFilterOpen, setIsFilterOpen] = useState(false)
     const [stats, setStats] = useState({ totalKelas: 0, totalSiswa: 0, totalRaport: 0, bulanIni: now.getMonth() + 1 })
     const [classProgress, setClassProgress] = useState({})
+    const [showAllIncompleteBanner, setShowAllIncompleteBanner] = useState(false)
 
     // ── Step state (0 = daftar kelas, 1 = setup, 2 = input, 3 = preview, 4 = arsip)
     const [step, setStep] = useState(0)
@@ -1586,9 +1587,9 @@ export default function RaportPage() {
                             {newMonthBanner.classesNotArchived.length} kelas masih ada santri yang belum diisi.
                         </p>
                         
-                        {/* Desktop: Wrap | Mobile: Scroll */}
-                        <div className="flex items-center gap-2 overflow-x-auto sm:overflow-visible sm:flex-wrap pb-2 sm:pb-0 no-scrollbar -mx-1 px-1">
-                            {newMonthBanner.classesNotArchived.map(cls => (
+                        {/* Mobile: Grid 2 Col | Tablet: 3-4 Col | Desktop: Flex Wrap */}
+                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:flex md:flex-wrap items-center gap-2 mt-3">
+                            {(showAllIncompleteBanner ? newMonthBanner.classesNotArchived : newMonthBanner.classesNotArchived.slice(0, 8)).map(cls => (
                                 <button 
                                     key={cls.class_id} 
                                     onClick={() => { 
@@ -1602,13 +1603,30 @@ export default function RaportPage() {
                                         }; 
                                         setStep(1) 
                                     }} 
-                                    className="h-8 px-3 rounded-xl bg-white border border-amber-500/30 text-amber-700 text-[10px] sm:text-[9px] font-black hover:bg-amber-50 transition-all flex items-center gap-2 shrink-0 sm:shrink shadow-sm"
+                                    className="h-9 px-3 rounded-xl bg-white/70 border border-amber-500/30 text-amber-900 text-[10px] font-black hover:bg-white hover:shadow-md hover:border-amber-500 transition-all flex items-center justify-between gap-2 shrink-0 shadow-sm"
                                 >
-                                    <FontAwesomeIcon icon={faChevronRight} className="text-[8px] opacity-60" />
-                                    {cls.class_name}
-                                    <span className="opacity-60 text-[8px]">({cls.filled}/{cls.total})</span>
+                                    <span className="truncate min-w-0">{cls.class_name.split(' ')[0]}</span>
+                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${cls.filled === 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {cls.filled}/{cls.total}
+                                    </span>
                                 </button>
                             ))}
+                            {!showAllIncompleteBanner && newMonthBanner.classesNotArchived.length > 8 && (
+                                <button 
+                                    onClick={() => setShowAllIncompleteBanner(true)}
+                                    className="h-9 px-3 rounded-xl bg-amber-500/10 border border-dashed border-amber-500/40 text-amber-600 text-[9px] font-black hover:bg-amber-500/20 transition-all flex items-center justify-center gap-1.5"
+                                >
+                                    +{newMonthBanner.classesNotArchived.length - 8} kelas lagi
+                                </button>
+                            )}
+                            {showAllIncompleteBanner && (
+                                <button 
+                                    onClick={() => setShowAllIncompleteBanner(false)}
+                                    className="h-9 px-3 rounded-xl text-amber-600 text-[9px] font-black hover:underline transition-all"
+                                >
+                                    Sembunyikan
+                                </button>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-2 mt-4 pt-3 border-t border-amber-500/10">
@@ -1686,8 +1704,8 @@ export default function RaportPage() {
                         )}
                     </div>
 
-                    {/* Filter Row (Scrollable horizontally on mobile) */}
-                    <div className="flex items-center gap-1.5 p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl w-full sm:w-auto overflow-x-auto no-scrollbar shrink-0 shadow-inner">
+                    {/* Filter Row (Fixed grid on mobile to avoid 'offside') */}
+                    <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5 p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl w-full sm:w-auto overflow-hidden shrink-0 shadow-inner">
                         {[
                             { id: 'all', label: 'Semua', icon: faSchool },
                             { id: 'boarding', label: 'Boarding', icon: faMoon },
@@ -1696,10 +1714,10 @@ export default function RaportPage() {
                             <button
                                 key={opt.id}
                                 onClick={() => setFilterType(opt.id)}
-                                className={`h-9 flex-1 sm:flex-none sm:px-5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-2 ${filterType === opt.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white dark:hover:bg-slate-800'}`}
+                                className={`h-9 sm:px-5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${filterType === opt.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white dark:hover:bg-slate-800'}`}
                             >
-                                <FontAwesomeIcon icon={opt.icon} className="text-[9px]" />
-                                {opt.label}
+                                <FontAwesomeIcon icon={opt.icon} className="text-[9px] shrink-0" />
+                                <span className="whitespace-nowrap">{opt.label}</span>
                             </button>
                         ))}
                     </div>
@@ -1969,8 +1987,8 @@ export default function RaportPage() {
                 </div>
 
                 <div className="flex gap-2 sm:gap-4 pt-4 border-t border-[var(--color-border)]">
-                    <button onClick={() => { setSelectedClassId(''); setMusyrif('') }} className="h-12 px-4 sm:px-6 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0">
-                        <FontAwesomeIcon icon={faArrowLeft} /> <span className="hidden xs:inline">Kembali</span>
+                    <button onClick={() => { setSelectedClassId(''); setMusyrif('') }} className="h-12 px-4 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0">
+                        <FontAwesomeIcon icon={faArrowLeft} /> <span className="hidden sm:inline">Kembali</span>
                     </button>
                     <button onClick={async () => { if (!selectedClassId) return; const ok = await loadStudents(); if (ok) setStep(2) }} disabled={!selectedClassId || loading} className="flex-1 h-12 rounded-2xl bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 overflow-hidden px-2">
                         {loading ? (
@@ -1987,49 +2005,61 @@ export default function RaportPage() {
         )
     }
 
-    const renderStep2 = () => (
+    const renderStep2 = () => {
+        return (
         <div className="space-y-2">
             {/* ── ROW 1: konteks + aksi utama ── */}
-            <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
-                <button onClick={() => {
-                    if (hasUnsavedMemo) {
-                        setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
-                        return
-                    }
-                    setStep(0); setSelectedClassId('')
-                }} className="h-8 px-3 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 shrink-0"><FontAwesomeIcon icon={faArrowLeft} className="text-[9px]" /> Ganti Kelas</button>
-                {!isOnline && <span className="h-8 px-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 text-[9px] font-black flex items-center gap-1.5 shrink-0"><FontAwesomeIcon icon={faWifi} className="text-[9px] opacity-50" /> Offline</span>}
-                {draftAvailable && (
-                    <div className="flex items-center gap-1 h-8 px-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[9px] font-black shrink-0">
-                        <FontAwesomeIcon icon={faCircleInfo} className="text-[9px]" />
-                        <span>Draft tersedia</span>
-                        <button onClick={loadDraft} className="ml-1 underline hover:no-underline">Muat</button>
-                        <button onClick={clearDraft} aria-label="Hapus draft" className="text-[var(--color-text-muted)] hover:text-rose-500 ml-0.5"><FontAwesomeIcon icon={faXmark} className="text-[8px]" /></button>
+            <div className="flex flex-col md:flex-row md:items-center gap-2">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                    <button onClick={() => {
+                        if (hasUnsavedMemo) {
+                            setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
+                            return
+                        }
+                        setStep(0); setSelectedClassId('')
+                    }} className="h-9 px-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 shrink-0">
+                        <FontAwesomeIcon icon={faArrowLeft} className="text-[9px]" /> Ganti Kelas
+                    </button>
+                    {!isOnline && <span className="h-9 px-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-[9px] font-black flex items-center gap-1.5 shrink-0"><FontAwesomeIcon icon={faWifi} className="text-[9px] opacity-50" /> Offline</span>}
+                    {draftAvailable && (
+                        <div className="flex items-center gap-1 h-9 px-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[9px] font-black shrink-0">
+                            <FontAwesomeIcon icon={faCircleInfo} className="text-[9px]" />
+                            <span>Draft tersedia</span>
+                            <button onClick={loadDraft} className="ml-1 underline hover:no-underline">Muat</button>
+                            <button onClick={clearDraft} aria-label="Hapus draft" className="text-[var(--color-text-muted)] hover:text-rose-500 ml-0.5"><FontAwesomeIcon icon={faXmark} className="text-[8px]" /></button>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-2 px-3 py-1.5 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0">
+                        <FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-xs" />
+                        <span className="text-[10px] font-black text-[var(--color-text)] whitespace-nowrap">{selectedClass?.name}</span>
+                        <span className="text-[var(--color-text-muted)] text-[10px]">·</span>
+                        <span className="text-[10px] font-bold text-[var(--color-text-muted)] whitespace-nowrap">{bulanObj?.id_str} {selectedYear}</span>
                     </div>
-                )}
-                {/* Kelas + bulan badge */}
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0"><FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-xs" /><span className="text-[10px] font-black text-[var(--color-text)]">{selectedClass?.name}</span><span className="text-[var(--color-text-muted)] text-[10px]">·</span><span className="text-[10px] font-bold text-[var(--color-text-muted)]">{bulanObj?.id_str} {selectedYear}</span></div>
-                {/* Progress bar */}
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="flex-1 h-2 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden min-w-[60px]"><div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} /></div>
-                    <span className="text-[10px] font-black text-[var(--color-text-muted)] whitespace-nowrap shrink-0">{completedCount}/{students.length} lengkap</span>
                 </div>
-                {/* Salin bulan lalu */}
-                <button onClick={copyFromLastMonth} disabled={copyingLastMonth} className="h-8 px-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-sky-500/20 transition-all disabled:opacity-50 shrink-0"><FontAwesomeIcon icon={copyingLastMonth ? faSpinner : faChevronLeft} className={copyingLastMonth ? 'animate-spin' : ''} /> Salin Bln Lalu</button>
-                {/* Simpan Semua */}
-                <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-8 px-4 rounded-lg bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-md shadow-emerald-500/20 relative disabled:opacity-70 shrink-0">
-                    <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />{savingAll ? 'Menyimpan...' : !canEdit ? 'Read-only' : 'Simpan Semua'}
-                    {!savingAll && hasUnsavedMemo && <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
-                </button>
-                {/* Preview & Cetak — CTA utama selalu terlihat */}
-                <button onClick={() => setStep(3)} className="h-8 px-4 rounded-lg bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-1.5 shrink-0"><FontAwesomeIcon icon={faMagnifyingGlass} className="text-[9px]" /> Preview & Cetak</button>
+
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {/* Progress bar */}
+                    <div className="flex-1 h-2 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden min-w-[60px]">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
+                    </div>
+                    <span className="text-[10px] font-black text-[var(--color-text-muted)] whitespace-nowrap shrink-0">{completedCount}/{students.length} lengkap</span>
+                    
+                    <div className="hidden md:flex items-center gap-2 ml-auto">
+                        <button onClick={copyFromLastMonth} disabled={copyingLastMonth} className="h-9 px-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-sky-500/20 transition-all disabled:opacity-50 shrink-0"><FontAwesomeIcon icon={copyingLastMonth ? faSpinner : faChevronLeft} className={copyingLastMonth ? 'animate-spin' : ''} /> Salin Bln Lalu</button>
+                        <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-md shadow-emerald-500/20 relative disabled:opacity-70 shrink-0">
+                            <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />{savingAll ? 'Menyimpan...' : !canEdit ? 'Read-only' : 'Simpan Semua'}
+                            {!savingAll && hasUnsavedMemo && <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
+                        </button>
+                        <button onClick={() => setStep(3)} className="h-9 px-4 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-1.5 shrink-0"><FontAwesomeIcon icon={faMagnifyingGlass} className="text-[9px]" /> Preview & Cetak</button>
+                    </div>
+                </div>
             </div>
             {/* ── ROW 2: tools, export, filter, search ── */}
             <div className="flex items-center gap-2 flex-wrap">
                 {/* Navigasi hint */}
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)]"><FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[10px]" /><span className="text-[9px] text-[var(--color-text-muted)] font-bold">Navigasi: <kbd className="px-1 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono">Tab</kbd>/<kbd className="px-1 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono">Enter</kbd> · <kbd className="px-1 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono">↑↓←→</kbd> · <kbd className="px-1 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono">Ctrl+S</kbd></span></div>
                 {/* Search */}
-                <div className="relative"><FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" /><input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="h-8 pl-7 pr-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all w-36" />{studentSearch && <button onClick={() => setStudentSearch('')} aria-label="Bersihkan pencarian" className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><FontAwesomeIcon icon={faXmark} className="text-[10px]" /></button>}</div>
+                <div className="relative flex-1 md:flex-none"><FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" /><input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="h-10 pl-7 pr-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all w-full md:w-36" />{studentSearch && <button onClick={() => setStudentSearch('')} aria-label="Bersihkan pencarian" className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><FontAwesomeIcon icon={faXmark} className="text-[10px]" /></button>}</div>
                 {/* Filter belum lengkap */}
                 <button onClick={() => setShowIncompleteOnly(v => !v)} className={`h-8 px-3 rounded-lg border text-[10px] font-black flex items-center gap-1.5 transition-all ${showIncompleteOnly ? 'bg-rose-500/15 border-rose-500/30 text-rose-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                     <FontAwesomeIcon icon={faFilter} className="text-[9px]" />
@@ -2040,34 +2070,37 @@ export default function RaportPage() {
                     <button
                         onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
                         title={`${noPhoneCount} santri belum ada nomor WA — klik untuk filter`}
-                        className={`h-8 px-3 rounded-lg border text-[10px] font-black flex items-center gap-1.5 transition-all ${showNoPhoneOnly ? 'bg-amber-500/15 border-amber-500/30 text-amber-700' : 'bg-amber-500/8 border-amber-500/20 text-amber-600 hover:bg-amber-500/15'}`}
+                        className={`h-10 px-3 rounded-lg border text-[10px] font-black flex items-center gap-1.5 transition-all ${showNoPhoneOnly ? 'bg-amber-500/15 border-amber-500/30 text-amber-700 shadow-sm' : 'bg-amber-500/8 border-amber-500/20 text-amber-600 hover:bg-amber-500/15'}`}
                     >
                         <FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />
-                        {noPhoneCount} tanpa WA
-                        {showNoPhoneOnly && <FontAwesomeIcon icon={faXmark} className="text-[8px] ml-0.5 opacity-70" />}
+                        <span className="whitespace-nowrap">{noPhoneCount} tanpa WA</span>
                     </button>
                 )}
                 {/* Shortcut modal */}
-                <button onClick={() => setShowShortcutModal(true)} aria-label="Lihat keyboard shortcuts" className="h-8 w-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black flex items-center justify-center hover:text-[var(--color-text)] transition-all" title="Keyboard shortcuts (?)">
-                    <FontAwesomeIcon icon={faKeyboard} className="text-[9px]" />
+                <button onClick={() => setShowShortcutModal(true)} className="h-10 w-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] transition-all shrink-0">
+                    <FontAwesomeIcon icon={faKeyboard} className="text-[10px]" />
                 </button>
                 {/* Isi Massal */}
                 <button onClick={() => { setBulkMode(v => !v); setBulkValues({}); setBulkSelected(new Set()) }} className={`h-8 px-3 rounded-lg border text-[10px] font-black flex items-center gap-1.5 transition-all ${bulkMode ? 'bg-violet-500/15 border-violet-500/30 text-violet-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                     <FontAwesomeIcon icon={faFillDrip} className="text-[9px]" />
-                    {bulkMode ? `Isi Massal${bulkSelected.size > 0 ? ` (${bulkSelected.size})` : ''}` : 'Isi Massal'}
+                    {bulkMode ? `Isi (${bulkSelected.size})` : 'Isi Massal'}
                 </button>
-                <div className="flex-1" />
-                {/* Export tools — dikumpulkan di kanan */}
-                <button onClick={exportCSV} className="h-8 px-3 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-teal-500/20 transition-all"><FontAwesomeIcon icon={faFileExport} className="text-[9px]" /> CSV</button>
-                <button onClick={exportXLS} className="h-8 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-emerald-500/20 transition-all" title="Export Excel (.xlsx) — mendukung warna sel & karakter Arab"><FontAwesomeIcon icon={faFileExport} className="text-[9px]" /> XLS</button>
-                <button onClick={() => { const completed = students.filter(s => isComplete(scores[s.id] || {})); if (!completed.length) { addToast('Belum ada nilai lengkap untuk diunduh', 'warning'); return }; runZipBlast(completed, null) }} className="h-8 px-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-sky-500/20 transition-all" title="Download semua raport lengkap sebagai ZIP"><FontAwesomeIcon icon={faFileZipper} className="text-[9px]" /> ZIP</button>
-                <button onClick={() => {
-                    const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
-                    if (!withPhone.length) { addToast('Tidak ada santri dengan nomor WA dan nilai lengkap', 'warning'); return }
-                    setWaBlastConfirm({ queue: withPhone })
-                }} className="h-8 px-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-green-500/20 transition-all">
-                    <FontAwesomeIcon icon={faWhatsapp} className="text-[9px]" /> Kirim WA
-                </button>
+                <div className="flex items-center gap-1 flex-1 md:flex-none md:ml-auto overflow-x-auto no-scrollbar">
+                    <button onClick={exportCSV} className="h-10 px-3 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-600 text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0">CSV</button>
+                    <button onClick={exportXLS} className="h-10 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0">XLS</button>
+                    <button onClick={() => {
+                        const completeds = students.filter(s => isComplete(scores[s.id] || {}))
+                        if (!completeds.length) return
+                        runZipBlast(completeds, null)
+                    }} className="h-10 px-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0">ZIP</button>
+                    <button onClick={() => {
+                        const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
+                        if (!withPhone.length) return
+                        setWaBlastConfirm({ queue: withPhone })
+                    }} className="h-10 px-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0">
+                        <FontAwesomeIcon icon={faWhatsapp} className="text-[10px]" /> WA
+                    </button>
+                </div>
             </div>
             {/* UIUX: Floating Bulk Action Bar */}
             <BulkActionBar
@@ -2457,7 +2490,8 @@ export default function RaportPage() {
                 {KRITERIA.map(k => { const vals = filteredStudents.map(s => scores[s.id]?.[k.key]).filter(v => v !== '' && v !== null && v !== undefined); const avg = vals.length ? (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1) : '—'; const g = avg !== '—' ? GRADE(Number(avg)) : null; return (<div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center"><div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>{k.id}</div><div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>{avg}</div><div className="text-[7px] font-bold text-[var(--color-text-muted)]" style={{ direction: 'rtl' }}>{g?.label || 'rata kelas'}</div></div>) })}
             </div>
         </div>
-    )
+        )
+    }
 
     const renderStep3 = () => {
         const previewStudent = previewStudentId ? students.find(s => s.id === previewStudentId) : students[0]
