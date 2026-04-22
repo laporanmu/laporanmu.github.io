@@ -92,22 +92,35 @@ export const ExtraTextarea = memo(({ value, studentId, fieldKey, onCommit, ...te
 // ─── Main StudentRow ─────────────────────────────────────────────────────────
 
 const studentRowAreEqual = (prev, next) => {
-    if (prev.si !== next.si ||
-        prev.student !== next.student ||
-        prev.sc !== next.sc ||
-        prev.ex !== next.ex ||
-        prev.isSaved !== next.isSaved ||
-        prev.isSaving !== next.isSaving ||
-        prev.isDirty !== next.isDirty ||
-        prev.isChecked !== next.isChecked ||
-        prev.bulkMode !== next.bulkMode ||
-        prev.lang !== next.lang ||
-        prev.trendData !== next.trendData ||
-        prev.prevScores !== next.prevScores ||
-        prev.templateOpen !== next.templateOpen ||
-        prev.catatanArab !== next.catatanArab ||
-        prev.sendingWAStatus !== next.sendingWAStatus) return false
-    return true
+    return (
+        prev.si === next.si &&
+        prev.student === next.student &&
+        prev.sc === next.sc &&
+        prev.ex === next.ex &&
+        prev.isSaved === next.isSaved &&
+        prev.isSaving === next.isSaving &&
+        prev.isDirty === next.isDirty &&
+        prev.isChecked === next.isChecked &&
+        prev.bulkMode === next.bulkMode &&
+        prev.lang === next.lang &&
+        prev.trendData === next.trendData &&
+        prev.prevScores === next.prevScores &&
+        prev.templateOpen === next.templateOpen &&
+        prev.catatanArab === next.catatanArab &&
+        prev.sendingWAStatus === next.sendingWAStatus &&
+        prev.onScoreChange === next.onScoreChange &&
+        prev.onExtraChange === next.onExtraChange &&
+        prev.onCatatanChange === next.onCatatanChange &&
+        prev.onSave === next.onSave &&
+        prev.onWA === next.onWA &&
+        prev.onPDF === next.onPDF &&
+        prev.onReset === next.onReset &&
+        prev.onBulkToggle === next.onBulkToggle &&
+        prev.onKeyDown === next.onKeyDown &&
+        prev.onTemplateToggle === next.onTemplateToggle &&
+        prev.onTemplateApply === next.onTemplateApply &&
+        prev.onTranslitToggle === next.onTranslitToggle
+    )
 }
 
 const StudentRow = memo(({
@@ -179,7 +192,7 @@ const StudentRow = memo(({
                         {templateOpen && (
                             <div className="absolute left-0 right-0 z-30 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-xl overflow-hidden" style={{ ...(si < 2 ? { top: 'calc(100% + 4px)' } : { bottom: 'calc(100% + 4px)' }), minWidth: 200 }}>
                                 <p className="text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-2.5 pt-2 pb-1">Pilih template catatan</p>
-                                {CATATAN_TEMPLATES.map((tmpl, ti) => (<button key={ti} onClick={() => onTemplateApply(student.id, tmpl)} className="w-full text-left px-2.5 py-1.5 text-[10px] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all leading-snug border-t border-[var(--color-border)]/40 first:border-t-0">{tmpl}</button>))}
+                                {CATATAN_TEMPLATES.map((tmpl, ti) => (<button key={ti} onMouseDown={() => onTemplateApply(student.id, tmpl)} className="w-full text-left px-2.5 py-1.5 text-[10px] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all leading-snug border-t border-[var(--color-border)]/40 first:border-t-0">{tmpl}</button>))}
                             </div>
                         )}
                     </div>
