@@ -2009,100 +2009,104 @@ export default function RaportPage() {
     const renderStep2 = () => {
         return (
             <div className="space-y-2">
-                {/* ── ROW 1: konteks + aksi utama ── */}
-                <div className="flex flex-col md:flex-row md:items-center gap-2">
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                {/* ── ROW 1: Context + Main Actions ── */}
+                <div className="w-full max-w-full flex flex-col md:flex-row md:items-center gap-3 overflow-hidden">
+                    {/* Left: Context */}
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0 shrink-0">
                         <button onClick={() => {
                             if (hasUnsavedMemo) {
                                 setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
                                 return
                             }
                             setStep(0); setSelectedClassId('')
-                        }} className="h-9 px-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 shrink-0">
+                        }} className="h-10 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 shrink-0 shadow-sm">
                             <FontAwesomeIcon icon={faArrowLeft} className="text-[9px]" /> Ganti Kelas
                         </button>
-                        {!isOnline && <span className="h-9 px-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-[9px] font-black flex items-center gap-1.5 shrink-0"><FontAwesomeIcon icon={faWifi} className="text-[9px] opacity-50" /> Offline</span>}
-                        {draftAvailable && (
-                            <div className="flex items-center gap-1 h-9 px-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[9px] font-black shrink-0">
-                                <FontAwesomeIcon icon={faCircleInfo} className="text-[9px]" />
-                                <span>Draft tersedia</span>
-                                <button onClick={loadDraft} className="ml-1 underline hover:no-underline">Muat</button>
-                                <button onClick={clearDraft} aria-label="Hapus draft" className="text-[var(--color-text-muted)] hover:text-rose-500 ml-0.5"><FontAwesomeIcon icon={faXmark} className="text-[8px]" /></button>
-                            </div>
-                        )}
-                        <div className="flex items-center gap-2 px-3 py-1.5 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0">
+                        <div className="flex items-center gap-2 px-3.5 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0 shadow-sm">
                             <FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-xs" />
                             <span className="text-[10px] font-black text-[var(--color-text)] whitespace-nowrap">{selectedClass?.name}</span>
                             <span className="text-[var(--color-text-muted)] text-[10px]">·</span>
-                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] whitespace-nowrap">{bulanObj?.id_str} {selectedYear}</span>
+                            <span className="text-[10px] font-black text-[var(--color-text-muted)] whitespace-nowrap">{bulanObj?.id_str} {selectedYear}</span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {/* Progress bar */}
-                        <div className="flex-1 h-2 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden min-w-[60px]">
-                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
+                    {/* Middle: Progress (Takes remaining space) */}
+                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <div className="flex-1 h-2.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden shadow-inner relative">
+                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
                         </div>
                         <span className="text-[10px] font-black text-[var(--color-text-muted)] whitespace-nowrap shrink-0">{completedCount}/{students.length} lengkap</span>
+                    </div>
 
-                        <div className="hidden md:flex items-center gap-2 ml-auto">
-                            <button onClick={copyFromLastMonth} disabled={copyingLastMonth} className="h-9 px-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-sky-500/20 transition-all disabled:opacity-50 shrink-0"><FontAwesomeIcon icon={copyingLastMonth ? faSpinner : faChevronLeft} className={copyingLastMonth ? 'animate-spin' : ''} /> Salin Bln Lalu</button>
-                            <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-md shadow-emerald-500/20 relative disabled:opacity-70 shrink-0">
-                                <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />{savingAll ? 'Menyimpan...' : !canEdit ? 'Read-only' : 'Simpan Semua'}
-                                {!savingAll && hasUnsavedMemo && <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
+                    {/* Right: Actions (Push to end) */}
+                    <div className="hidden md:flex items-center gap-2 shrink-0">
+                        <button onClick={copyFromLastMonth} disabled={copyingLastMonth} className="h-10 px-3.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-sky-500/20 transition-all disabled:opacity-50 shrink-0 shadow-sm"><FontAwesomeIcon icon={copyingLastMonth ? faSpinner : faChevronLeft} className={copyingLastMonth ? 'animate-spin' : ''} /> Salin Bln Lalu</button>
+                        <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-md shadow-emerald-500/20 relative disabled:opacity-70 shrink-0">
+                            <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />{savingAll ? 'Menyimpan...' : !canEdit ? 'Read-only' : 'Simpan Semua'}
+                            {!savingAll && hasUnsavedMemo && <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
+                        </button>
+                        <button onClick={() => setStep(3)} className="h-10 px-5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-indigo-500/20">
+                            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[9px]" /> Preview & Cetak
+                        </button>
+                    </div>
+                </div>
+
+                {/* ── ROW 2: Filters + Exports ── */}
+                <div className="w-full max-w-full flex flex-col md:flex-row md:items-center gap-3 overflow-hidden">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 md:pb-0 shrink-0">
+                        <div className="flex items-center gap-2 px-3 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm shrink-0">
+                            <FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[10px]" />
+                            <span className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider">NAVIGASI: <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono border">TAB/ENTER</kbd> - <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono border">↑↓←→</kbd></span>
+                        </div>
+                        <div className="relative shrink-0">
+                            <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" />
+                            <input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} 
+                                className="h-10 pl-8 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all w-44 md:w-52 shadow-sm" />
+                            {studentSearch && <button onClick={() => setStudentSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-rose-500 transition-colors"><FontAwesomeIcon icon={faXmark} className="text-[10px]" /></button>}
+                        </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                            <button onClick={() => { setShowIncompleteOnly(v => !v); setShowNoPhoneOnly(false) }} className={`h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-2 transition-all shadow-sm ${showIncompleteOnly ? 'bg-rose-500 text-white border-rose-500' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                <FontAwesomeIcon icon={faFilter} className="text-[10px]" />
+                                <span className="whitespace-nowrap">{showIncompleteOnly ? `Belum Lengkap` : 'Semua'}</span>
                             </button>
-                            <button onClick={() => setStep(3)} className="h-9 px-4 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-1.5 shrink-0"><FontAwesomeIcon icon={faMagnifyingGlass} className="text-[9px]" /> Preview & Cetak</button>
+                            {noPhoneCount > 0 && (
+                                <button
+                                    onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
+                                    className={`h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-2 transition-all shadow-sm ${showNoPhoneOnly ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-600 hover:bg-amber-500/15'}`}
+                                >
+                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
+                                    <span className="whitespace-nowrap">{noPhoneCount} tanpa WA</span>
+                                </button>
+                            )}
+                            <button onClick={() => setShowShortcutModal(true)} className="h-10 w-10 shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] transition-all shadow-sm">
+                                <FontAwesomeIcon icon={faKeyboard} className="text-[10px]" />
+                            </button>
+                            <button onClick={() => { setBulkMode(v => !v); setBulkValues({}); setBulkSelected(new Set()) }} className={`h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-2 transition-all shadow-sm shrink-0 ${bulkMode ? 'bg-violet-500 text-white border-violet-500' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                <FontAwesomeIcon icon={faFillDrip} className="text-[10px]" />
+                                {bulkMode ? `Isi Massal` : 'Isi Massal'}
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 ml-auto shrink-0">
+                            <button onClick={exportCSV} className="h-10 px-3.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 text-[10px] font-black transition-all hover:bg-teal-500/20 shadow-sm shrink-0">CSV</button>
+                            <button onClick={exportXLS} className="h-10 px-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black transition-all hover:bg-emerald-500/20 shadow-sm shrink-0">XLS</button>
+                            <button onClick={() => {
+                                const completeds = students.filter(s => isComplete(scores[s.id] || {}))
+                                if (completeds.length) runZipBlast(completeds, null)
+                            }} className="h-10 px-3.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black transition-all hover:bg-sky-500/20 shadow-sm shrink-0">ZIP</button>
+                            <button onClick={() => {
+                                const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
+                                if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
+                            }} className="h-10 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-black flex items-center gap-1.5 transition-all hover:bg-green-500/20 shadow-sm shrink-0">
+                                <FontAwesomeIcon icon={faWhatsapp} className="text-[10px]" /> WA
+                            </button>
                         </div>
                     </div>
                 </div>
-                {/* ── ROW 2: tools, export, filter, search ── */}
-                <div className="flex items-center gap-2 flex-wrap">
-                    {/* Navigasi hint */}
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)]"><FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[10px]" /><span className="text-[9px] text-[var(--color-text-muted)] font-bold">Navigasi: <kbd className="px-1 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono">Tab</kbd>/<kbd className="px-1 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono">Enter</kbd> · <kbd className="px-1 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono">↑↓←→</kbd> · <kbd className="px-1 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono">Ctrl+S</kbd></span></div>
-                    {/* Search */}
-                    <div className="relative flex-1 md:flex-none"><FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" /><input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="h-10 pl-7 pr-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all w-full md:w-36" />{studentSearch && <button onClick={() => setStudentSearch('')} aria-label="Bersihkan pencarian" className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><FontAwesomeIcon icon={faXmark} className="text-[10px]" /></button>}</div>
-                    {/* Filter belum lengkap */}
-                    <button onClick={() => setShowIncompleteOnly(v => !v)} className={`h-8 px-3 rounded-lg border text-[10px] font-black flex items-center gap-1.5 transition-all ${showIncompleteOnly ? 'bg-rose-500/15 border-rose-500/30 text-rose-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                        <FontAwesomeIcon icon={faFilter} className="text-[9px]" />
-                        {showIncompleteOnly ? `Belum lengkap (${filteredStudents.length})` : 'Semua'}
-                    </button>
-                    {/* Badge santri tanpa WA — klik untuk filter */}
-                    {noPhoneCount > 0 && (
-                        <button
-                            onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
-                            title={`${noPhoneCount} santri belum ada nomor WA — klik untuk filter`}
-                            className={`h-10 px-3 rounded-lg border text-[10px] font-black flex items-center gap-1.5 transition-all ${showNoPhoneOnly ? 'bg-amber-500/15 border-amber-500/30 text-amber-700 shadow-sm' : 'bg-amber-500/8 border-amber-500/20 text-amber-600 hover:bg-amber-500/15'}`}
-                        >
-                            <FontAwesomeIcon icon={faTriangleExclamation} className="text-[9px]" />
-                            <span className="whitespace-nowrap">{noPhoneCount} tanpa WA</span>
-                        </button>
-                    )}
-                    {/* Shortcut modal */}
-                    <button onClick={() => setShowShortcutModal(true)} className="h-10 w-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] transition-all shrink-0">
-                        <FontAwesomeIcon icon={faKeyboard} className="text-[10px]" />
-                    </button>
-                    {/* Isi Massal */}
-                    <button onClick={() => { setBulkMode(v => !v); setBulkValues({}); setBulkSelected(new Set()) }} className={`h-8 px-3 rounded-lg border text-[10px] font-black flex items-center gap-1.5 transition-all ${bulkMode ? 'bg-violet-500/15 border-violet-500/30 text-violet-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                        <FontAwesomeIcon icon={faFillDrip} className="text-[9px]" />
-                        {bulkMode ? `Isi (${bulkSelected.size})` : 'Isi Massal'}
-                    </button>
-                    <div className="flex items-center gap-1 flex-1 md:flex-none md:ml-auto overflow-x-auto no-scrollbar">
-                        <button onClick={exportCSV} className="h-10 px-3 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-600 text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0">CSV</button>
-                        <button onClick={exportXLS} className="h-10 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0">XLS</button>
-                        <button onClick={() => {
-                            const completeds = students.filter(s => isComplete(scores[s.id] || {}))
-                            if (!completeds.length) return
-                            runZipBlast(completeds, null)
-                        }} className="h-10 px-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0">ZIP</button>
-                        <button onClick={() => {
-                            const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
-                            if (!withPhone.length) return
-                            setWaBlastConfirm({ queue: withPhone })
-                        }} className="h-10 px-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0">
-                            <FontAwesomeIcon icon={faWhatsapp} className="text-[10px]" /> WA
-                        </button>
-                    </div>
-                </div>
+
                 {/* UIUX: Floating Bulk Action Bar */}
                 <BulkActionBar
                     selectedCount={bulkSelected.size}
