@@ -2,6 +2,7 @@ import React, { memo, useEffect } from 'react'
 import { KRITERIA, GRADE, LABEL, toArabicNum } from '../utils/raportConstants'
 import { translitToAr, translitClassToAr } from '../utils/translitData'
 import mbsLogo from '../../../assets/mbs.png'
+import smpLogo from '../../../assets/smp.png'
 
 const printCardAreEqual = (prev, next) => {
     if (prev.lang !== next.lang) return false
@@ -26,6 +27,17 @@ const printCardAreEqual = (prev, next) => {
 
 const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif, className, lang = 'ar', settings = {}, catatanArab, onRendered }) => {
     const sc = scores || {}, ex = extra || {}, L = LABEL[lang], isAr = lang === 'ar'
+    
+    // Logic to determine unit logo
+    const getUnitLogo = () => {
+        const c = String(className || '').toLowerCase()
+        // SMP: Grades 7, 8, 9 or contains 'smp'
+        if (c.includes('smp') || /^[789]/.test(c)) return smpLogo
+        // SMA Placeholder (Add smaLogo import when file exists)
+        if (c.includes('sma') || /^(10|11|12)/.test(c)) return null 
+        return null
+    }
+    const unitLogo = getUnitLogo()
     
     useEffect(() => { onRendered?.() }, [onRendered])
     
@@ -55,6 +67,11 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                         <div style={{ fontSize: '10pt', fontWeight: 700, letterSpacing: 2.5, color: '#333', marginTop: 1 }}>{settings.school_name_id || ''}</div>
                         <div style={{ fontSize: '7.5pt', color: '#666', marginTop: 2 }}>{settings.school_address || ''}</div>
                     </div>
+                    {unitLogo && (
+                        <div style={{ flexShrink: 0, width: 80, height: 80, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <img src={unitLogo} alt="Logo unit" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
+                        </div>
+                    )}
                 </div>
                 <div style={{ height: 3, background: `linear-gradient(90deg, ${settings.report_color_primary || '#1a5c35'}, ${settings.report_color_secondary || '#c8a400'}, ${settings.report_color_primary || '#1a5c35'})`, marginBottom: 0 }} />
                 <div style={{ borderBottom: `3px double ${settings.report_color_primary || '#1a5c35'}`, marginTop: 3 }} />
