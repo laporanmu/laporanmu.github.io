@@ -196,6 +196,7 @@ export default function RaportPage() {
 
     // ── Preview
     const [previewStudentId, setPreviewStudentId] = useState(null)
+    const [pageSize, setPageSize] = useState('a4') // 'a4' | 'f4'
 
     // ── WA/PDF
     const [sendingWA, setSendingWA] = useState({})
@@ -2510,13 +2511,13 @@ export default function RaportPage() {
 
                 <div className="flex flex-col lg:flex-row gap-6">
                     {/* Left: Sidebar Navigation */}
-                    <div className="lg:w-1/3 xl:w-1/4 space-y-4">
+                    <div className="lg:w-1/3 xl:w-1/4 space-y-4 self-start sticky top-4">
                         <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
                             <div className="flex items-center justify-between mb-4">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pilih Santri</p>
                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 font-bold">{totalCount} Santri</span>
                             </div>
-                            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                            <div className="space-y-2 max-h-[750px] overflow-y-auto pr-2 custom-scrollbar">
                                 {students.map(s => {
                                     const complete = isComplete(scores[s.id] || {})
                                     const active = previewStudentId === s.id
@@ -2559,6 +2560,16 @@ export default function RaportPage() {
                                     </div>
                                 </div>
 
+                                {/* Paper Size Toggle */}
+                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
+                                    <button onClick={() => setPageSize('a4')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                        A4
+                                    </button>
+                                    <button onClick={() => setPageSize('f4')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                        F4
+                                    </button>
+                                </div>
+
                                 {/* Language Toggle Pill */}
                                 <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
                                     <button onClick={() => setLang('ar')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
@@ -2569,13 +2580,13 @@ export default function RaportPage() {
                                     </button>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 shrink-0">
                                 {previewStudent?.phone && (
-                                    <button onClick={() => sendWATextOnly(previewStudent)} className="h-9 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black hover:bg-green-500/20 transition-all flex items-center gap-2">
+                                    <button onClick={() => sendWATextOnly(previewStudent)} className="h-9 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black hover:bg-green-500/20 transition-all flex items-center gap-2 whitespace-nowrap">
                                         <FontAwesomeIcon icon={faWhatsapp} /> Ringkasan WA
                                     </button>
                                 )}
-                                <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-9 px-4 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[10px] font-black hover:brightness-110 transition-all flex items-center gap-2">
+                                <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-9 px-4 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[10px] font-black hover:brightness-110 transition-all flex items-center gap-2 whitespace-nowrap">
                                     <FontAwesomeIcon icon={faPrint} /> Cetak Ini
                                 </button>
                             </div>
@@ -2594,6 +2605,7 @@ export default function RaportPage() {
                                         className={selectedClass?.name}
                                         lang={lang}
                                         settings={settings}
+                                        pageSize={pageSize}
                                         catatanArab={catatanArabMap[previewStudent.id]}
                                     />
                                 )}
@@ -3145,7 +3157,7 @@ export default function RaportPage() {
                 {printQueue.length > 0 && (
                     <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
                         {printStudents.filter(s => printQueue.includes(s.id)).map(s => (
-                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} catatanArab={catatanArabMap[s.id]} onRendered={() => setPrintRenderedCount(c => c + 1)} />
+                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} onRendered={() => setPrintRenderedCount(c => c + 1)} />
                         ))}
                     </div>
                 )}

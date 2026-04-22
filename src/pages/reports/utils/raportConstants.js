@@ -42,7 +42,7 @@ export const LABEL = {
         grade: 'التقدير', num: 'الرقم', weight: 'وزن البدن', height: 'طول البden',
         ziyadah: 'الزيادة', murojaah: 'المراجعة', sick: 'المريض', home: 'الإجازة',
         izin: 'الإذن', alpa: 'الغيab', gradeScale: 'نظام التقدير',
-        musyrif: 'رائد الحجرة', guardian: 'ولي الأمر',
+        musyrif: 'مربي الفصل', guardian: 'ولي الأمر',
         reportTitle: 'نتيجة الشخصية', month: 'شهر',
     },
     id: {
@@ -51,8 +51,8 @@ export const LABEL = {
         grade: 'Predikat', num: 'No', weight: 'Berat Badan', height: 'Tinggi Badan',
         ziyadah: 'Ziyadah', murojaah: "Muroja'ah", sick: 'Hari Sakit', home: 'Hari Pulang',
         izin: 'Hari Izin', alpa: 'Hari Alpa', gradeScale: 'Skala Penilaian',
-        musyrif: 'Musyrif / Wali Kamar', guardian: 'Wali Santri',
-        reportTitle: 'Raport Bulanan', month: 'Bulan',
+        musyrif: 'Wali Kelas', guardian: 'Wali Santri',
+        reportTitle: 'RAPORT BULANAN', month: 'Bulan',
     }
 }
 

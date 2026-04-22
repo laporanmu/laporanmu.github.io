@@ -6,6 +6,7 @@ import smpLogo from '../../../assets/smp.png'
 
 const printCardAreEqual = (prev, next) => {
     if (prev.lang !== next.lang) return false
+    if (prev.pageSize !== next.pageSize) return false
     if (prev.tahun !== next.tahun) return false
     if (prev.musyrif !== next.musyrif) return false
     if (prev.className !== next.className) return false
@@ -25,9 +26,13 @@ const printCardAreEqual = (prev, next) => {
     return true
 }
 
-const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif, className, lang = 'ar', settings = {}, catatanArab, onRendered }) => {
+const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif, className, lang = 'ar', settings = {}, catatanArab, onRendered, pageSize = 'a4' }) => {
     const sc = scores || {}, ex = extra || {}, L = LABEL[lang], isAr = lang === 'ar'
     
+    // Dimensi kertas: A4 (210x297) vs F4/Folio (215x330)
+    const pageW = pageSize === 'f4' ? '215mm' : '210mm'
+    const pageH = pageSize === 'f4' ? '330mm' : '297mm'
+
     // Logic to determine unit logo
     const getUnitLogo = () => {
         const c = String(className || '').toLowerCase()
@@ -45,16 +50,31 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
     const yearDisplay = isAr ? `\u200F${toArabicNum(tahun - 1)} \u2013 ${toArabicNum(tahun)}` : `${tahun - 1} – ${tahun}`
     const tableDir = isAr ? 'rtl' : 'ltr'
     const displayName = isAr ? (student?.metadata?.nama_arab || student?.name || '—') : (student?.name || '—')
-    const displayVal = (v) => { if (v === '' || v === null || v === undefined) return '—'; return isAr ? toArabicNum(v) : v }
+    const displayVal = (v, zeroAsDash = false) => { 
+        if (v === '' || v === null || v === undefined || (v === 0 && zeroAsDash) || (v === '0' && zeroAsDash)) return '—'; 
+        return isAr ? toArabicNum(v) : v 
+    }
 
     const displayMusyrif = isAr && musyrif ? translitToAr(musyrif) : musyrif
     const displayClassName = isAr && className ? translitClassToAr(className) : className
 
     return (
         <div className="raport-card" data-student-id={student?.id} style={{ 
-            fontFamily: "'Times New Roman', serif", width: '210mm', minHeight: '297mm', background: '#fff', 
-            color: '#000', padding: '8mm 12mm', boxSizing: 'border-box', fontSize: '11pt', lineHeight: 1.4, pageBreakAfter: 'always' 
+            fontFamily: "'Times New Roman', serif", width: '100%', maxWidth: pageW, minHeight: pageH, background: '#fff', 
+            color: '#000', padding: '8mm 12mm', boxSizing: 'border-box', fontSize: '11pt', lineHeight: 1.4, pageBreakAfter: 'always', margin: '0 auto',
+            position: 'relative'
         }}>
+            {/* Gaya Cetak Dinamis */}
+            <style>{`
+                @media print {
+                    @page {
+                        size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'};
+                        margin: 0;
+                    }
+                    body { margin: 0; -webkit-print-color-adjust: exact; }
+                    .raport-card { box-shadow: none !important; margin: 0 !important; width: ${pageW} !important; height: ${pageH} !important; maxWidth: none !important; }
+                }
+            `}</style>
             {/* Header Sekolah */}
             <div style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingBottom: 6 }}>
@@ -62,10 +82,15 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                         <img src={settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
                     </div>
                     <div style={{ flex: 1, textAlign: 'center' }}>
-                        {settings.school_subtitle_ar && <div style={{ fontSize: '8pt', color: '#444', direction: 'rtl', marginBottom: 3, fontFamily: "'Traditional Arabic', serif" }}>{settings.school_subtitle_ar}</div>}
-                        <div style={{ fontSize: '20pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35', direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5 }}>{settings.school_name_ar || ''}</div>
-                        <div style={{ fontSize: '10pt', fontWeight: 700, letterSpacing: 2.5, color: '#333', marginTop: 1 }}>{settings.school_name_id || ''}</div>
-                        <div style={{ fontSize: '7.5pt', color: '#666', marginTop: 2 }}>{settings.school_address || ''}</div>
+                        {settings.school_subtitle_ar && <div style={{ fontSize: '11pt', color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Traditional Arabic', serif", fontWeight: 700 }}>{settings.school_subtitle_ar}</div>}
+                        <div style={{ 
+                            fontSize: '26pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35', 
+                            direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5, 
+                            lineHeight: 1.1, marginBottom: 4,
+                            textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor, 0 0.4px 0 currentColor, 0 -0.4px 0 currentColor'
+                        }}>{settings.school_name_ar || ''}</div>
+                        <div style={{ fontSize: '11pt', fontWeight: 700, letterSpacing: 0.8, color: '#333', marginTop: 0 }}>{settings.school_name_id || ''}</div>
+                        <div style={{ fontSize: '8pt', color: '#666', marginTop: 2 }}>{settings.school_address || ''}</div>
                     </div>
                     {unitLogo && (
                         <div style={{ flexShrink: 0, width: 80, height: 80, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -101,21 +126,21 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 </tbody>
             </table>
 
-            {/* Tabel Nilai Utama */}
+            {/* Tabel Nilai */}
             <div style={{ direction: isAr ? 'rtl' : 'ltr', fontWeight: 700, fontSize: '11pt', marginBottom: 5, fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>{L.dailyWork}</div>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5pt', marginBottom: 12 }}>
                 <thead>
                     <tr style={{ background: '#f0f7f0' }}>
                         {isAr ? <>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '19%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.grade}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '11%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.score}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', fontFamily: "'Traditional Arabic', serif", textAlign: 'right' }}>{L.subject}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '15%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.grade}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '10%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.score}</th>
+                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.subject}</th>
                             <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '6%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.num}</th>
                         </> : <>
                             <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '6%', textAlign: 'center' }}>{L.num}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'left' }}>{L.subject}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '11%', textAlign: 'center' }}>{L.score}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '19%', textAlign: 'center' }}>{L.grade}</th>
+                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'center' }}>{L.subject}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '10%', textAlign: 'center' }}>{L.score}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '15%', textAlign: 'center' }}>{L.grade}</th>
                         </>}
                     </tr>
                 </thead>
@@ -127,12 +152,14 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                             <tr key={k.key}>
                                 {isAr ? <>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: g?.color || '#000', fontFamily: "'Traditional Arabic', serif" }}>{g ? gradeLabel(val) : '—'}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontWeight: 700, fontFamily: "'Traditional Arabic', serif" }}>{displayVal(val)}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{k.ar || k.id}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontWeight: 700 }}>{displayVal(val)}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt', width: '34.5%' }}>{k.ar}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', color: '#444', width: '34.5%' }}>{k.id}</td>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontFamily: "'Traditional Arabic', serif" }}>{numRows[i]}</td>
                                 </> : <>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', textAlign: 'center' }}>{numRows[i]}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px' }}>{k.id}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'left', color: '#444', width: '34.5%' }}>{k.id}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '11pt', width: '34.5%' }}>{k.ar}</td>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontWeight: 700 }}>{displayVal(val)}</td>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: g?.color || '#000' }}>{g ? gradeLabel(val) : '—'}</td>
                                 </>}
@@ -142,75 +169,92 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 </tbody>
             </table>
 
-            {/* Extra Data Table */}
-            <div style={{ display: 'flex', gap: 14, marginBottom: 14, flexDirection: isAr ? 'row-reverse' : 'row' }}>
+            {/* Data Tambahan (Fisik, Hafalan, Kehadiran) */}
+            <div style={{ display: 'flex', gap: 14, marginBottom: 14, flexDirection: isAr ? 'row-reverse' : 'row', alignItems: 'stretch' }}>
                 {/* BB / TB */}
-                <table style={{ flex: 1, borderCollapse: 'collapse', fontSize: '9.5pt' }}>
-                    <tbody>
-                        <tr>
-                            {isAr ? <>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.berat_badan)}</td>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.weight}</td>
-                            </> : <>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.weight}</td>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.berat_badan)}</td>
-                            </>}
-                        </tr>
-                        <tr>
-                            {isAr ? <>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.tinggi_badan)}</td>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.height}</td>
-                            </> : <>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.height}</td>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.tinggi_badan)}</td>
-                            </>}
-                        </tr>
-                    </tbody>
-                </table>
-                {/* Ziyadah / Murojaah */}
-                <table style={{ flex: 1, borderCollapse: 'collapse', fontSize: '9.5pt' }}>
-                    <tbody>
-                        <tr>
-                            {isAr ? <>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.ziyadah)}</td>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.ziyadah}</td>
-                            </> : <>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.ziyadah}</td>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.ziyadah)}</td>
-                            </>}
-                        </tr>
-                        <tr>
-                            {isAr ? <>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.murojaah)}</td>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.murojaah}</td>
-                            </> : <>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{L.murojaah}</td>
-                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.murojaah)}</td>
-                            </>}
-                        </tr>
-                    </tbody>
-                </table>
-                {/* Kehadiran */}
-                <table style={{ flex: 1, borderCollapse: 'collapse', fontSize: '9.5pt' }}>
-                    <tbody>
-                        {[
-                            { key: 'hari_sakit', label: L.sick },
-                            { key: 'hari_izin', label: L.izin },
-                            { key: 'hari_alpa', label: L.alpa },
-                            { key: 'hari_pulang', label: L.home },
-                        ].map(item => (
-                            <tr key={item.key}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontSize: '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
+                        {isAr ? 'الحالة البدنية' : 'Info Fisik'}
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
+                        <tbody>
+                            <tr style={{ height: '50%' }}>
                                 {isAr ? <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex[item.key])}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{item.label}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.berat_badan)}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.weight}</td>
                                 </> : <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{item.label}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex[item.key])}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.weight}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.berat_badan)}</td>
                                 </>}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                            <tr style={{ height: '50%' }}>
+                                {isAr ? <>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.tinggi_badan)}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.height}</td>
+                                </> : <>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.height}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.tinggi_badan)}</td>
+                                </>}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Ziyadah / Murojaah */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontSize: '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
+                        {isAr ? 'إنجازات الحفظ' : 'Info Hafalan'}
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
+                        <tbody>
+                            <tr style={{ height: '50%' }}>
+                                {isAr ? <>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.ziyadah, true)}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.ziyadah}</td>
+                                </> : <>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.ziyadah}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.ziyadah, true)}</td>
+                                </>}
+                            </tr>
+                            <tr style={{ height: '50%' }}>
+                                {isAr ? <>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.murojaah, true)}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{L.murojaah}</td>
+                                </> : <>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.murojaah}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.murojaah, true)}</td>
+                                </>}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Kehadiran */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontSize: '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
+                        {isAr ? 'المواظبة والحضور' : 'Kehadiran'}
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5pt', flex: 1 }}>
+                        <tbody>
+                            {[
+                                { key: 'hari_sakit', label: L.sick },
+                                { key: 'hari_izin', label: L.izin },
+                                { key: 'hari_alpa', label: L.alpa },
+                                { key: 'hari_pulang', label: L.home },
+                            ].map(item => (
+                                <tr key={item.key}>
+                                    {isAr ? <>
+                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex[item.key], true)}</td>
+                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{item.label}</td>
+                                    </> : <>
+                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{item.label}</td>
+                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex[item.key], true)}</td>
+                                    </>}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Skala Penilaian & Catatan */}
@@ -251,19 +295,21 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             </div>
 
             {/* Tanda Tangan */}
-            <div style={{ display: 'flex', marginTop: 36, flexDirection: isAr ? 'row-reverse' : 'row', justifyContent: 'space-between', direction: isAr ? 'rtl' : 'ltr' }}>
+            <div style={{ display: 'flex', marginTop: 36, flexDirection: isAr ? 'row-reverse' : 'row', justifyContent: 'space-between', direction: isAr ? 'rtl' : 'ltr', gap: 10 }}>
                 {[
                     {
-                        label: isAr ? (settings.headmaster_title_ar || 'مدير المعهد') : (settings.headmaster_title_id || 'Direktur'),
+                        label: isAr 
+                            ? (settings.headmaster_title_ar || 'مدير المعهد\nمعهد محمدية تانجول') 
+                            : (settings.headmaster_title_id || 'Pengasuh\nMuhammadiyah Boarding School Tanggul'),
                         sub: isAr ? (settings.headmaster_name_ar || '—') : (settings.headmaster_name_id || '—')
                     },
                     { label: L.musyrif, sub: displayMusyrif || '......................' },
                     { label: L.guardian, sub: '' }
                 ].map((item, i) => (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', fontSize: '9pt' }}>
-                        <div style={{ fontWeight: 700 }}>{item.label}</div>
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', fontSize: '9pt', maxWidth: '32%', minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, whiteSpace: 'pre-line', height: '4.2em', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontSize: '8.5pt', lineHeight: 1.2, marginBottom: 8 }}>{item.label}</div>
                         <div style={{ height: 60 }} />
-                        <div style={{ borderTop: '1px solid #333', paddingTop: 4, width: '80%', fontWeight: 700 }}>
+                        <div style={{ borderTop: '1px solid #333', paddingTop: 4, width: '90%', fontWeight: 700 }}>
                             {item.sub || '......................'}
                         </div>
                     </div>

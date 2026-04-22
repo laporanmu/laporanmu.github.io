@@ -13,10 +13,10 @@ export const DEFAULT_SETTINGS = {
     logo_url: '/src/assets/mbs.png',
 
     // Kepala sekolah / direktur
-    headmaster_title_id: 'Direktur MBS Tanggul',
-    headmaster_name_id: 'KH. Muhammad Ali Maksum, Lc',
-    headmaster_title_ar: 'مدير معهد محمدية الإسلامي تانجول',
-    headmaster_name_ar: 'كياهي الحاج محمد علي معصوم، ليسانس',
+    headmaster_title_id: 'Pengasuh\nMuhammadiyah Boarding School Tanggul',
+    headmaster_name_id: 'Ir. Muhammad Ali Maksum',
+    headmaster_title_ar: 'مدير المعهد\nمعهد محمدية تانجول',
+    headmaster_name_ar: 'المهندس محمد علي معصوم',
 
     // Warna raport
     report_color_primary: '#1a5c35',
@@ -47,6 +47,18 @@ export function SchoolSettingsProvider({ children }) {
                     .eq('id', 1)
                     .maybeSingle()
                 if (!error && data) {
+                    // Auto-upgrade legacy title to new multi-line format
+                    if (data.headmaster_title_id === 'Direktur MBS Tanggul') {
+                        data.headmaster_title_id = 'Pengasuh\nMuhammadiyah Boarding School Tanggul'
+                    }
+                    if (data.headmaster_title_ar === 'مدير معهد محمدية الإسلامي تانجول') {
+                        data.headmaster_title_ar = 'مدير المعهد\nمعهد محمدية تانجول'
+                    }
+                    // Auto-upgrade name/title if it matches old default
+                    if (data.headmaster_name_id === 'KH. Muhammad Ali Maksum, Lc') {
+                        data.headmaster_name_id = 'Ir. Muhammad Ali Maksum'
+                        data.headmaster_name_ar = 'المهندس محمد علي معصوم'
+                    }
                     setSettings(prev => ({ ...prev, ...data }))
                 }
             } catch {
