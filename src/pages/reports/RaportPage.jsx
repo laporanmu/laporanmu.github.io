@@ -2545,31 +2545,43 @@ export default function RaportPage() {
                         </div>
                     </div>
 
-                    {/* Right: Preview Area */}
-                    <div className="flex-1 space-y-4">
-                        <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                                    <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500" />
+                    {/* Right: Preview Area - Unified in one card */}
+                    <div className="flex-1 flex flex-col rounded-[32px] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
+                        <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500" />
+                                    </div>
+                                    <div className="hidden sm:block">
+                                        <h4 className="text-sm font-black text-[var(--color-text)]">Preview Raport</h4>
+                                        <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Tampilan untuk orang tua santri.</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 className="text-sm font-black text-[var(--color-text)]">Preview Raport</h4>
-                                    <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Tampilan yang akan diterima oleh orang tua santri.</p>
+
+                                {/* Language Toggle Pill */}
+                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
+                                    <button onClick={() => setLang('ar')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                        <span className="text-[12px] h-5 flex items-center">🌙</span> العربية
+                                    </button>
+                                    <button onClick={() => setLang('id')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 ${lang === 'id' ? 'bg-indigo-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                        <span className="text-[12px] h-5 flex items-center">🇮🇩</span> Indonesia
+                                    </button>
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-9 px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black hover:bg-emerald-500/20 transition-all flex items-center gap-2">
-                                    <FontAwesomeIcon icon={faPrint} /> Cetak Ini
-                                </button>
                                 {previewStudent?.phone && (
                                     <button onClick={() => sendWATextOnly(previewStudent)} className="h-9 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black hover:bg-green-500/20 transition-all flex items-center gap-2">
                                         <FontAwesomeIcon icon={faWhatsapp} /> Ringkasan WA
                                     </button>
                                 )}
+                                <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-9 px-4 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[10px] font-black hover:brightness-110 transition-all flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faPrint} /> Cetak Ini
+                                </button>
                             </div>
                         </div>
 
-                        <div className="overflow-auto rounded-3xl border border-[var(--color-border)] bg-gray-100 dark:bg-slate-900 p-6 flex justify-center shadow-inner min-h-[600px] custom-scrollbar">
+                        <div className="flex-1 overflow-auto bg-gray-50/50 dark:bg-slate-900/10 p-6 flex justify-center custom-scrollbar" style={{ minHeight: 600 }}>
                             <div className="shadow-2xl h-fit transform transition-transform duration-500 hover:scale-[1.01]">
                                 {previewStudent && (
                                     <RaportPrintCard
