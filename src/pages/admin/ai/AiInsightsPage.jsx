@@ -309,7 +309,7 @@ export default function AiInsightsPage() {
                     <div className="lg:col-span-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[1.5rem] p-4 flex flex-col items-center justify-center relative overflow-hidden group shadow-sm">
                         <div className="absolute top-4 left-4">
                             <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">Engine Ops</h3>
-                            <p className="text-xs font-black text-[var(--color-text)] italic">Multimodal Distribution</p>
+                            <p className="text-xs font-black text-[var(--color-text)]">Multimodal Distribution</p>
                         </div>
                         <div className="h-[100px] w-[100px] mt-4">
                             <ResponsiveContainer width="100%" height="100%">
@@ -621,7 +621,7 @@ export default function AiInsightsPage() {
 
                                                     {/* Preview */}
                                                     <td className="px-6 py-4">
-                                                        <p className={`text-[11px] font-medium line-clamp-1 italic ${sec.flagged ? 'text-rose-600' : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'} transition-colors`}>
+                                                        <p className={`text-[11px] font-medium line-clamp-1 ${sec.flagged ? 'text-rose-600' : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'} transition-colors`}>
                                                             <Highlight text={cleanText(log.user_query)} query={searchInput} />
                                                         </p>
                                                     </td>
@@ -667,7 +667,7 @@ export default function AiInsightsPage() {
                                                 </div>
                                                 <div>
                                                     <p className={`text-[8px] font-black uppercase tracking-widest opacity-40 mb-0.5 ${sec.flagged ? 'text-rose-600 opacity-100' : ''}`}>{sec.label}</p>
-                                                    <p className="text-[10px] font-black text-[var(--color-text)] leading-none italic">{log.type === 'chat' ? 'Neural Chat' : 'Zen Editor'}</p>
+                                                    <p className="text-[10px] font-black text-[var(--color-text)] leading-none">{log.type === 'chat' ? 'Neural Chat' : 'Zen Editor'}</p>
                                                 </div>
                                             </div>
                                             <div className="bg-[var(--color-surface-alt)] px-2 py-1 rounded-lg border border-[var(--color-border)] group-hover:bg-white transition-colors">
@@ -677,7 +677,7 @@ export default function AiInsightsPage() {
 
                                         <div className="space-y-3 mb-2">
                                             <div className="bg-[var(--color-surface-alt)]/50 rounded-2xl p-3 border border-[var(--color-border)]">
-                                                <p className="text-[11px] font-medium text-[var(--color-text-muted)] italic line-clamp-2">
+                                                <p className="text-[11px] font-medium text-[var(--color-text-muted)] line-clamp-2">
                                                     "<Highlight text={cleanText(log.user_query)} query={searchInput} />"
                                                 </p>
                                             </div>
@@ -696,11 +696,11 @@ export default function AiInsightsPage() {
                                         <div className="flex items-center justify-between mt-auto pt-3 border-t border-[var(--color-border)] border-dashed opacity-60">
                                             <div className="flex flex-col">
                                                 <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">Energy Usage</span>
-                                                <span className="text-[10px] font-black text-[var(--color-primary)] italic">{Math.round((log.user_query.length + (log.ai_response?.length || 0)) / 4)} TOKENS</span>
+                                                <span className="text-[10px] font-black text-[var(--color-primary)]">{Math.round((log.user_query.length + (log.ai_response?.length || 0)) / 4)} TOKENS</span>
                                             </div>
                                             <div className="text-right">
                                                 <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5">Est. Cost</span>
-                                                <span className="text-[10px] font-black text-emerald-500 italic">$ {(Math.round((log.user_query.length + (log.ai_response?.length || 0)) / 4) * TOKEN_RATE).toFixed(4)}</span>
+                                                <span className="text-[10px] font-black text-emerald-500">$ {(Math.round((log.user_query.length + (log.ai_response?.length || 0)) / 4) * TOKEN_RATE).toFixed(4)}</span>
                                             </div>
                                         </div>
 
@@ -847,7 +847,7 @@ export default function AiInsightsPage() {
                                         <div className="relative pl-12">
                                             <div className="absolute left-0 top-0 w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400">USR</div>
                                             <div className="p-4 rounded-2xl rounded-tl-none bg-white dark:bg-slate-800 border border-[var(--color-border)] shadow-sm">
-                                                <p className="text-[13px] font-medium text-[var(--color-text)] leading-relaxed italic opacity-90">"{cleanText(selectedLog.user_query)}"</p>
+                                                <p className="text-[13px] font-medium text-[var(--color-text)] leading-relaxed opacity-90">"{cleanText(selectedLog.user_query)}"</p>
                                             </div>
                                         </div>
 

@@ -95,7 +95,7 @@ export const ActionBadge = ({ action }) => {
  */
 export const JsonVisualizer = ({ data }) => {
     if (!data || typeof data !== 'object') {
-        return <span className="text-[var(--color-text-muted)] italic">null</span>
+        return <span className="text-[var(--color-text-muted)]">null</span>
     }
 
     const renderValue = (val) => {
@@ -152,7 +152,7 @@ export const DiffViewer = ({ oldData, newData, changedFields }) => {
     if (keys.length === 0) return (
         <div className="flex flex-col items-center justify-center py-8 opacity-40">
             <FontAwesomeIcon icon={faCircleInfo} className="text-xl mb-2" />
-            <p className="text-[10px] italic font-bold uppercase tracking-widest">Tidak ada perubahan terbaca</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest">Tidak ada perubahan terbaca</p>
         </div>
     )
 
@@ -227,7 +227,7 @@ export const DeleteTombstone = ({ data }) => {
         return (
             <div className="flex flex-col items-center justify-center py-6 opacity-40">
                 <FontAwesomeIcon icon={faDatabase} className="text-xl mb-2" />
-                <p className="text-[10px] italic font-bold uppercase tracking-widest">Data forensik tidak tersedia</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest">Data forensik tidak tersedia</p>
             </div>
         )
     }
@@ -259,7 +259,7 @@ export const DeleteTombstone = ({ data }) => {
                     )
                 })}
             </div>
-            <p className="text-[9px] text-[var(--color-text-muted)] opacity-50 text-center pt-2 italic">
+            <p className="text-[9px] text-[var(--color-text-muted)] opacity-50 text-center pt-2">
                 Record ini tidak lagi ada di database. Gunakan tombol "Pulihkan" untuk restore.
             </p>
         </div>

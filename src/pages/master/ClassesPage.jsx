@@ -652,7 +652,7 @@ export default function ClassesPage() {
                                     </button>
                                     <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
                                     <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
-                                    <p className="px-3 py-2 text-[10px] text-[var(--color-text-muted)] italic">Fitur arsip tidak tersedia untuk tabel ini.</p>
+                                    <p className="px-3 py-2 text-[10px] text-[var(--color-text-muted)]">Fitur arsip tidak tersedia untuk tabel ini.</p>
                                 </div>
                             )}
                         </div>
@@ -1107,9 +1107,9 @@ export default function ClassesPage() {
                     <div className="space-y-6">
                         <div className="p-4 bg-red-500/10 rounded-2xl flex items-center gap-4 text-red-500 border border-red-500/20 shadow-inner">
                             <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30 animate-pulse"><FontAwesomeIcon icon={faTrash} /></div>
-                            <div className="min-w-0"><h3 className="text-sm font-black uppercase tracking-wider italic">Konfirmasi Hapus</h3><p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest">Penghapusan tidak dapat dibatalkan.</p></div>
+                            <div className="min-w-0"><h3 className="text-sm font-black uppercase tracking-wider">Konfirmasi Hapus</h3><p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest">Penghapusan tidak dapat dibatalkan.</p></div>
                         </div>
-                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">Yakin menghapus kelas <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20 italic">{itemToDelete?.name}</span>? <span className="text-[10px] text-[var(--color-text-muted)] mt-2 block opacity-60">Siswa yang terdaftar akan kehilangan referensi kelas.</span></p>
+                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">Yakin menghapus kelas <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToDelete?.name}</span>? <span className="text-[10px] text-[var(--color-text-muted)] mt-2 block opacity-60">Siswa yang terdaftar akan kehilangan referensi kelas.</span></p>
                         <div className="flex gap-3 pt-2">
                             <button onClick={() => setIsDeleteModalOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest transition-all">BATAL</button>
                             <button onClick={handleDeleteConfirm} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 hover:bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all">{submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'HAPUS PERMANEN'}</button>
@@ -1330,7 +1330,7 @@ export default function ClassesPage() {
                                                     return (
                                                         <tr key={i} className={`transition-colors ${isSkipped ? 'opacity-40' : row._hasError ? 'bg-red-500/5' : isDupe ? 'bg-blue-500/5' : 'hover:bg-[var(--color-surface-alt)]/50'}`}>
                                                             <td className="px-3 py-2 text-[var(--color-text-muted)] font-bold">{i + 2}</td>
-                                                            <td className="px-3 py-2 font-bold text-[var(--color-text)]">{row.name || <span className="text-red-500 italic">kosong</span>}</td>
+                                                            <td className="px-3 py-2 font-bold text-[var(--color-text)]">{row.name || <span className="text-red-500">kosong</span>}</td>
                                                             <td className="px-3 py-2 font-bold text-[var(--color-text)]">{row.grade || '—'}</td>
                                                             <td className="px-3 py-2 text-[var(--color-text-muted)]">{row.major || '—'}</td>
                                                             <td className="px-3 py-2 text-[var(--color-text-muted)]">{row._teacherRaw ? (row.homeroom_teacher_id ? row._teacherRaw : <span className="text-amber-500">{row._teacherRaw} (?)</span>) : '—'}</td>

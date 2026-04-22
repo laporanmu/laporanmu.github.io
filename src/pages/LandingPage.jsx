@@ -450,7 +450,7 @@ export default function LandingPage() {
                                 <h2 className="text-3xl sm:text-4xl font-black mb-10 leading-tight">
                                     Mewujudkan Ekosistem Sekolah yang <span className="text-indigo-400">Disiplin, Adil, dan Transparan</span> Melalui Pendekatan Inovatif.
                                 </h2>
-                                <p className="text-white/70 leading-relaxed text-lg italic border-l-2 border-indigo-500 pl-6">
+                                <p className="text-white/70 leading-relaxed text-lg border-l-2 border-indigo-500 pl-6">
                                     "Kedisiplinan bukan tentang hukuman, melainkan tentang pembentukan karakter yang siap menghadapi masa depan."
                                 </p>
                             </div>

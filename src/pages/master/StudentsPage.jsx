@@ -1875,7 +1875,7 @@ export default function StudentsPage() {
                                                             <FontAwesomeIcon icon={faWhatsapp} />
                                                         </button>
                                                     </div>
-                                                    <div className="p-2.5 rounded-lg bg-[var(--color-surface-alt)]/50 border border-black/5 text-[10px] font-medium leading-relaxed italic line-clamp-2">
+                                                    <div className="p-2.5 rounded-lg bg-[var(--color-surface-alt)]/50 border border-black/5 text-[10px] font-medium leading-relaxed line-clamp-2">
                                                         {buildWAMessage(s, broadcastTemplate)}
                                                     </div>
                                                 </div>
@@ -2379,7 +2379,7 @@ export default function StudentsPage() {
                                             </div>
                                             <div className="flex flex-wrap gap-2 min-h-[40px] p-3 rounded-2xl bg-[var(--color-surface-alt)]/30 border border-dashed border-[var(--color-border)]">
                                                 {(studentForTags.tags || []).length === 0 ? (
-                                                    <p className="text-[10px] text-[var(--color-text-muted)] italic opacity-60 m-auto">Belum ada label terpilih</p>
+                                                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 m-auto">Belum ada label terpilih</p>
                                                 ) : (
                                                     (studentForTags.tags || []).map(tag => (
                                                         <button
@@ -2461,7 +2461,7 @@ export default function StudentsPage() {
                                                     )
                                                 })}
                                             </div>
-                                            <p className="text-[8px] text-[var(--color-text-muted)] mt-2 italic px-1">
+                                            <p className="text-[8px] text-[var(--color-text-muted)] mt-2 px-1">
                                                 * Gunakan ikon <FontAwesomeIcon icon={faEdit} className="text-blue-500 mx-0.5" /> dan <FontAwesomeIcon icon={faTrash} className="text-red-500 mx-0.5" /> untuk merubah nama atau menghapus label dari SEMUA siswa sekaligus.
                                             </p>
                                         </div>

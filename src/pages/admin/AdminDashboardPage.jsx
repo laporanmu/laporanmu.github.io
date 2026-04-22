@@ -232,7 +232,7 @@ export default function AdminDashboardPage() {
                         </div>
                         <div className="p-2 space-y-1.5">
                             {systemLogs.length === 0 ? (
-                                <p className="text-[10px] text-[var(--color-text-muted)] text-center py-10 italic opacity-50 font-medium">Monitoring connections...</p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] text-center py-10 opacity-50 font-medium">Monitoring connections...</p>
                             ) : (
                                 systemLogs.map((log, i) => (
                                     <div key={i} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-[var(--color-surface-alt)] border border-transparent hover:border-[var(--color-border)] group transition-all">

@@ -1,6 +1,7 @@
 import React, { memo, useEffect } from 'react'
 import { KRITERIA, GRADE, LABEL, toArabicNum } from '../utils/raportConstants'
 import { translitToAr, translitClassToAr } from '../utils/translitData'
+import mbsLogo from '../../../assets/mbs.png'
 
 const printCardAreEqual = (prev, next) => {
     if (prev.lang !== next.lang) return false
@@ -46,7 +47,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             <div style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingBottom: 6 }}>
                     <div style={{ flexShrink: 0, width: 80, height: 80, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={settings.logo_url || '/src/assets/mbs.png'} alt="Logo sekolah" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
+                        <img src={settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
                     </div>
                     <div style={{ flex: 1, textAlign: 'center' }}>
                         {settings.school_subtitle_ar && <div style={{ fontSize: '8pt', color: '#444', direction: 'rtl', marginBottom: 3, fontFamily: "'Traditional Arabic', serif" }}>{settings.school_subtitle_ar}</div>}

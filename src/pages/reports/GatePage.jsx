@@ -980,7 +980,7 @@ function ConfigModal({ onSave, onCancel, testNotification }) {
               <span className="hidden sm:inline">{testing ? 'Mengirim...' : 'Test'}</span>
             </button>
           </div>
-          <p className="mt-2 text-[9px] text-[var(--color-text-muted)] italic opacity-60">Pastikan URL webhook sudah benar (Telegram atau Discord).</p>
+          <p className="mt-2 text-[9px] text-[var(--color-text-muted)] opacity-60">Pastikan URL webhook sudah benar (Telegram atau Discord).</p>
         </div>
       </div>
     </Modal>
@@ -2278,7 +2278,7 @@ export default function GatePage() {
                                 <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
                               ))}
                               <th className="px-3 py-2.5 border-b border-[var(--color-border)]">
-                                <span className="text-[8px] text-[var(--color-text-muted)]/50 font-bold italic normal-case tracking-normal">klik baris → detail log</span>
+                                <span className="text-[8px] text-[var(--color-text-muted)]/50 font-bold normal-case tracking-normal">klik baris → detail log</span>
                               </th>
                             </tr>
                           </thead>

@@ -31,7 +31,7 @@ export const GatePresence = memo(function GatePresence({ recentGate, loading }) 
                     [1, 2].map(i => <div key={i} className="h-10 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)
                 ) : recentGate.length === 0 ? (
                     <div className="py-5 text-center border-2 border-dashed border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)]/50">
-                        <p className="text-[10px] font-black text-[var(--color-text-muted)] italic opacity-60">Semua di dalam sekolah</p>
+                        <p className="text-[10px] font-black text-[var(--color-text-muted)] opacity-60">Semua di dalam sekolah</p>
                     </div>
                 ) : (
                     recentGate.map(g => (

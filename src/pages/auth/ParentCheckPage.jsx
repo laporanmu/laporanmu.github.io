@@ -11,6 +11,7 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { useToast } from '../../context/ToastContext'
 import { useTheme } from '../../context/ThemeContext'
 import { supabase } from '../../lib/supabase'
+import mbsLogo from '../../assets/mbs.png'
 
 const BULAN_STR = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
@@ -338,7 +339,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             <div style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingBottom: 6 }}>
                     <div style={{ flexShrink: 0, width: 80, height: 80, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={settings.logo_url || '/src/assets/mbs.png'} alt="Logo sekolah" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
+                        <img src={settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
                     </div>
                     <div style={{ flex: 1, textAlign: 'center' }}>
                         {settings.school_subtitle_ar && <div style={{ fontSize: '8pt', color: '#444', direction: 'rtl', marginBottom: 3, fontFamily: "'Traditional Arabic', serif" }}>{settings.school_subtitle_ar}</div>}
@@ -597,6 +598,7 @@ export default function ParentCheckPage() {
     const [printQueue, setPrintQueue] = useState([])
     const [printRenderedCount, setPrintRenderedCount] = useState(0)
     const [printRaportData, setPrintRaportData] = useState(null)
+    const [isShaking, setIsShaking] = useState(false)
     // Rate limiting — cooldown counter (detik tersisa)
     const [loginCooldown, setLoginCooldown] = useState(0)
     const printContainerRef = useRef(null)
@@ -745,6 +747,8 @@ export default function ParentCheckPage() {
             // Form login sudah punya inline error area sendiri; toast cocok untuk
             // aksi background yang tidak punya area error di UI.
             setErrorMessage(err.message)
+            setIsShaking(true)
+            setTimeout(() => setIsShaking(false), 500)
         } finally {
             setLoading(false)
             setAutoChecking(false)
@@ -1069,28 +1073,35 @@ export default function ParentCheckPage() {
                                 {student.reports.length > 0 ? (
                                     <div className="space-y-2">
                                         {student.reports.map((report) => (
-                                            <div key={report.id} className="glass rounded-xl px-5 py-4 flex justify-between items-center gap-4 hover:border-red-500/30 transition-colors">
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-[var(--color-text)] leading-tight truncate mb-1">{report.type}</p>
-                                                    <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-medium">
-                                                        <span>{report.date}</span>
-                                                        <span className="w-1 h-1 rounded-full bg-[var(--color-border)]"></span>
-                                                        <span className="truncate">{report.teacher}</span>
+                                            <div key={report.id} className="glass rounded-2xl px-5 py-4 flex justify-between items-center gap-4 hover:border-red-500/30 transition-all group">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                                                        <span className="text-xs font-black text-red-500">{report.teacher[0]?.toUpperCase() || '?'}</span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-[var(--color-text)] leading-tight truncate mb-1">{report.type}</p>
+                                                        <div className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest opacity-60">
+                                                            <span className="tabular-nums">{report.date}</span>
+                                                            <span className="w-1 h-1 rounded-full bg-[var(--color-border)]"></span>
+                                                            <span className="truncate">{report.teacher}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="shrink-0 flex items-center justify-center px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 font-bold font-mono text-sm">
+                                                <div className="shrink-0 flex items-center justify-center px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 font-black font-mono text-sm shadow-sm">
                                                     {report.points}
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="py-10 bg-[var(--color-surface-alt)] rounded-2xl border border-dashed border-[var(--color-border)] text-center">
-                                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-3">
-                                            <FontAwesomeIcon icon={faShieldHalved} className="text-xl text-emerald-500" />
+                                    <div className="py-12 bg-[var(--color-surface-alt)]/50 rounded-2xl border border-[var(--color-border)] text-center flex flex-col items-center justify-center gap-4 animate-in fade-in zoom-in duration-500">
+                                        <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                            <FontAwesomeIcon icon={faShieldHalved} className="text-2xl text-emerald-500 opacity-20" />
                                         </div>
-                                        <p className="text-sm font-bold text-[var(--color-text-muted)]">Nihil Pelanggaran</p>
-                                        <p className="text-xs text-[var(--color-text-muted)] opacity-70 mt-1">Santri berlaku sangat baik sejauh ini.</p>
+                                        <div>
+                                            <p className="text-sm font-black text-[var(--color-text)]">Nihil Pelanggaran</p>
+                                            <p className="text-[11px] text-[var(--color-text-muted)] mt-1 opacity-60">Santri berlaku sangat baik sejauh ini.</p>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1107,28 +1118,35 @@ export default function ParentCheckPage() {
                                 {student.achievements.length > 0 ? (
                                     <div className="space-y-2">
                                         {student.achievements.map((item) => (
-                                            <div key={item.id} className="glass rounded-xl px-5 py-4 flex justify-between items-center gap-4 hover:border-emerald-500/30 transition-colors">
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-[var(--color-text)] leading-tight truncate mb-1">{item.type}</p>
-                                                    <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-medium">
-                                                        <span>{item.date}</span>
-                                                        <span className="w-1 h-1 rounded-full bg-[var(--color-border)]"></span>
-                                                        <span className="truncate">{item.teacher}</span>
+                                            <div key={item.id} className="glass rounded-2xl px-5 py-4 flex justify-between items-center gap-4 hover:border-emerald-500/30 transition-all group">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                                                        <span className="text-xs font-black text-emerald-500">{item.teacher[0]?.toUpperCase() || '?'}</span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-[var(--color-text)] leading-tight truncate mb-1">{item.type}</p>
+                                                        <div className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest opacity-60">
+                                                            <span className="tabular-nums">{item.date}</span>
+                                                            <span className="w-1 h-1 rounded-full bg-[var(--color-border)]"></span>
+                                                            <span className="truncate">{item.teacher}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="shrink-0 flex items-center justify-center px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-bold font-mono text-sm">
+                                                <div className="shrink-0 flex items-center justify-center px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-black font-mono text-sm shadow-sm">
                                                     +{item.points}
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="py-10 bg-[var(--color-surface-alt)] rounded-2xl border border-dashed border-[var(--color-border)] text-center space-y-2">
-                                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto">
-                                            <FontAwesomeIcon icon={faTrophy} className="text-xl text-amber-400" />
+                                    <div className="py-12 bg-[var(--color-surface-alt)]/50 rounded-2xl border border-[var(--color-border)] text-center flex flex-col items-center justify-center gap-4 animate-in fade-in zoom-in duration-500">
+                                        <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                                            <FontAwesomeIcon icon={faTrophy} className="text-2xl text-amber-500 opacity-20" />
                                         </div>
-                                        <p className="text-sm font-bold text-[var(--color-text-muted)]">Belum Ada Prestasi Tercatat</p>
-                                        <p className="text-xs text-[var(--color-text-muted)] opacity-60 px-6 leading-relaxed">Setiap pencapaian positif santri akan muncul di sini. Terus semangat!</p>
+                                        <div>
+                                            <p className="text-sm font-black text-[var(--color-text)]">Belum Ada Prestasi</p>
+                                            <p className="text-[11px] text-[var(--color-text-muted)] mt-1 opacity-60 px-6">Setiap pencapaian positif santri akan muncul di sini.</p>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1145,15 +1163,16 @@ export default function ParentCheckPage() {
                                     ))}
                                 </div>
                             ) : raportHistory.length === 0 ? (
-                                <div className="py-12 bg-[var(--color-surface-alt)] rounded-2xl border border-dashed border-[var(--color-border)] text-center px-6">
-                                    <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center mx-auto mb-3">
-                                        <FontAwesomeIcon icon={faCalendarAlt} className="text-2xl text-[var(--color-primary)] opacity-60" />
+                                <div className="py-14 bg-[var(--color-surface-alt)]/50 rounded-2xl border border-[var(--color-border)] text-center flex flex-col items-center justify-center gap-4 animate-in fade-in zoom-in duration-500">
+                                    <div className="w-16 h-16 rounded-3xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faCalendarAlt} className="text-2xl text-[var(--color-primary)] opacity-20" />
                                     </div>
-                                    <p className="text-sm font-black text-[var(--color-text-muted)]">Raport belum tersedia</p>
-                                    <p className="text-xs text-[var(--color-text-muted)] opacity-60 mt-1.5 leading-relaxed">
-                                        Raport bulan <span className="font-bold">{BULAN_STR[currentMonth]} {currentYear}</span> belum diisi oleh musyrif.
-                                        Silakan hubungi wali kelas untuk informasi lebih lanjut.
-                                    </p>
+                                    <div className="px-6">
+                                        <p className="text-sm font-black text-[var(--color-text)]">Raport Belum Tersedia</p>
+                                        <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 opacity-60 leading-relaxed">
+                                            Raport bulan <span className="font-bold">{BULAN_STR[currentMonth]} {currentYear}</span> belum diisi oleh musyrif.
+                                        </p>
+                                    </div>
                                     {student.homeroomTeacher?.phone && (
                                         <a
                                             href={`https://wa.me/${student.homeroomTeacher.phone.replace(/\D/g, '').replace(/^0/, '62')}`}
@@ -1363,7 +1382,7 @@ export default function ParentCheckPage() {
                                                         {r.catatan && (
                                                             <div className="px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/20">
                                                                 <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Catatan Musyrif</p>
-                                                                <p className="text-xs text-[var(--color-text)] leading-relaxed italic">{r.catatan}</p>
+                                                                <p className="text-xs text-[var(--color-text)] leading-relaxed">{r.catatan}</p>
                                                             </div>
                                                         )}
 
@@ -1518,12 +1537,14 @@ export default function ParentCheckPage() {
 
                 {/* Title */}
                 <div className="text-center sm:text-left mt-8 mb-4">
-                    <h1 className="text-2xl font-bold font-heading text-[var(--color-text)] mb-2">Cek Data Anak</h1>
+                    <h1 className="text-2xl font-black font-heading text-[var(--color-text)] mb-2">Cek Data Anak</h1>
                     <p className="text-sm text-[var(--color-text-muted)]">Gunakan kode registrasi & PIN dari sekolah</p>
                 </div>
 
                 {/* Form Card */}
-                <div className="glass rounded-[2rem] p-6 sm:p-8">
+                <div className={`glass rounded-[2rem] p-6 sm:p-8 animate-in fade-in zoom-in duration-700 overflow-hidden relative shadow-2xl shadow-indigo-500/10 ${isShaking ? 'animate-shake' : ''}`}>
+                    {/* Visual Accent */}
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-accent)] to-[var(--color-primary)] opacity-30" />
                     <form onSubmit={handleCheck} className="space-y-5">
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider pl-1">Kode Registrasi</label>
@@ -1534,7 +1555,7 @@ export default function ParentCheckPage() {
                                     value={code}
                                     onChange={(e) => setCode(formatCode(e.target.value))}
                                     placeholder="REG-XXXX-XXXX"
-                                    className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl pl-11 pr-4 py-3.5 text-sm font-bold uppercase tracking-widest text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:font-medium placeholder:tracking-normal placeholder:opacity-50 transition-all outline-none"
+                                    className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl pl-11 pr-4 py-3.5 text-sm font-black uppercase tracking-[0.2em] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:font-medium placeholder:tracking-normal placeholder:opacity-50 transition-all outline-none"
                                 />
                             </div>
                         </div>
@@ -1584,12 +1605,16 @@ export default function ParentCheckPage() {
                 </div>
 
                 {/* Footer Links */}
-                <div className="flex items-center justify-between text-xs px-2">
-                    <Link to="/login" className="font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors">
-                        Guru/Staff Login di sini
-                    </Link>
-                    <Link to="/" className="font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
-                        ← Kembali
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+                    <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                        <Link to="/login" className="hover:text-[var(--color-primary)] transition-colors">Guru/Staff Login</Link>
+                        <span className="w-1 h-1 rounded-full bg-[var(--color-border)]" />
+                        <Link to="/privacy" className="hover:text-[var(--color-primary)] transition-colors">Privasi</Link>
+                        <span className="w-1 h-1 rounded-full bg-[var(--color-border)]" />
+                        <Link to="/contact" className="hover:text-[var(--color-primary)] transition-colors">Bantuan</Link>
+                    </div>
+                    <Link to="/" className="text-[11px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2">
+                        <span>← Beranda</span>
                     </Link>
                 </div>
             </div>

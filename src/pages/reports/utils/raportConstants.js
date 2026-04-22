@@ -57,11 +57,11 @@ export const LABEL = {
 }
 
 export const KRITERIA = [
-    { key: 'nilai_akhlak', id: 'Akhlak', icon: faStar, color: '#f59e0b' },
-    { key: 'nilai_ibadah', id: 'Ibadah', icon: faMosque, color: '#6366f1' },
-    { key: 'nilai_kebersihan', id: 'Kebersihan', icon: faBroom, color: '#06b6d4' },
-    { key: 'nilai_quran', id: "Al-Qur'an", icon: faBookOpen, color: '#10b981' },
-    { key: 'nilai_bahasa', id: 'Bahasa', icon: faLanguage, color: '#8b5cf6' },
+    { key: 'nilai_akhlak', id: 'Akhlak', ar: 'الأخلاق', arShort: 'الأخلاق', icon: faStar, color: '#f59e0b' },
+    { key: 'nilai_ibadah', id: 'Ibadah', ar: 'العبادة', arShort: 'العبادة', icon: faMosque, color: '#6366f1' },
+    { key: 'nilai_kebersihan', id: 'Kebersihan', ar: 'النظافة', arShort: 'النظافة', icon: faBroom, color: '#06b6d4' },
+    { key: 'nilai_quran', id: "Al-Qur'an", ar: 'تحسين القراءة وحفظ القرآن', arShort: 'القرآن', icon: faBookOpen, color: '#10b981' },
+    { key: 'nilai_bahasa', id: 'Bahasa', ar: 'اللغة', arShort: 'اللغة', icon: faLanguage, color: '#8b5cf6' },
 ]
 
 export const FISIK_FIELDS = [

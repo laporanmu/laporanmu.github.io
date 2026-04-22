@@ -1521,7 +1521,7 @@ function UserRow({ user, currentUser, isPrivacyMode, isOnline, onDetail, onEdit,
                         </button>
                     </div>
                 ) : (
-                    <span className="text-[10px] text-[var(--color-text-muted)] opacity-40 italic">Belum di-link</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">Belum di-link</span>
                 )}
             </td>
 

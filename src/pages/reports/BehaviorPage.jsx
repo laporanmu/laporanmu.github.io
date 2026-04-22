@@ -750,11 +750,8 @@ export default function BehaviorPage() {
                     <div>
                         <Breadcrumb badge="Reports" items={['Behavior Analytics']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Laporan Perilaku</h1>
-                        <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">
+                        <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium opacity-70">
                             Rekam dan pantau perkembangan karakter siswa.
-                        </p>
-                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
-                            Gunakan view Timeline untuk membaca kronologi, dan view Tabel saat butuh export atau filter detail.
                         </p>
                     </div>
                     <div className="flex gap-2 items-center">
@@ -1060,7 +1057,7 @@ export default function BehaviorPage() {
                                             <div className="flex items-center gap-3 bg-[var(--color-surface-alt)]/80 backdrop-blur-sm pl-4 pr-5 py-2 rounded-xl border border-[var(--color-border)] w-fit">
                                                 <span className="text-[11px] font-black uppercase text-[var(--color-text)] tracking-wider">{fmtDayLabel(date)}</span>
                                                 <span className="w-1 h-1 rounded-full bg-current opacity-20" />
-                                                <span className="text-[9px] opacity-40 italic lowercase font-bold">{items.length} catatan</span>
+                                                <span className="text-[9px] opacity-40 lowercase font-bold">{items.length} catatan</span>
                                             </div>
                                         </div>
 
@@ -1117,7 +1114,7 @@ export default function BehaviorPage() {
                                                                             )}
                                                                         </div>
                                                                         <p className="text-[11px] text-[var(--color-text-muted)] truncate mt-0.5">{getTypeName(r.violation_type_id)}</p>
-                                                                        {r.notes && <p className="text-[10px] italic opacity-50 text-[var(--color-text-muted)] truncate">{mask(r.notes)}</p>}
+                                                                        {r.notes && <p className="text-[10px] opacity-50 text-[var(--color-text-muted)] truncate">{mask(r.notes)}</p>}
                                                                         <div className="flex items-center gap-1 mt-1">
                                                                             <FontAwesomeIcon icon={faFilePen} className="text-[8px] opacity-25 text-[var(--color-text-muted)]" />
                                                                             <span className="text-[8px] font-black uppercase tracking-widest opacity-30 text-[var(--color-text-muted)]">
@@ -1243,7 +1240,7 @@ export default function BehaviorPage() {
                                                 {visibleCols.type && (
                                                     <td className="px-4 py-3">
                                                         <p className="text-xs font-bold text-[var(--color-text)]">{getTypeName(r.violation_type_id)}</p>
-                                                        {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 italic truncate max-w-[180px]">{mask(r.notes)}</p>}
+                                                        {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 truncate max-w-[180px]">{mask(r.notes)}</p>}
                                                     </td>
                                                 )}
                                                 {visibleCols.points && (

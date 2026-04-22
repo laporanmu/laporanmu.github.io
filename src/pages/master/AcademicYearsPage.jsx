@@ -992,7 +992,7 @@ export default function AcademicYearsPage() {
                                                             <td className="px-6 py-4">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${year.semester === 'Ganjil' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/10' : 'bg-purple-500/10 text-purple-500 border-purple-500/10'}`}>{year.semester}</span>
-                                                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 italic">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
+                                                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4">
@@ -1039,7 +1039,7 @@ export default function AcademicYearsPage() {
                                                             <h4 className="text-sm font-black text-[var(--color-text)]">{year.name}</h4>
                                                             <div className="flex items-center gap-2 mt-0.5">
                                                                 <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border ${year.semester === 'Ganjil' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/10' : 'bg-purple-500/10 text-purple-500 border-purple-500/10'}`}>{year.semester}</span>
-                                                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-60 italic">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
+                                                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-60">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
                                                             </div>
                                                         </div>
                                                     </div>

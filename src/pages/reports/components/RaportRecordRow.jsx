@@ -5,9 +5,9 @@ import {
     faClipboardList, faBolt, faLightbulb, faLanguage
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import { 
-    MAX_SCORE, KRITERIA, GRADE, FISIK_FIELDS, HAFALAN_FIELDS, 
-    CATATAN_TEMPLATES, calcAvg 
+import {
+    MAX_SCORE, KRITERIA, GRADE, FISIK_FIELDS, HAFALAN_FIELDS,
+    CATATAN_TEMPLATES, calcAvg
 } from '../utils/raportConstants'
 import { RadarChart, SparklineTrend } from './RaportCharts'
 
@@ -33,25 +33,25 @@ export const ScoreCell = memo(({ value, onChange, onKeyDown, inputRef, kriteria 
 
     return (
         <div title={g ? `${kriteria.id}: ${val} — ${g.id} (${g.label})` : kriteria.id}>
-            <input 
-                ref={inputRef} 
-                type="number" 
-                inputMode="decimal" 
-                min={0} 
-                max={MAX_SCORE} 
-                value={val} 
-                onChange={handleChange} 
-                onKeyDown={onKeyDown} 
-                onFocus={() => setFocused(true)} 
-                onBlur={() => { setFocused(false); setHasError(false) }} 
+            <input
+                ref={inputRef}
+                type="number"
+                inputMode="decimal"
+                min={0}
+                max={MAX_SCORE}
+                value={val}
+                onChange={handleChange}
+                onKeyDown={onKeyDown}
+                onFocus={() => setFocused(true)}
+                onBlur={() => { setFocused(false); setHasError(false) }}
                 aria-label={`Nilai ${kriteria.id}`}
                 className="w-11 h-10 text-center text-base font-black rounded-lg outline-none transition-all appearance-none"
-                style={{ 
-                    background: hasError ? '#ef444415' : g ? g.bg : 'var(--color-surface-alt)', 
-                    color: hasError ? '#ef4444' : g ? g.uiColor : 'var(--color-text-muted)', 
-                    border: `2px solid ${hasError ? '#ef4444' : focused ? (g ? g.uiColor : 'var(--color-primary)') : (g ? g.border : 'var(--color-border)')}` 
+                style={{
+                    background: hasError ? '#ef444415' : g ? g.bg : 'var(--color-surface-alt)',
+                    color: hasError ? '#ef4444' : g ? g.uiColor : 'var(--color-text-muted)',
+                    border: `2px solid ${hasError ? '#ef4444' : focused ? (g ? g.uiColor : 'var(--color-primary)') : (g ? g.border : 'var(--color-border)')}`
                 }}
-                placeholder="—" 
+                placeholder="—"
             />
         </div>
     )
@@ -92,30 +92,30 @@ export const ExtraTextarea = memo(({ value, studentId, fieldKey, onCommit, ...te
 // ─── Main StudentRow ─────────────────────────────────────────────────────────
 
 const studentRowAreEqual = (prev, next) => {
-    if (prev.si !== next.si || 
-        prev.student !== next.student || 
-        prev.sc !== next.sc || 
-        prev.ex !== next.ex || 
-        prev.isSaved !== next.isSaved || 
-        prev.isSaving !== next.isSaving || 
-        prev.isDirty !== next.isDirty || 
-        prev.isChecked !== next.isChecked || 
-        prev.bulkMode !== next.bulkMode || 
-        prev.lang !== next.lang || 
-        prev.trendData !== next.trendData || 
-        prev.prevScores !== next.prevScores || 
-        prev.templateOpen !== next.templateOpen || 
-        prev.catatanArab !== next.catatanArab || 
+    if (prev.si !== next.si ||
+        prev.student !== next.student ||
+        prev.sc !== next.sc ||
+        prev.ex !== next.ex ||
+        prev.isSaved !== next.isSaved ||
+        prev.isSaving !== next.isSaving ||
+        prev.isDirty !== next.isDirty ||
+        prev.isChecked !== next.isChecked ||
+        prev.bulkMode !== next.bulkMode ||
+        prev.lang !== next.lang ||
+        prev.trendData !== next.trendData ||
+        prev.prevScores !== next.prevScores ||
+        prev.templateOpen !== next.templateOpen ||
+        prev.catatanArab !== next.catatanArab ||
         prev.sendingWAStatus !== next.sendingWAStatus) return false
     return true
 }
 
-const StudentRow = memo(({ 
-    student, si, sc, ex, isSaved, isSaving, isDirty, isChecked, 
-    bulkMode, lang, trendData, prevScores, templateOpen, catatanArab, sendingWAStatus, 
-    onScoreChange, onExtraChange, onCatatanChange, onSave, onWA, onPDF, onReset, 
-    onBulkToggle, onKeyDown, onTemplateToggle, onTemplateApply, onTranslitToggle, 
-    generateAutoComment, cellRefs 
+const StudentRow = memo(({
+    student, si, sc, ex, isSaved, isSaving, isDirty, isChecked,
+    bulkMode, lang, trendData, prevScores, templateOpen, catatanArab, sendingWAStatus,
+    onScoreChange, onExtraChange, onCatatanChange, onSave, onWA, onPDF, onReset,
+    onBulkToggle, onKeyDown, onTemplateToggle, onTemplateApply, onTranslitToggle,
+    generateAutoComment, cellRefs
 }) => {
     const avg = calcAvg(sc)
     return (
@@ -125,7 +125,7 @@ const StudentRow = memo(({
                     <input type="checkbox" checked={isChecked} onChange={e => onBulkToggle(student.id, e.target.checked)} aria-label={`Pilih ${student.name}`} className="w-3.5 h-3.5 accent-violet-500 cursor-pointer" />
                 </td>
             )}
-            <td className="px-3 py-3 sticky left-0 z-10" style={{ background: isChecked ? '#6366f108' : si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)' }}>
+            <td className="px-3 py-3 sticky left-0 z-10" style={{ background: isChecked ? '#6366f108' : si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)', borderRight: '1px solid var(--color-border)' }}>
                 <div className="flex items-center gap-2.5">
                     <RadarChart scores={sc} size={36} />
                     <div className="min-w-0 flex-1">
@@ -151,11 +151,11 @@ const StudentRow = memo(({
                 )
             })}
             <td className="px-2 py-3" style={{ verticalAlign: 'middle' }}>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                     {FISIK_FIELDS.map(f => (
                         <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
                             <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}><FontAwesomeIcon icon={f.icon} style={{ color: f.color, fontSize: 9 }} /></div>
-                            <ExtraInput type="number" inputMode="decimal" placeholder="—" value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.label} className="flex-1 w-0 h-full text-[11px] font-bold text-center bg-transparent text-[var(--color-text)] outline-none appearance-none" />
+                            <ExtraInput type="number" inputMode="decimal" placeholder="—" value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.label} className="flex-1 w-0 h-full text-[11px] font-bold text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none appearance-none" />
                             <span className="text-[9px] text-[var(--color-text-muted)] font-bold pr-1 shrink-0">{f.unit}</span>
                         </div>
                     ))}
@@ -171,7 +171,7 @@ const StudentRow = memo(({
                     ))}
                     <div className="flex rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', minHeight: 32 }}>
                         <div className="w-6 shrink-0 flex items-start justify-center pt-[7px]" style={{ background: '#f59e0b18' }}><FontAwesomeIcon icon={faClipboardList} style={{ color: '#f59e0b', fontSize: 9 }} /></div>
-                        <ExtraTextarea placeholder={`Catatan untuk ${student.name.split(' ')[0]}...`} value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={onCatatanChange} maxLength={200} rows={2} aria-label="Catatan musyrif" className="flex-1 w-0 px-1.5 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
+                        <ExtraTextarea placeholder="Catatan untuk Santri..." value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={onCatatanChange} maxLength={200} rows={2} aria-label="Catatan musyrif" className="flex-1 w-0 px-1.5 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
                         <button onClick={() => { const c = generateAutoComment(sc, student.id, trendData); if (!c) return; onCatatanChange(student.id, 'catatan', c) }} title="Generate komentar otomatis dari nilai" disabled={!avg} className="shrink-0 w-6 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30"><FontAwesomeIcon icon={faBolt} style={{ fontSize: 9 }} /></button>
                     </div>
                     <div className="relative">
@@ -188,7 +188,7 @@ const StudentRow = memo(({
                     )}
                 </div>
             </td>
-            <td className="px-2 py-3" style={{ verticalAlign: 'middle' }}>
+            <td className="px-2 py-3 sticky right-0 z-10" style={{ verticalAlign: 'middle', background: 'var(--color-surface)', borderLeft: '1px solid var(--color-border)' }}>
                 <div className="flex flex-col gap-1.5">
                     <button onClick={() => onSave(student.id)} disabled={isSaving} className="w-full h-8 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-black transition-all disabled:opacity-50" style={{ background: isSaved ? '#10b98115' : isDirty ? '#6366f115' : 'var(--color-surface-alt)', color: isSaved ? '#10b981' : isDirty ? '#6366f1' : 'var(--color-text-muted)', border: '1px solid', borderColor: isSaved ? '#10b98130' : isDirty ? '#6366f130' : 'var(--color-border)' }}>
                         <FontAwesomeIcon icon={isSaving ? faSpinner : isSaved ? faCircleCheck : faFloppyDisk} className={isSaving ? 'animate-spin text-[10px]' : 'text-[10px]'} />{isSaving ? 'Menyimpan...' : isSaved ? 'Tersimpan' : 'Simpan'}

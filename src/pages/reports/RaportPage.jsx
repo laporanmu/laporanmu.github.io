@@ -2236,10 +2236,10 @@ export default function RaportPage() {
                     className="overflow-x-auto rounded-2xl border border-[var(--color-border)]"
                     style={{ maxHeight: filteredStudents.length > 20 ? '70vh' : 'none', overflowY: filteredStudents.length > 20 ? 'auto' : 'visible' }}
                 >
-                    <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
+                    <table style={{ borderCollapse: 'collapse', minWidth: 1010, tableLayout: 'fixed' }}>
                         <colgroup>
                             {bulkMode && <col style={{ width: 36 }} />}
-                            <col style={{ width: 220 }} />{KRITERIA.map(k => <col key={k.key} style={{ width: 48 }} />)}<col style={{ width: 192 }} /><col style={{ width: 165 }} /><col style={{ width: 135 }} />
+                            <col style={{ width: 170 }} />{KRITERIA.map(k => <col key={k.key} style={{ width: 64 }} />)}<col style={{ width: 200 }} /><col style={{ width: 165 }} /><col style={{ width: 145 }} />
                         </colgroup>
                         <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
                             <tr style={{ background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
@@ -2253,11 +2253,11 @@ export default function RaportPage() {
                                         />
                                     </th>
                                 )}
-                                <th className="px-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 12px', verticalAlign: 'middle' }}>Santri</th>
+                                <th className="px-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 12px', verticalAlign: 'middle', borderRight: '1px solid var(--color-border)' }}>Santri</th>
                                 {KRITERIA.map(k => (<th key={k.key} style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'middle' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ direction: 'rtl', fontSize: 14, fontWeight: 900, color: k.color, lineHeight: 1, whiteSpace: 'nowrap', fontFamily: 'serif' }}>{k.arShort}</span><span style={{ fontSize: 8, fontWeight: 800, color: 'var(--color-text-muted)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{k.id}</span></div></th>))}
                                 <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Fisik</span><span style={{ fontSize: 8, color: 'var(--color-text-muted)', opacity: 0.55, fontWeight: 600 }}>BB · TB · Skt · Izin · Alpa · Plg</span></div></th>
                                 <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Hafalan & Catatan</span></div></th>
-                                <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Aksi</th>
+                                <th className="sticky right-0 z-10" style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1, background: 'var(--color-surface-alt)', borderLeft: '1px solid var(--color-border)' }}>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2416,12 +2416,12 @@ export default function RaportPage() {
                                     </div>
                                     <div>
                                         <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Fisik & Kehadiran</p>
-                                        <div className="grid grid-cols-3 gap-1.5">
+                                        <div className="grid grid-cols-2 gap-1.5">
                                             {[{ key: 'berat_badan', label: 'BB', icon: faWeightScale, color: '#6366f1', unit: 'kg' }, { key: 'tinggi_badan', label: 'TB', icon: faRulerVertical, color: '#06b6d4', unit: 'cm' }, { key: 'hari_sakit', label: 'Sakit', icon: faBandage, color: '#ef4444', unit: 'hr' }, { key: 'hari_izin', label: 'Izin', icon: faCircleExclamation, color: '#f59e0b', unit: 'hr' }, { key: 'hari_alpa', label: 'Alpa', icon: faTriangleExclamation, color: '#ef4444', unit: 'hr' }, { key: 'hari_pulang', label: 'Pulang', icon: faDoorOpen, color: '#8b5cf6', unit: 'x' }].map(f => (
                                                 <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] overflow-hidden" style={{ height: 32 }}>
                                                     <div className="w-7 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}><FontAwesomeIcon icon={f.icon} style={{ color: f.color, fontSize: 9 }} /></div>
                                                     <ExtraInput type="number" inputMode="decimal" placeholder={f.label} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
-                                                        className="flex-1 w-0 h-full text-[11px] font-bold text-center bg-transparent text-[var(--color-text)] outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                                        className="flex-1 w-0 h-full text-[11px] font-bold text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                                 </div>
                                             ))}
                                         </div>
@@ -2683,7 +2683,7 @@ export default function RaportPage() {
                                                     <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Ubah nilai dan data tambahan untuk periode ini.</p>
                                                 </div>
                                             </div>
-                                            <p className="text-xs italic text-[var(--color-text-muted)] mb-4">Fitur edit arsip sedang diproses...</p>
+                                            <p className="text-xs text-[var(--color-text-muted)] mb-4">Fitur edit arsip sedang diproses...</p>
                                             <div className="flex gap-3">
                                                 <button onClick={saveArchiveEdit} disabled={archiveEditSaving} className="flex-1 h-11 rounded-xl bg-emerald-500 text-white text-sm font-black shadow-lg shadow-emerald-500/20 hover:brightness-110 disabled:opacity-60 transition-all">
                                                     {archiveEditSaving ? 'Menyimpan...' : 'Simpan Semua Perubahan'}
@@ -3028,7 +3028,7 @@ export default function RaportPage() {
                     <div>
                         <Breadcrumb badge="Reports" items={['Grade Reports']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Raport Bulanan</h1>
-                        <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium italic opacity-70">نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas.</p>
+                        <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium opacity-70">نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas.</p>
                     </div>
                     <div className="flex gap-2 items-center">
                         {step >= 1 && step <= 3 && (
@@ -3536,7 +3536,7 @@ export default function RaportPage() {
                                                             })}
                                                         </div>
                                                         {h.catatan && (
-                                                            <div className="mt-3 p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] italic leading-relaxed">
+                                                            <div className="mt-3 p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] leading-relaxed">
                                                                 "{h.catatan}"
                                                             </div>
                                                         )}

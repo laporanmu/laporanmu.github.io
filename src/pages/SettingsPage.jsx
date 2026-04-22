@@ -687,7 +687,7 @@ export default function SettingsPage() {
                                 </div>
                             </div>
 
-                            <p className="text-[9px] text-[var(--color-text-muted)] text-center mt-4 italic">
+                            <p className="text-[9px] text-[var(--color-text-muted)] text-center mt-4">
                                 *Klik untuk mendapatkan notifikasi saat fitur tersedia
                             </p>
                         </div>

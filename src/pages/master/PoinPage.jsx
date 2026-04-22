@@ -886,9 +886,9 @@ export default function PoinPage() {
                     <div className="space-y-6">
                         <div className="p-4 bg-red-500/10 rounded-2xl border border-red-500/20 flex items-center gap-4 text-red-500">
                             <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30 animate-pulse"><FontAwesomeIcon icon={faTrash} /></div>
-                            <div><h3 className="text-sm font-black uppercase tracking-wider italic">Hapus Permanen</h3><p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest leading-tight">Berisiko pada relasi laporan siswa.</p></div>
+                            <div><h3 className="text-sm font-black uppercase tracking-wider">Hapus Permanen</h3><p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest leading-tight">Berisiko pada relasi laporan siswa.</p></div>
                         </div>
-                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">Yakin menghapus tipe poin <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20 italic">{itemToDelete?.name}</span>? Tindakan ini tidak dapat dibatalkan.</p>
+                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">Yakin menghapus tipe poin <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToDelete?.name}</span>? Tindakan ini tidak dapat dibatalkan.</p>
                         <div className="flex gap-3 pt-2">
                             <button onClick={() => setIsDeleteModalOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">BATAL</button>
                             <button onClick={handleDeleteConfirm} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all">HAPUS SEKARANG</button>
