@@ -10,57 +10,37 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 // ─── Shortcut Modal Content ──────────────────────────────────────────────────
 
 export const ShortcutModalContent = memo(() => {
-    const categories = [
-        {
-            title: 'Navigasi Sel (Excel-like)',
-            items: [
-                { keys: ['Tab', 'Enter'], desc: 'Pindah ke cell berikutnya' },
-                { keys: ['↑', '↓'], desc: 'Naik / turun baris' },
-                { keys: ['←', '→'], desc: 'Pindah kolom kriteria' },
-                { keys: ['Esc'], desc: 'Tutup modal / panel' },
-            ]
-        },
-        {
-            title: 'Aksi & Pengeditan',
-            items: [
-                { keys: ['Ctrl', 'S'], desc: 'Simpan semua nilai' },
-                { keys: ['Ctrl', 'Z'], desc: 'Undo nilai (Ctrl+Y untuk Redo)' },
-                { keys: ['/'], desc: 'Fokus ke pencarian santri' },
-                { keys: ['?'], desc: 'Buka panel shortcut ini' },
-            ]
-        }
+    const items = [
+        { section: 'Navigasi Sel (Excel-like)' },
+        { keys: ['Tab', 'Enter'], label: 'Pindah ke cell berikutnya' },
+        { keys: ['↑', '↓'], label: 'Naik / turun baris' },
+        { keys: ['←', '→'], label: 'Pindah kolom kriteria' },
+        { keys: ['Esc'], label: 'Tutup modal / panel' },
+        { section: 'Aksi & Pengeditan' },
+        { keys: ['Ctrl', 'S'], label: 'Simpan semua nilai' },
+        { keys: ['Ctrl', 'Z'], label: 'Undo nilai' },
+        { keys: ['Ctrl', 'Y'], label: 'Redo nilai' },
+        { keys: ['/'], label: 'Fokus ke pencarian santri' },
+        { keys: ['?'], label: 'Tampilkan shortcut ini' },
     ]
 
     return (
-        <div className="space-y-6">
-            {categories.map((cat, i) => (
-                <div key={i}>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">{cat.title}</p>
-                    <div className="space-y-1.5">
-                        {cat.items.map((item, j) => (
-                            <div key={j} className="flex items-center justify-between py-2 px-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] hover:border-indigo-500/20 transition-all">
-                                <span className="text-[12px] text-[var(--color-text-muted)] font-medium">{item.desc}</span>
-                                <div className="flex items-center gap-1">
-                                    {item.keys.map((k, kIdx) => (
-                                        <div key={kIdx} className="flex items-center gap-1">
-                                            <kbd className="px-2 py-1 rounded-md bg-white dark:bg-slate-800 border-b-2 border-[var(--color-border)] text-[10px] font-black">{k}</kbd>
-                                            {kIdx < item.keys.length - 1 && <span className="text-[10px] opacity-40">+</span>}
-                                        </div>
-                                    ))}
-                                </div>
+        <div className="p-3 space-y-0.5">
+            {items.map((item, i) => item.section ? (
+                <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-3 pb-1 px-1 first:pt-0">{item.section}</p>
+            ) : (
+                <div key={i} className="flex items-center justify-between px-1.5 py-1.5 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
+                    <span className="text-[11px] font-semibold text-[var(--color-text)] opacity-80">{item.label}</span>
+                    <div className="flex items-center gap-1">
+                        {item.keys.map((k, ki) => (
+                            <div key={ki} className="flex items-center gap-1">
+                                <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono min-w-[20px] text-center shadow-sm">{k}</span>
+                                {ki < item.keys.length - 1 && <span className="text-[9px] opacity-30">+</span>}
                             </div>
                         ))}
                     </div>
                 </div>
             ))}
-            <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/15 flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <FontAwesomeIcon icon={faCircleInfo} className="text-amber-500 text-sm" />
-                </div>
-                <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400 leading-relaxed">
-                    <strong>Pro Tip:</strong> Gunakan navigasi keyboard untuk mengisi nilai puluhan santri dalam hitungan menit tanpa menyentuh mouse.
-                </p>
-            </div>
         </div>
     )
 })

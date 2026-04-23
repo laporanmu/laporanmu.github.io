@@ -142,7 +142,7 @@ const StudentRow = memo(({
                 <div className="flex items-center gap-2.5">
                     <RadarChart scores={sc} size={36} />
                     <div className="min-w-0 flex-1">
-                        <div className="text-[13px] font-black text-[var(--color-text)] leading-tight truncate">{student.name}</div>
+                        <div className="text-[13px] font-black text-[var(--color-text)] leading-tight whitespace-normal break-words">{student.name}</div>
                         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                             {avg ? <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).color }}>{avg}</span> : <span className="text-[8px] text-[var(--color-text-muted)] font-bold">isi nilai</span>}
                             {isSaving && <FontAwesomeIcon icon={faSpinner} className="text-[8px] text-amber-500 animate-spin" />}
@@ -201,7 +201,7 @@ const StudentRow = memo(({
                     )}
                 </div>
             </td>
-            <td className="px-2 py-3 sticky right-0 z-10" style={{ verticalAlign: 'middle', background: 'var(--color-surface)', borderLeft: '1px solid var(--color-border)' }}>
+            <td className="px-2 py-3 sticky right-0 z-10" style={{ verticalAlign: 'middle', background: si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)' }}>
                 <div className="flex flex-col gap-1.5">
                     <button onClick={() => onSave(student.id)} disabled={isSaving} className="w-full h-8 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-black transition-all disabled:opacity-50" style={{ background: isSaved ? '#10b98115' : isDirty ? '#6366f115' : 'var(--color-surface-alt)', color: isSaved ? '#10b981' : isDirty ? '#6366f1' : 'var(--color-text-muted)', border: '1px solid', borderColor: isSaved ? '#10b98130' : isDirty ? '#6366f130' : 'var(--color-border)' }}>
                         <FontAwesomeIcon icon={isSaving ? faSpinner : isSaved ? faCircleCheck : faFloppyDisk} className={isSaving ? 'animate-spin text-[10px]' : 'text-[10px]'} />{isSaving ? 'Menyimpan...' : isSaved ? 'Tersimpan' : 'Simpan'}

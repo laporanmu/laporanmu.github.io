@@ -76,27 +76,32 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 }
             `}</style>
             {/* Header Sekolah */}
-            <div style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingBottom: 6 }}>
-                    <div style={{ flexShrink: 0, width: 80, height: 80, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
+            <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingBottom: 8 }}>
+                    {/* Logo Kiri (MBS) */}
+                    <div style={{ flexShrink: 0, width: 85, height: 85, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src={settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ width: 85, height: 85, objectFit: 'contain' }} />
                     </div>
-                    <div style={{ flex: 1, textAlign: 'center' }}>
-                        {settings.school_subtitle_ar && <div style={{ fontSize: '11pt', color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Traditional Arabic', serif", fontWeight: 700 }}>{settings.school_subtitle_ar}</div>}
+                    {/* Tengah (Nama Sekolah) */}
+                    <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
+                        {settings.school_subtitle_ar && (
+                            <div style={{ fontSize: '11.5pt', color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Traditional Arabic', serif", fontWeight: 700 }}>
+                                {settings.school_subtitle_ar}
+                            </div>
+                        )}
                         <div style={{ 
-                            fontSize: '26pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35', 
+                            fontSize: '28pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35', 
                             direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5, 
-                            lineHeight: 1.1, marginBottom: 4,
-                            textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor, 0 0.4px 0 currentColor, 0 -0.4px 0 currentColor'
+                            lineHeight: 0.9, marginBottom: 4,
+                            textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor'
                         }}>{settings.school_name_ar || ''}</div>
-                        <div style={{ fontSize: '11pt', fontWeight: 700, letterSpacing: 0.8, color: '#333', marginTop: 0 }}>{settings.school_name_id || ''}</div>
-                        <div style={{ fontSize: '8pt', color: '#666', marginTop: 2 }}>{settings.school_address || ''}</div>
+                        <div style={{ fontSize: '11.5pt', fontWeight: 700, letterSpacing: 0.8, color: '#333', marginTop: 2 }}>{settings.school_name_id || ''}</div>
+                        <div style={{ fontSize: '8pt', color: '#666', marginTop: 3, lineHeight: 1.2 }}>{settings.school_address || ''}</div>
                     </div>
-                    {unitLogo && (
-                        <div style={{ flexShrink: 0, width: 80, height: 80, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <img src={unitLogo} alt="Logo unit" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
-                        </div>
-                    )}
+                    {/* Logo Kanan (Unit) */}
+                    <div style={{ flexShrink: 0, width: 85, height: 85, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src={unitLogo || settings.logo_url || mbsLogo} alt="Logo unit" style={{ width: 85, height: 85, objectFit: 'contain' }} />
+                    </div>
                 </div>
                 <div style={{ height: 3, background: `linear-gradient(90deg, ${settings.report_color_primary || '#1a5c35'}, ${settings.report_color_secondary || '#c8a400'}, ${settings.report_color_primary || '#1a5c35'})`, marginBottom: 0 }} />
                 <div style={{ borderBottom: `3px double ${settings.report_color_primary || '#1a5c35'}`, marginTop: 3 }} />

@@ -44,8 +44,8 @@ import StatsCarousel from '../../components/StatsCarousel'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const ROW_HEIGHT = 64
-const OVERSCAN = 10
+const ROW_HEIGHT = 188
+const OVERSCAN = 5
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -170,6 +170,8 @@ export default function RaportPage() {
 
     // ── Modals
     const [showShortcutModal, setShowShortcutModal] = useState(false)
+    const [shortcutRect, setShortcutRect] = useState(null)
+    const shortcutBtnRef = useRef(null)
     const [showTutorialModal, setShowTutorialModal] = useState(false)
     const [tutorialStep, setTutorialStep] = useState(0)
     const [tutorialZoomImg, setTutorialZoomImg] = useState(null)
@@ -531,12 +533,32 @@ export default function RaportPage() {
     // ── Shortcut: "?" key opens shortcut modal
     useEffect(() => {
         const handler = (e) => {
-            if (e.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) setShowShortcutModal(v => !v)
+            if (e.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                if (!showShortcutModal && shortcutBtnRef.current) {
+                    setShortcutRect(shortcutBtnRef.current.getBoundingClientRect())
+                }
+                setShowShortcutModal(v => !v)
+            }
             if (e.key === 'Escape') setShowShortcutModal(false)
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [])
+    }, [showShortcutModal])
+
+    // Sticky positioning for portaled shortcuts dropdown
+    useEffect(() => {
+        if (!showShortcutModal) return
+        const update = () => {
+            if (shortcutBtnRef.current) setShortcutRect(shortcutBtnRef.current.getBoundingClientRect())
+        }
+        update()
+        window.addEventListener('scroll', update, true)
+        window.addEventListener('resize', update)
+        return () => {
+            window.removeEventListener('scroll', update, true)
+            window.removeEventListener('resize', update)
+        }
+    }, [showShortcutModal])
 
     // FIX #3: Ctrl+S — gunakan ref agar tidak ada TDZ (saveAll belum tersedia saat useEffect ini dibaca)
     const saveAllRef = useRef(null)
@@ -2008,101 +2030,136 @@ export default function RaportPage() {
 
     const renderStep2 = () => {
         return (
-            <div className="space-y-2">
-                {/* ── ROW 1: Context + Main Actions ── */}
-                <div className="w-full max-w-full flex flex-col md:flex-row md:items-center gap-3 overflow-hidden">
-                    {/* Left: Context */}
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0 shrink-0">
-                        <button onClick={() => {
-                            if (hasUnsavedMemo) {
-                                setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
-                                return
-                            }
-                            setStep(0); setSelectedClassId('')
-                        }} className="h-10 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 shrink-0 shadow-sm">
-                            <FontAwesomeIcon icon={faArrowLeft} className="text-[9px]" /> Ganti Kelas
-                        </button>
-                        <div className="flex items-center gap-2 px-3.5 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0 shadow-sm">
-                            <FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-xs" />
-                            <span className="text-[10px] font-black text-[var(--color-text)] whitespace-nowrap">{selectedClass?.name}</span>
-                            <span className="text-[var(--color-text-muted)] text-[10px]">·</span>
-                            <span className="text-[10px] font-black text-[var(--color-text-muted)] whitespace-nowrap">{bulanObj?.id_str} {selectedYear}</span>
-                        </div>
-                    </div>
-
-                    {/* Middle: Progress (Takes remaining space) */}
-                    <div className="flex-1 min-w-0 flex items-center gap-3">
-                        <div className="flex-1 h-2.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden shadow-inner relative">
-                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
-                        </div>
-                        <span className="text-[10px] font-black text-[var(--color-text-muted)] whitespace-nowrap shrink-0">{completedCount}/{students.length} lengkap</span>
-                    </div>
-
-                    {/* Right: Actions (Push to end) */}
-                    <div className="hidden md:flex items-center gap-2 shrink-0">
-                        <button onClick={copyFromLastMonth} disabled={copyingLastMonth} className="h-10 px-3.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center gap-1.5 hover:bg-sky-500/20 transition-all disabled:opacity-50 shrink-0 shadow-sm"><FontAwesomeIcon icon={copyingLastMonth ? faSpinner : faChevronLeft} className={copyingLastMonth ? 'animate-spin' : ''} /> Salin Bln Lalu</button>
-                        <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-md shadow-emerald-500/20 relative disabled:opacity-70 shrink-0">
-                            <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />{savingAll ? 'Menyimpan...' : !canEdit ? 'Read-only' : 'Simpan Semua'}
-                            {!savingAll && hasUnsavedMemo && <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
-                        </button>
-                        <button onClick={() => setStep(3)} className="h-10 px-5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-indigo-500/20">
-                            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[9px]" /> Preview & Cetak
-                        </button>
-                    </div>
-                </div>
-
-                {/* ── ROW 2: Filters + Exports ── */}
-                <div className="w-full max-w-full flex flex-col md:flex-row md:items-center gap-3 overflow-hidden">
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 md:pb-0 shrink-0">
-                        <div className="flex items-center gap-2 px-3 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm shrink-0">
-                            <FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[10px]" />
-                            <span className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider">NAVIGASI: <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono border">TAB/ENTER</kbd> - <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-border)] text-[8px] font-mono border">↑↓←→</kbd></span>
-                        </div>
-                        <div className="relative shrink-0">
-                            <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" />
-                            <input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} 
-                                className="h-10 pl-8 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all w-44 md:w-52 shadow-sm" />
-                            {studentSearch && <button onClick={() => setStudentSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-rose-500 transition-colors"><FontAwesomeIcon icon={faXmark} className="text-[10px]" /></button>}
-                        </div>
-                    </div>
-
-                    <div className="flex-1 min-w-0 flex items-center gap-3">
-                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                            <button onClick={() => { setShowIncompleteOnly(v => !v); setShowNoPhoneOnly(false) }} className={`h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-2 transition-all shadow-sm ${showIncompleteOnly ? 'bg-rose-500 text-white border-rose-500' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                <FontAwesomeIcon icon={faFilter} className="text-[10px]" />
-                                <span className="whitespace-nowrap">{showIncompleteOnly ? `Belum Lengkap` : 'Semua'}</span>
+            <div className="space-y-4">
+                {/* ── TOOLBAR CONTAINER ── */}
+                <div className="bg-[var(--color-surface)] pt-2 pb-3 space-y-3 mb-2">
+                    {/* ── ROW 1: Context + Progress + Actions ── */}
+                    <div className="w-full flex items-center justify-between gap-3">
+                        {/* Left: Context */}
+                        <div className="flex items-center gap-2 overflow-hidden">
+                            <button onClick={() => {
+                                if (hasUnsavedMemo) {
+                                    setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
+                                    return
+                                }
+                                setStep(0); setSelectedClassId('')
+                            }} className="h-9 w-9 md:h-10 md:w-auto md:px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center justify-center md:gap-1.5 shrink-0">
+                                <FontAwesomeIcon icon={faArrowLeft} className="text-[10px]" />
+                                <span className="hidden md:inline text-[10px] font-black uppercase tracking-wider">Ganti Kelas</span>
                             </button>
-                            {noPhoneCount > 0 && (
+                            <div className="flex items-center gap-2 px-3 h-9 md:h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0 overflow-hidden">
+                                <FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-[10px] shrink-0" />
+                                <div className="flex items-center gap-1.5 truncate">
+                                    <span className="text-[10px] font-black text-[var(--color-text)] whitespace-nowrap">{selectedClass?.name}</span>
+                                    <span className="hidden sm:inline w-px h-3 bg-[var(--color-border)] mx-1" />
+                                    <span className="hidden sm:inline text-[9px] font-bold text-[var(--color-text-muted)] uppercase">{BULAN[selectedMonth - 1]?.id_str} {selectedYear}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Middle: Progress (Desktop only) */}
+                        <div className="flex-1 min-w-0 hidden lg:flex items-center gap-4 px-4">
+                            <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden relative">
+                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
+                            </div>
+                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase whitespace-nowrap">{Math.round(progressPct)}% Lengkap</span>
+                        </div>
+
+                        {/* Right: Primary Actions */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            {/* Salin Bin Lalu (Desktop only) */}
+                            <button onClick={() => setShowCopyModal(true)} className="hidden md:flex h-10 px-4 rounded-xl border border-sky-500/20 bg-sky-500/5 text-sky-600 text-[10px] font-black uppercase tracking-widest hover:bg-sky-500/10 transition-all items-center gap-2">
+                                <FontAwesomeIcon icon={faChevronLeft} className="text-[9px]" /><span>Salin Bin Lalu</span>
+                            </button>
+
+                            <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-9 px-3 md:h-10 md:px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 relative disabled:opacity-70 shrink-0">
+                                <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin' : ''} />
+                                <span className="hidden md:inline">{savingAll ? 'Menyimpan...' : 'Simpan Semua'}</span>
+                                {!savingAll && hasUnsavedMemo && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
+                            </button>
+                            <button onClick={() => setStep(3)} className="h-9 w-9 md:h-10 md:w-auto md:px-5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center md:gap-2 shrink-0">
+                                <FontAwesomeIcon icon={faMagnifyingGlass} />
+                                <span className="hidden md:inline text-[10px] uppercase font-black tracking-widest">Preview & Cetak</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* ── ROW 2: Search + Filters + Exports ── */}
+                    <div className="w-full max-w-full flex md:flex-row flex-col md:items-center gap-2">
+                        {/* Search & Nav (Compact Row) */}
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            {/* Navigation Guide (Desktop Only) */}
+                            <div className="hidden md:flex items-center gap-2 px-3 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+                                <FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[10px]" />
+                                <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Navigasi:</span>
+                                <div className="flex items-center gap-1.5 ml-1">
+                                    <span className="px-1.5 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px] font-bold">TAB/ENTER</span>
+                                    <span className="text-[9px] font-bold text-[var(--color-text-muted)]">-</span>
+                                    <div className="flex items-center gap-0.5">
+                                        <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">↑</span>
+                                        <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">↓</span>
+                                        <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">←</span>
+                                        <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">→</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Search Bar */}
+                            <div className="relative flex-1 md:w-52 shrink-0">
+                                <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" />
+                                <input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
+                                    className="h-9 md:h-10 w-full pl-8 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all" />
+                            </div>
+                        </div>
+
+                        {/* Tools & Exports */}
+                        <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2">
+                            <div className="flex items-center gap-1.5 md:gap-2">
+                                {/* Keyboard Shortcut (Desktop only) */}
                                 <button
-                                    onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
-                                    className={`h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-2 transition-all shadow-sm ${showNoPhoneOnly ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-600 hover:bg-amber-500/15'}`}
+                                    ref={shortcutBtnRef}
+                                    onClick={() => {
+                                        if (!showShortcutModal) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect())
+                                        setShowShortcutModal(v => !v)
+                                    }}
+                                    className={`hidden md:flex h-10 w-10 shrink-0 rounded-xl border transition-all items-center justify-center ${showShortcutModal ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}
                                 >
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
-                                    <span className="whitespace-nowrap">{noPhoneCount} tanpa WA</span>
+                                    <FontAwesomeIcon icon={faKeyboard} className="text-[10px]" />
                                 </button>
-                            )}
-                            <button onClick={() => setShowShortcutModal(true)} className="h-10 w-10 shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] flex items-center justify-center hover:text-[var(--color-text)] transition-all shadow-sm">
-                                <FontAwesomeIcon icon={faKeyboard} className="text-[10px]" />
-                            </button>
-                            <button onClick={() => { setBulkMode(v => !v); setBulkValues({}); setBulkSelected(new Set()) }} className={`h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-2 transition-all shadow-sm shrink-0 ${bulkMode ? 'bg-violet-500 text-white border-violet-500' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                <FontAwesomeIcon icon={faFillDrip} className="text-[10px]" />
-                                {bulkMode ? `Isi Massal` : 'Isi Massal'}
-                            </button>
-                        </div>
 
-                        <div className="flex items-center gap-2 ml-auto shrink-0">
-                            <button onClick={exportCSV} className="h-10 px-3.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 text-[10px] font-black transition-all hover:bg-teal-500/20 shadow-sm shrink-0">CSV</button>
-                            <button onClick={exportXLS} className="h-10 px-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black transition-all hover:bg-emerald-500/20 shadow-sm shrink-0">XLS</button>
-                            <button onClick={() => {
-                                const completeds = students.filter(s => isComplete(scores[s.id] || {}))
-                                if (completeds.length) runZipBlast(completeds, null)
-                            }} className="h-10 px-3.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black transition-all hover:bg-sky-500/20 shadow-sm shrink-0">ZIP</button>
-                            <button onClick={() => {
-                                const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
-                                if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
-                            }} className="h-10 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-black flex items-center gap-1.5 transition-all hover:bg-green-500/20 shadow-sm shrink-0">
-                                <FontAwesomeIcon icon={faWhatsapp} className="text-[10px]" /> WA
-                            </button>
+                                <button onClick={() => { setBulkMode(v => !v); setBulkValues({}); setBulkSelected(new Set()) }} className={`h-9 px-4 w-full md:w-auto rounded-xl border text-[10px] font-black flex items-center justify-center md:justify-start gap-2 transition-all ${bulkMode ? 'bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-500/20' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                                    <FontAwesomeIcon icon={faFillDrip} className="text-[10px]" />
+                                    <span>Isi Massal</span>
+                                </button>
+
+                                {noPhoneCount > 0 && (
+                                    <button
+                                        onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
+                                        className={`h-10 px-4 rounded-xl border text-[10px] font-black hidden md:flex items-center gap-2 transition-all ${showNoPhoneOnly ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-600'}`}
+                                    >
+                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
+                                        <span className="whitespace-nowrap">{noPhoneCount} Tanpa WA</span>
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="hidden md:block w-px h-4 bg-[var(--color-border)] mx-1" />
+
+                            {/* Export Group (Grid on mobile, flex on desktop) */}
+                            <div className="grid grid-cols-4 md:flex items-center gap-1.5 md:gap-2">
+                                <button onClick={exportCSV} className="h-9 md:px-4 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 text-[10px] font-black flex items-center justify-center transition-all hover:bg-teal-500/20">CSV</button>
+                                <button onClick={exportXLS} className="h-9 md:px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black flex items-center justify-center transition-all hover:bg-emerald-500/20">XLS</button>
+                                <button onClick={() => {
+                                    const completeds = students.filter(s => isComplete(scores[s.id] || {}))
+                                    if (completeds.length) runZipBlast(completeds, null)
+                                }} className="h-9 md:px-4 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center justify-center transition-all hover:bg-sky-500/20">ZIP</button>
+                                <button onClick={() => {
+                                    const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
+                                    if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
+                                }} className="h-9 md:px-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-green-500/20">
+                                    <FontAwesomeIcon icon={faWhatsapp} className="text-[12px]" /> <span className="hidden md:inline">Blast WA</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2171,30 +2228,37 @@ export default function RaportPage() {
                     }}
                 />
                 {bulkMode && (
-                    <div className="p-3 rounded-xl border border-violet-500/30 bg-violet-500/5 flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <div className="w-6 h-6 rounded-lg bg-violet-500/20 flex items-center justify-center"><FontAwesomeIcon icon={faFillDrip} className="text-violet-500 text-[9px]" /></div>
-                            <span className="text-[10px] font-black text-violet-600">Isi Massal:</span>
-                            <span className="text-[9px] text-[var(--color-text-muted)]">isi nilai per kolom → terapkan ke semua santri yang belum diisi</span>
+                    <div className="p-3 rounded-xl border border-violet-500/20 bg-violet-500/5 space-y-3">
+                        {/* Compact Header */}
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-lg bg-violet-500/20 flex items-center justify-center shrink-0">
+                                <FontAwesomeIcon icon={faFillDrip} className="text-violet-500 text-[10px]" />
+                            </div>
+                            <div className="flex flex-col gap-0">
+                                <span className="text-[10px] font-black text-violet-600 uppercase tracking-wider">Isi Massal Nilai</span>
+                                <span className="text-[9px] text-[var(--color-text-muted)] leading-tight">Berlaku hanya untuk kolom yang masih kosong.</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap flex-1">
+
+                        {/* Input Grid: Slimmer & Faster */}
+                        <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-end gap-2 md:gap-3">
                             {KRITERIA.map(k => (
-                                <div key={k.key} className="flex items-center gap-1">
-                                    <span className="text-[9px] font-black" style={{ color: k.color }}>{k.id}</span>
+                                <div key={k.key} className="flex flex-col gap-1 flex-1 min-w-[70px]">
+                                    <span className="text-[9px] font-black uppercase tracking-tight truncate opacity-80" style={{ color: k.color }}>{k.id}</span>
                                     <input type="number" min={0} max={MAX_SCORE} placeholder="—"
                                         value={bulkValues[k.key] ?? ''}
                                         onChange={e => setBulkValues(prev => ({ ...prev, [k.key]: e.target.value === '' ? '' : Math.min(MAX_SCORE, Math.max(0, Number(e.target.value))) }))}
-                                        aria-label={`Nilai massal ${k.id}`}
-                                        className="w-10 h-7 text-center text-[11px] font-black rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none focus:border-violet-400 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        className="w-full h-8 text-center text-[11px] font-black rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/10 transition-all appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     />
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Actions Row: Compact */}
+                        <div className="flex items-center gap-2 pt-0.5">
                             <button onClick={() => {
                                 const keys = Object.keys(bulkValues).filter(k => bulkValues[k] !== '')
-                                if (!keys.length) { return }
-                                // FIX: hitung changedIds dari scores state saat ini (SEBELUM setScores)
-                                // agar changedIds.forEach(triggerAutoSave) berjalan dengan data yang benar.
-                                // Sebelumnya changedIds di-push di dalam updater → sudah kosong saat forEach jalan.
+                                if (!keys.length) { addToast('Isi minimal satu nilai', 'warning'); return }
                                 const changedIds = students
                                     .filter(s => {
                                         const cur = scores[s.id] || {}
@@ -2202,7 +2266,7 @@ export default function RaportPage() {
                                     })
                                     .map(s => s.id)
                                 if (!changedIds.length) {
-                                    addToast('Semua santri sudah memiliki nilai untuk kolom ini', 'warning')
+                                    addToast('Semua kolom sudah memiliki nilai', 'warning')
                                     return
                                 }
                                 setScores(prev => {
@@ -2224,13 +2288,12 @@ export default function RaportPage() {
                                     setSavedIds(p => { const n = new Set(p); n.delete(id); return n })
                                     triggerAutoSave(id)
                                 })
-                                addToast(`Nilai massal diterapkan ke ${changedIds.length} santri`, 'success')
-                                // FIX: tutup panel Isi Massal setelah Terapkan
+                                addToast(`Berhasil diterapkan ke ${changedIds.length} santri`, 'success')
                                 setBulkMode(false)
-                            }} className="h-7 px-3 rounded-lg bg-violet-500 text-white text-[9px] font-black hover:bg-violet-600 transition-all flex items-center gap-1.5">
-                                <FontAwesomeIcon icon={faCheck} className="text-[8px]" /> Terapkan
+                            }} className="flex-1 md:flex-none h-8 px-5 rounded-lg bg-violet-600 text-white text-[10px] font-black uppercase tracking-wider hover:bg-violet-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm">
+                                <FontAwesomeIcon icon={faCheck} className="text-[9px]" /> Terapkan
                             </button>
-                            <button onClick={() => setBulkValues({})} className="h-7 px-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] text-[9px] font-black hover:text-[var(--color-text)] transition-all">Reset</button>
+                            <button onClick={() => setBulkValues({})} className="h-8 px-3 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all">Reset</button>
                         </div>
                     </div>
                 )}
@@ -2238,18 +2301,18 @@ export default function RaportPage() {
                 <div className="hidden md:block">
                     <div
                         ref={tableScrollRef}
-                        className="overflow-x-auto rounded-2xl border border-[var(--color-border)]"
-                        style={{ maxHeight: filteredStudents.length > 20 ? '70vh' : 'none', overflowY: filteredStudents.length > 20 ? 'auto' : 'visible' }}
+                        className="overflow-x-auto rounded-xl border border-[var(--color-border)]"
+                        style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto', overflowAnchor: 'none' }}
                     >
-                        <table style={{ borderCollapse: 'collapse', minWidth: 1010, tableLayout: 'fixed' }}>
+                        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1030, tableLayout: 'fixed' }}>
                             <colgroup>
                                 {bulkMode && <col style={{ width: 36 }} />}
-                                <col style={{ width: 170 }} />{KRITERIA.map(k => <col key={k.key} style={{ width: 64 }} />)}<col style={{ width: 200 }} /><col style={{ width: 165 }} /><col style={{ width: 145 }} />
+                                <col style={{ width: 200 }} />{KRITERIA.map(k => <col key={k.key} style={{ width: 64 }} />)}<col style={{ width: 200 }} /><col style={{ width: 180 }} /><col style={{ width: 150 }} />
                             </colgroup>
-                            <thead style={{ position: 'sticky', top: 0, zIndex: 20 }}>
-                                <tr style={{ background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
+                            <thead className="sticky top-0 z-20" style={{ boxShadow: '0 1px 0 var(--color-border)' }}>
+                                <tr style={{ background: 'none' }}>
                                     {bulkMode && (
-                                        <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)' }}>
+                                        <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
                                             <input type="checkbox"
                                                 checked={bulkSelected.size === filteredStudents.length && filteredStudents.length > 0}
                                                 onChange={e => setBulkSelected(e.target.checked ? new Set(filteredStudents.map(s => s.id)) : new Set())}
@@ -2258,11 +2321,11 @@ export default function RaportPage() {
                                             />
                                         </th>
                                     )}
-                                    <th className="px-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 12px', verticalAlign: 'middle', borderRight: '1px solid var(--color-border)' }}>Santri</th>
-                                    {KRITERIA.map(k => (<th key={k.key} style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'middle' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ direction: 'rtl', fontSize: 14, fontWeight: 900, color: k.color, lineHeight: 1, whiteSpace: 'nowrap', fontFamily: 'serif' }}>{k.arShort}</span><span style={{ fontSize: 8, fontWeight: 800, color: 'var(--color-text-muted)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{k.id}</span></div></th>))}
-                                    <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Fisik</span><span style={{ fontSize: 8, color: 'var(--color-text-muted)', opacity: 0.55, fontWeight: 600 }}>BB · TB · Skt · Izin · Alpa · Plg</span></div></th>
-                                    <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Hafalan & Catatan</span></div></th>
-                                    <th className="sticky right-0 z-10" style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1, background: 'var(--color-surface-alt)', borderLeft: '1px solid var(--color-border)' }}>Aksi</th>
+                                    <th className="px-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 12px', verticalAlign: 'middle', borderRight: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>Santri</th>
+                                    {KRITERIA.map(k => (<th key={k.key} style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ direction: 'rtl', fontSize: 14, fontWeight: 900, color: k.color, lineHeight: 1, whiteSpace: 'nowrap', fontFamily: 'serif' }}>{k.arShort}</span><span style={{ fontSize: 8, fontWeight: 800, color: 'var(--color-text-muted)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{k.id}</span></div></th>))}
+                                    <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Fisik</span><span style={{ fontSize: 8, color: 'var(--color-text-muted)', opacity: 0.55, fontWeight: 600 }}>BB · TB · Skt · Izin · Alpa · Plg</span></div></th>
+                                    <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Hafalan & Catatan</span></div></th>
+                                    <th className="sticky right-0 z-10" style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1, background: 'var(--color-surface-alt)', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2492,7 +2555,7 @@ export default function RaportPage() {
                 </div>{/* end md:hidden */}
 
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {KRITERIA.map(k => { const vals = filteredStudents.map(s => scores[s.id]?.[k.key]).filter(v => v !== '' && v !== null && v !== undefined); const avg = vals.length ? (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1) : '—'; const g = avg !== '—' ? GRADE(Number(avg)) : null; return (<div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center"><div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>{k.id}</div><div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>{avg}</div><div className="text-[7px] font-bold text-[var(--color-text-muted)]" style={{ direction: 'rtl' }}>{g?.label || 'rata kelas'}</div></div>) })}
+                    {KRITERIA.map(k => { const vals = filteredStudents.map(s => scores[s.id]?.[k.key]).filter(v => v !== '' && v !== null && v !== undefined); const avg = vals.length ? (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1) : '—'; const g = avg !== '—' ? GRADE(Number(avg)) : null; return (<div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center"><div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>{k.id}</div><div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>{avg}</div><div className="text-[7px] font-bold text-[var(--color-text-muted)]" style={{ direction: 'rtl' }}>{g?.label || 'Rata - Rata Kelas'}</div></div>) })}
                 </div>
             </div>
         )
@@ -2515,7 +2578,7 @@ export default function RaportPage() {
 
                 <div className="flex flex-col lg:flex-row gap-6">
                     {/* Left: Sidebar Navigation */}
-                    <div className="lg:w-1/3 xl:w-1/4 space-y-4 self-start sticky top-6">
+                    <div className="lg:w-64 xl:w-72 space-y-4 self-start sticky top-6">
                         <div className="p-5 rounded-3xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
                             <div className="flex items-center justify-between mb-4 px-1">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Daftar Santri</p>
@@ -2552,7 +2615,7 @@ export default function RaportPage() {
 
                     {/* Right: Preview Area - Unified in one card */}
                     <div className="flex-1 flex flex-col rounded-[32px] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
-                        <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div className="flex items-center gap-6">
                                 <div className="flex items-center gap-3 shrink-0">
                                     <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
@@ -2563,7 +2626,6 @@ export default function RaportPage() {
                                         <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Dokumen resmi santri.</p>
                                     </div>
                                 </div>
-
                                 {/* Paper Size Toggle */}
                                 <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
                                     <button onClick={() => setPageSize('a4')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
@@ -2596,8 +2658,8 @@ export default function RaportPage() {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto bg-[var(--color-surface-alt)]/30 p-4 sm:p-8 flex justify-center custom-scrollbar" style={{ minHeight: 600 }}>
-                            <div className="shadow-2xl h-fit transform-gpu transition-all duration-300 origin-top hover:translate-y-[-2px]">
+                        <div className="flex-1 overflow-auto bg-[var(--color-surface-alt)]/30 p-2 sm:p-4 flex flex-col items-center custom-scrollbar" style={{ minHeight: 600 }}>
+                            <div className="shadow-2xl h-fit transform-gpu transition-all duration-300 origin-top hover:translate-y-[-1px] xl:scale-[1.05] mb-6">
                                 {previewStudent && (
                                     <RaportPrintCard
                                         student={previewStudent}
@@ -2614,6 +2676,7 @@ export default function RaportPage() {
                                     />
                                 )}
                             </div>
+                            <div className="h-8 w-full shrink-0" />
                         </div>
                     </div>
                 </div>
@@ -3166,15 +3229,28 @@ export default function RaportPage() {
                     </div>
                 )}
 
-                {/* Keyboard Shortcut Modal */}
-                <Modal
-                    isOpen={showShortcutModal}
-                    onClose={() => setShowShortcutModal(false)}
-                    title="Keyboard Shortcuts"
-                    icon={faKeyboard}
-                >
-                    <ShortcutModalContent />
-                </Modal>
+                {/* Portaled Keyboard Shortcuts Dropdown */}
+                {showShortcutModal && shortcutRect && createPortal(
+                    <>
+                        <div className="fixed inset-0 z-[1000] bg-black/5 backdrop-blur-[1px]" onClick={() => setShowShortcutModal(false)} />
+                        <div
+                            className="fixed z-[1001] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200"
+                            style={{
+                                top: shortcutRect.bottom + 8,
+                                left: Math.max(10, shortcutRect.right - 288)
+                            }}
+                        >
+                            <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)]">
+                                <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Pintasan Keyboard</p>
+                                <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
+                            </div>
+                            <div className="max-h-[60vh] overflow-y-auto">
+                                <ShortcutModalContent />
+                            </div>
+                        </div>
+                    </>,
+                    document.body
+                )}
 
                 {/* Tutorial Modal */}
                 {(() => {
