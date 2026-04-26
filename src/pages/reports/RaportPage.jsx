@@ -199,7 +199,7 @@ export default function RaportPage() {
     // ── Preview
     const [previewStudentId, setPreviewStudentId] = useState(null)
     const [pageSize, setPageSize] = useState('a4') // 'a4' | 'f4'
-    const [previewZoom, setPreviewZoom] = useState(0.8) // 0.8 = 80% zoom out
+    const [previewZoom, setPreviewZoom] = useState(1) // 0.8 = 80% zoom out
     const [isFullScreenPreview, setIsFullScreenPreview] = useState(false)
     const [showMobileStudentPicker, setShowMobileStudentPicker] = useState(false)
 
@@ -1633,8 +1633,9 @@ export default function RaportPage() {
 
     useEffect(() => {
         if (step === 3 && window.innerWidth < 768) {
-            const containerWidth = window.innerWidth - 64 // FIX: more conservative padding calculation
-            const docWidth = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591 
+            const padding = 56 // extra breathing room: 12px container p-3 * 2 + 16px visual margin each side
+            const containerWidth = window.innerWidth - padding
+            const docWidth = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
             const fitZoom = Math.floor((containerWidth / docWidth) * 100) / 100
             setPreviewZoom(Math.max(0.3, Math.min(0.8, fitZoom)))
         }
@@ -2749,125 +2750,170 @@ export default function RaportPage() {
 
                     {/* Right: Preview Area - Unified in one card */}
                     <div className="flex-1 flex flex-col rounded-[32px] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
-                        <div className="px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar flex-nowrap">
-                            {/* Left: Branding & Title */}
-                            <div className="flex items-center gap-2 shrink-0">
-                                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center hidden sm:flex">
-                                    <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500 text-xs" />
+                        <div className="px-4 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            {/* Row 1: Title & Mobile Toggle */}
+                            <div className="flex items-center justify-between w-full sm:w-auto">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500 text-[10px]" />
+                                    </div>
+                                    <h4 className="text-[11px] font-black text-[var(--color-text)] uppercase tracking-wider">Preview Raport</h4>
                                 </div>
-                                <div className="shrink-0">
-                                    <h4 className="text-[12px] font-black text-[var(--color-text)] whitespace-nowrap">Preview Raport</h4>
-                                    <p className="text-[8px] text-[var(--color-text-muted)] font-medium hidden md:block">Dokumen resmi santri.</p>
-                                </div>
-                            </div>
-
-                            {/* Middle: Format & Language Controls */}
-                            <div className="flex items-center gap-2 shrink-0">
-                                {/* Paper Size Toggle */}
-                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
-                                    <button onClick={() => setPageSize('a4')} className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                        A4
-                                    </button>
-                                    <button onClick={() => setPageSize('f4')} className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                        F4
-                                    </button>
-                                </div>
-
-                                {/* Language Toggle Pill */}
-                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
-                                    <button onClick={() => setLang('ar')} className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all flex items-center gap-1 ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                        <span className="hidden lg:inline">Arabic</span><span className="lg:hidden">AR</span>
-                                    </button>
-                                    <button onClick={() => setLang('id')} className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all flex items-center gap-1 ${lang === 'id' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                        <span className="hidden lg:inline">Indonesia</span><span className="lg:hidden">ID</span>
-                                    </button>
-                                </div>
-
-                                {/* Zoom Controls */}
-                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
-                                    <button onClick={() => setPreviewZoom(p => Math.max(0.4, p - 0.1))} className="h-7 w-7 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faSearch} className="scale-75 translate-x-[-1px] opacity-70" />-
-                                    </button>
-                                    <span className="text-[9px] font-black w-8 text-center text-indigo-500">{Math.round(previewZoom * 100)}%</span>
-                                    <button onClick={() => setPreviewZoom(p => Math.min(1.5, p + 0.1))} className="h-7 w-7 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faSearch} className="scale-75 translate-x-[-1px] opacity-70" />+
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Right: Actions */}
-                            <div className="flex items-center gap-1.5 shrink-0">
                                 <button
                                     onClick={() => setIsFullScreenPreview(true)}
-                                    title="Tampilan Penuh"
-                                    className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-indigo-500 transition-all flex items-center justify-center lg:hidden"
+                                    className="h-8 w-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] flex items-center justify-center sm:hidden"
                                 >
-                                    <FontAwesomeIcon icon={faExpand} className="scale-90" />
+                                    <FontAwesomeIcon icon={faExpand} className="scale-75" />
                                 </button>
-                                {previewStudent?.phone && (
-                                    <button onClick={() => sendWATextOnly(previewStudent)} className="h-9 px-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[9px] font-black hover:bg-green-500/20 transition-all flex items-center gap-1.5 whitespace-nowrap">
-                                        <FontAwesomeIcon icon={faWhatsapp} className="text-[9px]" /> <span className="hidden sm:inline">Whatsapp</span>
+                            </div>
+
+                            {/* Row 2 & 3: Controls */}
+                            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                                {/* Group: Format & Lang - Stretching on Mobile */}
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
+                                        <button onClick={() => setPageSize('a4')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>A4</button>
+                                        <button onClick={() => setPageSize('f4')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>F4</button>
+                                    </div>
+                                    <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
+                                        <button onClick={() => setLang('ar')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>AR</button>
+                                        <button onClick={() => setLang('id')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'id' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>ID</button>
+                                    </div>
+                                </div>
+
+                                {/* Group: Zoom & Actions - Stretching on Mobile */}
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    {/* Zoom Control stretches on mobile */}
+                                    <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
+                                        <button onClick={() => setPreviewZoom(p => Math.max(0.4, p - 0.1))} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />-</button>
+                                        <span className="text-[10px] font-black w-10 text-center text-indigo-500 tabular-nums">{Math.round(previewZoom * 100)}%</span>
+                                        <button onClick={() => setPreviewZoom(p => Math.min(1.5, p + 0.1))} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />+</button>
+                                    </div>
+
+                                    {previewStudent?.phone && (
+                                        <button onClick={() => sendWATextOnly(previewStudent)} className="h-10 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial">
+                                            <FontAwesomeIcon icon={faWhatsapp} className="text-xs" /> <span className="hidden xs:inline">Whatsapp</span>
+                                        </button>
+                                    )}
+
+                                    <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial shadow-lg shadow-emerald-500/20">
+                                        <FontAwesomeIcon icon={faPrint} className="text-xs" /> <span className="hidden xs:inline">Cetak</span>
                                     </button>
-                                )}
-                                <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-9 px-3 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[9px] font-black hover:brightness-110 transition-all flex items-center gap-1.5 whitespace-nowrap">
-                                    <FontAwesomeIcon icon={faPrint} className="text-[9px]" /> <span className="hidden sm:inline">Cetak</span><span className="sm:hidden">Print</span>
-                                </button>
+
+                                    <button
+                                        onClick={() => setIsFullScreenPreview(true)}
+                                        className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hidden sm:flex items-center justify-center hover:text-indigo-500 transition-all"
+                                    >
+                                        <FontAwesomeIcon icon={faExpand} className="scale-90" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <div className={`flex-1 overflow-auto bg-[var(--color-surface-alt)]/20 ${isFullScreenPreview ? 'p-2' : 'p-4 sm:p-10'} flex flex-col items-center custom-scrollbar`} style={{ minHeight: 600 }}>
+                        <div className="flex-1 overflow-y-auto bg-slate-200 dark:bg-slate-700 flex flex-col items-center custom-scrollbar p-3 sm:p-10" style={{ minHeight: window.innerWidth < 768 ? 300 : 600 }}>
                             <p className="text-[9px] font-bold text-[var(--color-text-muted)] mb-2 uppercase tracking-widest lg:hidden opacity-60">
                                 <FontAwesomeIcon icon={faExpand} className="mr-1" /> Klik raport untuk memperbesar
                             </p>
-                            {/* Layout Wrapper: Menggunakan zoom untuk sinkronisasi layout & visual tanpa ghost margins */}
-                            <div className="w-full flex justify-center">
-                                <div 
-                                    className="shadow-2xl h-fit mb-12 cursor-pointer hover:ring-2 hover:ring-indigo-500/30 transition-all" 
-                                    style={{ zoom: previewZoom, width: pageSize === 'f4' ? '215mm' : '210mm' }}
-                                    onClick={() => setIsFullScreenPreview(true)}
-                                >
-                                    {previewStudent && (
-                                        <RaportPrintCard
-                                            student={previewStudent}
-                                            scores={scores[previewStudent.id]}
-                                            extra={extras[previewStudent.id]}
-                                            bulanObj={bulanObj}
-                                            tahun={selectedYear}
-                                            musyrif={musyrif}
-                                            className={selectedClass?.name}
-                                            lang={lang}
-                                            settings={settings}
-                                            pageSize={pageSize}
-                                            catatanArab={catatanArabMap[previewStudent.id]}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                            <div className="h-8 w-full shrink-0" />
+                            {/* Layout Wrapper — menggunakan transform:scale agar layout width selalu akurat di Android */}
+                            {(() => {
+                                // Natural px size of the paper (96dpi)
+                                const naturalW = pageSize === 'f4' ? 812.6 : 793.7
+                                // A4: 297mm, F4: ~330mm
+                                const naturalH = pageSize === 'f4' ? 1247 : 1122
+                                return (
+                                    <div
+                                        className="mx-auto overflow-hidden"
+                                        style={{
+                                            width:  `${naturalW * previewZoom}px`,
+                                            height: `${naturalH * previewZoom}px`,
+                                        }}
+                                    >
+                                        <div
+                                            className="shadow-2xl rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-indigo-500/30 transition-all"
+                                            style={{
+                                                width: pageSize === 'f4' ? '215mm' : '210mm',
+                                                transform: `scale(${previewZoom})`,
+                                                transformOrigin: 'top left',
+                                            }}
+                                            onClick={() => setIsFullScreenPreview(true)}
+                                        >
+                                            {previewStudent && (
+                                                <RaportPrintCard
+                                                    student={previewStudent}
+                                                    scores={scores[previewStudent.id]}
+                                                    extra={extras[previewStudent.id]}
+                                                    bulanObj={bulanObj}
+                                                    tahun={selectedYear}
+                                                    musyrif={musyrif}
+                                                    className={selectedClass?.name}
+                                                    lang={lang}
+                                                    settings={settings}
+                                                    pageSize={pageSize}
+                                                    catatanArab={catatanArabMap[previewStudent.id]}
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            })()}
+                            <div className="hidden sm:block h-8 w-full shrink-0" />
                         </div>
                     </div>
                 </div>
 
-                {/* ── FULLSCREEN PREVIEW OVERLAY ── */}
+                {/* ── PREMIUM LIGHT STUDIO PREVIEW OVERLAY ── */}
                 {isFullScreenPreview && (
-                    <div className="fixed inset-0 z-[100] bg-[var(--color-surface)] flex flex-col animate-in fade-in zoom-in-95 duration-200">
-                        <div className="h-14 px-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between shadow-sm">
-                            <div className="flex items-center gap-3">
-                                <button onClick={() => setIsFullScreenPreview(false)} className="h-9 w-9 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] transition-all flex items-center justify-center">
-                                    <FontAwesomeIcon icon={faCompress} />
+                    <div className="fixed inset-0 z-[100] bg-slate-100 flex flex-col animate-in fade-in duration-300">
+                        {/* Clean Light Top Bar */}
+                        <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200 bg-white/80 backdrop-blur-md shadow-sm">
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => setIsFullScreenPreview(false)}
+                                    className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all flex items-center justify-center group"
+                                >
+                                    <FontAwesomeIcon icon={faArrowLeft} className="group-active:scale-90" />
                                 </button>
-                                <span className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Preview Mode</span>
+                                <div className="min-w-0">
+                                    <h3 className="text-slate-900 text-[13px] font-black truncate max-w-[150px] sm:max-w-none uppercase tracking-wider">
+                                        {previewStudent?.name || 'Preview Document'}
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Digital Preview</span>
+                                    </div>
+                                </div>
                             </div>
+
                             <div className="flex items-center gap-2">
-                                <button onClick={() => setPreviewZoom(p => Math.max(0.4, p - 0.1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] flex items-center justify-center text-xs font-black">-</button>
-                                <span className="text-[10px] font-black w-8 text-center">{Math.round(previewZoom * 100)}%</span>
-                                <button onClick={() => setPreviewZoom(p => Math.min(1.5, p + 0.1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] flex items-center justify-center text-xs font-black">+</button>
-                                <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
-                                <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-9 px-4 rounded-xl bg-indigo-600 text-white text-[10px] font-black">Cetak</button>
+                                {/* Format Badges */}
+                                <div className="hidden sm:flex items-center gap-1.5 mr-4 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200">
+                                    <span className="text-[9px] font-black text-slate-400">SIZE:</span>
+                                    <span className="text-[9px] font-black text-indigo-600">{pageSize.toUpperCase()}</span>
+                                    <div className="w-px h-2 bg-slate-200" />
+                                    <span className="text-[9px] font-black text-slate-400">LANG:</span>
+                                    <span className="text-[9px] font-black text-amber-600">{lang.toUpperCase()}</span>
+                                </div>
+
+                                <button
+                                    onClick={() => openPrintWindow([previewStudent].filter(Boolean))}
+                                    className="h-10 px-5 rounded-full bg-indigo-600 text-white text-[11px] font-black shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-2"
+                                >
+                                    <FontAwesomeIcon icon={faPrint} />
+                                    <span>Cetak</span>
+                                </button>
                             </div>
                         </div>
-                        <div className="flex-1 overflow-auto bg-[var(--color-surface-alt)] p-4 flex flex-col items-center custom-scrollbar pt-8">
-                            <div className="shadow-2xl h-fit mb-24" style={{ zoom: previewZoom, width: pageSize === 'f4' ? '215mm' : '210mm' }}>
+
+                        {/* Soft Studio Scroll Area */}
+                        <div className="flex-1 overflow-auto bg-slate-50 flex flex-col items-center custom-scrollbar py-4 sm:py-12 px-4">
+                            <div
+                                className="shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-200 transition-all duration-300"
+                                style={{
+                                    zoom: previewZoom,
+                                    width: pageSize === 'f4' ? '215mm' : '210mm',
+                                    transformOrigin: 'top center'
+                                }}
+                            >
                                 {previewStudent && (
                                     <RaportPrintCard
                                         student={previewStudent}
@@ -2884,6 +2930,50 @@ export default function RaportPage() {
                                     />
                                 )}
                             </div>
+                        </div>
+
+                        {/* Floating Bottom Navigation (Modern Style) */}
+                        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-1 p-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-indigo-900/10">
+                            <button
+                                onClick={() => setPreviewZoom(p => Math.max(0.3, p - 0.1))}
+                                className="w-10 h-10 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-indigo-600 transition-all flex items-center justify-center"
+                            >
+                                <FontAwesomeIcon icon={faSearch} className="scale-75 translate-x-[-1px] opacity-70" />-
+                            </button>
+
+                            <div className="px-3 min-w-[70px] text-center border-x border-slate-100">
+                                <span className="text-[11px] font-black text-slate-700 tabular-nums">{Math.round(previewZoom * 100)}%</span>
+                            </div>
+
+                            <button
+                                onClick={() => setPreviewZoom(p => Math.min(2.0, p + 0.1))}
+                                className="w-10 h-10 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-indigo-600 transition-all flex items-center justify-center"
+                            >
+                                <FontAwesomeIcon icon={faSearch} className="scale-75 translate-x-[-1px] opacity-70" />+
+                            </button>
+
+                            <div className="w-px h-4 bg-slate-200 mx-1" />
+
+                            {/* Fit Width Shortcut */}
+                            <button
+                                onClick={() => {
+                                    const containerWidth = window.innerWidth - 64
+                                    const docWidth = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
+                                    setPreviewZoom(Math.floor((containerWidth / docWidth) * 100) / 100)
+                                }}
+                                className="h-10 px-4 rounded-xl hover:bg-indigo-50 text-slate-600 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all"
+                            >
+                                Fit Width
+                            </button>
+
+                            <div className="w-px h-4 bg-slate-200 mx-1" />
+
+                            <button
+                                onClick={() => setIsFullScreenPreview(false)}
+                                className="w-10 h-10 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all flex items-center justify-center"
+                            >
+                                <FontAwesomeIcon icon={faXmark} />
+                            </button>
                         </div>
                     </div>
                 )}
