@@ -30,17 +30,18 @@ export default function StatsCarousel({ children, count, cols = 4, className = '
     }
 
     const colsClass =
-        cols === 5 ? 'lg:grid-cols-5' :
-        cols === 3 ? 'lg:grid-cols-3' :
-        cols === 2 ? 'lg:grid-cols-2' :
-        'lg:grid-cols-4'
+        cols === 5 ? 'sm:grid-cols-3 lg:grid-cols-5' :
+        cols === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' :
+        cols === 3 ? 'sm:grid-cols-3 lg:grid-cols-3' :
+        cols === 2 ? 'sm:grid-cols-2 lg:grid-cols-2' :
+        'sm:grid-cols-2 lg:grid-cols-4'
 
     return (
         <div className={`relative mb-6 -mx-3 sm:mx-0 ${className}`}>
             <div
                 ref={scrollRef}
                 onScroll={handleScroll}
-                className={`flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 ${colsClass} lg:overflow-visible lg:pb-0 lg:snap-none`}
+                className={`flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid ${colsClass} lg:overflow-visible lg:pb-0 lg:snap-none`}
             >
                 {children}
             </div>

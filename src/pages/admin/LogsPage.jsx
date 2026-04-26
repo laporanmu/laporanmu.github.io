@@ -1273,7 +1273,7 @@ export default function LogsPage() {
 
     return (
         <DashboardLayout title="Audit Logs">
-            <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
+            <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
 
                 {/* Header */}
                 <div className="flex flex-col gap-1">

@@ -17,6 +17,7 @@ import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
 import { useSchoolSettings, DEFAULT_SETTINGS } from '../../context/SchoolSettingsContext'
 import { useAuth } from '../../context/AuthContext'
+import mbsLogo from '../../assets/mbs.png'
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -148,10 +149,15 @@ function RaportPreview({ form }) {
     return (
         <div className="rounded-xl overflow-hidden bg-white text-black shadow-md border border-gray-200">
             <div className="flex items-center gap-3 p-3">
-                {form.logo_url
-                    ? <img src={form.logo_url} alt="logo" className="w-10 h-10 object-contain rounded shrink-0" onError={e => e.target.style.display = 'none'} />
-                    : <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-[8px] font-bold shrink-0">LOGO</div>
-                }
+                <img 
+                    src={form.logo_url || mbsLogo} 
+                    alt="logo" 
+                    className="w-10 h-10 object-contain rounded shrink-0" 
+                    onError={e => {
+                        if (form.logo_url) e.target.src = mbsLogo;
+                        else e.target.style.display = 'none';
+                    }} 
+                />
                 <div className="flex-1 text-center leading-tight min-w-0">
                     {form.school_subtitle_ar && <div className="text-[7px] text-gray-400 truncate" dir="rtl">{form.school_subtitle_ar}</div>}
                     <div className="text-[11px] font-black truncate" style={{ color: c1 }} dir="rtl">{form.school_name_ar || '—'}</div>
@@ -587,12 +593,12 @@ export default function AdminSettingsPage() {
                                                 : <FontAwesomeIcon icon={faUpload} className="text-[var(--color-text-muted)] text-xs" />
                                             }
                                         </div>
-                                        <input
-                                            type="text" value={form.logo_url}
-                                            onChange={e => set('logo_url', e.target.value)}
-                                            className="input-field text-sm h-11 flex-1"
-                                            placeholder="/src/assets/logo.png"
-                                        />
+                                            <input
+                                                type="text" value={form.logo_url}
+                                                onChange={e => set('logo_url', e.target.value)}
+                                                className="input-field text-sm h-11 flex-1"
+                                                placeholder="https://example.com/logo.png"
+                                            />
                                     </div>
                                 </div>
                             </div>

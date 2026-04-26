@@ -17,6 +17,7 @@ import DashboardLayout from '../layout/DashboardLayout'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
 import { useSchoolSettings } from '../../context/SchoolSettingsContext'
+import mbsLogo from '../../assets/mbs.png'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -266,7 +267,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             <div style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingBottom: 6 }}>
                     <div style={{ flexShrink: 0, width: 80, height: 80, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={settings.logo_url || '/src/assets/mbs.png'} alt="Logo" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
+                        <img src={settings.logo_url || mbsLogo} alt="Logo" style={{ width: 78, height: 78, objectFit: 'contain', mixBlendMode: 'multiply', backgroundColor: '#fff' }} />
                     </div>
                     <div style={{ flex: 1, textAlign: 'center' }}>
                         {settings.school_subtitle_ar && (

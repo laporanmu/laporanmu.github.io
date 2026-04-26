@@ -11,6 +11,7 @@ import {
 import Modal from '../ui/Modal'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
+import mbsLogo from '../../assets/mbs.png'
 
 // ─── Re-use dari RaportBulananModal ──────────────────────────────────────────
 
@@ -253,7 +254,7 @@ export default function RiwayatRaportModal({ isOpen, onClose, classesList = [] }
                 <div style="font-family:'Times New Roman',serif;width:210mm;min-height:297mm;background:#fff;color:#000;padding:12mm 15mm;box-sizing:border-box;font-size:11pt;line-height:1.4;page-break-after:always">
                     <!-- Header -->
                     <div style="border-bottom:3px double #1a5c35;padding-bottom:8px;margin-bottom:10px;display:flex;align-items:center;gap:16px">
-                        <img src="/src/assets/mbs.png" style="width:80px;height:80px;object-fit:contain;mix-blend-mode:multiply;flex-shrink:0" />
+                        <img src="${mbsLogo}" style="width:80px;height:80px;object-fit:contain;mix-blend-mode:multiply;flex-shrink:0" />
                         <div style="flex:1;text-align:center">
                             <div style="font-size:8pt;color:#444;direction:rtl;margin-bottom:3px;font-family:'Traditional Arabic',serif">المجلس التعليمي للمرحلتين الابتدائية والمتوسطة التابع للرئاسة الفرعية للجمعية المحمدية</div>
                             <div style="font-size:20pt;font-weight:900;color:#1a5c35;direction:rtl;font-family:'Traditional Arabic',serif">معهد محمدية الإسلامي تانجول</div>

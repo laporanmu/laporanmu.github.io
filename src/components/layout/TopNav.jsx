@@ -368,7 +368,7 @@ export default function TopNav({ title, subtitle }) {
             `}</style>
 
             <header className="sticky top-0 z-40">
-                <div className="mx-auto max-w-7xl px-3 sm:px-4 lg:px-6 pt-3">
+                <div className="mx-auto max-w-[1800px] px-3 sm:px-4 lg:px-6 pt-3">
 
                     {/* ===================== */}
                     {/* MOBILE */}

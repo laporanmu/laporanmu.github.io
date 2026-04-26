@@ -10,13 +10,27 @@ export function StatCard({
     trend, 
     trendUp, 
     loading = false,
-    borderColor = 'border-t-[var(--color-primary)]',
-    iconBg = 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
+    borderColor, 
+    iconBg, 
+    color = 'primary',
     className = '',
     valueClassName = 'text-2xl text-[var(--color-text)]',
     onClick,
     title
 }) {
+    // If color is provided, map it to specific styles
+    const colorMap = {
+        primary: { border: 'border-t-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' },
+        indigo: { border: 'border-indigo-500', bg: 'bg-indigo-500/10 text-indigo-500' },
+        emerald: { border: 'border-emerald-500', bg: 'bg-emerald-500/10 text-emerald-500' },
+        amber: { border: 'border-amber-500', bg: 'bg-amber-500/10 text-amber-500' },
+        rose: { border: 'border-rose-500', bg: 'bg-rose-500/10 text-rose-500' },
+        sky: { border: 'border-sky-500', bg: 'bg-sky-500/10 text-sky-500' },
+    }
+
+    const finalBorder = borderColor || colorMap[color]?.border || colorMap.primary.border
+    const finalBg = iconBg || colorMap[color]?.bg || colorMap.primary.bg
+
     const animatedValue = useCountUp(value, 1500, loading)
     const displayValue = typeof value === 'number' || !isNaN(parseFloat(value)) ? animatedValue : value
 
@@ -28,10 +42,10 @@ export function StatCard({
         >
             {/* Neural Pulse Indicator (Top Right) */}
             <div className="absolute top-4 right-4">
-                <div className={`w-1.5 h-1.5 rounded-full ${borderColor.replace('border-t-', 'bg-').replace('border-', 'bg-')} opacity-60 animate-pulse shadow-[0_0_8px_currentColor]`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${finalBorder.replace('border-t-', 'bg-').replace('border-', 'bg-')} opacity-60 animate-pulse shadow-[0_0_8px_currentColor]`} />
             </div>
 
-            <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center text-lg flex-shrink-0 shadow-sm ${iconBg} transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+            <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center text-lg flex-shrink-0 shadow-sm ${finalBg} transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
                 <FontAwesomeIcon icon={icon} />
             </div>
             

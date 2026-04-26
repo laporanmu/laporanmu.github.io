@@ -12,7 +12,7 @@ import {
     faCloudArrowUp, faFileLines, faFilePdf, faFileZipper, faBoxArchive,
     faSearch, faSliders, faPlus, faFilter, faFillDrip, faArrowTrendUp, faArrowTrendDown, faFileExport,
     faQuestion, faCircleInfo, faSortAmountDown, faWifi, faKeyboard, faLightbulb,
-    faMoon, faSun
+    faMoon, faSun, faExpand, faCompress, faChevronDown
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -199,6 +199,9 @@ export default function RaportPage() {
     // ── Preview
     const [previewStudentId, setPreviewStudentId] = useState(null)
     const [pageSize, setPageSize] = useState('a4') // 'a4' | 'f4'
+    const [previewZoom, setPreviewZoom] = useState(0.8) // 0.8 = 80% zoom out
+    const [isFullScreenPreview, setIsFullScreenPreview] = useState(false)
+    const [showMobileStudentPicker, setShowMobileStudentPicker] = useState(false)
 
     // ── WA/PDF
     const [sendingWA, setSendingWA] = useState({})
@@ -1150,10 +1153,22 @@ export default function RaportPage() {
             const el = cellRefs.current[`${si}-${ki}`]
             if (el) {
                 el.focus()
+                // Move cursor to end (works for type="number" too)
+                const val = el.value
+                el.value = ''
+                el.value = val
             } else if (tableScrollRef.current) {
                 // Baris belum di-render — scroll container ke posisi estimasi
                 tableScrollRef.current.scrollTop = si * ROW_HEIGHT
-                requestAnimationFrame(() => cellRefs.current[`${si}-${ki}`]?.focus())
+                requestAnimationFrame(() => {
+                    const elDelayed = cellRefs.current[`${si}-${ki}`]
+                    if (elDelayed) {
+                        elDelayed.focus()
+                        const valD = elDelayed.value
+                        elDelayed.value = ''
+                        elDelayed.value = valD
+                    }
+                })
             }
         }
         if (e.key === 'Tab' || e.key === 'Enter') {
@@ -1165,8 +1180,8 @@ export default function RaportPage() {
         }
         if (e.key === 'ArrowDown') { e.preventDefault(); focusCell(studentIdx + 1, kriteriaIdx) }
         if (e.key === 'ArrowUp') { e.preventDefault(); focusCell(studentIdx - 1, kriteriaIdx) }
-        if (e.key === 'ArrowRight') focusCell(studentIdx, kriteriaIdx + 1)
-        if (e.key === 'ArrowLeft') focusCell(studentIdx, kriteriaIdx - 1)
+        if (e.key === 'ArrowRight') { e.preventDefault(); focusCell(studentIdx, kriteriaIdx + 1) }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); focusCell(studentIdx, kriteriaIdx - 1) }
     }, [filteredStudents.length])
 
     // ── Archive
@@ -1363,7 +1378,21 @@ export default function RaportPage() {
         const html = [...cards].map(c => c.outerHTML).join('')
         const titleStr = stuList.length === 1 ? `Raport ${stuList[0].name}_${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}` : `Raport Kelas ${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}`
         const win = window.open('', '_blank'); if (!win) { addToast('Popup diblokir browser.', 'error'); setPrintQueue([]); setPrintRenderedCount(0); return }
-        win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titleStr}</title><style>@page{size:A4;margin:0}body{margin:0;padding:0}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}img{mix-blend-mode:multiply}.raport-card{page-break-after:always}</style></head><body>${html}</body></html>`)
+        win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titleStr}</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+            <style>
+                @page { size: A4; margin: 0; }
+                body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background: white; }
+                * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                .raport-card { page-break-after: always; position: relative; overflow: hidden; background: white !important; }
+                img { mix-blend-mode: multiply; max-width: 100%; height: auto; }
+                @media print {
+                    body { background: white; }
+                    .raport-card { box-shadow: none !important; border: none !important; margin: 0 !important; }
+                }
+            </style></head><body>${html}</body></html>`)
         win.document.close(); win.focus(); setTimeout(() => {
             win.print(); setPrintQueue([]); setPrintRenderedCount(0);
             logAudit({
@@ -1390,7 +1419,13 @@ export default function RaportPage() {
             if ((!cards || cards.length < stuIds.length) && attempt < 30) { setTimeout(() => tryExport(attempt + 1), 200); return }
             const html = [...(cards?.length ? cards : document.querySelectorAll('.raport-card'))].map(c => c.outerHTML).join('')
             const win = window.open('', '_blank'); if (!win) { addToast('Popup diblokir.', 'error'); return }
-            win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Raport ${entry.class_name} ${BULAN.find(b => b.id === entry.month)?.id_str} ${entry.year}</title><style>@page{size:A4;margin:0}body{margin:0;padding:0;font-family:'Times New Roman',serif}.raport-card{page-break-after:always;box-sizing:border-box}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${html}</body></html>`)
+            win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Raport ${entry.class_name} ${BULAN.find(b => b.id === entry.month)?.id_str} ${entry.year}</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+                <style>
+                    @page{size:A4;margin:0}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+                </style></head><body>${html}</body></html>`)
             win.document.close(); win.focus(); setTimeout(() => { win.print(); setPrintQueue([]); setPrintRenderedCount(0) }, 800)
         }
         setTimeout(() => tryExport(), 300)
@@ -1595,6 +1630,21 @@ export default function RaportPage() {
     }, [generatePDFBlob, selectedMonth, selectedYear, selectedClass, addToast, profile])
 
     // ─── Render helpers ───────────────────────────────────────────────────────
+
+    useEffect(() => {
+        if (step === 3 && window.innerWidth < 768) {
+            const containerWidth = window.innerWidth - 64 // FIX: more conservative padding calculation
+            const docWidth = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591 
+            const fitZoom = Math.floor((containerWidth / docWidth) * 100) / 100
+            setPreviewZoom(Math.max(0.3, Math.min(0.8, fitZoom)))
+        }
+    }, [step, pageSize])
+
+    // ── Handle Escape key for full screen
+    useEffect(() => {
+        const h = (e) => { if (e.key === 'Escape') setIsFullScreenPreview(false) }
+        window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h)
+    }, [])
 
     const renderStep0 = () => (
         <div className="space-y-6">
@@ -2032,9 +2082,9 @@ export default function RaportPage() {
         return (
             <div className="space-y-4">
                 {/* ── TOOLBAR CONTAINER ── */}
-                <div className="bg-[var(--color-surface)] pt-2 pb-3 space-y-3 mb-2">
+                <div className="pt-2 pb-3 space-y-3 mb-2">
                     {/* ── ROW 1: Context + Progress + Actions ── */}
-                    <div className="w-full flex items-center justify-between gap-3">
+                    <div className="w-full flex flex-wrap items-center justify-between gap-3 gap-y-4">
                         {/* Left: Context */}
                         <div className="flex items-center gap-2 overflow-hidden">
                             <button onClick={() => {
@@ -2066,18 +2116,18 @@ export default function RaportPage() {
                         </div>
 
                         {/* Right: Primary Actions */}
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
                             {/* Salin Bin Lalu (Desktop only) */}
-                            <button onClick={() => setShowCopyModal(true)} className="hidden md:flex h-10 px-4 rounded-xl border border-sky-500/20 bg-sky-500/5 text-sky-600 text-[10px] font-black uppercase tracking-widest hover:bg-sky-500/10 transition-all items-center gap-2">
+                            <button onClick={() => setShowCopyModal(true)} className="hidden md:flex h-10 px-5 rounded-xl border border-sky-500/20 bg-sky-500/5 text-sky-600 text-[10px] font-black uppercase tracking-widest hover:bg-sky-500/10 transition-all items-center gap-2.5">
                                 <FontAwesomeIcon icon={faChevronLeft} className="text-[9px]" /><span>Salin Bin Lalu</span>
                             </button>
 
-                            <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-9 px-3 md:h-10 md:px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 relative disabled:opacity-70 shrink-0">
+                            <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-9 px-4 md:h-10 md:px-6 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 relative disabled:opacity-70 shrink-0">
                                 <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin' : ''} />
                                 <span className="hidden md:inline">{savingAll ? 'Menyimpan...' : 'Simpan Semua'}</span>
                                 {!savingAll && hasUnsavedMemo && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
                             </button>
-                            <button onClick={() => setStep(3)} className="h-9 w-9 md:h-10 md:w-auto md:px-5 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center md:gap-2 shrink-0">
+                            <button onClick={() => setStep(3)} className="h-9 w-9 md:h-10 md:w-auto md:px-6 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center md:gap-2.5 shrink-0">
                                 <FontAwesomeIcon icon={faMagnifyingGlass} />
                                 <span className="hidden md:inline text-[10px] uppercase font-black tracking-widest">Preview & Cetak</span>
                             </button>
@@ -2113,7 +2163,7 @@ export default function RaportPage() {
                         </div>
 
                         {/* Tools & Exports */}
-                        <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2">
+                        <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-end gap-2">
                             <div className="flex items-center gap-1.5 md:gap-2">
                                 {/* Keyboard Shortcut (Desktop only) */}
                                 <button
@@ -2304,10 +2354,10 @@ export default function RaportPage() {
                         className="overflow-x-auto rounded-xl border border-[var(--color-border)]"
                         style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto', overflowAnchor: 'none' }}
                     >
-                        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1030, tableLayout: 'fixed' }}>
+                        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 910, tableLayout: 'fixed' }}>
                             <colgroup>
                                 {bulkMode && <col style={{ width: 36 }} />}
-                                <col style={{ width: 200 }} />{KRITERIA.map(k => <col key={k.key} style={{ width: 64 }} />)}<col style={{ width: 200 }} /><col style={{ width: 180 }} /><col style={{ width: 150 }} />
+                                <col style={{ width: 140 }} />{KRITERIA.map(k => <col key={k.key} style={{ width: 55 }} />)}<col style={{ width: 170 }} /><col style={{ width: 160 }} /><col style={{ width: 130 }} />
                             </colgroup>
                             <thead className="sticky top-0 z-20" style={{ boxShadow: '0 1px 0 var(--color-border)' }}>
                                 <tr style={{ background: 'none' }}>
@@ -2321,7 +2371,7 @@ export default function RaportPage() {
                                             />
                                         </th>
                                     )}
-                                    <th className="px-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 12px', verticalAlign: 'middle', borderRight: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>Santri</th>
+                                    <th className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 0', textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>Santri</th>
                                     {KRITERIA.map(k => (<th key={k.key} style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ direction: 'rtl', fontSize: 14, fontWeight: 900, color: k.color, lineHeight: 1, whiteSpace: 'nowrap', fontFamily: 'serif' }}>{k.arShort}</span><span style={{ fontSize: 8, fontWeight: 800, color: 'var(--color-text-muted)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{k.id}</span></div></th>))}
                                     <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Fisik</span><span style={{ fontSize: 8, color: 'var(--color-text-muted)', opacity: 0.55, fontWeight: 600 }}>BB · TB · Skt · Izin · Alpa · Plg</span></div></th>
                                     <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Hafalan & Catatan</span></div></th>
@@ -2483,13 +2533,17 @@ export default function RaportPage() {
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Fisik & Kehadiran</p>
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5 flex justify-between items-center">
+                                                <span>Fisik & Kehadiran</span>
+                                                <span className="text-[7px] opacity-40 font-medium uppercase">BB • TB • SAKIT • IZIN • ALPA • PULANG</span>
+                                            </p>
                                             <div className="grid grid-cols-2 gap-1.5">
-                                                {[{ key: 'berat_badan', label: 'BB', icon: faWeightScale, color: '#6366f1', unit: 'kg' }, { key: 'tinggi_badan', label: 'TB', icon: faRulerVertical, color: '#06b6d4', unit: 'cm' }, { key: 'hari_sakit', label: 'Sakit', icon: faBandage, color: '#ef4444', unit: 'hr' }, { key: 'hari_izin', label: 'Izin', icon: faCircleExclamation, color: '#f59e0b', unit: 'hr' }, { key: 'hari_alpa', label: 'Alpa', icon: faTriangleExclamation, color: '#ef4444', unit: 'hr' }, { key: 'hari_pulang', label: 'Pulang', icon: faDoorOpen, color: '#8b5cf6', unit: 'x' }].map(f => (
-                                                    <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] overflow-hidden" style={{ height: 32 }}>
+                                                {[{ key: 'berat_badan', label: 'Berat Badan', icon: faWeightScale, color: '#6366f1', unit: 'kg' }, { key: 'tinggi_badan', label: 'Tinggi Badan', icon: faRulerVertical, color: '#06b6d4', unit: 'cm' }, { key: 'hari_sakit', label: 'Sakit', icon: faBandage, color: '#ef4444', unit: 'hr' }, { key: 'hari_izin', label: 'Izin', icon: faCircleExclamation, color: '#f59e0b', unit: 'hr' }, { key: 'hari_alpa', label: 'Alpa', icon: faTriangleExclamation, color: '#ef4444', unit: 'hr' }, { key: 'hari_pulang', label: 'Pulang', icon: faDoorOpen, color: '#8b5cf6', unit: 'x' }].map(f => (
+                                                    <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)]" style={{ height: 32 }}>
                                                         <div className="w-7 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}><FontAwesomeIcon icon={f.icon} style={{ color: f.color, fontSize: 9 }} /></div>
-                                                        <ExtraInput type="number" inputMode="decimal" placeholder={f.label} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
-                                                            className="flex-1 w-0 h-full text-[11px] font-bold text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                                        <ExtraInput type="text" inputMode="decimal" placeholder={f.label} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
+                                                            className="flex-1 w-0 h-full text-[11px] font-black text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none" />
+                                                        <span className="text-[7px] font-black text-[var(--color-text-muted)] pr-1.5 opacity-60 uppercase">{f.unit}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -2548,7 +2602,6 @@ export default function RaportPage() {
                                         Berikutnya <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
                                     </button>
                                 </div>
-                                <p className="text-center text-[8px] text-[var(--color-text-muted)] mt-1 opacity-50">← geser kartu untuk pindah santri →</p>
                             </div>
                         )
                     })()}
@@ -2570,26 +2623,107 @@ export default function RaportPage() {
         return (
             <div className="space-y-6">
                 {/* Header Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatsCarousel count={3} cols={3}>
                     <StatCard label="Progress Lengkap" value={`${completeCount}/${totalCount}`} icon={faCircleCheck} color="emerald" />
                     <StatCard label="Persentase" value={`${pct}%`} icon={faChartPie} color="indigo" />
                     <StatCard label="Periode" value={`${BULAN.find(b => b.id === selectedMonth)?.id_str} ${selectedYear}`} icon={faCalendarAlt} color="amber" />
-                </div>
+                </StatsCarousel>
 
                 <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Left: Sidebar Navigation */}
-                    <div className="lg:w-64 xl:w-72 space-y-4 self-start sticky top-6">
-                        <div className="p-5 rounded-3xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
-                            <div className="flex items-center justify-between mb-4 px-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Daftar Santri</p>
+                    {/* Left: Sidebar Navigation - Desktop: Sidebar, Mobile: Smart Navigator */}
+                    <div className="w-full lg:w-64 xl:w-72 space-y-4 self-start lg:sticky lg:top-6">
+                        <div className="p-4 lg:p-5 rounded-3xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
+                            <div className="flex items-center justify-between mb-3 lg:mb-4 px-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{window.innerWidth < 1024 ? 'Navigasi Santri' : 'Pilih Santri'}</p>
                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 font-black">{totalCount}</span>
                             </div>
-                            <div className="space-y-1.5 h-[calc(100vh-320px)] min-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+
+                            {/* MOBILE: Smart Selector with Arrows & Custom FontAwesome Picker */}
+                            <div className="lg:hidden flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        const idx = students.findIndex(s => s.id === (previewStudentId || students[0].id))
+                                        if (idx > 0) setPreviewStudentId(students[idx - 1].id)
+                                    }}
+                                    className="w-10 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-indigo-500 flex items-center justify-center active:scale-95 transition-all"
+                                >
+                                    <FontAwesomeIcon icon={faChevronLeft} />
+                                </button>
+
+                                <button
+                                    onClick={() => setShowMobileStudentPicker(true)}
+                                    className="flex-1 h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between gap-2 overflow-hidden"
+                                >
+                                    <div className="flex items-center gap-2 truncate min-w-0">
+                                        <FontAwesomeIcon
+                                            icon={isComplete(scores[previewStudentId || students[0]?.id] || {}) ? faCircleCheck : faCircleExclamation}
+                                            className={`text-[10px] shrink-0 ${isComplete(scores[previewStudentId || students[0]?.id] || {}) ? 'text-emerald-500' : 'text-amber-500'}`}
+                                        />
+                                        <span className="text-[11px] font-bold text-[var(--color-text)] truncate">
+                                            {students.find(s => s.id === (previewStudentId || students[0]?.id))?.name || 'Pilih Santri'}
+                                        </span>
+                                    </div>
+                                    <FontAwesomeIcon icon={faChevronDown} className="text-[10px] text-[var(--color-text-muted)] shrink-0" />
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        const idx = students.findIndex(s => s.id === (previewStudentId || students[0].id))
+                                        if (idx < students.length - 1) setPreviewStudentId(students[idx + 1].id)
+                                    }}
+                                    className="w-10 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-indigo-500 flex items-center justify-center active:scale-95 transition-all"
+                                >
+                                    <FontAwesomeIcon icon={faChevronRight} />
+                                </button>
+                            </div>
+
+                            {/* MOBILE STUDENT PICKER MODAL */}
+                            <Modal
+                                isOpen={showMobileStudentPicker}
+                                onClose={() => setShowMobileStudentPicker(false)}
+                                title="Pilih Santri"
+                                size="md"
+                            >
+                                <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
+                                    {students.map(s => {
+                                        const complete = isComplete(scores[s.id] || {})
+                                        const active = (previewStudentId || students[0]?.id) === s.id
+                                        return (
+                                            <button
+                                                key={s.id}
+                                                onClick={() => {
+                                                    setPreviewStudentId(s.id)
+                                                    setShowMobileStudentPicker(false)
+                                                }}
+                                                className={`w-full p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${active ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text)]'}`}
+                                            >
+                                                <div className="flex items-center gap-3 truncate">
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-white/20' : 'bg-[var(--color-surface)]'}`}>
+                                                        <span className={`text-[10px] font-black ${active ? 'text-white' : 'text-indigo-500'}`}>{s.name.charAt(0)}</span>
+                                                    </div>
+                                                    <span className="text-xs font-bold truncate">{s.name}</span>
+                                                </div>
+                                                <FontAwesomeIcon
+                                                    icon={complete ? faCircleCheck : faCircleExclamation}
+                                                    className={`text-xs ${active ? 'text-white/80' : complete ? 'text-emerald-500' : 'text-amber-500'}`}
+                                                />
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </Modal>
+
+                            {/* DESKTOP: Vertical Sidebar List */}
+                            <div className="hidden lg:flex flex-col gap-1.5 h-[calc(100vh-320px)] min-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                 {students.map(s => {
                                     const complete = isComplete(scores[s.id] || {})
                                     const active = previewStudentId === s.id
                                     return (
-                                        <button key={s.id} onClick={() => setPreviewStudentId(s.id)} className={`w-full p-2.5 rounded-xl border text-left transition-all ${active ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/15' : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-indigo-500/30'}`}>
+                                        <button
+                                            key={s.id}
+                                            onClick={() => setPreviewStudentId(s.id)}
+                                            className={`w-full p-2.5 rounded-xl border text-left transition-all ${active ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/15' : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-indigo-500/30'}`}
+                                        >
                                             <div className="flex items-center gap-2.5">
                                                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-white/20' : 'bg-[var(--color-surface-alt)]'}`}>
                                                     <span className={`text-[9px] font-black ${active ? 'text-white' : 'text-indigo-500'}`}>{s.name.charAt(0)}</span>
@@ -2615,51 +2749,125 @@ export default function RaportPage() {
 
                     {/* Right: Preview Area - Unified in one card */}
                     <div className="flex-1 flex flex-col rounded-[32px] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
-                        <div className="px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-3 shrink-0">
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500" />
-                                    </div>
-                                    <div className="hidden lg:block">
-                                        <h4 className="text-sm font-black text-[var(--color-text)]">Preview Raport</h4>
-                                        <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Dokumen resmi santri.</p>
-                                    </div>
+                        <div className="px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar flex-nowrap">
+                            {/* Left: Branding & Title */}
+                            <div className="flex items-center gap-2 shrink-0">
+                                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center hidden sm:flex">
+                                    <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500 text-xs" />
                                 </div>
+                                <div className="shrink-0">
+                                    <h4 className="text-[12px] font-black text-[var(--color-text)] whitespace-nowrap">Preview Raport</h4>
+                                    <p className="text-[8px] text-[var(--color-text-muted)] font-medium hidden md:block">Dokumen resmi santri.</p>
+                                </div>
+                            </div>
+
+                            {/* Middle: Format & Language Controls */}
+                            <div className="flex items-center gap-2 shrink-0">
                                 {/* Paper Size Toggle */}
                                 <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
-                                    <button onClick={() => setPageSize('a4')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                    <button onClick={() => setPageSize('a4')} className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                                         A4
                                     </button>
-                                    <button onClick={() => setPageSize('f4')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                    <button onClick={() => setPageSize('f4')} className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                                         F4
                                     </button>
                                 </div>
 
                                 {/* Language Toggle Pill */}
                                 <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
-                                    <button onClick={() => setLang('ar')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                        <span className="text-[12px] h-5 flex items-center">🌙</span> العربية
+                                    <button onClick={() => setLang('ar')} className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all flex items-center gap-1 ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                        <span className="hidden lg:inline">Arabic</span><span className="lg:hidden">AR</span>
                                     </button>
-                                    <button onClick={() => setLang('id')} className={`h-7 px-3 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 ${lang === 'id' ? 'bg-indigo-500 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                        <span className="text-[12px] h-5 flex items-center">🇮🇩</span> Indonesia
+                                    <button onClick={() => setLang('id')} className={`h-7 px-2.5 rounded-lg text-[9px] font-black transition-all flex items-center gap-1 ${lang === 'id' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                        <span className="hidden lg:inline">Indonesia</span><span className="lg:hidden">ID</span>
+                                    </button>
+                                </div>
+
+                                {/* Zoom Controls */}
+                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-9">
+                                    <button onClick={() => setPreviewZoom(p => Math.max(0.4, p - 0.1))} className="h-7 w-7 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faSearch} className="scale-75 translate-x-[-1px] opacity-70" />-
+                                    </button>
+                                    <span className="text-[9px] font-black w-8 text-center text-indigo-500">{Math.round(previewZoom * 100)}%</span>
+                                    <button onClick={() => setPreviewZoom(p => Math.min(1.5, p + 0.1))} className="h-7 w-7 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faSearch} className="scale-75 translate-x-[-1px] opacity-70" />+
                                     </button>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0 flex-nowrap">
+
+                            {/* Right: Actions */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                    onClick={() => setIsFullScreenPreview(true)}
+                                    title="Tampilan Penuh"
+                                    className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-indigo-500 transition-all flex items-center justify-center lg:hidden"
+                                >
+                                    <FontAwesomeIcon icon={faExpand} className="scale-90" />
+                                </button>
                                 {previewStudent?.phone && (
-                                    <button onClick={() => sendWATextOnly(previewStudent)} className="h-9 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black hover:bg-green-500/20 transition-all flex items-center gap-2 whitespace-nowrap">
-                                        <FontAwesomeIcon icon={faWhatsapp} className="text-[10px]" /> <span className="hidden sm:inline">Ringkasan</span> WA
+                                    <button onClick={() => sendWATextOnly(previewStudent)} className="h-9 px-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[9px] font-black hover:bg-green-500/20 transition-all flex items-center gap-1.5 whitespace-nowrap">
+                                        <FontAwesomeIcon icon={faWhatsapp} className="text-[9px]" /> <span className="hidden sm:inline">Whatsapp</span>
                                     </button>
                                 )}
-                                <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-9 px-4 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[10px] font-black hover:brightness-110 transition-all flex items-center gap-2 whitespace-nowrap">
-                                    <FontAwesomeIcon icon={faPrint} className="text-[10px]" /> Cetak Ini
+                                <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-9 px-3 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[9px] font-black hover:brightness-110 transition-all flex items-center gap-1.5 whitespace-nowrap">
+                                    <FontAwesomeIcon icon={faPrint} className="text-[9px]" /> <span className="hidden sm:inline">Cetak</span><span className="sm:hidden">Print</span>
                                 </button>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto bg-[var(--color-surface-alt)]/30 p-2 sm:p-4 flex flex-col items-center custom-scrollbar" style={{ minHeight: 600 }}>
-                            <div className="shadow-2xl h-fit transform-gpu transition-all duration-300 origin-top hover:translate-y-[-1px] xl:scale-[1.05] mb-6">
+                        <div className={`flex-1 overflow-auto bg-[var(--color-surface-alt)]/20 ${isFullScreenPreview ? 'p-2' : 'p-4 sm:p-10'} flex flex-col items-center custom-scrollbar`} style={{ minHeight: 600 }}>
+                            <p className="text-[9px] font-bold text-[var(--color-text-muted)] mb-2 uppercase tracking-widest lg:hidden opacity-60">
+                                <FontAwesomeIcon icon={faExpand} className="mr-1" /> Klik raport untuk memperbesar
+                            </p>
+                            {/* Layout Wrapper: Menggunakan zoom untuk sinkronisasi layout & visual tanpa ghost margins */}
+                            <div className="w-full flex justify-center">
+                                <div 
+                                    className="shadow-2xl h-fit mb-12 cursor-pointer hover:ring-2 hover:ring-indigo-500/30 transition-all" 
+                                    style={{ zoom: previewZoom, width: pageSize === 'f4' ? '215mm' : '210mm' }}
+                                    onClick={() => setIsFullScreenPreview(true)}
+                                >
+                                    {previewStudent && (
+                                        <RaportPrintCard
+                                            student={previewStudent}
+                                            scores={scores[previewStudent.id]}
+                                            extra={extras[previewStudent.id]}
+                                            bulanObj={bulanObj}
+                                            tahun={selectedYear}
+                                            musyrif={musyrif}
+                                            className={selectedClass?.name}
+                                            lang={lang}
+                                            settings={settings}
+                                            pageSize={pageSize}
+                                            catatanArab={catatanArabMap[previewStudent.id]}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                            <div className="h-8 w-full shrink-0" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── FULLSCREEN PREVIEW OVERLAY ── */}
+                {isFullScreenPreview && (
+                    <div className="fixed inset-0 z-[100] bg-[var(--color-surface)] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+                        <div className="h-14 px-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => setIsFullScreenPreview(false)} className="h-9 w-9 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] transition-all flex items-center justify-center">
+                                    <FontAwesomeIcon icon={faCompress} />
+                                </button>
+                                <span className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Preview Mode</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setPreviewZoom(p => Math.max(0.4, p - 0.1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] flex items-center justify-center text-xs font-black">-</button>
+                                <span className="text-[10px] font-black w-8 text-center">{Math.round(previewZoom * 100)}%</span>
+                                <button onClick={() => setPreviewZoom(p => Math.min(1.5, p + 0.1))} className="h-9 w-9 rounded-xl border border-[var(--color-border)] flex items-center justify-center text-xs font-black">+</button>
+                                <div className="w-px h-4 bg-[var(--color-border)] mx-1" />
+                                <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-9 px-4 rounded-xl bg-indigo-600 text-white text-[10px] font-black">Cetak</button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-auto bg-[var(--color-surface-alt)] p-4 flex flex-col items-center custom-scrollbar pt-8">
+                            <div className="shadow-2xl h-fit mb-24" style={{ zoom: previewZoom, width: pageSize === 'f4' ? '215mm' : '210mm' }}>
                                 {previewStudent && (
                                     <RaportPrintCard
                                         student={previewStudent}
@@ -2676,10 +2884,9 @@ export default function RaportPage() {
                                     />
                                 )}
                             </div>
-                            <div className="h-8 w-full shrink-0" />
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         )
     }
@@ -3162,29 +3369,25 @@ export default function RaportPage() {
                             icon={faSchool}
                             label="Total Kelas"
                             value={stats.totalKelas}
-                            iconBg="bg-indigo-500/10 text-indigo-500"
-                            borderColor="border-indigo-500"
+                            color="indigo"
                         />
                         <StatCard
                             icon={faUsers}
                             label="Total Siswa"
                             value={stats.totalSiswa}
-                            iconBg="bg-emerald-500/10 text-emerald-500"
-                            borderColor="border-emerald-500"
+                            color="emerald"
                         />
                         <StatCard
                             icon={faClipboardList}
                             label="Total Raport"
                             value={stats.totalRaport}
-                            iconBg="bg-indigo-500/10 text-indigo-500"
-                            borderColor="border-indigo-500"
+                            color="indigo"
                         />
                         <StatCard
                             icon={faCalendarAlt}
                             label="Bulan Berjalan"
                             value={BULAN[stats.bulanIni - 1]?.id_str || '—'}
-                            iconBg="bg-amber-500/10 text-amber-500"
-                            borderColor="border-amber-500"
+                            color="amber"
                             valueClassName="text-lg text-[var(--color-text)]"
                         />
                     </StatsCarousel>
@@ -3512,16 +3715,16 @@ export default function RaportPage() {
                 {/* ── FLOATING UNSAVED BAR ── */}
                 {
                     step === 2 && hasUnsavedMemo && !unsavedBarDismissed && (
-                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border border-amber-500/30 bg-[var(--color-surface)] backdrop-blur-sm animate-bounce-subtle"
+                        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-2xl shadow-2xl border border-amber-500/30 bg-[var(--color-surface)] backdrop-blur-sm animate-bounce-subtle w-max max-w-[95vw]"
                             style={{ boxShadow: '0 8px 32px rgba(245,158,11,0.18)' }}>
                             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                            <span className="text-[11px] font-black text-[var(--color-text)]">
+                            <span className="text-[10px] md:text-[11px] font-black text-[var(--color-text)] whitespace-nowrap">
                                 Ada perubahan yang belum disimpan
                             </span>
                             <button onClick={saveAll} disabled={savingAll}
                                 className="h-8 px-4 rounded-xl bg-amber-500 text-white text-[10px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 disabled:opacity-60 shadow-md shadow-amber-500/20">
                                 <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />
-                                {savingAll ? 'Menyimpan...' : 'Simpan Sekarang'}
+                                {savingAll ? 'Menyimpan...' : 'Simpan'}
                             </button>
                             {/* FIX MAJOR: tombol × hanya dismiss bar, tidak menyimpan apapun */}
                             <button

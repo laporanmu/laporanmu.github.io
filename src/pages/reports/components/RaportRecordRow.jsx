@@ -20,7 +20,7 @@ export const ScoreCell = memo(({ value, onChange, onKeyDown, inputRef, kriteria 
     const g = val !== '' ? GRADE(val) : null
 
     const handleChange = (e) => {
-        const raw = e.target.value
+        const raw = e.target.value.replace(/[^0-9]/g, '')
         if (raw === '') { setHasError(false); onChange(''); return }
         const num = Number(raw)
         if (num < 0 || num > MAX_SCORE) {
@@ -35,7 +35,7 @@ export const ScoreCell = memo(({ value, onChange, onKeyDown, inputRef, kriteria 
         <div title={g ? `${kriteria.id}: ${val} — ${g.id} (${g.label})` : kriteria.id}>
             <input
                 ref={inputRef}
-                type="number"
+                type="text"
                 inputMode="decimal"
                 min={0}
                 max={MAX_SCORE}
@@ -138,16 +138,16 @@ const StudentRow = memo(({
                     <input type="checkbox" checked={isChecked} onChange={e => onBulkToggle(student.id, e.target.checked)} aria-label={`Pilih ${student.name}`} className="w-3.5 h-3.5 accent-violet-500 cursor-pointer" />
                 </td>
             )}
-            <td className="px-3 py-3 sticky left-0 z-10" style={{ background: isChecked ? '#6366f108' : si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)', borderRight: '1px solid var(--color-border)' }}>
-                <div className="flex items-center gap-2.5">
-                    <RadarChart scores={sc} size={36} />
-                    <div className="min-w-0 flex-1">
-                        <div className="text-[13px] font-black text-[var(--color-text)] leading-tight whitespace-normal break-words">{student.name}</div>
-                        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                            {avg ? <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).color }}>{avg}</span> : <span className="text-[8px] text-[var(--color-text-muted)] font-bold">isi nilai</span>}
+            <td className="px-0 py-3 sticky left-0 z-10" style={{ background: isChecked ? '#6366f108' : si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)', borderRight: '1px solid var(--color-border)' }}>
+                <div className="flex flex-col items-center justify-center text-center gap-1.5">
+                    <RadarChart scores={sc} size={32} />
+                    <div className="min-w-0">
+                        <div className="text-[12px] font-black text-[var(--color-text)] leading-tight whitespace-normal break-words uppercase tracking-tight">{student.name}</div>
+                        <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
+                            {avg ? <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).color }}>{avg}</span> : <span className="text-[8px] text-[var(--color-text-muted)] font-bold">isi nilai</span>}
                             {isSaving && <FontAwesomeIcon icon={faSpinner} className="text-[8px] text-amber-500 animate-spin" />}
                             {!isSaving && isSaved && <FontAwesomeIcon icon={faCircleCheck} className="text-[8px] text-emerald-500" />}
-                            {!isSaving && !isSaved && isDirty && <span className="text-[8px] font-black text-amber-500 flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />belum simpan</span>}
+                            {!isSaving && !isSaved && isDirty && <span className="text-[8px] font-black text-amber-500 flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" /></span>}
                             {trendData?.length >= 2 && <SparklineTrend trendData={trendData} />}
                         </div>
                     </div>

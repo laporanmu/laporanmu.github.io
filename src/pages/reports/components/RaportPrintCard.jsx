@@ -13,22 +13,22 @@ const printCardAreEqual = (prev, next) => {
     if (prev.student?.id !== next.student?.id) return false
     if (prev.student?.metadata?.nama_arab !== next.student?.metadata?.nama_arab) return false
     if (prev.bulanObj?.id !== next.bulanObj?.id) return false
-    
+
     // Deep-compare scores
     const sk = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
     for (const k of sk) { if ((prev.scores?.[k] ?? '') !== (next.scores?.[k] ?? '')) return false }
-    
+
     // Deep-compare extra fields
     const ek = ['berat_badan', 'tinggi_badan', 'ziyadah', 'murojaah', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang', 'catatan']
     for (const k of ek) { if ((prev.extra?.[k] ?? '') !== (next.extra?.[k] ?? '')) return false }
-    
+
     if (JSON.stringify(prev.settings) !== JSON.stringify(next.settings)) return false
     return true
 }
 
 const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif, className, lang = 'ar', settings = {}, catatanArab, onRendered, pageSize = 'a4' }) => {
     const sc = scores || {}, ex = extra || {}, L = LABEL[lang], isAr = lang === 'ar'
-    
+
     // Dimensi kertas: A4 (210x297) vs F4/Folio (215x330)
     const pageW = pageSize === 'f4' ? '215mm' : '210mm'
     const pageH = pageSize === 'f4' ? '330mm' : '297mm'
@@ -39,28 +39,28 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
         // SMP: Grades 7, 8, 9 or contains 'smp'
         if (c.includes('smp') || /^[789]/.test(c)) return smpLogo
         // SMA Placeholder (Add smaLogo import when file exists)
-        if (c.includes('sma') || /^(10|11|12)/.test(c)) return null 
+        if (c.includes('sma') || /^(10|11|12)/.test(c)) return null
         return null
     }
     const unitLogo = getUnitLogo()
-    
+
     useEffect(() => { onRendered?.() }, [onRendered])
-    
+
     const gradeLabel = isAr ? (v) => GRADE(v)?.label : (v) => GRADE(v)?.id
     const yearDisplay = isAr ? `\u200F${toArabicNum(tahun - 1)} \u2013 ${toArabicNum(tahun)}` : `${tahun - 1} – ${tahun}`
     const tableDir = isAr ? 'rtl' : 'ltr'
     const displayName = isAr ? (student?.metadata?.nama_arab || student?.name || '—') : (student?.name || '—')
-    const displayVal = (v, zeroAsDash = false) => { 
-        if (v === '' || v === null || v === undefined || (v === 0 && zeroAsDash) || (v === '0' && zeroAsDash)) return '—'; 
-        return isAr ? toArabicNum(v) : v 
+    const displayVal = (v, zeroAsDash = false) => {
+        if (v === '' || v === null || v === undefined || (v === 0 && zeroAsDash) || (v === '0' && zeroAsDash)) return '—';
+        return isAr ? toArabicNum(v) : v
     }
 
     const displayMusyrif = isAr && musyrif ? translitToAr(musyrif) : musyrif
     const displayClassName = isAr && className ? translitClassToAr(className) : className
 
     return (
-        <div className="raport-card" data-student-id={student?.id} style={{ 
-            fontFamily: "'Times New Roman', serif", width: '100%', maxWidth: pageW, minHeight: pageH, background: '#fff', 
+        <div className="raport-card" data-student-id={student?.id} style={{
+            fontFamily: "'Times New Roman', serif", width: pageW, minWidth: pageW, minHeight: pageH, background: '#fff',
             color: '#000', padding: '8mm 12mm', boxSizing: 'border-box', fontSize: '11pt', lineHeight: 1.4, pageBreakAfter: 'always', margin: '0 auto',
             position: 'relative'
         }}>
@@ -85,13 +85,13 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                     {/* Tengah (Nama Sekolah) */}
                     <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
                         {settings.school_subtitle_ar && (
-                            <div style={{ fontSize: '11.5pt', color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Traditional Arabic', serif", fontWeight: 700 }}>
+                            <div style={{ fontSize: '11.5pt', color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Amiri', 'Traditional Arabic', serif", fontWeight: 700 }}>
                                 {settings.school_subtitle_ar}
                             </div>
                         )}
-                        <div style={{ 
-                            fontSize: '28pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35', 
-                            direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5, 
+                        <div style={{
+                            fontSize: '28pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35',
+                            direction: 'rtl', fontFamily: "'Amiri', 'Traditional Arabic', serif", letterSpacing: 0.5,
                             lineHeight: 0.9, marginBottom: 4,
                             textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor'
                         }}>{settings.school_name_ar || ''}</div>
@@ -288,7 +288,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 </div>
                 {ex.catatan && (
                     <div style={{
-                        flex: 1, alignSelf: 'stretch', border: '1px solid #ccc', borderRadius: 4, padding: '8px 12px', 
+                        flex: 1, alignSelf: 'stretch', border: '1px solid #ccc', borderRadius: 4, padding: '8px 12px',
                         fontSize: '9.5pt', direction: isAr ? 'rtl' : 'ltr', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', lineHeight: 1.6,
                     }}>
                         <div style={{ fontWeight: 700, fontSize: '9pt', color: '#555', marginBottom: 4 }}>
@@ -303,8 +303,8 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             <div style={{ display: 'flex', marginTop: 36, flexDirection: isAr ? 'row-reverse' : 'row', justifyContent: 'space-between', direction: isAr ? 'rtl' : 'ltr', gap: 10 }}>
                 {[
                     {
-                        label: isAr 
-                            ? (settings.headmaster_title_ar || 'مدير المعهد\nمعهد محمدية تانجول') 
+                        label: isAr
+                            ? (settings.headmaster_title_ar || 'مدير المعهد\nمعهد محمدية تانجول')
                             : (settings.headmaster_title_id || 'Pengasuh\nMuhammadiyah Boarding School Tanggul'),
                         sub: isAr ? (settings.headmaster_name_ar || '—') : (settings.headmaster_name_id || '—')
                     },

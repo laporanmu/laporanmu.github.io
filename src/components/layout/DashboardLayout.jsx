@@ -24,9 +24,10 @@ export default function DashboardLayout({ children, title }) {
             </div>
 
             {/* Page Content */}
-            <main className="relative z-10 mx-auto w-full max-w-7xl px-3 sm:px-4 lg:px-6 py-6 lg:py-8 pb-24 lg:pb-8">
-                {/* kalau kamu mau konten sedikit lebih sempit, keep max-w-6xl */}
-                <div className="mx-auto w-full max-w-6xl">
+            {/* Page Content */}
+            <main className="relative z-10 mx-auto w-full max-w-[1800px] px-3 sm:px-4 lg:px-6 py-6 lg:py-8 pb-24 lg:pb-8">
+                {/* Konten lebih lebar untuk mendukung monitor besar & kepadatan data tinggi */}
+                <div className="mx-auto w-full max-w-none">
                     {children}
                 </div>
             </main>

@@ -940,7 +940,7 @@ export default function NewsEditorPage() {
     if (isLoading) {
         return (
             <DashboardLayout title="Loading Editor...">
-                <div className="max-w-6xl mx-auto space-y-6">
+                <div className="max-w-[1800px] mx-auto space-y-6">
                     <div className="h-32 bg-[var(--color-surface-alt)] animate-pulse rounded-[2rem]" />
                     <div className="flex gap-6">
                         <div className="flex-1 space-y-6">

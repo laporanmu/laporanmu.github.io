@@ -10,7 +10,7 @@ export const DEFAULT_SETTINGS = {
     school_address: 'Jl. Pemandian no. 88 RT 002 RW 003 Patemon, Tanggul, Jember 68155',
     school_domain: 'smpmuh4tanggul.sch.id',
     app_domain: 'laporanmu.vercel.app',
-    logo_url: '/src/assets/mbs.png',
+    logo_url: '',
 
     // Kepala sekolah / direktur
     headmaster_title_id: 'Pengasuh\nMuhammadiyah Boarding School Tanggul',
@@ -58,6 +58,10 @@ export function SchoolSettingsProvider({ children }) {
                     if (data.headmaster_name_id === 'KH. Muhammad Ali Maksum, Lc') {
                         data.headmaster_name_id = 'Ir. Muhammad Ali Maksum'
                         data.headmaster_name_ar = 'المهندس محمد علي معصوم'
+                    }
+                    // Auto-fix legacy logo path
+                    if (data.logo_url === '/src/assets/mbs.png') {
+                        data.logo_url = ''
                     }
                     setSettings(prev => ({ ...prev, ...data }))
                 }

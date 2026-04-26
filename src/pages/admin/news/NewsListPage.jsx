@@ -673,7 +673,7 @@ export default function NewsListPage() {
 
     return (
         <DashboardLayout title="Manajemen Informasi">
-            <div className="p-4 md:p-6 space-y-5 max-w-[1280px] mx-auto">
+            <div className="p-4 md:p-6 space-y-5 max-w-[1800px] mx-auto">
 
                 {/* ── Header Section ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 animate-in slide-in-from-top-4 duration-500">
