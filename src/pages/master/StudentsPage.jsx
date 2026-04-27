@@ -705,27 +705,27 @@ export default function StudentsPage() {
 
                 {/* Stats Row Wrapper */}
                 <StatsCarousel count={STAT_CARD_COUNT} cols={5}>
-                    <StatCard 
+                    <StatCard
                         icon={faUsers}
                         label="Total Siswa"
                         value={globalStats.total}
                         iconBg="bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]"
                     />
-                    <StatCard 
+                    <StatCard
                         icon={faMars}
                         label="Putra"
                         value={globalStats.boys}
                         borderColor="border-t-blue-500"
                         iconBg="bg-blue-500/10 text-blue-500"
                     />
-                    <StatCard 
+                    <StatCard
                         icon={faVenus}
                         label="Putri"
                         value={globalStats.girls}
                         borderColor="border-t-pink-500"
                         iconBg="bg-pink-500/10 text-pink-500"
                     />
-                    <StatCard 
+                    <StatCard
                         icon={faTrophy}
                         label="Rata-rata Poin"
                         value={globalStats.avgPoints}
@@ -736,7 +736,7 @@ export default function StudentsPage() {
                         iconBg="bg-emerald-500/10 text-emerald-500"
                         onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
                     />
-                    <StatCard 
+                    <StatCard
                         icon={faTriangleExclamation}
                         label="Kelas Bermasalah"
                         value={globalStats.worstClass ? globalStats.worstClass.name : '-'}

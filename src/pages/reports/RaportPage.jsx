@@ -12,7 +12,7 @@ import {
     faCloudArrowUp, faFileLines, faFilePdf, faFileZipper, faBoxArchive,
     faSearch, faSliders, faPlus, faFilter, faFillDrip, faArrowTrendUp, faArrowTrendDown, faFileExport,
     faQuestion, faCircleInfo, faSortAmountDown, faWifi, faKeyboard, faLightbulb,
-    faMoon, faSun, faExpand, faCompress, faChevronDown
+    faMoon, faSun, faExpand, faCompress, faChevronDown, faFileImport
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -63,6 +63,16 @@ const ClassCardSkeleton = () => (
 
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
+
+function getPortalContainer(id) {
+    let el = document.getElementById(id);
+    if (!el) {
+        el = document.createElement('div');
+        el.id = id;
+        document.body.appendChild(el);
+    }
+    return el;
+}
 
 export default function RaportPage() {
     const { addToast } = useToast()
@@ -1137,6 +1147,10 @@ export default function RaportPage() {
         })
     }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, profile])
 
+    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
+    const [headerMenuRect, setHeaderMenuRect] = useState(null)
+    const headerMenuBtnRef = useRef(null)
+
     // ── Export XLS (XLSX via SheetJS — lazy load dari CDN)
     const exportXLS = useCallback(async () => {
         if (!window.XLSX) {
@@ -1190,6 +1204,249 @@ export default function RaportPage() {
             newData: { format: 'XLSX', count: students.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
         })
     }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, profile])
+
+    // ── Export ALL Classes XLS
+    const exportAllClassesXLS = useCallback(async () => {
+        if (!window.XLSX) {
+            await new Promise((res, rej) => {
+                const s = document.createElement('script')
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+                s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
+                document.head.appendChild(s)
+            })
+        }
+
+        setLoading(true) // Re-use global loading state
+        try {
+            // 1. Ambil semua kelas yang ada
+            const { data: allCls, error: clsErr } = await supabase.from('classes').select('id, name')
+            if (clsErr) throw clsErr
+
+            // 2. Ambil semua siswa aktif
+            const { data: allStu, error: stuErr } = await supabase.from('students').select('id, name, class_id').is('deleted_at', null).order('name')
+            if (stuErr) throw stuErr
+
+            // 3. Ambil seluruh raport di bulan dan tahun yang aktif saat ini
+            const { data: allRep, error: repErr } = await supabase.from('student_monthly_reports').select('*').eq('month', selectedMonth).eq('year', selectedYear)
+            if (repErr) throw repErr
+
+            const XLSX = window.XLSX
+            const wb = XLSX.utils.book_new()
+            const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
+
+            let sheetAdded = 0
+
+            for (const cls of allCls) {
+                const classStudents = allStu.filter(s => s.class_id === cls.id)
+                if (classStudents.length === 0) continue
+
+                const rows = classStudents.map((s, i) => {
+                    const rep = allRep.find(r => r.student_id === s.id) || {}
+                    // Format object for calcAvg
+                    const sc = { nilai_akhlak: rep.nilai_akhlak, nilai_ibadah: rep.nilai_ibadah, nilai_kebersihan: rep.nilai_kebersihan, nilai_quran: rep.nilai_quran, nilai_bahasa: rep.nilai_bahasa }
+                    const avg = calcAvg(sc)
+                    const predikat = avg ? GRADE(Number(avg)).id : ''
+
+                    return [
+                        i + 1, s.name,
+                        rep.nilai_akhlak !== null && rep.nilai_akhlak !== undefined ? Number(rep.nilai_akhlak) : '',
+                        rep.nilai_ibadah !== null && rep.nilai_ibadah !== undefined ? Number(rep.nilai_ibadah) : '',
+                        rep.nilai_kebersihan !== null && rep.nilai_kebersihan !== undefined ? Number(rep.nilai_kebersihan) : '',
+                        rep.nilai_quran !== null && rep.nilai_quran !== undefined ? Number(rep.nilai_quran) : '',
+                        rep.nilai_bahasa !== null && rep.nilai_bahasa !== undefined ? Number(rep.nilai_bahasa) : '',
+                        avg ? Number(avg) : '', predikat,
+                        rep.berat_badan !== null && rep.berat_badan !== undefined ? Number(rep.berat_badan) : '',
+                        rep.tinggi_badan !== null && rep.tinggi_badan !== undefined ? Number(rep.tinggi_badan) : '',
+                        rep.ziyadah ?? '', rep.murojaah ?? '',
+                        rep.hari_sakit !== null && rep.hari_sakit !== undefined ? Number(rep.hari_sakit) : '',
+                        rep.hari_izin !== null && rep.hari_izin !== undefined ? Number(rep.hari_izin) : '',
+                        rep.hari_alpa !== null && rep.hari_alpa !== undefined ? Number(rep.hari_alpa) : '',
+                        rep.hari_pulang !== null && rep.hari_pulang !== undefined ? Number(rep.hari_pulang) : '',
+                        rep.catatan || '',
+                    ]
+                })
+
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+                ws['!cols'] = [
+                    { wch: 4 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 8 },
+                    { wch: 10 }, { wch: 12 }, { wch: 7 }, { wch: 7 }, { wch: 12 }, { wch: 12 },
+                    { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 10 }, { wch: 30 }
+                ]
+
+                const sheetName = (cls.name || 'Kelas').replace(/[\\/?*\[\]]/g, '').substring(0, 31)
+                XLSX.utils.book_append_sheet(wb, ws, sheetName)
+                sheetAdded++
+            }
+
+            if (sheetAdded === 0) {
+                addToast('Tidak ada data siswa untuk diexport', 'warning')
+                return
+            }
+
+            XLSX.writeFile(wb, `Raport_Semua_Kelas_${bulanObj?.id_str || ''}_${selectedYear}.xlsx`)
+            addToast(`Berhasil export semua kelas (${sheetAdded} sheet)`, 'success')
+
+            logAudit({
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { format: 'XLSX_ALL_CLASSES', month: selectedMonth, year: selectedYear }
+            })
+
+        } catch (err) {
+            addToast('Gagal memproses export massal: ' + err.message, 'error')
+            console.error(err)
+        } finally {
+            setLoading(false)
+        }
+    }, [selectedMonth, selectedYear, bulanObj, addToast, profile])
+
+    // ── Import XLS
+    const fileInputRef = useRef(null)
+    // Update rect on scroll to keep dropdowns attached
+    useEffect(() => {
+        if (isHeaderMenuOpen || showShortcutModal) {
+            const handleScroll = () => {
+                if (isHeaderMenuOpen && headerMenuBtnRef.current) {
+                    setHeaderMenuRect(headerMenuBtnRef.current.getBoundingClientRect());
+                }
+                if (showShortcutModal && shortcutBtnRef.current) {
+                    setShortcutRect(shortcutBtnRef.current.getBoundingClientRect());
+                }
+            };
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            return () => window.removeEventListener('scroll', handleScroll);
+        }
+    }, [isHeaderMenuOpen, showShortcutModal]);
+
+    const importXLS = useCallback(async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        // Reset input agar bisa pilih file yang sama lagi
+        e.target.value = ''
+
+        if (!window.XLSX) {
+            await new Promise((res, rej) => {
+                const s = document.createElement('script')
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+                s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
+                document.head.appendChild(s)
+            })
+        }
+
+        setLoading(true)
+        try {
+            const reader = new FileReader()
+            const data = await new Promise((resolve, reject) => {
+                reader.onload = (evt) => resolve(evt.target.result)
+                reader.onerror = reject
+                reader.readAsArrayBuffer(file)
+            })
+
+            const XLSX = window.XLSX
+            const wb = XLSX.read(data, { type: 'array' })
+
+            // 1. Ambil data master untuk mapping
+            const { data: allCls } = await supabase.from('classes').select('id, name')
+            const { data: allStu } = await supabase.from('students').select('id, name, class_id').is('deleted_at', null)
+
+            const classMap = {} // name -> id
+            allCls?.forEach(c => { classMap[c.name.toLowerCase().trim()] = c.id })
+
+            const payloads = []
+            let totalProcessed = 0
+            let notFound = []
+
+            // 2. Proses tiap Sheet
+            for (const sheetName of wb.SheetNames) {
+                const ws = wb.Sheets[sheetName]
+                const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1 }) // Ambil raw rows
+
+                if (jsonData.length < 2) continue // Skip sheet kosong/hanya header
+
+                // Cari class_id berdasarkan nama sheet
+                const clsId = classMap[sheetName.toLowerCase().trim()]
+
+                // Iterasi baris data (skip header di index 0)
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i]
+                    const sName = String(row[1] || '').trim() // Nama di kolom B (index 1)
+                    if (!sName) continue
+
+                    // Cari student_id berdasarkan nama + class_id (jika sheet name valid)
+                    const student = allStu?.find(s =>
+                        s.name.toLowerCase().trim() === sName.toLowerCase() &&
+                        (!clsId || s.class_id === clsId)
+                    )
+
+                    if (!student) {
+                        notFound.push(`${sName} (${sheetName})`)
+                        continue
+                    }
+
+                    // Map values (pastikan index sesuai dengan exporter)
+                    // Index: 2=Akhlak, 3=Ibadah, 4=Kebersihan, 5=Quran, 6=Bahasa
+                    // Index: 9=BB, 10=TB, 11=Ziyadah, 12=Murojaah, 13=Sakit, 14=Izin, 15=Alpa, 16=Pulang, 17=Catatan
+                    const getNum = (val) => (val === '' || val === undefined || val === null) ? null : Number(val)
+
+                    payloads.push({
+                        student_id: student.id,
+                        month: selectedMonth,
+                        year: selectedYear,
+                        musyrif_name: musyrif,
+                        updated_by: profile?.id ?? null,
+                        updated_by_name: profile?.name ?? null,
+                        nilai_akhlak: getNum(row[2]),
+                        nilai_ibadah: getNum(row[3]),
+                        nilai_kebersihan: getNum(row[4]),
+                        nilai_quran: getNum(row[5]),
+                        nilai_bahasa: getNum(row[6]),
+                        berat_badan: getNum(row[9]),
+                        tinggi_badan: getNum(row[10]),
+                        ziyadah: row[11] || null,
+                        murojaah: row[12] || null,
+                        hari_sakit: getNum(row[13]) || 0,
+                        hari_izin: getNum(row[14]) || 0,
+                        hari_alpa: getNum(row[15]) || 0,
+                        hari_pulang: getNum(row[16]) || 0,
+                        catatan: row[17] || null
+                    })
+                    totalProcessed++
+                }
+            }
+
+            if (payloads.length === 0) {
+                addToast('Tidak ada data valid yang bisa diimport', 'warning')
+                return
+            }
+
+            // 3. Bulk Upsert ke Supabase
+            const { error: upsErr } = await supabase
+                .from('student_monthly_reports')
+                .upsert(payloads, { onConflict: 'student_id,month,year' })
+
+            if (upsErr) throw upsErr
+
+            addToast(`Berhasil import ${totalProcessed} data raport`, 'success')
+            if (notFound.length > 0) {
+                console.warn('Siswa tidak ditemukan:', notFound)
+                addToast(`${notFound.length} siswa tidak ditemukan di database (cek log)`, 'warning')
+            }
+
+            // Reload data jika kelas yang sedang dibuka termasuk yang diimport
+            loadStudents()
+
+            logAudit({
+                action: 'INSERT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { method: 'IMPORT_XLS', count: totalProcessed, file_name: file.name }
+            })
+
+        } catch (err) {
+            addToast('Gagal import: ' + err.message, 'error')
+            console.error(err)
+        } finally {
+            setLoading(false)
+        }
+    }, [selectedMonth, selectedYear, musyrif, profile, addToast, loadStudents])
 
     // ── Auto-save
     const triggerAutoSave = useCallback((studentId) => {
@@ -2318,7 +2575,7 @@ export default function RaportPage() {
                             </div>
 
                             {/* Search Bar */}
-                            <div className="relative flex-1 md:w-52 shrink-0">
+                            <div className="relative flex-1 md:w-93 shrink-0">
                                 <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" />
                                 <input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
                                     className="h-9 md:h-10 w-full pl-8 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all" />
@@ -2328,17 +2585,6 @@ export default function RaportPage() {
                         {/* Tools & Exports */}
                         <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-end gap-2">
                             <div className="flex items-center gap-1.5 md:gap-2">
-                                {/* Keyboard Shortcut (Desktop only) */}
-                                <button
-                                    ref={shortcutBtnRef}
-                                    onClick={() => {
-                                        if (!showShortcutModal) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect())
-                                        setShowShortcutModal(v => !v)
-                                    }}
-                                    className={`hidden md:flex h-10 w-10 shrink-0 rounded-xl border transition-all items-center justify-center ${showShortcutModal ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}
-                                >
-                                    <FontAwesomeIcon icon={faKeyboard} className="text-[10px]" />
-                                </button>
 
                                 <button onClick={() => { setBulkMode(v => !v); setBulkValues({}); setBulkSelected(new Set()) }} className={`h-9 px-4 w-full md:w-auto rounded-xl border text-[10px] font-black flex items-center justify-center md:justify-start gap-2 transition-all ${bulkMode ? 'bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-500/20' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
                                     <FontAwesomeIcon icon={faFillDrip} className="text-[10px]" />
@@ -2359,9 +2605,9 @@ export default function RaportPage() {
                             <div className="hidden md:block w-px h-4 bg-[var(--color-border)] mx-1" />
 
                             {/* Export Group (Grid on mobile, flex on desktop) */}
-                            <div className="grid grid-cols-4 md:flex items-center gap-1.5 md:gap-2">
+                            <div className="grid grid-cols-4 md:flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 md:pb-0">
                                 <button onClick={exportCSV} className="h-9 md:px-4 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 text-[10px] font-black flex items-center justify-center transition-all hover:bg-teal-500/20">CSV</button>
-                                <button onClick={exportXLS} className="h-9 md:px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black flex items-center justify-center transition-all hover:bg-emerald-500/20">XLS</button>
+                                <button onClick={exportXLS} className="h-9 md:px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black flex items-center justify-center transition-all hover:bg-emerald-500/20" title="Export Kelas Ini (XLS)">XLS</button>
                                 <button onClick={() => {
                                     const completeds = students.filter(s => isComplete(scores[s.id] || {}))
                                     if (completeds.length) runZipBlast(completeds, null)
@@ -3707,7 +3953,7 @@ export default function RaportPage() {
                 )}
 
                 {/* ── PAGE HEADER ── */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="sticky top-[72px] z-40 -mx-4 md:-mx-6 px-4 md:px-6 py-3 md:py-4 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-300 mb-6">
                     <div>
                         <Breadcrumb badge="Reports" items={['Grade Reports']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Raport Bulanan</h1>
@@ -3725,18 +3971,32 @@ export default function RaportPage() {
                                 ))}
                             </div>
                         )}
+                        {/* Keyboard Shortcut - moved here for consistency */}
+                        <button
+                            ref={shortcutBtnRef}
+                            onClick={() => { if (!showShortcutModal) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setShowShortcutModal(v => !v) }}
+                            className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center text-sm transition-all active:scale-95
+                                ${showShortcutModal
+                                    ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)] shadow-sm'
+                                    : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'
+                                }`}
+                            title="Keyboard Shortcuts (?)"
+                        >
+                            <FontAwesomeIcon icon={faKeyboard} />
+                        </button>
+
+                        <button
+                            ref={headerMenuBtnRef}
+                            onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                            title="Data & Backup Operations"
+                        >
+                            <FontAwesomeIcon icon={faSliders} />
+                        </button>
+
                         <button onClick={() => { setTutorialStep(0); setShowTutorialModal(true) }} aria-label="Panduan penggunaan" className="h-8 w-18 gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center justify-center hover:bg-amber-500/15 transition-all" title="Panduan & Tutorial">
                             <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
                             Tutorial
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (step === 4) setStep(0)
-                                else { setStep(4); loadArchive() }
-                            }}
-                            className={`h-9 px-3 rounded-lg border text-[9px] font-black flex items-center gap-1.5 transition-all ${step === 4 ? 'bg-amber-500/15 border-amber-500/30 text-amber-600 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                        >
-                            <FontAwesomeIcon icon={faTableList} /> {step === 4 ? 'Tutup Riwayat' : 'Riwayat'}
                         </button>
                         {step === 0 && (
                             <button onClick={() => { setSelectedClassId(''); setStep(1) }} className="btn btn-primary h-9 px-4 lg:px-5 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2">
@@ -3807,6 +4067,67 @@ export default function RaportPage() {
                 }
             `}</style>
 
+                {/* Portaled Header Menu Dropdown */}
+                {isHeaderMenuOpen && headerMenuRect && createPortal(
+                    <>
+                        <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsHeaderMenuOpen(false)} />
+                        <div
+                            className="fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-0 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 overflow-hidden"
+                            style={{
+                                top: headerMenuRect.bottom + 8,
+                                left: Math.max(10, headerMenuRect.right - 224)
+                            }}
+                        >
+                            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                                <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Data & Backup</p>
+                            </div>
+                            
+                            <div className="p-2 space-y-1">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-1">Operasi</p>
+
+                            {/* Import Section */}
+                            <input type="file" ref={fileInputRef} onChange={importXLS} accept=".xlsx, .xls" className="hidden" />
+                            <button onClick={() => { setIsHeaderMenuOpen(false); fileInputRef.current?.click() }}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <FontAwesomeIcon icon={faFileImport} className="text-xs" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[11px] font-black leading-tight">Import XLS</p>
+                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Restore data dari file Excel backup</p>
+                                </div>
+                            </button>
+
+                            <button onClick={() => { setIsHeaderMenuOpen(false); exportAllClassesXLS() }}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[11px] font-black leading-tight">Export Semua</p>
+                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Backup seluruh kelas bulan ini ke XLS</p>
+                                </div>
+                            </button>
+
+                            <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                            <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Arsip</p>
+
+                            <button onClick={() => { setIsHeaderMenuOpen(false); setStep(4); loadArchive() }}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[11px] font-black leading-tight">Riwayat Raport</p>
+                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat dan cetak arsip bulan sebelumnya</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </>,
+                document.body
+            )}
+
                 {/* ── Hidden print container ── */}
                 {printQueue.length > 0 && (
                     <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
@@ -3819,9 +4140,9 @@ export default function RaportPage() {
                 {/* Portaled Keyboard Shortcuts Dropdown */}
                 {showShortcutModal && shortcutRect && createPortal(
                     <>
-                        <div className="fixed inset-0 z-[1000] bg-black/5 backdrop-blur-[1px]" onClick={() => setShowShortcutModal(false)} />
+                        <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setShowShortcutModal(false)} />
                         <div
-                            className="fixed z-[1001] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200"
+                            className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
                             style={{
                                 top: shortcutRect.bottom + 8,
                                 left: Math.max(10, shortcutRect.right - 288)

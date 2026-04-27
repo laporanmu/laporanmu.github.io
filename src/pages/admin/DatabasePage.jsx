@@ -465,12 +465,22 @@ export default function DatabasePage() {
 
         try {
             // ── Fetch base data ──────────────────────────────────────
-            const { data: allStudents } = await supabase.from('students').select('id, name, class_id, registration_code').is('deleted_at', null)
-            const { data: allTeachers } = await supabase.from('teachers').select('id, name, nbm').is('deleted_at', null)
-            const { data: allClasses } = await supabase.from('classes').select('id, name')
+            const { data: allStudents, error: errStudents } = await supabase.from('students').select('id, name, class_id, registration_code').is('deleted_at', null)
+            const { data: allTeachers, error: errTeachers } = await supabase.from('teachers').select('id, name, nbm').is('deleted_at', null)
+            const { data: allClasses, error: errClasses } = await supabase.from('classes').select('id, name')
+
+            if (errStudents) throw new Error('Gagal memuat data siswa: ' + errStudents.message)
+            if (errTeachers) throw new Error('Gagal memuat data guru: ' + errTeachers.message)
+            if (errClasses) throw new Error('Gagal memuat data kelas: ' + errClasses.message)
+
             const classIds = new Set((allClasses || []).map(c => c.id))
             const classMap = Object.fromEntries((allClasses || []).map(c => [c.id, c.name]))
             const studentIds = new Set((allStudents || []).map(s => s.id))
+
+            // Fetch ALL student IDs including soft-deleted for orphan checks
+            const { data: allHistoricalStudents, error: errHistStudents } = await supabase.from('students').select('id')
+            if (errHistStudents) throw new Error('Gagal memuat data histori siswa: ' + errHistStudents.message)
+            const allStudentIds = new Set((allHistoricalStudents || []).map(s => s.id))
 
             // 1. Orphan students — students with class_id not in classes
             const orphanStudents = (allStudents || []).filter(s => s.class_id && !classIds.has(s.class_id))
@@ -481,7 +491,7 @@ export default function DatabasePage() {
 
             // 2. Orphan reports — reports with student_id not in students
             const { data: allReports } = await supabase.from('reports').select('id, student_id, points')
-            const orphanReports = (allReports || []).filter(r => r.student_id && !studentIds.has(r.student_id))
+            const orphanReports = (allReports || []).filter(r => r.student_id && !allStudentIds.has(r.student_id))
             results.orphan_reports = {
                 count: orphanReports.length,
                 items: orphanReports.map(r => ({ id: r.id, student_id: r.student_id, points: r.points ?? '—' })),
@@ -489,7 +499,7 @@ export default function DatabasePage() {
 
             // 3. Orphan raport — raport with student_id not in students
             const { data: allRaport } = await supabase.from('student_monthly_reports').select('id, student_id, month, year')
-            const orphanRaport = (allRaport || []).filter(r => r.student_id && !studentIds.has(r.student_id))
+            const orphanRaport = (allRaport || []).filter(r => r.student_id && !allStudentIds.has(r.student_id))
             results.orphan_raport = {
                 count: orphanRaport.length,
                 items: orphanRaport.map(r => ({

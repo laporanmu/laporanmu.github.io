@@ -39,9 +39,9 @@ export const LABEL = {
     ar: {
         studentName: 'اسم الطالب', room: 'الغرفة', class: 'الفصل', year: 'العام الدراسي',
         dailyWork: 'الأعمال اليومية', subject: 'المواد الدراسية', score: 'النقاط',
-        grade: 'التقدير', num: 'الرقم', weight: 'وزن البدن', height: 'طول البden',
+        grade: 'التقدير', num: 'الرقم', weight: 'وزن البدن', height: 'طول البدن',
         ziyadah: 'الزيادة', murojaah: 'المراجعة', sick: 'المريض', home: 'الإجازة',
-        izin: 'الإذن', alpa: 'الغيab', gradeScale: 'نظام التقدير',
+        izin: 'الإذن', alpa: 'الغياب', gradeScale: 'نظام التقدير',
         musyrif: 'مربي الفصل', guardian: 'ولي الأمر',
         reportTitle: 'نتيجة الشخصية', month: 'شهر',
     },
