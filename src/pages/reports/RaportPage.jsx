@@ -201,7 +201,41 @@ export default function RaportPage() {
     const [pageSize, setPageSize] = useState('a4') // 'a4' | 'f4'
     const [previewZoom, setPreviewZoom] = useState(1) // 0.8 = 80% zoom out
     const [isFullScreenPreview, setIsFullScreenPreview] = useState(false)
+    const [fullScreenZoom, setFullScreenZoom] = useState(1) // zoom khusus fullscreen
     const [showMobileStudentPicker, setShowMobileStudentPicker] = useState(false)
+    const previewContainerRef = useRef(null)
+    const fullScreenScrollRef = useRef(null)
+
+    // ── Auto-fit zoom: gunakan ResizeObserver agar akurat saat layout selesai render
+    useEffect(() => {
+        if (step !== 3) return
+        const calcFit = (containerW) => {
+            // p-3 = 12px tiap sisi (24px total), p-10 = 40px tiap sisi (80px total)
+            const padding = containerW < 640 ? 24 : 80
+            const availW = containerW - padding
+            const docW = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
+            const fit = Math.floor((availW / docW) * 100) / 100
+            setPreviewZoom(Math.min(1, Math.max(0.3, fit)))
+        }
+        // ResizeObserver — akurat, tidak bergantung pada window.innerWidth
+        let ro
+        const t = setTimeout(() => {
+            const el = previewContainerRef.current
+            if (!el) return
+            calcFit(el.clientWidth)
+            ro = new ResizeObserver(entries => {
+                for (const e of entries) calcFit(e.contentRect.width)
+            })
+            ro.observe(el)
+        }, 100)
+        return () => { clearTimeout(t); ro?.disconnect() }
+    }, [step, pageSize])
+
+    // ── Default zoom fullscreen = 100% saat pertama dibuka
+    useEffect(() => {
+        if (!isFullScreenPreview) return
+        setFullScreenZoom(1)
+    }, [isFullScreenPreview, pageSize])
 
     // ── WA/PDF
     const [sendingWA, setSendingWA] = useState({})
@@ -2785,8 +2819,20 @@ export default function RaportPage() {
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
                                     {/* Zoom Control stretches on mobile */}
                                     <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
-                                        <button onClick={() => setPreviewZoom(p => Math.max(0.4, p - 0.1))} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />-</button>
-                                        <span className="text-[10px] font-black w-10 text-center text-indigo-500 tabular-nums">{Math.round(previewZoom * 100)}%</span>
+                                        <button onClick={() => setPreviewZoom(p => Math.max(0.3, p - 0.1))} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />-</button>
+                                        {/* #3: Fit-Width shortcut — tap sekali langsung fit ke lebar container */}
+                                        <button
+                                            onClick={() => {
+                                                const el = previewContainerRef.current
+                                                if (!el) return
+                                                const padding = window.innerWidth < 640 ? 24 : 80
+                                                const availW = el.clientWidth - padding
+                                                const docW = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
+                                                setPreviewZoom(Math.min(1, Math.max(0.3, Math.floor((availW / docW) * 100) / 100)))
+                                            }}
+                                            title="Fit ke lebar layar"
+                                            className="text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
+                                        >{Math.round(previewZoom * 100)}%</button>
                                         <button onClick={() => setPreviewZoom(p => Math.min(1.5, p + 0.1))} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />+</button>
                                     </div>
 
@@ -2810,10 +2856,39 @@ export default function RaportPage() {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto bg-slate-200 dark:bg-slate-700 flex flex-col items-center custom-scrollbar p-3 sm:p-10" style={{ minHeight: window.innerWidth < 768 ? 300 : 600 }}>
-                            <p className="text-[9px] font-bold text-[var(--color-text-muted)] mb-2 uppercase tracking-widest lg:hidden opacity-60">
-                                <FontAwesomeIcon icon={faExpand} className="mr-1" /> Klik raport untuk memperbesar
-                            </p>
+                        <div
+                            ref={previewContainerRef}
+                            className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-200 dark:bg-slate-700 flex flex-col items-center custom-scrollbar p-3 sm:p-10"
+                            style={{ minHeight: window.innerWidth < 768 ? 300 : 600 }}
+                            /* #5: Pinch-to-zoom gesture */
+                            onTouchStart={e => {
+                                if (e.touches.length === 2) {
+                                    e.currentTarget._pinchStartDist = Math.hypot(
+                                        e.touches[0].clientX - e.touches[1].clientX,
+                                        e.touches[0].clientY - e.touches[1].clientY
+                                    )
+                                    e.currentTarget._pinchStartZoom = previewZoom
+                                }
+                            }}
+                            onTouchMove={e => {
+                                if (e.touches.length === 2 && e.currentTarget._pinchStartDist) {
+                                    e.preventDefault()
+                                    const dist = Math.hypot(
+                                        e.touches[0].clientX - e.touches[1].clientX,
+                                        e.touches[0].clientY - e.touches[1].clientY
+                                    )
+                                    const ratio = dist / e.currentTarget._pinchStartDist
+                                    const newZoom = Math.min(1.5, Math.max(0.3, e.currentTarget._pinchStartZoom * ratio))
+                                    setPreviewZoom(Math.floor(newZoom * 100) / 100)
+                                }
+                            }}
+                            onTouchEnd={e => { e.currentTarget._pinchStartDist = null }}
+                        >
+                            {/* #2: Animated eye-catching hint badge — hanya di mobile */}
+                            <div className="lg:hidden flex items-center gap-1.5 mb-3 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-indigo-500/20 shadow-sm animate-pulse">
+                                <FontAwesomeIcon icon={faExpand} className="text-indigo-500 text-[9px]" />
+                                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Klik raport untuk memperbesar</span>
+                            </div>
                             {/* Layout Wrapper — menggunakan transform:scale agar layout width selalu akurat di Android */}
                             {(() => {
                                 // Natural px size of the paper (96dpi)
@@ -2824,12 +2899,13 @@ export default function RaportPage() {
                                     <div
                                         className="mx-auto overflow-hidden"
                                         style={{
-                                            width:  `${naturalW * previewZoom}px`,
+                                            width: `${naturalW * previewZoom}px`,
                                             height: `${naturalH * previewZoom}px`,
                                         }}
                                     >
+                                        {/* #4: Pulse ring animation untuk hint tap-to-fullscreen */}
                                         <div
-                                            className="shadow-2xl rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-indigo-500/30 transition-all"
+                                            className="relative shadow-2xl rounded-xl overflow-hidden cursor-pointer transition-all group"
                                             style={{
                                                 width: pageSize === 'f4' ? '215mm' : '210mm',
                                                 transform: `scale(${previewZoom})`,
@@ -2837,6 +2913,9 @@ export default function RaportPage() {
                                             }}
                                             onClick={() => setIsFullScreenPreview(true)}
                                         >
+                                            {/* Pulse ring hanya di mobile — muncul di atas kertas */}
+                                            <div className="lg:hidden absolute inset-0 rounded-xl ring-2 ring-indigo-400/40 animate-pulse pointer-events-none z-10" />
+                                            <div className="lg:hidden absolute inset-0 rounded-xl ring-4 ring-indigo-400/10 animate-pulse pointer-events-none z-10" style={{ animationDelay: '0.3s' }} />
                                             {previewStudent && (
                                                 <RaportPrintCard
                                                     student={previewStudent}
@@ -2861,116 +2940,197 @@ export default function RaportPage() {
                     </div>
                 </div>
 
-                {/* ── PREMIUM LIGHT STUDIO PREVIEW OVERLAY ── */}
+                {/* ── FULLSCREEN DIGITAL PREVIEW ── */}
                 {isFullScreenPreview && (
-                    <div className="fixed inset-0 z-[100] bg-slate-100 flex flex-col animate-in fade-in duration-300">
-                        {/* Clean Light Top Bar */}
-                        <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200 bg-white/80 backdrop-blur-md shadow-sm">
-                            <div className="flex items-center gap-4">
+                    <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)', backgroundSize: '20px 20px', backgroundColor: '#e9ebef' }}>
+
+                        {/* Top Bar — rounded floating card */}
+                        <div className="shrink-0 mx-3 sm:mx-5 mt-3 sm:mt-4 rounded-2xl px-3 sm:px-5 h-14 flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.10)]">
+                            <div className="flex items-center gap-3 min-w-0">
                                 <button
                                     onClick={() => setIsFullScreenPreview(false)}
-                                    className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all flex items-center justify-center group"
+                                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center shrink-0 active:scale-90"
                                 >
-                                    <FontAwesomeIcon icon={faArrowLeft} className="group-active:scale-90" />
+                                    <FontAwesomeIcon icon={faArrowLeft} className="text-sm" />
                                 </button>
                                 <div className="min-w-0">
-                                    <h3 className="text-slate-900 text-[13px] font-black truncate max-w-[150px] sm:max-w-none uppercase tracking-wider">
-                                        {previewStudent?.name || 'Preview Document'}
-                                    </h3>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Digital Preview</span>
+                                    <p className="text-slate-900 dark:text-white text-[12px] font-black truncate max-w-[160px] sm:max-w-xs">
+                                        {previewStudent?.name || 'Preview'}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                        <span className="text-[9px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-[0.15em]">Digital Preview</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                                {/* Format Badges */}
-                                <div className="hidden sm:flex items-center gap-1.5 mr-4 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200">
-                                    <span className="text-[9px] font-black text-slate-400">SIZE:</span>
-                                    <span className="text-[9px] font-black text-indigo-600">{pageSize.toUpperCase()}</span>
-                                    <div className="w-px h-2 bg-slate-200" />
-                                    <span className="text-[9px] font-black text-slate-400">LANG:</span>
-                                    <span className="text-[9px] font-black text-amber-600">{lang.toUpperCase()}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                                {/* Format pills */}
+                                <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                                    <span className="text-[9px] font-black text-slate-400 dark:text-white/30">SIZE</span>
+                                    <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 ml-1">{pageSize.toUpperCase()}</span>
+                                    <div className="w-px h-2 bg-slate-200 dark:bg-white/10 mx-1.5" />
+                                    <span className="text-[9px] font-black text-slate-400 dark:text-white/30">LANG</span>
+                                    <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 ml-1">{lang.toUpperCase()}</span>
                                 </div>
-
                                 <button
                                     onClick={() => openPrintWindow([previewStudent].filter(Boolean))}
-                                    className="h-10 px-5 rounded-full bg-indigo-600 text-white text-[11px] font-black shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-2"
+                                    className="w-9 h-9 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center active:scale-95 transition-all"
+                                    title="Cetak Raport"
                                 >
-                                    <FontAwesomeIcon icon={faPrint} />
-                                    <span>Cetak</span>
+                                    <FontAwesomeIcon icon={faPrint} className="text-sm" />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Soft Studio Scroll Area */}
-                        <div className="flex-1 overflow-auto bg-slate-50 flex flex-col items-center custom-scrollbar py-4 sm:py-12 px-4">
-                            <div
-                                className="shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-200 transition-all duration-300"
-                                style={{
-                                    zoom: previewZoom,
-                                    width: pageSize === 'f4' ? '215mm' : '210mm',
-                                    transformOrigin: 'top center'
-                                }}
-                            >
-                                {previewStudent && (
-                                    <RaportPrintCard
-                                        student={previewStudent}
-                                        scores={scores[previewStudent.id]}
-                                        extra={extras[previewStudent.id]}
-                                        bulanObj={bulanObj}
-                                        tahun={selectedYear}
-                                        musyrif={musyrif}
-                                        className={selectedClass?.name}
-                                        lang={lang}
-                                        settings={settings}
-                                        pageSize={pageSize}
-                                        catatanArab={catatanArabMap[previewStudent.id]}
-                                    />
-                                )}
-                            </div>
+                        {/* Scroll Area — scroll aktif, paper mulai dari atas */}
+                        <div
+                            ref={fullScreenScrollRef}
+                            className="flex-1 overflow-auto flex flex-col items-center py-8 px-4"
+                            style={{
+                                scrollbarWidth: 'none',
+                                msOverflowStyle: 'none',
+                                background: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)',
+                                backgroundSize: '20px 20px',
+                                backgroundColor: '#e9ebef',
+                            }}
+                            /* Pinch-to-zoom di fullscreen */
+                            onTouchStart={e => {
+                                if (e.touches.length === 2) {
+                                    e.currentTarget._pinchDist = Math.hypot(
+                                        e.touches[0].clientX - e.touches[1].clientX,
+                                        e.touches[0].clientY - e.touches[1].clientY
+                                    )
+                                    e.currentTarget._pinchZoom = fullScreenZoom
+                                }
+                            }}
+                            onTouchMove={e => {
+                                if (e.touches.length === 2 && e.currentTarget._pinchDist) {
+                                    e.preventDefault()
+                                    const dist = Math.hypot(
+                                        e.touches[0].clientX - e.touches[1].clientX,
+                                        e.touches[0].clientY - e.touches[1].clientY
+                                    )
+                                    const ratio = dist / e.currentTarget._pinchDist
+                                    setFullScreenZoom(Math.min(2, Math.max(0.3, Math.floor(e.currentTarget._pinchZoom * ratio * 100) / 100)))
+                                }
+                            }}
+                            onTouchEnd={e => { e.currentTarget._pinchDist = null }}
+                        >
+                            {/* Paper — transform:scale (bukan zoom) agar overflow:hidden+border-radius bekerja */}
+                            {(() => {
+                                const naturalW = pageSize === 'f4' ? 812.6 : 793.7
+                                const naturalH = pageSize === 'f4' ? 1247 : 1122
+                                const s = fullScreenZoom
+                                return (
+                                    <div
+                                        className="shrink-0"
+                                        style={{
+                                            width: `${naturalW * s}px`,
+                                            height: `${naturalH * s}px`,
+                                            borderRadius: '24px',
+                                            overflow: 'hidden',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.06), 0 8px 32px rgba(0,0,0,0.12), 0 24px 64px rgba(0,0,0,0.08)',
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: `${naturalW}px`,
+                                            transformOrigin: 'top left',
+                                            transform: `scale(${s})`,
+                                        }}>
+                                            {previewStudent && (
+                                                <RaportPrintCard
+                                                    student={previewStudent}
+                                                    scores={scores[previewStudent.id]}
+                                                    extra={extras[previewStudent.id]}
+                                                    bulanObj={bulanObj}
+                                                    tahun={selectedYear}
+                                                    musyrif={musyrif}
+                                                    className={selectedClass?.name}
+                                                    lang={lang}
+                                                    settings={settings}
+                                                    pageSize={pageSize}
+                                                    catatanArab={catatanArabMap[previewStudent.id]}
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            })()}
                         </div>
 
-                        {/* Floating Bottom Navigation (Modern Style) */}
-                        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-1 p-1.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-indigo-900/10">
+                        {/* Floating Bottom Bar — clean pill, posisi di atas bottom nav */}
+                        <div className="fixed bottom-[72px] sm:bottom-6 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-0.5 p-1.5 rounded-2xl shadow-xl shadow-slate-900/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-white/10">
+                            {/* Zoom out */}
                             <button
-                                onClick={() => setPreviewZoom(p => Math.max(0.3, p - 0.1))}
-                                className="w-10 h-10 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-indigo-600 transition-all flex items-center justify-center"
+                                onClick={() => setFullScreenZoom(p => Math.round(Math.max(0.3, p - 0.1) * 100) / 100)}
+                                className="w-10 h-10 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10 transition-all flex items-center justify-center active:scale-90"
                             >
-                                <FontAwesomeIcon icon={faSearch} className="scale-75 translate-x-[-1px] opacity-70" />-
+                                <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
+                                <span className="text-[10px] font-black leading-none ml-0.5">-</span>
                             </button>
 
-                            <div className="px-3 min-w-[70px] text-center border-x border-slate-100">
-                                <span className="text-[11px] font-black text-slate-700 tabular-nums">{Math.round(previewZoom * 100)}%</span>
-                            </div>
-
-                            <button
-                                onClick={() => setPreviewZoom(p => Math.min(2.0, p + 0.1))}
-                                className="w-10 h-10 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-indigo-600 transition-all flex items-center justify-center"
-                            >
-                                <FontAwesomeIcon icon={faSearch} className="scale-75 translate-x-[-1px] opacity-70" />+
-                            </button>
-
-                            <div className="w-px h-4 bg-slate-200 mx-1" />
-
-                            {/* Fit Width Shortcut */}
+                            {/* Zoom % — tap to fit */}
                             <button
                                 onClick={() => {
-                                    const containerWidth = window.innerWidth - 64
-                                    const docWidth = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
-                                    setPreviewZoom(Math.floor((containerWidth / docWidth) * 100) / 100)
+                                    const availW = window.innerWidth - 32
+                                    const docW = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
+                                    setFullScreenZoom(Math.min(1, Math.max(0.3, Math.floor((availW / docW) * 100) / 100)))
                                 }}
-                                className="h-10 px-4 rounded-xl hover:bg-indigo-50 text-slate-600 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all"
+                                title="Tap untuk Fit Width"
+                                className="min-w-[52px] h-10 px-2 rounded-xl text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-white/5 transition-all text-[11px] font-black tabular-nums"
                             >
-                                Fit Width
+                                {Math.round(fullScreenZoom * 100)}%
                             </button>
 
-                            <div className="w-px h-4 bg-slate-200 mx-1" />
+                            {/* Zoom in */}
+                            <button
+                                onClick={() => setFullScreenZoom(p => Math.round(Math.min(2.0, p + 0.1) * 100) / 100)}
+                                className="w-10 h-10 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10 transition-all flex items-center justify-center active:scale-90"
+                            >
+                                <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
+                                <span className="text-[10px] font-black leading-none ml-0.5">+</span>
+                            </button>
 
+                            <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-1" />
+
+                            {/* Prev student */}
+                            <button
+                                onClick={() => {
+                                    const idx = students.findIndex(s => s.id === (previewStudent?.id))
+                                    if (idx > 0) setPreviewStudentId(students[idx - 1].id)
+                                }}
+                                disabled={!previewStudent || students.findIndex(s => s.id === previewStudent?.id) === 0}
+                                className="w-10 h-10 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10 transition-all flex items-center justify-center disabled:opacity-25 active:scale-90"
+                            >
+                                <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
+                            </button>
+
+                            {/* Student counter */}
+                            <div className="min-w-[44px] text-center">
+                                <span className="text-[10px] font-black text-slate-400 dark:text-white/40 tabular-nums">
+                                    {(students.findIndex(s => s.id === previewStudent?.id) + 1)}/{students.length}
+                                </span>
+                            </div>
+
+                            {/* Next student */}
+                            <button
+                                onClick={() => {
+                                    const idx = students.findIndex(s => s.id === (previewStudent?.id))
+                                    if (idx < students.length - 1) setPreviewStudentId(students[idx + 1].id)
+                                }}
+                                disabled={!previewStudent || students.findIndex(s => s.id === previewStudent?.id) === students.length - 1}
+                                className="w-10 h-10 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10 transition-all flex items-center justify-center disabled:opacity-25 active:scale-90"
+                            >
+                                <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
+                            </button>
+
+                            <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-1" />
+
+                            {/* Close */}
                             <button
                                 onClick={() => setIsFullScreenPreview(false)}
-                                className="w-10 h-10 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all flex items-center justify-center"
+                                className="w-10 h-10 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:text-white/40 dark:hover:text-red-400 dark:hover:bg-red-500/10 transition-all flex items-center justify-center active:scale-90"
                             >
                                 <FontAwesomeIcon icon={faXmark} />
                             </button>
