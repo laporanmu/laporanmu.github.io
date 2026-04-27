@@ -34,8 +34,8 @@ function getPortalContainer(id) {
 const REPORTS_ITEMS = [
     { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen izin keluar masuk area santri", color: "bg-red-500/10 text-red-500" },
     { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Laporan perkembangan poin & prestasi bulanan", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
-    { to: "/perilaku", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
+    { to: "/attendance", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
+    { to: "/behavior", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
 ]
 
 const MASTER_ITEMS = [
@@ -116,8 +116,8 @@ export default function MasterSheet({ isOpen, onClose, section }) {
     const filteredReports = REPORTS_ITEMS.filter(it => {
         if (it.to === '/gate') return flags['nav.gate'] !== false
         if (it.to === '/raport') return flags['nav.raport'] !== false
-        if (it.to === '/absensi') return flags['nav.absensi'] !== false
-        if (it.to === '/perilaku') return flags['nav.poin'] !== false
+        if (it.to === '/attendance') return flags['nav.absensi'] !== false
+        if (it.to === '/behavior') return flags['nav.poin'] !== false
         return true
     })
     const visibleReports = isSatpam
@@ -195,7 +195,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                         {show.admin && (
                             <div className="mt-2">
                                 {(show.reports || show.master) && <Divider />}
-                                <Section 
+                                <Section
                                     title="Infrastructure & Control"
                                     items={ADMIN_ITEMS}
                                     onNavigate={handleNav}

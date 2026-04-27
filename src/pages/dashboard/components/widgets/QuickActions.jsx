@@ -16,7 +16,7 @@ export const QuickActions = memo(function QuickActions() {
                 <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Navigasi halaman utama</p>
             </div>
             <div className="space-y-2.5 relative z-10">
-                <Link to="/perilaku" className="flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--color-primary)] hover:brightness-110 active:scale-[0.98] text-white transition-all shadow-lg shadow-[var(--color-primary)]/20">
+                <Link to="/behavior" className="flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--color-primary)] hover:brightness-110 active:scale-[0.98] text-white transition-all shadow-lg shadow-[var(--color-primary)]/20">
                     <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
                         <FontAwesomeIcon icon={faPlus} className="text-sm" />
                     </div>

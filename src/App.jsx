@@ -76,12 +76,12 @@ const ALL_STAFF = ['developer', 'admin', 'guru', 'satpam']
 
 const ROUTE_ALIASES = [
   // English ↔ Indonesian aliases
-  { from: '/absence', to: '/absensi' },
-  { from: '/attendance', to: '/absensi' },
+  { from: '/absence', to: '/attendance' },
+  { from: '/attendance', to: '/attendance' },
   { from: '/portal', to: '/gate' },
   { from: '/report', to: '/raport' },
   { from: '/reports', to: '/raports' },
-  { from: '/points', to: '/perilaku' },
+  { from: '/points', to: '/behavior' },
 
   // Master data aliases
   { from: '/master/student', to: '/master/students' },
@@ -157,7 +157,7 @@ function RoleRoute({ children, roles = [] }) {
  * Jika flag sedang load: tampilkan spinner.
  *
  * Usage:
- *   <Route path="/absensi" element={<FlagRoute flag="module.absensi"><AttendancePage /></FlagRoute>} />
+ *   <Route path="/attendance" element={<FlagRoute flag="module.absensi"><AttendancePage /></FlagRoute>} />
  */
 function FlagRoute({ children, flag, label }) {
   const { flags, loading } = useFeatureFlags()
@@ -402,8 +402,8 @@ function AppRoutes() {
             {/* Core — module flag guarded */}
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Bulanan"><RaportPage /></FlagRoute>} />
-            <Route path="/perilaku" element={<FlagRoute flag="module.poin" label="Laporan Perilaku"><BehaviorPage /></FlagRoute>} />
-            <Route path="/absensi" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AttendancePage /></FlagRoute>} />
+            <Route path="/behavior" element={<FlagRoute flag="module.poin" label="Laporan Perilaku"><BehaviorPage /></FlagRoute>} />
+            <Route path="/attendance" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AttendancePage /></FlagRoute>} />
             <Route path="/settings" element={<SettingsPage />} />
 
             {/* Role + flag guarded */}

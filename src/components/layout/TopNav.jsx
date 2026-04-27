@@ -63,8 +63,8 @@ const MASTER_ITEMS = [
 const REPORTS_ITEMS = [
     { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen izin keluar masuk area santri", color: "bg-red-500/10 text-red-500" },
     { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Laporan perkembangan poin & prestasi bulanan", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/absensi", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
-    { to: "/perilaku", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
+    { to: "/attendance", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
+    { to: "/behavior", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
 ]
 
 // Admin-only items — hanya tampil untuk developer & admin
@@ -251,8 +251,8 @@ export default function TopNav({ title, subtitle }) {
     const visibleReportsItems = REPORTS_ITEMS.filter(it => {
         if (it.to === '/gate') return flags['nav.gate'] !== false
         if (it.to === '/raport') return flags['nav.raport'] !== false
-        if (it.to === '/absensi') return flags['nav.absensi'] !== false
-        if (it.to === '/perilaku') return flags['nav.poin'] !== false
+        if (it.to === '/attendance') return flags['nav.absensi'] !== false
+        if (it.to === '/behavior') return flags['nav.poin'] !== false
         return true
     })
     // Satpam: only show gate
@@ -443,7 +443,7 @@ export default function TopNav({ title, subtitle }) {
 
                             {/* Left: Logo */}
                             <div className="flex items-center gap-2">
-                                <div 
+                                <div
                                     className="w-9 h-9 rounded-2xl bg-indigo-600 text-white font-black flex items-center justify-center shrink-0"
                                     aria-label="Laporanmu Logo"
                                     role="img"
@@ -471,7 +471,7 @@ export default function TopNav({ title, subtitle }) {
                                             className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2
                                                 ${reportsOpen
                                                     ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]"
-                                                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`}
+                                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`}
                                             type="button"
                                         >
                                             <FontAwesomeIcon icon={faClipboardList} />

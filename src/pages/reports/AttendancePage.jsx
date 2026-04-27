@@ -23,6 +23,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
+import { EmptyState } from '../../components/ui/DataDisplay'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -4477,96 +4478,104 @@ export default function AttendancePage() {
                         {activeTab === 'input' && (
                             <>
                                 {/* ── Toolbar ── */}
-                                <div className="px-3 md:px-4 py-3 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-y-3 gap-x-4">
+                                <div className="px-3 md:px-4 py-3 border-b border-[var(--color-border)] flex flex-col gap-3">
 
-                                    {/* Left Side: Actions & Controls */}
-                                    <div className="flex items-center gap-2.5 flex-wrap">
-                                        {/* Group: Data Actions */}
-                                        <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shadow-sm">
-                                            <MassActionDropdown
-                                                studentList={studentList}
-                                                dataMap={dataMap}
-                                                setDataMap={setDataMap}
-                                                tahun={tahun}
-                                                bulan={bulan}
-                                                daysInMonth={daysInMonth}
-                                                onDirty={markDirty}
-                                                addToast={addToast}
-                                            />
-                                            <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
-                                            <button onClick={handleCopyLastMonth} disabled={copyingLastMonth || loadingData}
-                                                className="h-8 px-2.5 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all flex items-center gap-1.5 disabled:opacity-40"
-                                                title="Salin data dari bulan lalu">
-                                                {copyingLastMonth ? <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[9px]" /> : <FontAwesomeIcon icon={faCopy} className="text-[9px]" />}
-                                                <span className="hidden lg:inline">Salin Bulan Lalu</span>
-                                                <span className="lg:hidden sm:inline">Salin</span>
-                                            </button>
-                                            <button onClick={() => setShowImport(true)}
-                                                className="h-8 px-2.5 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all flex items-center gap-1.5"
-                                                title="Import data">
-                                                <FontAwesomeIcon icon={faFileImport} className="text-[9px]" />
-                                                <span className="hidden sm:inline">Import</span>
-                                            </button>
+                                    {/* Row 1: Actions & Controls */}
+                                    <div className="flex items-center justify-between w-full overflow-x-auto no-scrollbar pb-1 sm:pb-0 gap-4">
+                                        
+                                        {/* Left: Data & History Actions */}
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            {/* Group: Data Actions */}
+                                            <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shadow-sm">
+                                                <MassActionDropdown
+                                                    studentList={studentList}
+                                                    dataMap={dataMap}
+                                                    setDataMap={setDataMap}
+                                                    tahun={tahun}
+                                                    bulan={bulan}
+                                                    daysInMonth={daysInMonth}
+                                                    onDirty={markDirty}
+                                                    addToast={addToast}
+                                                />
+                                                <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
+                                                <button onClick={handleCopyLastMonth} disabled={copyingLastMonth || loadingData}
+                                                    className="h-8 px-2.5 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all flex items-center gap-1.5 disabled:opacity-40"
+                                                    title="Salin data dari bulan lalu">
+                                                    {copyingLastMonth ? <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[9px]" /> : <FontAwesomeIcon icon={faCopy} className="text-[9px]" />}
+                                                    <span className="hidden lg:inline">Salin Bulan Lalu</span>
+                                                    <span className="lg:hidden sm:inline">Salin</span>
+                                                </button>
+                                                <button onClick={() => setShowImport(true)}
+                                                    className="h-8 px-2.5 rounded-lg text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all flex items-center gap-1.5"
+                                                    title="Import data">
+                                                    <FontAwesomeIcon icon={faFileImport} className="text-[9px]" />
+                                                    <span className="hidden sm:inline">Import</span>
+                                                </button>
+                                            </div>
+
+                                            {/* Group: History & Navigation */}
+                                            <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shadow-sm">
+                                                <button onClick={applyUndo} disabled={!canUndo} title="Batalkan (Ctrl+Z)"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30">
+                                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
+                                                </button>
+                                                <button onClick={applyRedo} disabled={!canRedo} title="Ulangi (Ctrl+Y)"
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30">
+                                                    <FontAwesomeIcon icon={faRotateRight} className="text-[10px]" />
+                                                </button>
+                                                <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
+                                                <button onClick={handleScrollToToday} disabled={!todayDate}
+                                                    className="h-8 px-3 rounded-lg text-[10px] font-black text-indigo-600 hover:bg-indigo-500/10 transition-all flex items-center gap-1.5 disabled:opacity-40"
+                                                    title="Scroll ke kolom hari ini">
+                                                    <FontAwesomeIcon icon={faCrosshairs} className="text-[9px]" />
+                                                    <span className="hidden sm:inline text-indigo-700">HARI INI</span>
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        {/* Group: History & Navigation */}
-                                        <div className="flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shadow-sm">
-                                            <button onClick={applyUndo} disabled={!canUndo} title="Batalkan (Ctrl+Z)"
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30">
-                                                <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
-                                            </button>
-                                            <button onClick={applyRedo} disabled={!canRedo} title="Ulangi (Ctrl+Y)"
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all disabled:opacity-30">
-                                                <FontAwesomeIcon icon={faRotateRight} className="text-[10px]" />
-                                            </button>
-                                            <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
-                                            <button onClick={handleScrollToToday} disabled={!todayDate}
-                                                className="h-8 px-3 rounded-lg text-[10px] font-black text-indigo-600 hover:bg-indigo-500/10 transition-all flex items-center gap-1.5 disabled:opacity-40"
-                                                title="Scroll ke kolom hari ini">
-                                                <FontAwesomeIcon icon={faCrosshairs} className="text-[9px]" />
-                                                <span className="hidden sm:inline text-indigo-700">HARI INI</span>
-                                            </button>
-                                        </div>
+                                        {/* Right: View Settings & Legend */}
+                                        <div className="flex items-center gap-3 shrink-0 ml-auto">
+                                            {/* Group: View Settings (Desktop) */}
+                                            <div className="hidden sm:flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shadow-sm">
+                                                <button onClick={() => setHideWeekend(v => !v)}
+                                                    className={`h-8 px-3 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 ${hideWeekend ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'}`}
+                                                    title="Toggle akhir pekan">
+                                                    <FontAwesomeIcon icon={hideWeekend ? faEyeSlash : faEye} className="text-[9px]" />
+                                                    <span className="hidden lg:inline">{hideWeekend ? 'Tampilkan Weekend' : 'Sembunyikan Weekend'}</span>
+                                                </button>
+                                                <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
+                                                <select value={filterMode} onChange={e => setFilterMode(e.target.value)}
+                                                    className={`h-8 px-2 rounded-lg text-[10px] font-black outline-none cursor-pointer bg-transparent transition-all ${filterMode !== 'all' ? 'text-amber-600' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                                    <option value="all">Semua Siswa</option>
+                                                    <option value="alpa">Alpa ≥ {alertThreshold.alpa}</option>
+                                                    <option value="belum">Belum diisi</option>
+                                                </select>
+                                                <button onClick={() => setShowAlertConfig(true)}
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all"
+                                                    title="Konfigurasi alert">
+                                                    <FontAwesomeIcon icon={faBell} className="text-[10px]" />
+                                                </button>
+                                            </div>
 
-                                        {/* Group: View Settings (Desktop) */}
-                                        <div className="hidden sm:flex items-center bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shadow-sm">
-                                            <button onClick={() => setHideWeekend(v => !v)}
-                                                className={`h-8 px-3 rounded-lg text-[10px] font-black transition-all flex items-center gap-1.5 ${hideWeekend ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'}`}
-                                                title="Toggle akhir pekan">
-                                                <FontAwesomeIcon icon={hideWeekend ? faEyeSlash : faEye} className="text-[9px]" />
-                                                <span className="hidden lg:inline">{hideWeekend ? 'Tampilkan Weekend' : 'Sembunyikan Weekend'}</span>
-                                            </button>
-                                            <div className="w-px h-4 bg-[var(--color-border)] mx-0.5" />
-                                            <select value={filterMode} onChange={e => setFilterMode(e.target.value)}
-                                                className={`h-8 px-2 rounded-lg text-[10px] font-black outline-none cursor-pointer bg-transparent transition-all ${filterMode !== 'all' ? 'text-amber-600' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                                <option value="all">Semua Siswa</option>
-                                                <option value="alpa">Alpa ≥ {alertThreshold.alpa}</option>
-                                                <option value="belum">Belum diisi</option>
-                                            </select>
-                                            <button onClick={() => setShowAlertConfig(true)}
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-all"
-                                                title="Konfigurasi alert">
-                                                <FontAwesomeIcon icon={faBell} className="text-[10px]" />
-                                            </button>
-                                        </div>
-
-                                        {/* Legend — Compact (Desktop Only) */}
-                                        <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 bg-[var(--color-surface-alt)]/50 rounded-xl border border-[var(--color-border)]">
-                                            {STATUS_LIST.map(s => (
-                                                <div key={s}
-                                                    className={`w-6 h-6 rounded-md border flex items-center justify-center text-[10px] font-black cursor-help transition-all hover:scale-110 shadow-sm ${STATUS_META[s].cellBg} ${STATUS_META[s].color} ${STATUS_META[s].cellBorder}`}
-                                                    title={STATUS_META[s].label}>
-                                                    {s}
-                                                </div>
-                                            ))}
+                                            {/* Legend — Compact (Desktop Only) */}
+                                            <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 bg-[var(--color-surface-alt)]/50 rounded-xl border border-[var(--color-border)]">
+                                                {STATUS_LIST.map(s => (
+                                                    <div key={s}
+                                                        className={`w-6 h-6 rounded-md border flex items-center justify-center text-[10px] font-black cursor-help transition-all hover:scale-110 shadow-sm ${STATUS_META[s].cellBg} ${STATUS_META[s].color} ${STATUS_META[s].cellBorder}`}
+                                                        title={STATUS_META[s].label}>
+                                                        {s}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Right Side: Search & Progress */}
-                                    <div className="flex items-center gap-4 ml-auto">
-                                        {/* Desktop Progress - Vertical alignment fixed */}
-                                        <div className="hidden lg:flex flex-col items-end gap-1 min-w-[100px]">
-                                            <div className="flex items-center gap-2">
+                                    {/* Row 2: Search & Progress */}
+                                    <div className="flex items-center gap-4 w-full">
+                                        
+                                        {/* Desktop Progress - Wider to balance space */}
+                                        <div className="hidden lg:flex flex-col items-start gap-1 w-64 xl:w-80 shrink-0">
+                                            <div className="flex items-center justify-between w-full">
                                                 <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">Penyelesaian</span>
                                                 <span className={`text-[10px] font-black tabular-nums ${completionPct === 100 ? 'text-emerald-600' : completionPct >= 60 ? 'text-indigo-600' : 'text-amber-600'}`}>{completionPct}%</span>
                                             </div>
@@ -4581,50 +4590,52 @@ export default function AttendancePage() {
                                             </div>
                                         </div>
 
-                                        {/* View switcher — mobile only (Tighter) */}
-                                        <div className="sm:hidden flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5 shrink-0">
-                                            {[
-                                                { key: 'table', icon: faTableCells, label: 'Tabel' },
-                                                { key: 'card', icon: faBorderAll, label: 'Card' },
-                                                { key: 'list', icon: faList, label: 'List' },
-                                            ].map(v => (
-                                                <button key={v.key}
-                                                    onClick={() => { setMobileView(v.key); try { localStorage.setItem('absensi_mobile_view', v.key) } catch { } }}
-                                                    className={`w-8 h-7 rounded-lg flex items-center justify-center text-[10px] transition-all ${mobileView === v.key ? 'bg-white shadow-sm text-indigo-600' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                                    <FontAwesomeIcon icon={v.icon} />
-                                                </button>
-                                            ))}
+                                        {/* Mobile view switchers & progress */}
+                                        <div className="sm:hidden flex items-center gap-2 shrink-0">
+                                            {/* View switcher */}
+                                            <div className="flex items-center gap-0.5 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] p-0.5">
+                                                {[
+                                                    { key: 'table', icon: faTableCells, label: 'Tabel' },
+                                                    { key: 'card', icon: faBorderAll, label: 'Card' },
+                                                    { key: 'list', icon: faList, label: 'List' },
+                                                ].map(v => (
+                                                    <button key={v.key}
+                                                        onClick={() => { setMobileView(v.key); try { localStorage.setItem('absensi_mobile_view', v.key) } catch { } }}
+                                                        className={`w-8 h-7 rounded-lg flex items-center justify-center text-[10px] transition-all ${mobileView === v.key ? 'bg-white shadow-sm text-indigo-600' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                                        <FontAwesomeIcon icon={v.icon} />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            
+                                            {/* Mobile completion compact */}
+                                            {studentList.length > 0 && (
+                                                <div className="flex items-center gap-2 px-2 h-8 bg-[var(--color-surface-alt)] rounded-lg border border-[var(--color-border)]">
+                                                    <div className="w-10 h-1 rounded-full bg-[var(--color-border)] overflow-hidden">
+                                                        <div className="h-full rounded-full transition-all duration-300"
+                                                            style={{ width: `${completionPct}%`, background: completionPct === 100 ? '#059669' : completionPct >= 60 ? '#6366f1' : '#d97706' }} />
+                                                    </div>
+                                                    <span className={`text-[10px] font-black tabular-nums ${completionPct === 100 ? 'text-emerald-600' : completionPct >= 60 ? 'text-indigo-500' : 'text-amber-600'}`}>
+                                                        {completionPct}%
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* Mobile completion compact */}
-                                        {studentList.length > 0 && (
-                                            <div className="sm:hidden flex items-center gap-2 px-2 py-1 bg-[var(--color-surface-alt)] rounded-lg border border-[var(--color-border)] shrink-0">
-                                                <div className="w-10 h-1 rounded-full bg-[var(--color-border)] overflow-hidden">
-                                                    <div className="h-full rounded-full transition-all duration-300"
-                                                        style={{ width: `${completionPct}%`, background: completionPct === 100 ? '#059669' : completionPct >= 60 ? '#6366f1' : '#d97706' }} />
-                                                </div>
-                                                <span className={`text-[10px] font-black tabular-nums ${completionPct === 100 ? 'text-emerald-600' : completionPct >= 60 ? 'text-indigo-500' : 'text-amber-600'}`}>
-                                                    {completionPct}%
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* Search Input — Refined */}
-                                        <div className="relative group min-w-[160px] lg:min-w-[240px]">
+                                        {/* Search Input — Flex-1 to stretch & fill the remaining space without max-width */}
+                                        <div className="relative group flex-1 w-full">
                                             <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
                                             <input value={searchRaw} onChange={e => setSearchRaw(e.target.value)} placeholder="Cari nama / NISN..."
-                                                className="w-full h-8 pl-8 pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[11px] font-medium text-[var(--color-text)] outline-none focus:border-indigo-500 focus:bg-[var(--color-surface)] focus:shadow-md transition-all placeholder:opacity-50" />
+                                                className="w-full h-8 sm:h-9 pl-9 pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 text-[11px] font-medium text-[var(--color-text)] outline-none focus:border-indigo-500 focus:bg-[var(--color-surface)] focus:shadow-md transition-all placeholder:opacity-50" />
                                             {searchRaw && (
-                                                <button onClick={() => setSearchRaw('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 text-[12px] transition-colors">&times;</button>
+                                                <button onClick={() => setSearchRaw('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 text-[14px] transition-colors">&times;</button>
                                             )}
                                         </div>
 
                                         <button onClick={() => setShowMobileSheet(true)}
-                                            className="sm:hidden w-8 h-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] shadow-sm text-indigo-600 flex items-center justify-center active:scale-95 transition-transform">
+                                            className="sm:hidden shrink-0 w-8 h-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] shadow-sm text-indigo-600 flex items-center justify-center active:scale-95 transition-transform">
                                             <FontAwesomeIcon icon={faGear} className="text-xs" />
                                         </button>
                                     </div>
-
                                 </div>
 
                                 {/* ── Mobile toolbar sheet ── */}
@@ -4856,68 +4867,69 @@ export default function AttendancePage() {
                                                                 <td colSpan={38} className="py-12 text-center">
                                                                     {searchRaw ? (
                                                                         // Empty: search no results
-                                                                        <div className="flex flex-col items-center gap-3">
-                                                                            <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center">
-                                                                                <FontAwesomeIcon icon={faMagnifyingGlass} className="text-xl text-[var(--color-text-muted)] opacity-40" />
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="text-[13px] font-black text-[var(--color-text)]">Tidak ada hasil</p>
-                                                                                <p className="text-[11px] text-[var(--color-text-muted)] mt-1">Tidak ada siswa yang cocok dengan <span className="font-bold">"{searchRaw}"</span></p>
-                                                                            </div>
-                                                                            <button onClick={() => setSearchRaw('')}
-                                                                                className="h-8 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
-                                                                                Hapus pencarian
-                                                                            </button>
-                                                                        </div>
+                                                                        <EmptyState 
+                                                                            icon={faMagnifyingGlass}
+                                                                            title="Tidak ada hasil"
+                                                                            description={`Tidak ada siswa yang cocok dengan "${searchRaw}"`}
+                                                                            variant="plain"
+                                                                            color="slate"
+                                                                            action={
+                                                                                <button onClick={() => setSearchRaw('')}
+                                                                                    className="h-8 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                                                                                    Hapus pencarian
+                                                                                </button>
+                                                                            }
+                                                                        />
                                                                     ) : filterMode !== 'all' ? (
                                                                         // Empty: filter active
-                                                                        <div className="flex flex-col items-center gap-3">
-                                                                            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                                                                                <FontAwesomeIcon icon={faFilter} className="text-xl text-amber-500 opacity-70" />
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="text-[13px] font-black text-[var(--color-text)]">Tidak ada siswa yang cocok</p>
-                                                                                <p className="text-[11px] text-[var(--color-text-muted)] mt-1">Filter aktif tidak menemukan siswa</p>
-                                                                            </div>
-                                                                            <button onClick={() => setFilterMode('all')}
-                                                                                className="h-8 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] font-black text-amber-600 hover:bg-amber-500/20 transition-all flex items-center gap-1.5">
-                                                                                <FontAwesomeIcon icon={faArrowsRotate} className="text-[9px]" /> Reset filter
-                                                                            </button>
-                                                                        </div>
+                                                                        <EmptyState 
+                                                                            icon={faFilter}
+                                                                            title="Tidak ada siswa yang cocok"
+                                                                            description="Filter aktif tidak menemukan siswa"
+                                                                            variant="plain"
+                                                                            color="slate"
+                                                                            action={
+                                                                                <button onClick={() => setFilterMode('all')}
+                                                                                    className="h-8 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-1.5">
+                                                                                    <FontAwesomeIcon icon={faArrowsRotate} className="text-[9px]" /> Reset filter
+                                                                                </button>
+                                                                            }
+                                                                        />
                                                                     ) : completionPct === 0 && studentList.length > 0 ? (
                                                                         // Empty: no data yet this month — engaging CTA
-                                                                        <div className="flex flex-col items-center gap-4 max-w-xs mx-auto">
-                                                                            <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
-                                                                                <FontAwesomeIcon icon={faCalendarDays} className="text-2xl text-[var(--color-primary)] opacity-70" />
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="text-[14px] font-black text-[var(--color-text)]">Belum ada absensi {BULAN_NAMA[bulan]}</p>
-                                                                                <p className="text-[11px] text-[var(--color-text-muted)] mt-1 leading-relaxed">
-                                                                                    Mulai isi sekarang, atau salin dari bulan sebelumnya jika polanya sama.
-                                                                                </p>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-2 flex-wrap justify-center">
-                                                                                <button
-                                                                                    onClick={handleCopyLastMonth}
-                                                                                    disabled={copyingLastMonth}
-                                                                                    className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 shadow-sm shadow-[var(--color-primary)]/20">
-                                                                                    {copyingLastMonth ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faCopy} />}
-                                                                                    Copy dari {BULAN_NAMA[bulan === 1 ? 12 : bulan - 1]}
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => { setShowCommandPalette(true); haptic('light') }}
-                                                                                    className="h-9 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-2">
-                                                                                    <FontAwesomeIcon icon={faWandMagicSparkles} className="text-[9px]" />
-                                                                                    Isi cepat ⌘K
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
+                                                                        <EmptyState 
+                                                                            icon={faCalendarDays}
+                                                                            title={`Belum ada absensi ${BULAN_NAMA[bulan]}`}
+                                                                            description="Mulai isi sekarang, atau salin dari bulan sebelumnya jika polanya sama."
+                                                                            variant="plain"
+                                                                            color="indigo"
+                                                                            action={
+                                                                                <div className="flex items-center gap-2 flex-wrap justify-center">
+                                                                                    <button
+                                                                                        onClick={handleCopyLastMonth}
+                                                                                        disabled={copyingLastMonth}
+                                                                                        className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 shadow-sm shadow-[var(--color-primary)]/20">
+                                                                                        {copyingLastMonth ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faCopy} />}
+                                                                                        Copy dari {BULAN_NAMA[bulan === 1 ? 12 : bulan - 1]}
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => { setShowCommandPalette(true); haptic('light') }}
+                                                                                        className="h-9 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] active:scale-95 transition-all flex items-center gap-2">
+                                                                                        <FontAwesomeIcon icon={faWandMagicSparkles} className="text-[9px]" />
+                                                                                        Isi cepat ⌘K
+                                                                                    </button>
+                                                                                </div>
+                                                                            }
+                                                                        />
                                                                     ) : (
                                                                         // Generic empty
-                                                                        <div className="flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
-                                                                            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-2xl opacity-20" />
-                                                                            <p className="text-[12px] font-bold">Tidak ada siswa aktif</p>
-                                                                        </div>
+                                                                        <EmptyState 
+                                                                            icon={faUsers}
+                                                                            title="Tidak ada siswa aktif"
+                                                                            description="Siswa kelas ini belum ditambahkan atau tidak ada siswa aktif."
+                                                                            variant="plain"
+                                                                            color="slate"
+                                                                        />
                                                                     )}
                                                                 </td>
                                                             </tr>

@@ -56,7 +56,7 @@ export const WeeklyTrendChart = memo(function WeeklyTrendChart({ chartData, load
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
                         </div>
                         <div className="flex justify-between px-2">
-                             {[1,2,3,4,5,6,7].map(i => <div key={i} className="w-6 h-2 bg-[var(--color-surface-alt)] animate-pulse rounded" />)}
+                            {[1, 2, 3, 4, 5, 6, 7].map(i => <div key={i} className="w-6 h-2 bg-[var(--color-surface-alt)] animate-pulse rounded" />)}
                         </div>
                     </div>
                 ) : (
@@ -64,12 +64,12 @@ export const WeeklyTrendChart = memo(function WeeklyTrendChart({ chartData, load
                         <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorViolations" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
-                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                                 </linearGradient>
                                 <linearGradient id="colorAchievements" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
@@ -198,7 +198,7 @@ export const QuickActions = memo(function QuickActions() {
                 <p className="text-[10px] text-[var(--color-text-muted)] opacity-70 mt-0.5">Navigasi halaman utama</p>
             </div>
             <div className="space-y-2.5 relative z-10">
-                <Link to="/perilaku" className="flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--color-primary)] hover:brightness-110 active:scale-[0.98] text-white transition-all shadow-lg shadow-[var(--color-primary)]/20">
+                <Link to="/behavior" className="flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--color-primary)] hover:brightness-110 active:scale-[0.98] text-white transition-all shadow-lg shadow-[var(--color-primary)]/20">
                     <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
                         <FontAwesomeIcon icon={faPlus} className="text-sm" />
                     </div>
