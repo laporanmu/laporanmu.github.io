@@ -202,20 +202,29 @@ export default function RaportPage() {
     const [previewZoom, setPreviewZoom] = useState(1) // 0.8 = 80% zoom out
     const [isFullScreenPreview, setIsFullScreenPreview] = useState(false)
     const [fullScreenZoom, setFullScreenZoom] = useState(1) // zoom khusus fullscreen
+    const [showFullScreenHud, setShowFullScreenHud] = useState(true)
+    const [isMobileViewport, setIsMobileViewport] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false))
     const [showMobileStudentPicker, setShowMobileStudentPicker] = useState(false)
     const previewContainerRef = useRef(null)
     const fullScreenScrollRef = useRef(null)
+    const fullScreenHudTimerRef = useRef(null)
+    const fullScreenLastTapRef = useRef(0)
+    const bodyLockRef = useRef({ overflow: '', overscroll: '' })
+    const manualZoomRef = useRef(false)
 
     // ── Auto-fit zoom: gunakan ResizeObserver agar akurat saat layout selesai render
     useEffect(() => {
         if (step !== 3) return
+        manualZoomRef.current = false // Reset manual zoom if step or pageSize changes
         const calcFit = (containerW) => {
             // p-3 = 12px tiap sisi (24px total), p-10 = 40px tiap sisi (80px total)
             const padding = containerW < 640 ? 24 : 80
             const availW = containerW - padding
             const docW = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
             const fit = Math.floor((availW / docW) * 100) / 100
-            setPreviewZoom(Math.min(1, Math.max(0.3, fit)))
+            if (!manualZoomRef.current) {
+                setPreviewZoom(Math.min(1, Math.max(0.3, fit)))
+            }
         }
         // ResizeObserver — akurat, tidak bergantung pada window.innerWidth
         let ro
@@ -231,11 +240,59 @@ export default function RaportPage() {
         return () => { clearTimeout(t); ro?.disconnect() }
     }, [step, pageSize])
 
-    // ── Default zoom fullscreen = 100% saat pertama dibuka
+    useEffect(() => {
+        const onResize = () => setIsMobileViewport(window.innerWidth < 768)
+        window.addEventListener('resize', onResize)
+        return () => window.removeEventListener('resize', onResize)
+    }, [])
+
+    const getFullScreenFitZoom = useCallback((mobile = false) => {
+        if (typeof window === 'undefined') return 1
+        const docW = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
+        const horizontalPadding = mobile ? 28 : 120
+        const availW = Math.max(320, window.innerWidth - horizontalPadding)
+        return Math.min(mobile ? 1.25 : 1.3, Math.max(0.3, Math.floor((availW / docW) * 100) / 100))
+    }, [pageSize])
+
+    // ── Default zoom fullscreen: mobile fit-width, desktop 100%
     useEffect(() => {
         if (!isFullScreenPreview) return
-        setFullScreenZoom(1)
-    }, [isFullScreenPreview, pageSize])
+        setFullScreenZoom(isMobileViewport ? getFullScreenFitZoom(true) : 1)
+    }, [isFullScreenPreview, pageSize, isMobileViewport, getFullScreenFitZoom])
+
+    const bumpFullScreenHud = useCallback(() => {
+        setShowFullScreenHud(prev => prev ? prev : true)
+        if (fullScreenHudTimerRef.current) clearTimeout(fullScreenHudTimerRef.current)
+        if (!isFullScreenPreview || isMobileViewport) return
+        fullScreenHudTimerRef.current = setTimeout(() => setShowFullScreenHud(false), 2000)
+    }, [isFullScreenPreview, isMobileViewport])
+
+    useEffect(() => {
+        if (!isFullScreenPreview) {
+            if (fullScreenHudTimerRef.current) clearTimeout(fullScreenHudTimerRef.current)
+            setShowFullScreenHud(true)
+            return
+        }
+        bumpFullScreenHud()
+        return () => {
+            if (fullScreenHudTimerRef.current) clearTimeout(fullScreenHudTimerRef.current)
+        }
+    }, [isFullScreenPreview, bumpFullScreenHud])
+
+    // ── Lock body scroll while fullscreen modal open
+    useEffect(() => {
+        if (!isFullScreenPreview) return
+        bodyLockRef.current = {
+            overflow: document.body.style.overflow,
+            overscroll: document.body.style.overscrollBehavior,
+        }
+        document.body.style.overflow = 'hidden'
+        document.body.style.overscrollBehavior = 'none'
+        return () => {
+            document.body.style.overflow = bodyLockRef.current.overflow
+            document.body.style.overscrollBehavior = bodyLockRef.current.overscroll
+        }
+    }, [isFullScreenPreview])
 
     // ── WA/PDF
     const [sendingWA, setSendingWA] = useState({})
@@ -365,7 +422,32 @@ export default function RaportPage() {
     }, [baseFiltered, showIncompleteOnly, scores])
 
     const completedCount = useMemo(() => students.filter(s => isComplete(scores[s.id] || {})).length, [students, scores])
-    const progressPct = students.length ? Math.round((completedCount / students.length) * 100) : 0
+    const progressPct = useMemo(() => {
+        if (!students.length) return 0
+        const totalRatio = students.reduce((acc, s) => {
+            const sc = scores[s.id] || {}
+            const ex = extras[s.id] || {}
+            const progressFields = [
+                sc.nilai_akhlak,
+                sc.nilai_ibadah,
+                sc.nilai_kebersihan,
+                sc.nilai_quran,
+                sc.nilai_bahasa,
+                ex.berat_badan,
+                ex.tinggi_badan,
+                ex.hari_sakit,
+                ex.hari_izin,
+                ex.hari_alpa,
+                ex.hari_pulang,
+                ex.ziyadah,
+                ex.murojaah,
+                ex.catatan,
+            ]
+            const filled = progressFields.filter(v => v !== '' && v !== null && v !== undefined).length
+            return acc + (filled / progressFields.length)
+        }, 0)
+        return Math.round((totalRatio / students.length) * 100)
+    }, [students, scores, extras])
     // FIX MINOR: useMemo agar tidak dihitung ulang tiap render
     const noPhoneCount = useMemo(() => students.filter(s => !s.phone).length, [students])
 
@@ -386,6 +468,21 @@ export default function RaportPage() {
         return list
     }, [classesList, searchQuery, filterType])
 
+    const step0Stats = useMemo(() => {
+        const progressRows = Object.values(classProgress || {})
+        const totalTargets = progressRows.reduce((acc, row) => acc + (row.total || 0), 0)
+        const totalCompleted = progressRows.reduce((acc, row) => acc + (row.done || 0), 0)
+        const weightedInput = totalTargets
+            ? Math.round(progressRows.reduce((acc, row) => acc + ((row.pct || 0) * (row.total || 0)), 0) / totalTargets)
+            : 0
+        return {
+            totalKelas: stats.totalKelas,
+            totalSiswa: stats.totalSiswa,
+            raportLengkap: `${totalCompleted}/${totalTargets}`,
+            rataInput: `${weightedInput}%`,
+        }
+    }, [classProgress, stats.totalKelas, stats.totalSiswa])
+
     // ── Fetch page data
     useEffect(() => {
         const fetchData = async () => {
@@ -398,7 +495,7 @@ export default function RaportPage() {
                     supabase.from('classes').select('id, name, homeroom_teacher_id, teachers:homeroom_teacher_id(name)').order('name'),
                     supabase.from('students').select('id, class_id').is('deleted_at', null),
                     supabase.from('student_monthly_reports')
-                        .select('student_id')
+                        .select('student_id, nilai_akhlak, nilai_ibadah, nilai_kebersihan, nilai_quran, nilai_bahasa, berat_badan, tinggi_badan, hari_sakit, hari_izin, hari_alpa, hari_pulang, ziyadah, murojaah, catatan')
                         .eq('month', curMonth).eq('year', curYear),
                     supabase.from('student_monthly_reports')
                         .select('student_id, month, year')
@@ -426,7 +523,33 @@ export default function RaportPage() {
                 }
                 const stuToClass = {}
                 for (const s of allStudents) stuToClass[s.id] = s.class_id
-                const curDoneSet = new Set(curReports.map(r => r.student_id))
+                const curProgressByStudent = {}
+                for (const r of curReports) {
+                    const progressFields = [
+                        r.nilai_akhlak,
+                        r.nilai_ibadah,
+                        r.nilai_kebersihan,
+                        r.nilai_quran,
+                        r.nilai_bahasa,
+                        r.berat_badan,
+                        r.tinggi_badan,
+                        r.hari_sakit,
+                        r.hari_izin,
+                        r.hari_alpa,
+                        r.hari_pulang,
+                        r.ziyadah,
+                        r.murojaah,
+                        r.catatan,
+                    ]
+                    const filled = progressFields.filter(v => v !== '' && v !== null && v !== undefined).length
+                    curProgressByStudent[r.student_id] = filled / progressFields.length
+                }
+                const curDoneSet = new Set(
+                    curReports
+                        .filter(r => ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
+                            .every(k => r[k] !== '' && r[k] !== null && r[k] !== undefined))
+                        .map(r => r.student_id)
+                )
                 const lastReportByClass = {}
                 for (const r of lastReports) {
                     const cid = stuToClass[r.student_id]
@@ -441,6 +564,7 @@ export default function RaportPage() {
                     prog[cls.id] = {
                         total: ids.length,
                         done: ids.filter(id => curDoneSet.has(id)).length,
+                        pct: ids.length ? Math.round((ids.reduce((acc, id) => acc + (curProgressByStudent[id] || 0), 0) / ids.length) * 100) : 0,
                         lastMonth: lastReportByClass[cls.id]?.month ?? null,
                         lastYear: lastReportByClass[cls.id]?.year ?? null,
                     }
@@ -1142,7 +1266,7 @@ export default function RaportPage() {
     const handleResetStudent = useCallback((student) => {
         setConfirmModal({
             title: 'Reset Nilai?',
-            subtitle: `Semua data ${student.name.split(' ')[0]} akan dikosongkan`,
+            subtitle: `Semua data ${student.name} akan dikosongkan`,
             body: 'Nilai akademik, hafalan, fisik, dan catatan santri ini akan dihapus permanen dari database.',
             icon: 'danger', variant: 'red', confirmLabel: 'Ya, Reset Semua',
             onConfirm: () => { setConfirmModal(null); resetStudent(student.id) }
@@ -1259,7 +1383,9 @@ export default function RaportPage() {
                 const key = `${cls.id}__${row.month}__${row.year}`
                 if (!grouped[key]) grouped[key] = { key, class_id: cls.id, class_name: cls.name, month: row.month, year: row.year, musyrif: row.musyrif_name, count: 0, completed: 0, lang: isBoarding ? 'ar' : 'id' }
                 grouped[key].count++
-                if (['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa'].every(k => row[k] !== null)) grouped[key].completed++
+                const hasAllMainScores = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
+                    .every(k => row[k] !== '' && row[k] !== null && row[k] !== undefined)
+                if (hasAllMainScores) grouped[key].completed++
             }
             setArchiveList(Object.values(grouped).sort((a, b) => b.year - a.year || b.month - a.month))
         } catch (e) { addToast('Gagal memuat arsip', 'error'); console.error('loadArchive error:', e) }
@@ -1859,7 +1985,9 @@ export default function RaportPage() {
                             const teacher = cls.teachers?.name || 'Wali Kelas -'
                             const isDone = prog && prog.total > 0 && prog.done === prog.total
                             const isPartial = prog && prog.done > 0 && prog.done < prog.total
-                            const pct = prog?.total ? Math.round((prog.done / prog.total) * 100) : 0
+                            const pct = typeof prog?.pct === 'number'
+                                ? prog.pct
+                                : (prog?.total ? Math.round((prog.done / prog.total) * 100) : 0)
                             const lastLabel = prog?.lastMonth ? `${BULAN.find(b => b.id === prog.lastMonth)?.id_str} ${prog.lastYear}` : null
 
                             return (
@@ -2147,7 +2275,7 @@ export default function RaportPage() {
                             <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden relative">
                                 <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
                             </div>
-                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase whitespace-nowrap">{Math.round(progressPct)}% Lengkap</span>
+                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase whitespace-nowrap">{Math.round(progressPct)}% Input</span>
                         </div>
 
                         {/* Right: Primary Actions */}
@@ -2163,7 +2291,7 @@ export default function RaportPage() {
                                 {!savingAll && hasUnsavedMemo && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
                             </button>
                             <button onClick={() => setStep(3)} className="h-9 w-9 md:h-10 md:w-auto md:px-6 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center md:gap-2.5 shrink-0">
-                                <FontAwesomeIcon icon={faMagnifyingGlass} />
+                                <FontAwesomeIcon icon={faPrint} />
                                 <span className="hidden md:inline text-[10px] uppercase font-black tracking-widest">Preview & Cetak</span>
                             </button>
                         </div>
@@ -2643,7 +2771,7 @@ export default function RaportPage() {
                 </div>{/* end md:hidden */}
 
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {KRITERIA.map(k => { const vals = filteredStudents.map(s => scores[s.id]?.[k.key]).filter(v => v !== '' && v !== null && v !== undefined); const avg = vals.length ? (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1) : '—'; const g = avg !== '—' ? GRADE(Number(avg)) : null; return (<div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center"><div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>{k.id}</div><div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>{avg}</div><div className="text-[7px] font-bold text-[var(--color-text-muted)]" style={{ direction: 'rtl' }}>{g?.label || 'Rata - Rata Kelas'}</div></div>) })}
+                    {KRITERIA.map(k => { const vals = filteredStudents.map(s => scores[s.id]?.[k.key]).filter(v => v !== '' && v !== null && v !== undefined); const avg = vals.length ? (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1) : '—'; const g = avg !== '—' ? GRADE(Number(avg)) : null; return (<div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center"><div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>{k.id}</div><div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>{avg}</div><div className="text-[7px] font-bold text-[var(--color-text-muted)]">Rata - Rata Kelas</div></div>) })}
                 </div>
             </div>
         )
@@ -2658,10 +2786,11 @@ export default function RaportPage() {
         return (
             <div className="space-y-6">
                 {/* Header Stats */}
-                <StatsCarousel count={3} cols={3}>
-                    <StatCard label="Progress Lengkap" value={`${completeCount}/${totalCount}`} icon={faCircleCheck} color="emerald" />
-                    <StatCard label="Persentase" value={`${pct}%`} icon={faChartPie} color="indigo" />
-                    <StatCard label="Periode" value={`${BULAN.find(b => b.id === selectedMonth)?.id_str} ${selectedYear}`} icon={faCalendarAlt} color="amber" />
+                <StatsCarousel count={4} cols={4}>
+                    <StatCard key="total" label="Total Santri" value={totalCount} icon={faUsers} color="sky" />
+                    <StatCard key="progress" label="Progress Lengkap" value={completeCount} icon={faCircleCheck} color="emerald" />
+                    <StatCard key="pct" label="Persentase" value={pct} suffix="%" icon={faChartPie} color="indigo" />
+                    <StatCard key="periode" label="Periode" value={`${BULAN.find(b => b.id === selectedMonth)?.id_str} ${selectedYear}`} icon={faCalendarAlt} color="amber" />
                 </StatsCarousel>
 
                 <div className="flex flex-col lg:flex-row gap-6">
@@ -2819,10 +2948,11 @@ export default function RaportPage() {
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
                                     {/* Zoom Control stretches on mobile */}
                                     <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
-                                        <button onClick={() => setPreviewZoom(p => Math.max(0.3, p - 0.1))} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />-</button>
+                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />-</button>
                                         {/* #3: Fit-Width shortcut — tap sekali langsung fit ke lebar container */}
                                         <button
                                             onClick={() => {
+                                                manualZoomRef.current = false
                                                 const el = previewContainerRef.current
                                                 if (!el) return
                                                 const padding = window.innerWidth < 640 ? 24 : 80
@@ -2833,7 +2963,7 @@ export default function RaportPage() {
                                             title="Fit ke lebar layar"
                                             className="text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
                                         >{Math.round(previewZoom * 100)}%</button>
-                                        <button onClick={() => setPreviewZoom(p => Math.min(1.5, p + 0.1))} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />+</button>
+                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />+</button>
                                     </div>
 
                                     {previewStudent?.phone && (
@@ -2879,6 +3009,7 @@ export default function RaportPage() {
                                     )
                                     const ratio = dist / e.currentTarget._pinchStartDist
                                     const newZoom = Math.min(1.5, Math.max(0.3, e.currentTarget._pinchStartZoom * ratio))
+                                    manualZoomRef.current = true
                                     setPreviewZoom(Math.floor(newZoom * 100) / 100)
                                 }
                             }}
@@ -2941,60 +3072,66 @@ export default function RaportPage() {
                 </div>
 
                 {/* ── FULLSCREEN DIGITAL PREVIEW ── */}
-                {isFullScreenPreview && (
+                {isFullScreenPreview && createPortal(
                     <div
-                        className="fixed inset-0 z-[9999] bg-slate-950/65 backdrop-blur-sm p-2 sm:p-4"
+                        className="fixed inset-0 z-[99999] bg-slate-400/80 p-2 sm:p-3"
                         onClick={() => setIsFullScreenPreview(false)}
+                        onMouseMove={bumpFullScreenHud}
+                        onWheel={bumpFullScreenHud}
+                        onTouchStart={bumpFullScreenHud}
                     >
                         <div
-                            className="h-full w-full rounded-3xl border border-white/15 bg-[#0b1430] shadow-[0_24px_80px_rgba(0,0,0,0.45)] flex flex-col overflow-hidden"
+                            className="relative h-full w-full rounded-[24px] overflow-hidden border border-slate-200/80 bg-[#e9edf5] shadow-2xl"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="shrink-0 h-14 px-3 sm:px-4 flex items-center justify-between border-b border-white/10 bg-white/5">
+                            <div
+                                className={`absolute left-3 right-3 z-20 h-12 px-2 sm:px-3 rounded-2xl flex items-center justify-between border border-slate-200/80 bg-white/92 shadow-sm transition-all duration-200 ${showFullScreenHud ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+                                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+                            >
                                 <div className="flex items-center gap-2 min-w-0">
                                     <button
                                         onClick={() => setIsFullScreenPreview(false)}
-                                        className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all flex items-center justify-center shrink-0"
+                                        className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center shrink-0"
                                         title="Tutup fullscreen"
                                     >
-                                        <FontAwesomeIcon icon={faArrowLeft} className="text-sm" />
+                                        <FontAwesomeIcon icon={faArrowLeft} className="text-[11px]" />
                                     </button>
                                     <div className="min-w-0">
-                                        <p className="text-white text-[12px] font-black truncate max-w-[150px] sm:max-w-xs">
+                                        <p className="text-slate-800 text-[11px] font-black truncate max-w-[140px] sm:max-w-xs">
                                             {previewStudent?.name || 'Preview'}
                                         </p>
-                                        <p className="text-[9px] text-white/55 font-bold uppercase tracking-[0.14em]">
+                                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-[0.14em]">
                                             Digital Preview
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 border border-white/10">
-                                        <span className="text-[9px] font-black text-white/55">SIZE {pageSize.toUpperCase()}</span>
-                                        <span className="text-white/25">|</span>
-                                        <span className="text-[9px] font-black text-white/55">LANG {lang.toUpperCase()}</span>
+                                    <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 border border-slate-200">
+                                        <span className="text-[9px] font-black text-slate-500">SIZE {pageSize.toUpperCase()}</span>
+                                        <span className="text-slate-300">|</span>
+                                        <span className="text-[9px] font-black text-slate-500">LANG {lang.toUpperCase()}</span>
                                     </div>
                                     <button
                                         onClick={() => openPrintWindow([previewStudent].filter(Boolean))}
-                                        className="w-9 h-9 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center transition-all"
+                                        className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/30 flex items-center justify-center transition-all"
                                         title="Cetak Raport"
                                     >
-                                        <FontAwesomeIcon icon={faPrint} className="text-sm" />
+                                        <FontAwesomeIcon icon={faPrint} className="text-[11px]" />
                                     </button>
                                 </div>
                             </div>
 
                             <div
                                 ref={fullScreenScrollRef}
-                                className="flex-1 overflow-auto flex flex-col items-center px-3 sm:px-6 py-6 sm:py-8"
+                                className="h-full overflow-auto flex flex-col items-center px-3 sm:px-6 pt-20 pb-20"
                                 style={{
                                     scrollbarWidth: 'none',
                                     msOverflowStyle: 'none',
-                                    backgroundImage: 'radial-gradient(rgba(255,255,255,.08) 1px, transparent 1px)',
-                                    backgroundSize: '16px 16px',
+                                    backgroundColor: 'transparent',
                                 }}
                                 onTouchStart={e => {
+                                    bumpFullScreenHud()
                                     if (e.touches.length === 2) {
                                         e.currentTarget._pinchDist = Math.hypot(
                                             e.touches[0].clientX - e.touches[1].clientX,
@@ -3004,6 +3141,7 @@ export default function RaportPage() {
                                     }
                                 }}
                                 onTouchMove={e => {
+                                    bumpFullScreenHud()
                                     if (e.touches.length === 2 && e.currentTarget._pinchDist) {
                                         e.preventDefault()
                                         const dist = Math.hypot(
@@ -3015,6 +3153,20 @@ export default function RaportPage() {
                                     }
                                 }}
                                 onTouchEnd={e => { e.currentTarget._pinchDist = null }}
+                                onMouseMove={bumpFullScreenHud}
+                                onWheel={bumpFullScreenHud}
+                                onClick={bumpFullScreenHud}
+                                onTouchEndCapture={() => {
+                                    bumpFullScreenHud()
+                                    if (!isMobileViewport) return
+                                    const now = Date.now()
+                                    const since = now - fullScreenLastTapRef.current
+                                    fullScreenLastTapRef.current = now
+                                    if (since > 0 && since < 320) {
+                                        const fit = getFullScreenFitZoom(true)
+                                        setFullScreenZoom(prev => (Math.abs(prev - fit) < 0.04 ? 1 : fit))
+                                    }
+                                }}
                             >
                                 {(() => {
                                     const naturalW = pageSize === 'f4' ? 812.6 : 793.7
@@ -3028,7 +3180,7 @@ export default function RaportPage() {
                                                 height: `${naturalH * s}px`,
                                                 borderRadius: '20px',
                                                 overflow: 'hidden',
-                                                boxShadow: '0 18px 55px rgba(0,0,0,0.55)',
+                                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
                                             }}
                                         >
                                             <div style={{ width: `${naturalW}px`, transformOrigin: 'top left', transform: `scale(${s})` }}>
@@ -3053,68 +3205,72 @@ export default function RaportPage() {
                                 })()}
                             </div>
 
-                            <div className="shrink-0 px-3 sm:px-4 py-2.5 border-t border-white/10 bg-white/5 flex items-center justify-center">
-                                <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/10 border border-white/10">
-                                    <button
-                                        onClick={() => setFullScreenZoom(p => Math.round(Math.max(0.3, p - 0.1) * 100) / 100)}
-                                        className="w-10 h-10 rounded-xl text-white/75 hover:text-white hover:bg-white/15 transition-all flex items-center justify-center"
-                                    >
-                                        <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
-                                        <span className="text-[10px] font-black leading-none ml-0.5">-</span>
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            const availW = Math.max(320, window.innerWidth - 120)
-                                            const docW = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
-                                            setFullScreenZoom(Math.min(1.3, Math.max(0.3, Math.floor((availW / docW) * 100) / 100)))
-                                        }}
-                                        title="Fit ke lebar viewer"
-                                        className="min-w-[56px] h-10 px-2 rounded-xl text-indigo-300 hover:text-indigo-200 hover:bg-indigo-500/20 transition-all text-[11px] font-black tabular-nums"
-                                    >
-                                        {Math.round(fullScreenZoom * 100)}%
-                                    </button>
-                                    <button
-                                        onClick={() => setFullScreenZoom(p => Math.round(Math.min(2.0, p + 0.1) * 100) / 100)}
-                                        className="w-10 h-10 rounded-xl text-white/75 hover:text-white hover:bg-white/15 transition-all flex items-center justify-center"
-                                    >
-                                        <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
-                                        <span className="text-[10px] font-black leading-none ml-0.5">+</span>
-                                    </button>
-                                    <div className="w-px h-6 bg-white/20 mx-1" />
-                                    <button
-                                        onClick={() => {
-                                            const idx = students.findIndex(s => s.id === (previewStudent?.id))
-                                            if (idx > 0) setPreviewStudentId(students[idx - 1].id)
-                                        }}
-                                        disabled={!previewStudent || students.findIndex(s => s.id === previewStudent?.id) === 0}
-                                        className="w-10 h-10 rounded-xl text-white/75 hover:text-white hover:bg-white/15 transition-all flex items-center justify-center disabled:opacity-30"
-                                    >
-                                        <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
-                                    </button>
-                                    <span className="min-w-[54px] text-center text-[10px] font-black text-white/55 tabular-nums">
-                                        {(students.findIndex(s => s.id === previewStudent?.id) + 1)}/{students.length}
-                                    </span>
-                                    <button
-                                        onClick={() => {
-                                            const idx = students.findIndex(s => s.id === (previewStudent?.id))
-                                            if (idx < students.length - 1) setPreviewStudentId(students[idx + 1].id)
-                                        }}
-                                        disabled={!previewStudent || students.findIndex(s => s.id === previewStudent?.id) === students.length - 1}
-                                        className="w-10 h-10 rounded-xl text-white/75 hover:text-white hover:bg-white/15 transition-all flex items-center justify-center disabled:opacity-30"
-                                    >
-                                        <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
-                                    </button>
-                                    <div className="w-px h-6 bg-white/20 mx-1" />
-                                    <button
-                                        onClick={() => setIsFullScreenPreview(false)}
-                                        className="w-10 h-10 rounded-xl text-white/60 hover:text-red-300 hover:bg-red-500/20 transition-all flex items-center justify-center"
-                                    >
-                                        <FontAwesomeIcon icon={faXmark} />
-                                    </button>
+                            <div
+                                className={`absolute left-3 right-3 z-20 flex items-center justify-center transition-all duration-200 ${showFullScreenHud ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}
+                                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+                            >
+                                <div className="max-w-full overflow-x-auto no-scrollbar">
+                                    <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 sm:p-1 rounded-2xl bg-white/92 backdrop-blur border border-slate-200 shadow-sm w-max mx-auto">
+                                        <button
+                                            onClick={() => setFullScreenZoom(p => Math.round(Math.max(0.3, p - 0.1) * 100) / 100)}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center"
+                                        >
+                                            <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
+                                            <span className="text-[10px] font-black leading-none ml-0.5">-</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setFullScreenZoom(getFullScreenFitZoom(isMobileViewport))
+                                            }}
+                                            title="Fit ke lebar viewer"
+                                            className="min-w-[52px] h-9 sm:min-w-[56px] sm:h-10 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-indigo-500 hover:text-indigo-700 hover:bg-indigo-500/10 transition-all text-[10px] sm:text-[11px] font-black tabular-nums"
+                                        >
+                                            {Math.round(fullScreenZoom * 100)}%
+                                        </button>
+                                        <button
+                                            onClick={() => setFullScreenZoom(p => Math.round(Math.min(2.0, p + 0.1) * 100) / 100)}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center"
+                                        >
+                                            <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
+                                            <span className="text-[10px] font-black leading-none ml-0.5">+</span>
+                                        </button>
+                                        <div className="w-px h-5 sm:h-6 bg-slate-300 mx-0.5 sm:mx-1" />
+                                        <button
+                                            onClick={() => {
+                                                const idx = students.findIndex(s => s.id === (previewStudent?.id))
+                                                if (idx > 0) setPreviewStudentId(students[idx - 1].id)
+                                            }}
+                                            disabled={!previewStudent || students.findIndex(s => s.id === previewStudent?.id) === 0}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center disabled:opacity-30"
+                                        >
+                                            <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
+                                        </button>
+                                        <span className="min-w-[46px] sm:min-w-[54px] text-center text-[9px] sm:text-[10px] font-black text-slate-400 tabular-nums">
+                                            {(students.findIndex(s => s.id === previewStudent?.id) + 1)}/{students.length}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                const idx = students.findIndex(s => s.id === (previewStudent?.id))
+                                                if (idx < students.length - 1) setPreviewStudentId(students[idx + 1].id)
+                                            }}
+                                            disabled={!previewStudent || students.findIndex(s => s.id === previewStudent?.id) === students.length - 1}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center disabled:opacity-30"
+                                        >
+                                            <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
+                                        </button>
+                                        <div className="w-px h-5 sm:h-6 bg-slate-300 mx-0.5 sm:mx-1" />
+                                        <button
+                                            onClick={() => setIsFullScreenPreview(false)}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
+                                        >
+                                            <FontAwesomeIcon icon={faXmark} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
             </div>
         )
@@ -3597,27 +3753,26 @@ export default function RaportPage() {
                         <StatCard
                             icon={faSchool}
                             label="Total Kelas"
-                            value={stats.totalKelas}
+                            value={step0Stats.totalKelas}
                             color="indigo"
                         />
                         <StatCard
                             icon={faUsers}
                             label="Total Siswa"
-                            value={stats.totalSiswa}
+                            value={step0Stats.totalSiswa}
                             color="emerald"
                         />
                         <StatCard
-                            icon={faClipboardList}
-                            label="Total Raport"
-                            value={stats.totalRaport}
+                            icon={faCircleCheck}
+                            label="Raport Lengkap"
+                            value={step0Stats.raportLengkap}
                             color="indigo"
                         />
                         <StatCard
-                            icon={faCalendarAlt}
-                            label="Bulan Berjalan"
-                            value={BULAN[stats.bulanIni - 1]?.id_str || '—'}
+                            icon={faChartPie}
+                            label="Rata Input"
+                            value={step0Stats.rataInput}
                             color="amber"
-                            valueClassName="text-lg text-[var(--color-text)]"
                         />
                     </StatsCarousel>
                 )}
@@ -3892,29 +4047,7 @@ export default function RaportPage() {
                     )}
                 </Modal>
 
-                {/* Standard Confirm Modal */}
-                {confirmModal && (
-                    <Modal
-                        isOpen={true}
-                        onClose={() => setConfirmModal(null)}
-                        title={confirmModal.title}
-                        icon={faTriangleExclamation}
-                        variant={confirmModal.variant || 'red'}
-                    >
-                        <div className="space-y-6">
-                            <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10">
-                                <p className="text-sm font-black text-[var(--color-text)] mb-1">{confirmModal.subtitle}</p>
-                                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">{confirmModal.body}</p>
-                            </div>
-                            <div className="flex gap-3">
-                                <button onClick={() => setConfirmModal(null)} className="flex-1 h-11 rounded-xl border border-[var(--color-border)] text-sm font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Batal</button>
-                                <button onClick={() => { confirmModal.onConfirm(); setConfirmModal(null) }} className={`flex-1 h-11 rounded-xl text-white text-sm font-black shadow-lg shadow-red-500/20 transition-all ${confirmModal.variant === 'amber' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-500 hover:bg-red-600'}`}>
-                                    {confirmModal.confirmLabel || 'Lanjutkan'}
-                                </button>
-                            </div>
-                        </div>
-                    </Modal>
-                )}
+
 
                 {/* Delete Confirm Modal (Portal implementation replace) */}
                 {confirmDelete && (
@@ -4132,26 +4265,42 @@ export default function RaportPage() {
                     isOpen={!!confirmModal}
                     onClose={() => setConfirmModal(null)}
                     title={confirmModal?.title ?? 'Konfirmasi'}
-                    icon={confirmModal?.icon ?? faTriangleExclamation}
-                    variant={confirmModal?.variant ?? 'red'}
+                    size="sm"
                 >
                     {confirmModal && (
-                        <div className="space-y-6">
-                            <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-                                {confirmModal.body}
-                            </p>
-                            <div className="flex gap-2">
+                        <div className="space-y-5">
+                            <div className={`p-3.5 rounded-2xl flex items-center gap-3.5 border ${confirmModal.variant === 'amber' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                }`}>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg border ${confirmModal.variant === 'amber' ? 'bg-amber-500/20 border-amber-500/30' : 'bg-red-500/20 border-red-500/30'
+                                    }`}>
+                                    <FontAwesomeIcon icon={faTriangleExclamation} />
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="text-[11px] font-black uppercase tracking-wider leading-tight">{confirmModal.title ?? 'Konfirmasi'}</h3>
+                                    {confirmModal.subtitle && (
+                                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-80 mt-1">{confirmModal.subtitle}</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="px-1">
+                                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                    {confirmModal.body}
+                                </p>
+                            </div>
+
+                            <div className="flex gap-2.5 pt-1">
                                 <button
                                     onClick={() => setConfirmModal(null)}
-                                    className="flex-1 h-11 rounded-xl border border-[var(--color-border)] text-sm font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all"
+                                    className="h-10 px-4 rounded-xl flex-1 bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest transition-all"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     onClick={() => { confirmModal.onConfirm(); setConfirmModal(null) }}
-                                    className={`flex-1 h-11 rounded-xl text-white text-sm font-black shadow-lg transition-all ${confirmModal.variant === 'amber'
-                                        ? 'bg-amber-500 shadow-amber-500/20'
-                                        : 'bg-red-500 shadow-red-500/20'
+                                    className={`h-10 px-5 rounded-xl flex-1 text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all flex items-center justify-center gap-2 ${confirmModal.variant === 'amber'
+                                        ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                                        : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
                                         }`}
                                 >
                                     {confirmModal.confirmLabel ?? 'Lanjutkan'}

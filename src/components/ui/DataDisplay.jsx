@@ -7,6 +7,7 @@ export function StatCard({
     label, 
     value, 
     subValue,
+    suffix,
     trend, 
     trendUp, 
     loading = false,
@@ -53,7 +54,7 @@ export function StatCard({
                 <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)] opacity-50 mb-1 truncate">{label}</p>
                 <div className="flex items-center gap-2.5">
                     <h3 className={`font-black font-heading leading-none tabular-nums tracking-tighter ${valueClassName}`}>
-                        {loading ? <span className="inline-block w-8 h-6 rounded bg-[var(--color-border)] animate-pulse" /> : displayValue}
+                        {loading ? <span className="inline-block w-8 h-6 rounded bg-[var(--color-border)] animate-pulse" /> : <>{displayValue}{suffix}</>}
                     </h3>
                     {trend && (
                         <p className={`text-[9px] font-black flex items-center gap-1 ${trendUp === true ? 'text-emerald-500 bg-emerald-500/10' : trendUp === false ? 'text-rose-500 bg-rose-500/10' : 'text-[var(--color-text-muted)] bg-[var(--color-surface-alt)]'} px-1.5 py-0.5 rounded-md`}>

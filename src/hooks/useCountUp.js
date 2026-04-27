@@ -17,7 +17,10 @@ export function useCountUp(target, duration = 1000, loading = false) {
 
         let start = 0
         const end = targetValue
-        if (start === end) return
+        if (start === end) {
+            setCount(end)
+            return
+        }
 
         let startTimestamp = null
         const step = (timestamp) => {
