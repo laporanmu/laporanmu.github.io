@@ -95,13 +95,13 @@ const DayCell = memo(({ status, weekend, invalid, isToday, isFocused, onMouseDow
         <td
             style={{
                 width: 32, minWidth: 32,
-                border: isFocused ? '2px solid #6366f1' : isToday ? '1px solid #6366f180' : '1px solid var(--color-border)',
+                border: isFocused ? '2px solid #6366f1' : '1px solid var(--color-border)',
                 backgroundColor: meta
                     ? undefined
                     : isFocused
                         ? '#6366f10a'
                         : isToday
-                            ? '#6366f108'
+                            ? '#6366f105'
                             : weekend
                                 ? 'var(--color-surface-alt)'
                                 : undefined,
@@ -111,15 +111,15 @@ const DayCell = memo(({ status, weekend, invalid, isToday, isFocused, onMouseDow
                 position: 'relative',
                 zIndex: isFocused ? 2 : undefined,
             }}
-            className={meta ? `${meta.cellBg} ${meta.cellBorder}` : ''}
+            className={`${meta ? `${meta.cellBg} ${meta.cellBorder}` : ''} ${isToday && !isFocused ? 'shadow-[inset_0_0_0_1px_#6366f1,inset_0_0_8px_rgba(99,102,241,0.2)]' : ''}`}
             onMouseDown={onMouseDown}
             onMouseEnter={onMouseEnter}
         >
             {isToday && !meta && (
-                <div style={{
-                    position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
-                    width: 4, height: 4, borderRadius: '50%', backgroundColor: '#6366f1', opacity: 0.6,
-                }} />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 z-10" />
+                    <div className="absolute w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping opacity-75" />
+                </div>
             )}
             <div
                 className={`w-full h-full flex items-center justify-center text-[11px] font-black transition-all duration-75 hover:brightness-90 active:scale-90 ${meta ? meta.color : weekend ? 'text-[var(--color-text-muted)]/20' : 'text-transparent hover:text-[var(--color-text-muted)]/30'
@@ -770,12 +770,18 @@ function MobileCardView({ filteredStudents, dataMap, tahun, bulan, daysInMonth, 
                                             style={{
                                                 ...(meta
                                                     ? { background: meta.bg, border: `1.5px solid ${meta.border}`, boxShadow: isT ? '0 0 0 2px #6366f1' : undefined }
-                                                    : { background: isWknd ? 'var(--color-surface-alt)' : 'var(--color-surface)', border: isT ? '1.5px solid #6366f1' : '1px solid var(--color-border)' }
+                                                    : { background: isWknd ? 'var(--color-surface-alt)' : 'var(--color-surface)', border: isT ? '1px solid #6366f1' : '1px solid var(--color-border)' }
                                                 ),
                                                 aspectRatio: '1 / 1.1',
                                             }}
-                                            className="rounded-lg transition-all active:scale-90 select-none flex flex-col items-center justify-center w-full"
+                                            className={`rounded-lg transition-all active:scale-90 select-none flex flex-col items-center justify-center w-full relative overflow-hidden ${isT && !meta ? 'shadow-[inset_0_0_8px_rgba(99,102,241,0.15)] bg-indigo-500/5' : ''}`}
                                         >
+                                            {isT && !meta && (
+                                                <div className="absolute top-[3px] right-[3px] flex items-center justify-center">
+                                                    <div className="w-1 h-1 rounded-full bg-indigo-500 z-10" />
+                                                    <div className="absolute w-1 h-1 rounded-full bg-indigo-500 animate-ping opacity-75" />
+                                                </div>
+                                            )}
                                             <span style={{ fontSize: 12, fontWeight: 900, lineHeight: 1, color: meta ? meta.text : 'transparent' }}>
                                                 {v}
                                             </span>
