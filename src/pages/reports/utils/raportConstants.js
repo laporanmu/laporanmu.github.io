@@ -1,6 +1,6 @@
-import { 
+import {
     faStar, faMosque, faBroom, faBookOpen, faLanguage,
-    faWeightScale, faRulerVertical, faBandage, faCircleExclamation, 
+    faWeightScale, faRulerVertical, faBandage, faCircleExclamation,
     faTriangleExclamation, faDoorOpen, faFileLines
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -49,8 +49,8 @@ export const LABEL = {
         studentName: 'Nama Santri', room: 'Kamar', class: 'Kelas', year: 'Tahun Ajaran',
         dailyWork: 'Amal Harian', subject: 'Mata Pelajaran', score: 'Nilai',
         grade: 'Predikat', num: 'No', weight: 'Berat Badan', height: 'Tinggi Badan',
-        ziyadah: 'Ziyadah', murojaah: "Muroja'ah", sick: 'Hari Sakit', home: 'Hari Pulang',
-        izin: 'Hari Izin', alpa: 'Hari Alpa', gradeScale: 'Skala Penilaian',
+        ziyadah: 'Ziyadah', murojaah: "Muroja'ah", sick: 'Sakit', home: 'Pulang',
+        izin: 'Izin', alpa: 'Alpa', gradeScale: 'Skala Penilaian',
         musyrif: 'Wali Kelas', guardian: 'Wali Santri',
         reportTitle: 'RAPORT BULANAN', month: 'Bulan',
     }
