@@ -136,17 +136,17 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             <div style={{ direction: isAr ? 'rtl' : 'ltr', fontWeight: 700, fontSize: '11pt', marginBottom: 5, fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>{L.dailyWork}</div>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5pt', marginBottom: 12 }}>
                 <thead>
-                    <tr style={{ background: '#f0f7f0' }}>
+                    <tr style={{ background: '#f0f4f8' }}>
                         {isAr ? <>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '15%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.grade}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '10%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.score}</th>
-                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.subject}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '6%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center' }}>{L.num}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '15%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.grade}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '10%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.score}</th>
+                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', fontFamily: "'Traditional Arabic', serif", textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.subject}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '6%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.num}</th>
                         </> : <>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '6%', textAlign: 'center' }}>{L.num}</th>
-                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'center' }}>{L.subject}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '10%', textAlign: 'center' }}>{L.score}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '15%', textAlign: 'center' }}>{L.grade}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '6%', textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.num}</th>
+                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.subject}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '10%', textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.score}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '15%', textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.grade}</th>
                         </>}
                     </tr>
                 </thead>
@@ -180,7 +180,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 {/* BB / TB */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ fontSize: '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                        {isAr ? 'التطور البدني' : 'Perkembangan Fisik'}
+                        {isAr ? 'التطور البدني' : 'PERKEMBANGAN FISIK'}
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
                         <tbody>
@@ -209,7 +209,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 {/* Ziyadah / Murojaah */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ fontSize: '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                        {isAr ? 'تطور الحفظ' : 'Perkembangan Hafalan'}
+                        {isAr ? 'تطور الحفظ' : 'PERKEMBANGAN HAFALAN'}
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
                         <tbody>
@@ -238,7 +238,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 {/* Kehadiran */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ fontSize: '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                        {isAr ? 'المواظبة التعليمية' : 'Keaktifan Belajar'}
+                        {isAr ? 'الغياب' : 'ABSENSI'}
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5pt', flex: 1 }}>
                         <tbody>
@@ -250,8 +250,8 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                             ].map(item => (
                                 <tr key={item.key}>
                                     {isAr ? <>
-                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontFamily: "'Traditional Arabic', serif" }}>{displayVal(ex[item.key], true)}</td>
-                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{item.label} يَوْم</td>
+                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontFamily: "'Traditional Arabic', serif" }}>{displayVal(ex[item.key], true)} يَوْم</td>
+                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif" }}>{item.label}</td>
                                     </> : <>
                                         <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{item.label}</td>
                                         <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex[item.key], true)} hari</td>
@@ -269,7 +269,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                     <table style={{ borderCollapse: 'collapse', fontSize: '9pt', direction: isAr ? 'rtl' : 'ltr' }}>
                         <thead>
                             <tr>
-                                <th colSpan={2} style={{ border: '1px solid #999', padding: '3px 16px', background: '#e8f5e9', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: 'center' }}>
+                                <th colSpan={2} style={{ border: '1px solid #999', padding: '3px 16px', background: '#f0f4f8', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: 'center', fontWeight: 800, color: '#000' }}>
                                     {L.gradeScale}
                                 </th>
                             </tr>
