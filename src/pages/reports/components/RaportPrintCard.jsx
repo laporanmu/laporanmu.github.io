@@ -3,6 +3,7 @@ import { KRITERIA, GRADE, LABEL, toArabicNum } from '../utils/raportConstants'
 import { translitToAr, translitClassToAr } from '../utils/translitData'
 import mbsLogo from '../../../assets/mbs.png'
 import smpLogo from '../../../assets/smp.png'
+import smaLogo from '../../../assets/sma.jpg'
 
 const printCardAreEqual = (prev, next) => {
     if (prev.lang !== next.lang) return false
@@ -39,7 +40,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
         // SMP: Grades 7, 8, 9 or contains 'smp'
         if (c.includes('smp') || /^[789]/.test(c)) return smpLogo
         // SMA Placeholder (Add smaLogo import when file exists)
-        if (c.includes('sma') || /^(10|11|12)/.test(c)) return null
+        if (c.includes('sma') || /^(10|11|12)/.test(c)) return smaLogo
         return null
     }
     const unitLogo = getUnitLogo()
