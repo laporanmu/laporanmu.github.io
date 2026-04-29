@@ -179,7 +179,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 {/* BB / TB */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ fontSize: '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                        {isAr ? 'الحالة البدنية' : 'Info Fisik'}
+                        {isAr ? 'التطور البدني' : 'Perkembangan Fisik'}
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
                         <tbody>
@@ -208,7 +208,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 {/* Ziyadah / Murojaah */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ fontSize: '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                        {isAr ? 'إنجازات الحفظ' : 'Info Hafalan'}
+                        {isAr ? 'تطور الحفظ' : 'Perkembangan Hafalan'}
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
                         <tbody>
@@ -237,7 +237,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                 {/* Kehadiran */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ fontSize: '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                        {isAr ? 'المواظبة والحضور' : 'Kehadiran'}
+                        {isAr ? 'المواظبة التعليمية' : 'Keaktifan Belajar'}
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5pt', flex: 1 }}>
                         <tbody>
