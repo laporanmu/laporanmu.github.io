@@ -72,8 +72,10 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                         size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'};
                         margin: 0;
                     }
-                    body { margin: 0; -webkit-print-color-adjust: exact; }
+                    body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     .raport-card { box-shadow: none !important; margin: 0 !important; width: ${pageW} !important; height: ${pageH} !important; maxWidth: none !important; }
+                    .school-name-ar { text-shadow: none !important; }
+                    .divider-gradient { background: ${settings.report_color_primary || '#1a5c35'} !important; }
                 }
             `}</style>
             {/* Header Sekolah */}
@@ -90,7 +92,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                                 {settings.school_subtitle_ar}
                             </div>
                         )}
-                        <div style={{
+                        <div className="school-name-ar" style={{
                             fontSize: '28pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35',
                             direction: 'rtl', fontFamily: "'Amiri', 'Traditional Arabic', serif", letterSpacing: 0.5,
                             lineHeight: 0.9, marginBottom: 4,
@@ -104,7 +106,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                         <img src={unitLogo || settings.logo_url || mbsLogo} alt="Logo unit" style={{ width: 85, height: 85, objectFit: 'contain' }} />
                     </div>
                 </div>
-                <div style={{ height: 3, background: `linear-gradient(90deg, ${settings.report_color_primary || '#1a5c35'}, ${settings.report_color_secondary || '#c8a400'}, ${settings.report_color_primary || '#1a5c35'})`, marginBottom: 0 }} />
+                <div className="divider-gradient" style={{ height: 3, background: `linear-gradient(90deg, ${settings.report_color_primary || '#1a5c35'}, ${settings.report_color_secondary || '#c8a400'}, ${settings.report_color_primary || '#1a5c35'})`, marginBottom: 0 }} />
                 <div style={{ borderBottom: `3px double ${settings.report_color_primary || '#1a5c35'}`, marginTop: 3 }} />
             </div>
 
