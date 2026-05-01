@@ -97,12 +97,11 @@ import { useStudentsCore } from '../../hooks/students/useStudentsCore'
 import StudentArchiveModal from '../../components/students/StudentArchiveModal'
 import StudentBulkPhotoModal from '../../components/students/StudentBulkPhotoModal'
 import StudentGSheetsModal from '../../components/students/StudentGSheetsModal'
-import RaportBulananModal from '../../components/students/RaportBulananModal'
 import StudentFormModal from '../../components/students/StudentFormModal'
 import StudentInlineAddRow from '../../components/students/StudentInlineAddRow'
 import { StudentRow, StudentMobileCard, StudentSkeletonRow, StudentSkeletonCard } from '../../components/students/StudentRow'
 import StatsCarousel from '../../components/StatsCarousel'
-import { StatCard } from '../../components/ui/DataDisplay'
+import { StatCard, EmptyState } from '../../components/ui/DataDisplay'
 
 const LazyQRCodeCanvas = React.lazy(() =>
     import('qrcode.react').then((m) => ({ default: m.QRCodeCanvas }))
@@ -780,7 +779,7 @@ export default function StudentsPage() {
                                 </div>
                                 <div className="text-left whitespace-nowrap">
                                     <p className={`text-[10px] font-black leading-none ${filterMissing === 'photo' ? 'text-amber-600' : 'text-amber-600 dark:text-amber-400'}`}>{globalStats.incompleteCount} Tidak Lengkap</p>
-                                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Foto/NISN/WA</p>
+                                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">Foto / NISN / Whatsapp</p>
                                 </div>
                             </button>
                         )}
@@ -1285,29 +1284,21 @@ export default function StudentsPage() {
                                             ))
                                         ) : students.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-28 text-center align-middle">
-                                                    <div className="w-full h-full flex flex-col items-center justify-center text-center mx-auto animate-in fade-in zoom-in-95 duration-700">
-                                                        <div className="relative mb-6">
-                                                            <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
-                                                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
-                                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
-                                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
-                                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <h3 className="text-base font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
-                                                        <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-sm leading-relaxed mb-6">
-                                                            Maaf, kami tidak menemukan data siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter.
-                                                        </p>
-                                                        <button
-                                                            type="button"
-                                                            onClick={resetAllFilters}
-                                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4"
-                                                        >
-                                                            Reset Semua Filter
-                                                        </button>
-                                                    </div>
+                                                <td colSpan={10} className="px-6 py-20">
+                                                    <EmptyState
+                                                        icon={faSearch}
+                                                        title="Pencarian Tidak Ditemukan"
+                                                        description="Maaf, kami tidak menemukan data siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                                        action={
+                                                            <button
+                                                                type="button"
+                                                                onClick={resetAllFilters}
+                                                                className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                                            >
+                                                                Reset Semua Filter
+                                                            </button>
+                                                        }
+                                                    />
                                                 </td>
                                             </tr>
                                         ) : (
@@ -1431,26 +1422,20 @@ export default function StudentsPage() {
                                         )}
                                     </div>
                                 ) : students.length === 0 ? (
-                                    <div className="py-24 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-700">
-                                        <div className="relative mb-6">
-                                            <div className="absolute inset-0 bg-[var(--color-primary)]/10 blur-3xl rounded-full scale-150 animate-pulse" />
-                                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-xl flex items-center justify-center">
-                                                <FontAwesomeIcon icon={faSearch} className="text-4xl text-[var(--color-primary)]/30" />
-                                                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-[var(--color-surface)] shadow-lg flex items-center justify-center border border-[var(--color-border)]">
-                                                    <FontAwesomeIcon icon={faXmark} className="text-red-500 text-sm" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <h3 className="text-lg font-black text-[var(--color-text)] mb-2">Pencarian Tidak Ditemukan</h3>
-                                        <p className="text-xs font-bold text-[var(--color-text-muted)] max-w-[280px] leading-relaxed mb-6">
-                                            Maaf, kami tidak menemukan siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter.
-                                        </p>
-                                        <button
-                                            onClick={resetAllFilters}
-                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition mb-4"
-                                        >
-                                            Reset Semua Filter
-                                        </button>
+                                    <div className="py-12">
+                                        <EmptyState
+                                            icon={faSearch}
+                                            title="Pencarian Tidak Ditemukan"
+                                            description="Maaf, kami tidak menemukan siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                            action={
+                                                <button
+                                                    onClick={resetAllFilters}
+                                                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                                >
+                                                    Reset Semua Filter
+                                                </button>
+                                            }
+                                        />
                                     </div>
                                 ) : (
                                     <>
@@ -2025,18 +2010,13 @@ export default function StudentsPage() {
                             isOpen={activeModal === 'bulkPromote'}
                             onClose={() => closeModal()}
                             title="Kenaikan Kelas Massal"
+                            description={`${selectedStudentIds.length} siswa akan dipindahkan ke kelas tujuan.`}
+                            icon={faGraduationCap}
+                            iconBg="bg-[var(--color-primary)]/10"
+                            iconColor="text-[var(--color-primary)]"
                             size="sm"
                         >
                             <div className="space-y-6">
-                                <div className="p-4 glass bg-[var(--color-primary)]/10 rounded-[1.5rem] border border-[var(--color-primary)]/20">
-                                    <p className="text-[10px] font-black text-[var(--color-primary)] uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
-                                        Target Kenaikan
-                                    </p>
-                                    <p className="text-[11px] text-[var(--color-text)] leading-relaxed font-bold">
-                                        Anda akan memindahkan <span className="text-[var(--color-primary)] font-black text-[13px] bg-[var(--color-primary)]/10 px-1.5 py-0.5 rounded-md border border-[var(--color-primary)]/20">{selectedStudentIds.length} siswa</span> terpilih ke kelas tujuan.
-                                    </p>
-                                </div>
 
                                 <div>
                                     <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest block mb-2 ml-1">Pilih Kelas Baru</label>
@@ -2077,19 +2057,13 @@ export default function StudentsPage() {
                             isOpen={activeModal === 'delete'}
                             onClose={() => closeModal()}
                             title="Konfirmasi Arsip"
+                            description="Siswa akan dipindahkan ke folder Arsip"
+                            icon={faBoxArchive}
+                            iconBg="bg-amber-500/10"
+                            iconColor="text-amber-600"
                             size="sm"
                         >
                             <div className="space-y-5">
-                                <div className="p-3.5 bg-amber-500/10 rounded-2xl flex items-center gap-3.5 text-amber-600 border border-amber-500/20">
-                                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 text-lg border border-amber-500/30">
-                                        <FontAwesomeIcon icon={faBoxArchive} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h3 className="text-[11px] font-black uppercase tracking-wider leading-tight">Pindahkan ke Arsip?</h3>
-                                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-80 mt-1">Dapat dipulihkan dari menu Arsip.</p>
-                                    </div>
-                                </div>
-
                                 <div className="px-1">
                                     <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
                                         Siswa <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20">{studentToDelete?.name}</span> akan diarsipkan. Riwayat laporan & poin tetap tersimpan dengan aman.
@@ -2117,19 +2091,13 @@ export default function StudentsPage() {
                             isOpen={activeModal === 'bulkDelete'}
                             onClose={() => closeModal()}
                             title="Konfirmasi Hapus"
+                            description={`${selectedStudentIds.length} siswa akan dihapus secara permanen`}
+                            icon={faTrash}
+                            iconBg="bg-red-500/10"
+                            iconColor="text-red-500"
                             size="sm"
                         >
                             <div className="space-y-5">
-                                <div className="p-3.5 bg-red-500/10 rounded-2xl flex items-center gap-3.5 text-red-500 border border-red-500/20">
-                                    <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-lg border border-red-500/30">
-                                        <FontAwesomeIcon icon={faTrash} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h3 className="text-[11px] font-black uppercase tracking-wider leading-tight">Hapus {selectedStudentIds.length} Siswa?</h3>
-                                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-80 mt-1">Data akan terhapus secara permanen.</p>
-                                    </div>
-                                </div>
-
                                 <div className="px-1">
                                     <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
                                         Anda akan menghapus <span className="text-red-500 font-black bg-red-500/10 px-1.5 py-0.5 rounded-md border border-red-500/20">{selectedStudentIds.length} siswa</span>. Tindakan ini tidak dapat dibatalkan. Riwayat behavior mereka akan hilang.
@@ -2303,13 +2271,13 @@ export default function StudentsPage() {
                             isOpen={activeModal === 'resetPoints'}
                             onClose={() => closeModal()}
                             title="Reset Poin Semester Baru"
+                            description="Set semua poin ke 0 untuk semester/tahun ajaran baru."
+                            icon={faRotateLeft}
+                            iconBg="bg-orange-500/10"
+                            iconColor="text-orange-500"
                             size="sm"
                         >
                             <div className="space-y-5">
-                                <div className="p-4 bg-orange-500/10 rounded-[1.5rem] border border-orange-500/20">
-                                    <FontAwesomeIcon icon={faRotateLeft} className="text-orange-500 text-2xl mb-2" />
-                                    <p className="text-sm font-bold text-[var(--color-text)]">Set semua poin ke 0 untuk semester/tahun ajaran baru.</p>
-                                </div>
                                 <div>
                                     <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-2">Pilih Kelas (kosongkan untuk semua kelas)</label>
                                     <select
@@ -2343,12 +2311,13 @@ export default function StudentsPage() {
                             isOpen={activeModal === 'tag'}
                             onClose={() => closeModal()}
                             title={`Kelola Label —” ${studentForTags?.name || ''}`}
+                            description="Atur label siswa untuk segmentasi & filter"
+                            icon={faTags}
+                            iconBg="bg-indigo-500/10"
+                            iconColor="text-indigo-600"
                             size="sm"
                         >
                             <div className="space-y-4">
-                                <p className="text-[10px] text-[var(--color-text-muted)] font-bold opacity-70">
-                                    Atur label siswa untuk segmentasi & filter
-                                </p>
                                 {studentForTags && (
                                     <div className="space-y-6">
                                         {/* Input Section */}
@@ -2491,25 +2460,34 @@ export default function StudentsPage() {
                 />
 
                 {/* Fitur 13 - Photo Zoom Overlay */}
+                {/* Photo Zoom Modal */}
                 {
                     photoZoom && (
-                        <div
-                            className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center cursor-pointer backdrop-blur-sm"
-                            onClick={() => setPhotoZoom(null)}
+                        <Modal
+                            isOpen={!!photoZoom}
+                            onClose={() => setPhotoZoom(null)}
+                            title={photoZoom.name}
+                            description={photoZoom.className}
+                            size="md"
+                            noPadding={true}
+                            contentClassName="flex flex-col items-center justify-center bg-black/5"
                         >
-                            <div className="text-center" onClick={e => e.stopPropagation()}>
+                            <div className="relative w-full aspect-square sm:aspect-auto sm:h-[60vh] flex items-center justify-center p-4">
                                 <img
                                     src={photoZoom.url}
                                     alt={photoZoom.name}
-                                    className="max-w-[320px] max-h-[320px] w-auto h-auto rounded-2xl object-cover shadow-2xl ring-4 ring-white/10"
+                                    className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl ring-4 ring-white/10"
                                 />
-                                <p className="text-white font-black mt-3 text-sm drop-shadow">{photoZoom.name}</p>
-                                <button onClick={() => setPhotoZoom(null)}
-                                    className="mt-3 h-8 px-4 rounded-xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition">
+                            </div>
+                            <div className="p-6 pt-0 flex flex-col items-center">
+                                <button
+                                    onClick={() => setPhotoZoom(null)}
+                                    className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-border)] transition-all"
+                                >
                                     Tutup
                                 </button>
                             </div>
-                        </div>
+                        </Modal>
                     )
                 }
 
@@ -2691,6 +2669,10 @@ export default function StudentsPage() {
                             isOpen={activeModal === 'bulkTag'}
                             onClose={() => closeModal()}
                             title={`Aksi Label Massal —” ${selectedStudentIds.length} Siswa`}
+                            description="Tambah atau hapus label untuk rombongan siswa terpilih."
+                            icon={faTags}
+                            iconBg="bg-indigo-500/10"
+                            iconColor="text-indigo-600"
                             size="sm"
                         >
                             <div className="space-y-6">
@@ -2765,18 +2747,13 @@ export default function StudentsPage() {
                             isOpen={activeModal === 'bulkPoint'}
                             onClose={() => closeModal()}
                             title={`Aksi Poin Massal —” ${selectedStudentIds.length} Siswa`}
+                            description="Berikan poin positif atau negatif ke seluruh siswa terpilih."
+                            icon={faBolt}
+                            iconBg="bg-orange-500/10"
+                            iconColor="text-orange-500"
                             size="sm"
                         >
                             <div className="space-y-6">
-                                <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500 text-xl">
-                                        <FontAwesomeIcon icon={faBolt} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-600/60">Input Poin Massal</p>
-                                        <p className="text-xs font-bold text-[var(--color-text)]">Berikan poin positif atau negatif ke seluruh siswa terpilih.</p>
-                                    </div>
-                                </div>
 
                                 <div className="space-y-4">
                                     <div>

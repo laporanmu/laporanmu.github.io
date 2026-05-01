@@ -518,6 +518,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                         guardian_relation: formData.guardian_relation || null,
                         status: formData.status || 'aktif',
                         tags: formData.tags || [],
+                        metadata: formData.metadata || {},
                     })
                     .eq('id', selectedStudent.id)
                 if (error) throw error
@@ -555,6 +556,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     guardian_relation: formData.guardian_relation || null,
                     status: formData.status || 'aktif',
                     tags: formData.tags || [],
+                    metadata: formData.metadata || {},
                 }
                 const { data: insData, error } = await supabase.from('students').insert([newStudentData]).select('id').single()
                 if (error) throw error

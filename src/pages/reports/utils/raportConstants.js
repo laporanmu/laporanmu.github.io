@@ -7,6 +7,14 @@ import {
 export const MAX_SCORE = 9
 export const STORAGE_BUCKET = 'raport-mbs'
 
+export const LIST_KAMAR = [
+    { id: 'Fachruddin', ar: 'فخر الدين' },
+    { id: 'Ibrahim', ar: 'إبراهيم' },
+    { id: 'Ahmad Dahlan', ar: 'أحمد دحلان' },
+    { id: 'Mas Mansyur', ar: 'ماس منصور' },
+    { id: 'Buya Hamka', ar: 'بويا هامكا' }
+]
+
 export const toArabicNum = (n) => String(n).replace(/[0-9]/g, d => '٠١٢٣٤٥٦٧٨٩'[d])
 
 export const BULAN = [
@@ -15,13 +23,13 @@ export const BULAN = [
     { id: 3, ar: 'مارس', id_str: 'Maret' },
     { id: 4, ar: 'أبريل', id_str: 'April' },
     { id: 5, ar: 'مايو', id_str: 'Mei' },
-    { id: 6, id_str: 'Juni' },
-    { id: 7, id_str: 'Juli' },
-    { id: 8, id_str: 'Agustus' },
-    { id: 9, id_str: 'September' },
-    { id: 10, id_str: 'Oktober' },
-    { id: 11, id_str: 'November' },
-    { id: 12, id_str: 'Desember' },
+    { id: 6, ar: 'يونيو', id_str: 'Juni' },
+    { id: 7, ar: 'يوليو', id_str: 'Juli' },
+    { id: 8, ar: 'أغسطس', id_str: 'Agustus' },
+    { id: 9, ar: 'سبتمبر', id_str: 'September' },
+    { id: 10, ar: 'أكتوبر', id_str: 'Oktober' },
+    { id: 11, ar: 'نوفمبر', id_str: 'November' },
+    { id: 12, ar: 'ديسمبر', id_str: 'Desember' },
 ]
 
 export const CATATAN_TEMPLATES = [
@@ -38,7 +46,7 @@ export const CATATAN_TEMPLATES = [
 export const LABEL = {
     ar: {
         studentName: 'اسم الطالب', room: 'الغرفة', class: 'الفصل', year: 'العام الدراسي',
-        dailyWork: 'الأعمال اليومية', subject: 'المواد الدراسية', score: 'النقاط',
+        subject: 'جوانب التقييم', score: 'النقاط',
         grade: 'التقدير', num: 'الرقم', weight: 'وزن البدن', height: 'طول البدن',
         ziyadah: 'الزيادة', murojaah: 'المراجعة', sick: 'للمرض', home: 'للرجوع',
         izin: 'الإذن', alpa: 'بلا إذن', gradeScale: 'نظام التقدير',
@@ -47,7 +55,7 @@ export const LABEL = {
     },
     id: {
         studentName: 'Nama Santri', room: 'Kamar', class: 'Kelas', year: 'Tahun Ajaran',
-        dailyWork: 'Amal Harian', subject: 'Aspek Penilaian', score: 'Nilai',
+        subject: 'Aspek Penilaian', score: 'Nilai',
         grade: 'Predikat', num: 'No', weight: 'Berat Badan', height: 'Tinggi Badan',
         ziyadah: 'Ziyadah', murojaah: "Muroja'ah", sick: 'Sakit', home: 'Pulang',
         izin: 'Izin', alpa: 'Alpa', gradeScale: 'Skala Penilaian',

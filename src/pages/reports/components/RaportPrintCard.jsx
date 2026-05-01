@@ -1,5 +1,5 @@
 import React, { memo, useEffect } from 'react'
-import { KRITERIA, GRADE, LABEL, toArabicNum } from '../utils/raportConstants'
+import { KRITERIA, GRADE, LABEL, toArabicNum, LIST_KAMAR } from '../utils/raportConstants'
 import { translitToAr, translitClassToAr } from '../utils/translitData'
 import mbsLogo from '../../../assets/mbs.png'
 import smpLogo from '../../../assets/smp.png'
@@ -58,6 +58,10 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
 
     const displayMusyrif = isAr && musyrif ? translitToAr(musyrif) : musyrif
     const displayClassName = isAr && className ? translitClassToAr(className) : className
+
+    const roomVal = student?.metadata?.kamar || '—'
+    const roomObj = LIST_KAMAR.find(k => k.id === roomVal)
+    const displayRoom = isAr ? (roomObj?.ar || roomVal) : (roomObj?.id || roomVal)
 
     return (
         <div className="raport-card" data-student-id={student?.id} style={{
@@ -123,7 +127,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                         <td style={{ verticalAlign: 'middle', padding: '4px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: isAr ? 'right' : 'left', width: '20%', fontSize: isAr ? '12pt' : '10.5pt' }}>{L.studentName} :</td>
                         <td style={{ verticalAlign: 'middle', fontWeight: 700, padding: '4px 0', width: '30%', textAlign: isAr ? 'right' : 'left', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', fontSize: isAr ? '12pt' : '10.5pt' }}>{displayName}</td>
                         <td style={{ verticalAlign: 'middle', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: isAr ? 'right' : 'left', width: '20%', padding: '4px 0', fontSize: isAr ? '12pt' : '10.5pt' }}>{L.room} :</td>
-                        <td style={{ verticalAlign: 'middle', fontWeight: 700, width: '30%', textAlign: isAr ? 'right' : 'left', padding: '4px 0' }}>{student?.metadata?.kamar || '—'}</td>
+                        <td style={{ verticalAlign: 'middle', fontWeight: 700, width: '30%', textAlign: isAr ? 'right' : 'left', padding: '4px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', fontSize: isAr ? '12pt' : '10.5pt' }}>{displayRoom}</td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid #ccc' }}>
                         <td style={{ verticalAlign: 'middle', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: isAr ? 'right' : 'left', padding: '4px 0', fontSize: isAr ? '12pt' : '10.5pt' }}>{L.class} :</td>
@@ -135,7 +139,6 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             </table>
 
             {/* Tabel Nilai */}
-            <div style={{ direction: isAr ? 'rtl' : 'ltr', fontWeight: 700, fontSize: isAr ? '12pt' : '11pt', marginBottom: 5, fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>{L.dailyWork}</div>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5pt', marginBottom: 12 }}>
                 <thead>
                     <tr style={{ background: '#f0f4f8' }}>
