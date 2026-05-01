@@ -80,7 +80,7 @@ const LABEL = {
     },
     id: {
         studentName: 'Nama Santri', room: 'Kamar', class: 'Kelas', year: 'Tahun Ajaran',
-        dailyWork: 'Amal Harian', subject: 'Mata Pelajaran', score: 'Nilai',
+        dailyWork: 'Amal Harian', subject: 'Aspek Penilaian', score: 'Nilai',
         grade: 'Predikat', num: 'No', weight: 'Berat Badan', height: 'Tinggi Badan',
         ziyadah: 'Ziyadah', murojaah: "Muroja'ah", sick: 'Hari Sakit', home: 'Hari Pulang',
         izin: 'Hari Izin', alpa: 'Hari Alpa', gradeScale: 'Skala Penilaian',

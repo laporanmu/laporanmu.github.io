@@ -112,7 +112,7 @@ const TeacherFormModal = memo(function TeacherFormModal({
                             <input type="text" value={form.nbm} onChange={e => setForm(p => ({ ...p, nbm: e.target.value }))} placeholder="Nomor Baku Muhammadiyah" className="input-field w-full h-11 font-mono text-sm" />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Mata Pelajaran</label>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Aspek Penilaian</label>
                             <input type="text" value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} placeholder="e.g. Matematika" className="input-field w-full h-11 text-sm" list="subj-suggest" />
                             <datalist id="subj-suggest">{(subjectsList || []).map(s => <option key={s} value={s} />)}</datalist>
                         </div>

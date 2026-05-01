@@ -243,7 +243,7 @@ export default function RiwayatRaportModal({ isOpen, onClose, classesList = [] }
                        <th style="border:1px solid #999;padding:4px 8px;font-family:'Traditional Arabic',serif">المواد الدراسية</th>
                        <th style="border:1px solid #999;padding:4px 8px;width:8%;font-family:'Traditional Arabic',serif">الرقم</th>`
                     : `<th style="border:1px solid #999;padding:4px 8px;width:8%">No</th>
-                       <th style="border:1px solid #999;padding:4px 8px">Mata Pelajaran</th>
+                       <th style="border:1px solid #999;padding:4px 8px">Aspek Penilaian</th>
                        <th style="border:1px solid #999;padding:4px 8px;width:14%">Nilai</th>
                        <th style="border:1px solid #999;padding:4px 8px;width:18%">Predikat</th>`
 
