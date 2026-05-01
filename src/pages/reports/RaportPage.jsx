@@ -16,7 +16,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
-import Breadcrumb from '../../components/ui/Breadcrumb'
+import PageHeader from '../../components/ui/PageHeader'
 import { StatCard, EmptyState } from '../../components/ui/DataDisplay'
 import Modal from '../../components/ui/Modal'
 import { supabase } from '../../lib/supabase'
@@ -3953,59 +3953,60 @@ export default function RaportPage() {
                 )}
 
                 {/* ── PAGE HEADER ── */}
-                <div className="sticky top-[72px] z-40 -mx-4 md:-mx-6 px-4 md:px-6 py-3 md:py-4 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-300 mb-6">
-                    <div>
-                        <Breadcrumb badge="Reports" items={['Grade Reports']} className="mb-1" />
-                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Raport Bulanan</h1>
-                        <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium opacity-70">نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas.</p>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                        {step >= 1 && step <= 3 && (
-                            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                                {stepLabels.map((label, i) => (
-                                    <div key={i} className="flex items-center gap-1.5">
-                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${step === i + 1 ? 'bg-emerald-500 text-white' : step > i + 1 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'}`}>{step > i + 1 ? <FontAwesomeIcon icon={faCheck} className="text-[7px]" /> : i + 1}</div>
-                                        <span className={`text-[9px] font-bold ${step === i + 1 ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'}`}>{label}</span>
-                                        {i < stepLabels.length - 1 && <div className="w-4 h-px bg-[var(--color-border)]" />}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        {/* Keyboard Shortcut - moved here for consistency */}
-                        <button
-                            ref={shortcutBtnRef}
-                            onClick={() => { if (!showShortcutModal) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setShowShortcutModal(v => !v) }}
-                            className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center text-sm transition-all active:scale-95
-                                ${showShortcutModal
-                                    ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)] shadow-sm'
-                                    : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'
-                                }`}
-                            title="Keyboard Shortcuts (?)"
-                        >
-                            <FontAwesomeIcon icon={faKeyboard} />
-                        </button>
+                <PageHeader
+                    badge="Reports"
+                    breadcrumbs={['Grade Reports']}
+                    title="Raport Bulanan"
+                    subtitle="نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas."
+                    actions={
+                        <>
+                            {step >= 1 && step <= 3 && (
+                                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] mr-2">
+                                    {stepLabels.map((label, i) => (
+                                        <div key={i} className="flex items-center gap-1.5">
+                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${step === i + 1 ? 'bg-emerald-500 text-white' : step > i + 1 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'}`}>{step > i + 1 ? <FontAwesomeIcon icon={faCheck} className="text-[7px]" /> : i + 1}</div>
+                                            <span className={`text-[9px] font-bold ${step === i + 1 ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'}`}>{label}</span>
+                                            {i < stepLabels.length - 1 && <div className="w-4 h-px bg-[var(--color-border)]" />}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
-                        <button
-                            ref={headerMenuBtnRef}
-                            onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
-                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                            title="Data & Backup Operations"
-                        >
-                            <FontAwesomeIcon icon={faSliders} />
-                        </button>
-
-                        <button onClick={() => { setTutorialStep(0); setShowTutorialModal(true) }} aria-label="Panduan penggunaan" className="h-8 w-18 gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center justify-center hover:bg-amber-500/15 transition-all" title="Panduan & Tutorial">
-                            <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
-                            Tutorial
-                        </button>
-                        {step === 0 && (
-                            <button onClick={() => { setSelectedClassId(''); setStep(1) }} className="btn btn-primary h-9 px-4 lg:px-5 shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2">
-                                <FontAwesomeIcon icon={faPlus} className="text-sm" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Buat Raport</span>
+                            <button
+                                ref={shortcutBtnRef}
+                                onClick={() => { if (!showShortcutModal) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setShowShortcutModal(v => !v) }}
+                                className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center text-sm transition-all active:scale-95
+                                    ${showShortcutModal
+                                        ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)] shadow-sm'
+                                        : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'
+                                    }`}
+                                title="Keyboard Shortcuts (?)"
+                            >
+                                <FontAwesomeIcon icon={faKeyboard} />
                             </button>
-                        )}
-                    </div>
-                </div>
+
+                            <button
+                                ref={headerMenuBtnRef}
+                                onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                                title="Data & Backup Operations"
+                            >
+                                <FontAwesomeIcon icon={faSliders} />
+                            </button>
+
+                            <button onClick={() => { setTutorialStep(0); setShowTutorialModal(true) }} aria-label="Panduan penggunaan" className="h-9 px-3 gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center justify-center hover:bg-amber-500/15 transition-all" title="Panduan & Tutorial">
+                                <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
+                                Tutorial
+                            </button>
+                            {step === 0 && (
+                                <button onClick={() => { setSelectedClassId(''); setStep(1) }} className="h-9 px-4 lg:px-5 rounded-xl bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2 hover:opacity-90 transition-all">
+                                    <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Buat Raport</span>
+                                </button>
+                            )}
+                        </>
+                    }
+                />
 
                 {/* ── STATS ── */}
                 {step === 0 && (
