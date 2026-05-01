@@ -148,14 +148,14 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
         const rect = anchorRef.current.getBoundingClientRect()
         style = {
             position: 'fixed',
-            top: rect.bottom + 8,
-            right: window.innerWidth - rect.right,
-            width: 320,
+            top: rect.bottom + 12,
+            right: window.innerWidth - rect.right - 8, // Offset 8px to the right for better balance
+            width: 340,
         }
     }
 
     const inner = (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden">
+        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <div>
@@ -439,7 +439,7 @@ export default function TopNav({ title, subtitle }) {
                     {/* DESKTOP */}
                     {/* ===================== */}
                     <div className="hidden lg:block rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/85 backdrop-blur-xl shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
-                        <div className="grid grid-cols-3 items-center px-4 py-3">
+                        <div className="flex items-center justify-between px-4 py-3">
 
                             {/* Left: Logo */}
                             <div className="flex items-center gap-2">
@@ -598,24 +598,28 @@ export default function TopNav({ title, subtitle }) {
                                                     </div>
                                                 </div>
                                             )}
-                                        </div>
+                                    </div>
                                     )}
+
+                                    {/* Divider */}
+                                    <div className="w-px h-5 bg-[var(--color-border)] mx-1 opacity-50" />
+
+                                    <div className="flex items-center">
+                                        <BellButton />
+                                        <button
+                                            onClick={toggleTheme}
+                                            aria-label={isDark ? "Aktifkan Mode Terang" : "Aktifkan Mode Gelap"}
+                                            className="p-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition"
+                                            type="button"
+                                        >
+                                            <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
+                                        </button>
+                                    </div>
                                 </nav>
                             </div>
 
-                            {/* Right: Bell + Theme + Profile */}
-                            <div className="flex items-center justify-end gap-2">
-                                <BellButton />
-
-                                <button
-                                    onClick={toggleTheme}
-                                    aria-label={isDark ? "Aktifkan Mode Terang" : "Aktifkan Mode Gelap"}
-                                    className="p-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition"
-                                    type="button"
-                                >
-                                    <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
-                                </button>
-
+                            {/* Right: Profile */}
+                            <div className="flex items-center justify-end">
                                 {/* Profile dropdown */}
                                 <div className="relative" ref={desktopProfileRef}>
                                     <button

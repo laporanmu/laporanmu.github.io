@@ -164,7 +164,7 @@ export function EmptyState({ icon, title, description, action, variant = 'glass'
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[var(--color-primary)]/5 rounded-full blur-[80px] pointer-events-none" />
             )}
  
-            <div className={`relative z-10 ${isMinimal ? '' : 'flex flex-col items-center'}`}>
+            <div className={`relative z-10 flex flex-col items-center`}>
                 {icon && (
                     <div className={`${isMinimal ? `w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl mb-4 shadow-lg mx-auto transform rotate-3 ${colorMap}` : 'w-20 h-20 mb-6 rounded-3xl mx-auto flex items-center justify-center bg-gradient-to-br from-[var(--color-surface-alt)] to-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-primary)] shadow-sm group-hover:scale-110 transition-transform duration-500'}`}>
                         <FontAwesomeIcon icon={icon} className={isMinimal ? '' : 'text-3xl'} />

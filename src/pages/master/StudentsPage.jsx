@@ -70,6 +70,8 @@ import {
     faFileImport,
     faFileExport,
     faClipboardList,
+    faSortAlphaDown,
+    faArrowUp91
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 
@@ -120,8 +122,8 @@ const LazyStudentImportModal = React.lazy(() =>
     import('../../components/students/StudentImportModal')
 )
 
-// â”€â”€ BehaviorHeatmap —” outside StudentsPage to prevent re-creation on every render â”€â”€
-// â”€â”€ helper for pagination â”€â”€
+// BehaviorHeatmap outside StudentsPage to prevent re-creation on every render 
+// helper for pagination 
 import Pagination from '../../components/ui/Pagination'
 
 
@@ -131,7 +133,7 @@ const MOBILE_BOTTOM_NAV_PX = 5
 // ── Isolated Search Input ────────────────────────────────────────────────────
 // State ketikan HARUS di komponen terpisah supaya keystroke tidak
 // re-render seluruh StudentsPage (3000+ baris)
-const DebouncedSearchInput = memo(({ searchQuery, onSearch, inputRef }) => {
+const DebouncedSearchInput = memo(({ searchQuery, onSearch, inputRef, isLoading }) => {
     const [value, setValue] = useState(searchQuery)
 
     // Debounce: propagate ke parent setelah 350ms berhenti mengetik
@@ -146,17 +148,21 @@ const DebouncedSearchInput = memo(({ searchQuery, onSearch, inputRef }) => {
     }, [searchQuery])
 
     return (
-        <div className="flex-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
-                <FontAwesomeIcon icon={faSearch} />
+        <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm group-focus-within:text-[var(--color-primary)] transition-colors">
+                {isLoading ? (
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xs text-[var(--color-primary)]" />
+                ) : (
+                    <FontAwesomeIcon icon={faSearch} />
+                )}
             </div>
             <input
                 ref={inputRef}
                 type="text"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder="Cari nama, NISN, no HP..."
-                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
+                placeholder="Cari nama, NISN..."
+                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-[var(--color-surface-alt)]/50 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all rounded-xl font-bold placeholder:font-normal placeholder:opacity-40"
             />
         </div>
     )
@@ -243,7 +249,7 @@ export default function StudentsPage() {
     // --- Stats Carousel Dot Indicator ---
     const statsScrollRef = useRef(null)
     const [activeStatIdx, setActiveStatIdx] = useState(0)
-    const STAT_CARD_COUNT = 5
+    const STAT_CARD_COUNT = 4
 
 
 
@@ -492,7 +498,10 @@ export default function StudentsPage() {
                 {/* Privasi Banner */}
                 {isPrivacyMode && (
                     <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disensor</div>
+                        <div className="flex items-center gap-2 text-amber-600 text-xs font-bold">
+                            <FontAwesomeIcon icon={faEyeSlash} />
+                            <span>Mode Privasi Aktif<span className="hidden sm:inline"> — Data sensitif disensor</span></span>
+                        </div>
                         <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">Matikan</button>
                     </div>
                 )}
@@ -694,7 +703,7 @@ export default function StudentsPage() {
                         <button
                             onClick={handleAdd}
                             disabled={!canEdit}
-                            className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
+                            className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                         >
                             <FontAwesomeIcon icon={faPlus} />
                             <span className="hidden sm:inline">{canEdit ? 'Tambah' : 'Read-only'}</span>
@@ -703,17 +712,19 @@ export default function StudentsPage() {
                 </div>
 
                 {/* Stats Row Wrapper */}
-                <StatsCarousel count={STAT_CARD_COUNT} cols={5}>
+                <StatsCarousel count={STAT_CARD_COUNT} cols={4}>
                     <StatCard
                         icon={faUsers}
                         label="Total Siswa"
                         value={globalStats.total}
+                        className="w-full"
                         iconBg="bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]"
                     />
                     <StatCard
                         icon={faMars}
                         label="Putra"
                         value={globalStats.boys}
+                        className="w-full"
                         borderColor="border-t-blue-500"
                         iconBg="bg-blue-500/10 text-blue-500"
                     />
@@ -721,6 +732,7 @@ export default function StudentsPage() {
                         icon={faVenus}
                         label="Putri"
                         value={globalStats.girls}
+                        className="w-full"
                         borderColor="border-t-pink-500"
                         iconBg="bg-pink-500/10 text-pink-500"
                     />
@@ -728,6 +740,7 @@ export default function StudentsPage() {
                         icon={faTrophy}
                         label="Rata-rata Poin"
                         value={globalStats.avgPoints}
+                        className="w-full"
                         valueClassName={globalStats.avgPoints >= 0 ? 'text-2xl text-[var(--color-text)]' : 'text-2xl text-red-500'}
                         trend={globalStats.avgPointsLastWeek !== null ? Math.abs(globalStats.avgPointsLastWeek) : null}
                         trendUp={globalStats.avgPointsLastWeek >= 0}
@@ -735,20 +748,9 @@ export default function StudentsPage() {
                         iconBg="bg-emerald-500/10 text-emerald-500"
                         onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
                     />
-                    <StatCard
-                        icon={faTriangleExclamation}
-                        label="Kelas Bermasalah"
-                        value={globalStats.worstClass ? globalStats.worstClass.name : '-'}
-                        valueClassName={globalStats.worstClass ? 'text-[13px] text-red-500' : 'text-2xl text-[var(--color-text-muted)]'}
-                        subValue={globalStats.worstClass ? `Average ${globalStats.worstClass.avg} poin` : undefined}
-                        borderColor="border-t-red-500"
-                        iconBg="bg-red-500/10 text-red-500"
-                        onClick={() => { if (globalStats.worstClass) { setFilterClass(''); setFilterPointMode('risk') } }}
-                        title="Klik untuk filter siswa risiko"
-                    />
                 </StatsCarousel>
 
-                {/* â”€â”€ INSIGHT ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                {/*  INSIGHT ROW */}
                 {(globalStats.risk > 0 || globalStats.incompleteCount > 0 || globalStats.topPerformer || (globalStats.worstClass && globalStats.worstClass.avg < 0) || globalStats.avgPointsLastWeek !== null) && (
                     <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-6 animate-in fade-in slide-in-from-top-1 duration-500 pb-1">
 
@@ -830,24 +832,104 @@ export default function StudentsPage() {
 
                     </div>
                 )}
-                {/* â”€â”€ END INSIGHT ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                {/* ———————————————————————————————————— END INSIGHT ROW ———————————————————————————————————— */}
 
                 {/* Filters & Sort */}
                 <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
 
-                    {/* Row 1: Search + action buttons */}
-                    <div className="flex flex-row items-center gap-2 p-3">
-                        <DebouncedSearchInput
-                            searchQuery={searchQuery}
-                            onSearch={handleSearchChange}
-                            inputRef={searchInputRef}
-                        />
+                    {/* Row 1: Search + Quick Filters + Action Buttons */}
+                    <div className="flex items-center gap-2 p-2.5 lg:p-3">
+                        {/* Search Bar - Dynamic & Responsive */}
+                        <div className="flex-initial w-full lg:w-[232px] xl:w-[352px] min-w-[120px] transition-all duration-300">
+                            <DebouncedSearchInput
+                                searchQuery={searchQuery}
+                                onSearch={handleSearchChange}
+                                inputRef={searchInputRef}
+                                isLoading={loading}
+                            />
+                        </div>
 
-                        {/* Filter toggle button */}
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Quick Filter Chips - Desktop Only */}
+                        <div className="hidden lg:flex flex-1 items-center gap-2 overflow-x-auto scrollbar-hide py-0.5 min-w-0 pr-8 h-full [mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)]">
+                            <div className="h-4 w-px bg-[var(--color-border)] mx-1 hidden lg:block" />
+
+                            {/* Group 1: Status */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                {[
+                                    { id: '', label: 'Semua', icon: faUsers },
+                                    { id: 'aktif', label: 'Aktif', icon: faCheckCircle },
+                                    { id: 'lulus', label: 'Lulus', icon: faGraduationCap },
+                                ].map((s) => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => setFilterStatus(s.id)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${filterStatus === s.id
+                                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
+                                            : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]'
+                                            }`}
+                                    >
+                                        <FontAwesomeIcon icon={s.icon} className={`text-[10px] ${filterStatus === s.id ? 'opacity-100' : 'opacity-30'}`} />
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Separator */}
+                            <div className="h-4 w-px bg-[var(--color-border)] mx-1 shrink-0" />
+
+                            {/* Group 2: Gender */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                {[
+                                    { id: 'L', label: 'Putra', icon: faMars, activeCls: 'bg-blue-500 border-blue-500' },
+                                    { id: 'P', label: 'Putri', icon: faVenus, activeCls: 'bg-pink-500 border-pink-500' },
+                                ].map((g) => (
+                                    <button
+                                        key={g.id}
+                                        onClick={() => setFilterGender(filterGender === g.id ? '' : g.id)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${filterGender === g.id
+                                            ? `${g.activeCls} text-white`
+                                            : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]'
+                                            }`}
+                                    >
+                                        <FontAwesomeIcon icon={g.icon} className={`text-[10px] ${filterGender === g.id ? 'opacity-100' : 'opacity-30'}`} />
+                                        {g.label}
+                                    </button>
+                                ))}
+                            </div>
+                            {/* Group 3: Quick Sort */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                    onClick={() => setSortBy(sortBy === 'name' ? '-name' : 'name')}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${sortBy.includes('name')
+                                        ? 'bg-amber-500 border-amber-500 text-white'
+                                        : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-amber-500/30 hover:bg-amber-500/5 hover:text-amber-600'
+                                        }`}
+                                >
+                                    <FontAwesomeIcon icon={faSortAlphaDown} className={`text-[10px] ${sortBy.includes('name') ? 'opacity-100' : 'opacity-30'}`} />
+                                    Nama {sortBy === 'name' ? 'A-Z' : 'Z-A'}
+                                </button>
+                                <button
+                                    onClick={() => setSortBy(sortBy === '-points' ? 'points' : '-points')}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${sortBy.includes('points')
+                                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                                        : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-600'
+                                        }`}
+                                >
+                                    <FontAwesomeIcon icon={faArrowUp91} className={`text-[10px] ${sortBy.includes('points') ? 'opacity-100' : 'opacity-30'}`} />
+                                    {sortBy === '-points' ? 'Poin Tertinggi' : 'Poin Terendah'}
+                                </button>
+                            </div>
+                        </div>
+
+
+                        {/* Dedicated Divider for Enterprise Look */}
+                        <div className="hidden lg:block w-px h-4 bg-[var(--color-border)] mx-2 shrink-0" />
+
+                        {/* Action Buttons: Always visible, grouped nicely on mobile */}
+                        <div className="flex items-center justify-end gap-2 shrink-0 lg:ml-auto">
                             <button
                                 onClick={toggleSelectAll}
-                                className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedStudentIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white shadow-md' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
+                                className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedStudentIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
                                 title="Pilih Semua / Batal"
                             >
                                 <FontAwesomeIcon icon={selectedStudentIds.length > 0 ? faCheckDouble : faSquareCheck} />
@@ -864,27 +946,14 @@ export default function StudentsPage() {
                                 className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${showAdvancedFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
                             >
                                 <FontAwesomeIcon icon={faSliders} />
-                                <span className="hidden xs:inline">Filter</span>
+                                <span className="hidden xs:inline">Lainnya</span>
                                 {activeFilterCount > 0 && (
                                     <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
                                         {activeFilterCount}
                                     </span>
                                 )}
                             </button>
-
-                            {/* Reset */}
-                            {activeFilterCount > 0 && !selectedStudentIds.length && (
-                                <button
-                                    type="button"
-                                    onClick={resetAllFilters}
-                                    className="h-9 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-red-500/10 flex items-center gap-1.5"
-                                >
-                                    <FontAwesomeIcon icon={faXmark} />
-                                    <span className="hidden sm:inline">Reset</span>
-                                </button>
-                            )}
                         </div>
-
                     </div>
 
 
@@ -916,7 +985,7 @@ export default function StudentsPage() {
                                     <button type="button" onClick={() => setFilterGender('')}
                                         className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus filter gender">
                                         <FontAwesomeIcon icon={filterGender === 'L' ? faMars : faVenus} className="text-[10px] opacity-70" />
-                                        {filterGender === 'L' ? 'Putra' : 'Putri'}
+                                        Gender: {filterGender === 'L' ? 'Putra' : 'Putri'}
                                         <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
                                             <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                                         </span>
@@ -925,7 +994,7 @@ export default function StudentsPage() {
                                 {filterStatus && (
                                     <button type="button" onClick={() => setFilterStatus('')}
                                         className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600" title="Hapus filter status">
-                                        Status: {filterStatus}
+                                        Status: {filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)}
                                         <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-amber-500/20 flex items-center justify-center text-amber-600 opacity-70 group-hover:opacity-100 transition-opacity">
                                             <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
                                         </span>
@@ -971,7 +1040,19 @@ export default function StudentsPage() {
                     {/* Row 2: Expandable filter panel */}
                     {showAdvancedFilter && (
                         <div className="border-t border-[var(--color-border)] p-3 bg-[var(--color-surface-alt)]/40 animate-in fade-in slide-in-from-top-2">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-4 mb-4">
+                            {/* Header Panel with Reset button */}
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">Filter Lanjutan</h3>
+                                <button
+                                    onClick={resetAllFilters}
+                                    className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 transition-colors flex items-center gap-1.5"
+                                >
+                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
+                                    Reset Semua Filter
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-3 mb-3">
                                 {/* Kelas */}
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Kelas</label>
@@ -1064,10 +1145,10 @@ export default function StudentsPage() {
                                     </div>
                                 </div>
 
-                                {/* Quick poin presets */}
-                                <div className="col-span-2">
+                                {/* Preset Poin - Inline with Rentang */}
+                                <div className="col-span-2 lg:col-span-1">
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Preset Poin</label>
-                                    <div className="flex flex-wrap items-center gap-1.5 overflow-hidden">
+                                    <div className="flex items-center gap-1.5">
                                         {[
                                             { value: '', label: 'Semua', icon: null },
                                             { value: 'risk', label: 'Risiko', icon: faTriangleExclamation },
@@ -1075,9 +1156,9 @@ export default function StudentsPage() {
                                         ].map(opt => (
                                             <button key={opt.value} type="button"
                                                 onClick={() => { setFilterPointMode(opt.value); setFilterPointMin(''); setFilterPointMax(''); setPage(1) }}
-                                                className={`h-8 sm:h-9 px-3 rounded-lg sm:rounded-xl text-[10px] font-black uppercase border transition-all flex items-center justify-center gap-2 shrink-0 ${filterPointMode === opt.value && opt.value !== '' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
+                                                className={`h-8 px-2.5 rounded-lg text-[9px] font-black uppercase border transition-all flex items-center justify-center gap-1.5 shrink-0 ${filterPointMode === opt.value && opt.value !== '' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
                                             >
-                                                {opt.icon && <FontAwesomeIcon icon={opt.icon} className="text-[10px]" />}
+                                                {opt.icon && <FontAwesomeIcon icon={opt.icon} className="text-[9px]" />}
                                                 {opt.label}
                                             </button>
                                         ))}
@@ -1085,56 +1166,56 @@ export default function StudentsPage() {
                                 </div>
                             </div>
 
-                            {/* Full Width Section: Data Needs Presets */}
-                            <div className="pt-3 border-t border-[var(--color-border)]/30 mt-1 mb-3">
-                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Filter Kebutuhan Data</label>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {[
-                                        { label: 'Semua', icon: faUsers, active: !filterMissing && sortBy !== 'created_at' && sortBy !== 'total_points_desc', onClick: () => { setFilterMissing(''); setSortBy('name_asc'); } },
-                                        { label: 'Foto Kosong', icon: faImage, active: filterMissing === 'photo', onClick: () => { setFilterMissing('photo'); setPage(1); } },
-                                        { label: 'Tanpa WA', icon: faWhatsapp, active: filterMissing === 'wa', onClick: () => { setFilterMissing('wa'); setPage(1); } },
-                                        { label: 'Top Performer', icon: faTrophy, active: sortBy === 'total_points_desc', onClick: () => { setSortBy('total_points_desc'); setPage(1); } },
-                                        { label: 'Siswa Baru', icon: faPlus, active: sortBy === 'created_at', onClick: () => { setSortBy('created_at'); setPage(1); } },
-                                    ].map((s, i) => (
-                                        <button key={i} onClick={s.onClick}
-                                            className={`h-8 sm:h-9 px-3.5 rounded-lg sm:rounded-xl border flex items-center gap-2 transition-all ${s.active ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
-                                            <FontAwesomeIcon icon={s.icon} className="text-[11px] sm:text-xs" />
-                                            <span className="text-[10px] sm:text-[9px] font-black uppercase tracking-widest whitespace-nowrap">{s.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            {/* Full Width Section: Data Needs Presets - Compact */}
+                            <div className="pt-3 border-t border-[var(--color-border)]/30 mt-1">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mr-2">Cepat:</span>
+                                        {[
+                                            { label: 'Semua', icon: faUsers, active: !filterMissing && sortBy !== 'created_at' && sortBy !== 'total_points_desc', onClick: () => { setFilterMissing(''); setSortBy('name_asc'); } },
+                                            { label: 'Foto Kosong', icon: faImage, active: filterMissing === 'photo', onClick: () => { setFilterMissing('photo'); setPage(1); } },
+                                            { label: 'Tanpa WA', icon: faWhatsapp, active: filterMissing === 'wa', onClick: () => { setFilterMissing('wa'); setPage(1); } },
+                                            { label: 'Top Performer', icon: faTrophy, active: sortBy === 'total_points_desc', onClick: () => { setSortBy('total_points_desc'); setPage(1); } },
+                                            { label: 'Siswa Baru', icon: faPlus, active: sortBy === 'created_at', onClick: () => { setSortBy('created_at'); setPage(1); } },
+                                        ].map((s, i) => (
+                                            <button key={i} onClick={s.onClick}
+                                                className={`h-7 px-2.5 rounded-lg border flex items-center gap-2 transition-all ${s.active ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                                <FontAwesomeIcon icon={s.icon} className="text-[9px]" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">{s.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
 
-                            {/* Filter Panel Footer - Actions */}
-                            <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-[var(--color-border)]/50">
-                                {activeFilterCount > 0 && (
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                const XLSX = await import('xlsx')
-                                                const rows = await fetchFilteredForExport()
-                                                const ws = XLSX.utils.json_to_sheet(rows)
-                                                const wb = XLSX.utils.book_new()
-                                                XLSX.utils.book_append_sheet(wb, ws, 'Filter')
-                                                const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
-                                                const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-                                                downloadBlob(blob, `export_filter_${new Date().toISOString().slice(0, 10)}.xlsx`)
-                                                addToast(`${rows.length} baris berhasil diekspor sebagai Excel`, 'success')
-                                            } catch { addToast('Gagal export', 'error') }
-                                        }}
-                                        className="h-9 px-4 rounded-xl bg-teal-500/10 text-teal-600 hover:bg-teal-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-teal-500/20"
-                                    >
-                                        <FontAwesomeIcon icon={faDownload} />
-                                        <span className="whitespace-nowrap"><span className="whitespace-nowrap">Export Hasil Filter</span></span>
-                                    </button>
-                                )}
-                                <button
-                                    onClick={resetAllFilters}
-                                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20 flex items-center justify-center gap-2"
-                                >
-                                    <FontAwesomeIcon icon={faXmark} />
-                                    Reset Filter
-                                </button>
+                                    <div className="flex items-center gap-2">
+                                        {activeFilterCount > 0 && (
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const XLSX = await import('xlsx')
+                                                        const rows = await fetchFilteredForExport()
+                                                        const ws = XLSX.utils.json_to_sheet(rows)
+                                                        const wb = XLSX.utils.book_new()
+                                                        XLSX.utils.book_append_sheet(wb, ws, 'Filter')
+                                                        const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+                                                        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+                                                        downloadBlob(blob, `export_filter_${new Date().toISOString().slice(0, 10)}.xlsx`)
+                                                        addToast(`${rows.length} baris berhasil diekspor sebagai Excel`, 'success')
+                                                    } catch { addToast('Gagal export', 'error') }
+                                                }}
+                                                className="h-7 px-3 rounded-lg bg-teal-500/10 text-teal-600 hover:bg-teal-500 hover:text-white transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-teal-500/20"
+                                            >
+                                                <FontAwesomeIcon icon={faDownload} className="text-[8px]" />
+                                                Export
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => setShowAdvancedFilter(false)}
+                                            className="h-7 px-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all"
+                                        >
+                                            Tutup Panel
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1286,18 +1367,32 @@ export default function StudentsPage() {
                                             <tr>
                                                 <td colSpan={10} className="px-6 py-20">
                                                     <EmptyState
-                                                        icon={faSearch}
-                                                        title="Pencarian Tidak Ditemukan"
-                                                        description="Maaf, kami tidak menemukan data siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
-                                                        action={
-                                                            <button
-                                                                type="button"
-                                                                onClick={resetAllFilters}
-                                                                className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
-                                                            >
-                                                                Reset Semua Filter
-                                                            </button>
-                                                        }
+                                                        variant="plain"
+                                                        icon={activeFilterCount > 0 || searchQuery ? faSearch : faUsers}
+                                                        title={activeFilterCount > 0 || searchQuery ? "Pencarian Tidak Ditemukan" : "Belum Ada Data Siswa"}
+                                                        description={activeFilterCount > 0 || searchQuery 
+                                                            ? "Maaf, kami tidak menemukan data siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                                            : "Database siswa Anda masih kosong. Mulai tambahkan siswa baru atau import data untuk mulai mengelola."
+                                                         }
+                                                         action={
+                                                            activeFilterCount > 0 || searchQuery ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={resetAllFilters}
+                                                                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                                                >
+                                                                    Reset Semua Filter
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => { setIsModalOpen(true); setActiveModal('add'); }}
+                                                                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 hover:scale-105 transition-all flex items-center gap-2"
+                                                                >
+                                                                    <FontAwesomeIcon icon={faPlus} />
+                                                                    Tambah Siswa Pertama
+                                                                </button>
+                                                            )
+                                                         }
                                                     />
                                                 </td>
                                             </tr>
@@ -1424,16 +1519,30 @@ export default function StudentsPage() {
                                 ) : students.length === 0 ? (
                                     <div className="py-12">
                                         <EmptyState
-                                            icon={faSearch}
-                                            title="Pencarian Tidak Ditemukan"
-                                            description="Maaf, kami tidak menemukan siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                            variant="plain"
+                                            icon={activeFilterCount > 0 || searchQuery ? faSearch : faUsers}
+                                            title={activeFilterCount > 0 || searchQuery ? "Pencarian Tidak Ditemukan" : "Belum Ada Data Siswa"}
+                                            description={activeFilterCount > 0 || searchQuery 
+                                               ? "Maaf, kami tidak menemukan siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                               : "Database siswa Anda masih kosong. Mulai tambahkan siswa baru untuk mulai mengelola."
+                                            }
                                             action={
-                                                <button
-                                                    onClick={resetAllFilters}
-                                                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
-                                                >
-                                                    Reset Semua Filter
-                                                </button>
+                                               activeFilterCount > 0 || searchQuery ? (
+                                                   <button
+                                                       onClick={resetAllFilters}
+                                                       className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                                   >
+                                                       Reset Semua Filter
+                                                   </button>
+                                               ) : (
+                                                   <button
+                                                       onClick={() => { setIsModalOpen(true); setActiveModal('add'); }}
+                                                       className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 active:scale-95 transition-all flex items-center gap-2"
+                                                   >
+                                                       <FontAwesomeIcon icon={faPlus} />
+                                                       Tambah Siswa Pertama
+                                                   </button>
+                                               )
                                             }
                                         />
                                     </div>
@@ -2583,13 +2692,12 @@ export default function StudentsPage() {
                         >
                             <div className="relative group">
                                 {/* Glow Effect */}
-                                <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-primary)] via-indigo-500 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
 
-                                <div className="relative glass-morphism bg-gray-900/90 dark:bg-gray-800/95 backdrop-blur-3xl border border-white/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] px-2 py-2 flex items-center justify-between gap-2 text-white overflow-hidden">
+                                <div className="relative glass-morphism bg-gray-900/90 dark:bg-gray-800/95 backdrop-blur-3xl border border-white/20 rounded-2xl px-2 py-2 flex items-center justify-between gap-2 text-white overflow-hidden">
                                     {/* Animated scanline */}
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
                                     <div className="flex items-center gap-2 pl-1 shrink-0">
-                                        <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center font-black text-sm shadow-lg shadow-indigo-500/30 shrink-0">
+                                        <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center font-black text-sm shrink-0">
                                             {selectedStudentIds.length}
                                         </div>
                                         <div className="hidden sm:block">
@@ -2680,13 +2788,13 @@ export default function StudentsPage() {
                                 <div className="flex p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
                                     <button
                                         onClick={() => setBulkTagAction('add')}
-                                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${bulkTagAction === 'add' ? 'bg-indigo-500 text-white shadow-lg' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${bulkTagAction === 'add' ? 'bg-indigo-500 text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                                     >
                                         Tambah Label
                                     </button>
                                     <button
                                         onClick={() => setBulkTagAction('remove')}
-                                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${bulkTagAction === 'remove' ? 'bg-red-500 text-white shadow-lg' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${bulkTagAction === 'remove' ? 'bg-red-500 text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                                     >
                                         Hapus Label
                                     </button>
@@ -2802,7 +2910,7 @@ export default function StudentsPage() {
                                     <button
                                         onClick={handleBulkPointUpdate}
                                         disabled={submitting || !bulkPointValue}
-                                        className="h-12 flex-2 rounded-xl bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-orange-500/20 transition-all disabled:opacity-50"
+                                        className="h-12 flex-2 rounded-xl bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50"
                                     >
                                         {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'Proses Poin Massal'}
                                     </button>
