@@ -61,6 +61,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const [bulkTagAction, setBulkTagAction] = useState('add')
     const [bulkPointValue, setBulkPointValue] = useState(0)
     const [bulkPointLabel, setBulkPointLabel] = useState('')
+    const [bulkRoomId, setBulkRoomId] = useState('')
 
     // ---- STATE: PROFILE / DETAIL ----
     const [behaviorHistory, setBehaviorHistory] = useState([])
@@ -696,6 +697,41 @@ export function useStudentsCore({ addToast, addUndoToast }) {
         } catch { addToast('Gagal', 'error') } finally { setSubmitting(false) }
     }
 
+    const handleBulkRoomAssign = async () => {
+        if (!bulkRoomId || selectedStudentIds.length === 0) return addToast('Pilih kamar terlebih dahulu', 'warning')
+        setSubmitting(true)
+        const idsToUpdate = [...selectedStudentIds]
+        const count = idsToUpdate.length
+        const roomVal = bulkRoomId
+        try {
+            // Fetch current metadata untuk preserve existing fields
+            const { data: prevData } = await supabase.from('students').select('id, metadata').in('id', idsToUpdate)
+            const prevMetaMap = Object.fromEntries((prevData || []).map(s => [s.id, s.metadata || {}]))
+
+            const updates = idsToUpdate.map(id =>
+                supabase.from('students').update({
+                    metadata: { ...prevMetaMap[id], kamar: roomVal === '-' ? '' : roomVal }
+                }).eq('id', id)
+            )
+            await Promise.all(updates)
+            await logAudit({
+                action: 'UPDATE', source: 'SYSTEM', tableName: 'students',
+                newData: { bulk_room_assign: true, count, room: roomVal, ids: idsToUpdate }
+            })
+            closeModal()
+            setBulkRoomId('')
+            setSelectedStudentIds([])
+            fetchData()
+            addUndoToast(`${count} siswa → Kamar ${roomVal === '-' ? 'dikosongkan' : roomVal}`, async () => {
+                await Promise.all(idsToUpdate.map(id =>
+                    supabase.from('students').update({ metadata: prevMetaMap[id] }).eq('id', id)
+                ))
+                fetchData()
+                addToast('Dibatalkan', 'success')
+            })
+        } catch { addToast('Gagal menetapkan kamar', 'error') } finally { setSubmitting(false) }
+    }
+
     // ---- FUNCTIONS: ARCHIVE ----
     const fetchArchivedStudents = async () => {
         setLoadingArchived(true)
@@ -1169,6 +1205,7 @@ Laporanmu System`
         // Bulk
         bulkClassId, setBulkClassId, bulkTagAction, setBulkTagAction,
         bulkPointValue, setBulkPointValue, bulkPointLabel, setBulkPointLabel,
+        bulkRoomId, setBulkRoomId,
         // Profile / Details
         behaviorHistory, setBehaviorHistory, raportHistory, setRaportHistory,
         profileTab, setProfileTab, timelineFilter, setTimelineFilter,
@@ -1177,7 +1214,7 @@ Laporanmu System`
         // Functional
         handleSubmit, handleAdd, handleEdit, confirmDelete, executeDelete, closeModal,
         toggleSelectAll, toggleSelectStudent, handleBulkPromote, handleBulkDelete,
-        handleBulkPointUpdate, handleBulkTagApply,
+        handleBulkPointUpdate, handleBulkTagApply, handleBulkRoomAssign,
         fetchArchivedStudents, handleRestoreStudent, handlePermanentDelete, setArchivedStudents,
         fetchUsedTags, handleToggleTag, handleGlobalDeleteTag, handleGlobalRenameTag,
         fetchBehaviorHistory, fetchRaportHistory, handleViewProfile,

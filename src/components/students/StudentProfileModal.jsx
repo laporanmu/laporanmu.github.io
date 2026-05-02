@@ -144,7 +144,7 @@ END:VCARD`
                         const now = new Date()
                         const alerts = []
 
-                        if (behaviorHistory.length > 0) {
+                        if (behaviorHistory?.length > 0) {
                             const lastDate = new Date(behaviorHistory[0].created_at)
                             const daysSince = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24))
                             if (daysSince >= 14) alerts.push({ id: 'stale', color: 'amber', icon: faClockRotateLeft, text: `Stale ${daysSince} hari` })
@@ -194,14 +194,14 @@ END:VCARD`
                             { key: 'statistik', label: 'Statistik', icon: faArrowTrendUp },
                             {
                                 key: 'laporan', label: 'Perilaku', icon: faHistory,
-                                badge: !loadingHistory && behaviorHistory.length > 0 ? behaviorHistory.length : null
+                                badge: !loadingHistory && behaviorHistory?.length > 0 ? behaviorHistory.length : null
                             },
                             {
                                 key: 'audit', label: 'Audit', icon: faShieldHalved,
                             },
                             {
                                 key: 'raport', label: 'Raport', icon: faTableList,
-                                badge: !loadingRaport && raportHistory.length > 0 ? raportHistory.length : null
+                                badge: !loadingRaport && raportHistory?.length > 0 ? raportHistory.length : null
                             },
                         ].map(tab => (
                             <button
@@ -357,7 +357,7 @@ END:VCARD`
                                 {/* Stats tiles - Compact */}
                                 <div className="grid grid-cols-2 gap-1.5">
                                     {[
-                                        { label: 'Total Laporan', value: behaviorHistory.length, color: 'text-[var(--color-text)]', bg: 'bg-[var(--color-surface-alt)]/60 border-[var(--color-border)]' },
+                                        { label: 'Total Laporan', value: behaviorHistory?.length || 0, color: 'text-[var(--color-text)]', bg: 'bg-[var(--color-surface-alt)]/60 border-[var(--color-border)]' },
                                         { label: 'Total Poin', value: `${(selectedStudent.points ?? selectedStudent.total_points ?? 0) >= 0 ? '+' : ''}${selectedStudent.points ?? selectedStudent.total_points ?? 0}`, color: (selectedStudent.points ?? selectedStudent.total_points ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500', bg: 'bg-[var(--color-surface-alt)]/60 border-[var(--color-border)]' },
                                         { label: `Positif (${timelineStats.pos}×)`, value: `+${timelineStats.totalPos}`, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/15' },
                                         { label: `Negatif (${timelineStats.neg}×)`, value: timelineStats.totalNeg || 0, color: 'text-red-500', bg: 'bg-red-500/5 border-red-500/15' },
@@ -406,14 +406,14 @@ END:VCARD`
                                                 </div>
                                             ))}
                                         </div>
-                                    ) : timelineFiltered.length === 0 ? (
+                                    ) : timelineFiltered?.length === 0 ? (
                                         <div className="py-10 flex flex-col items-center justify-center opacity-30 gap-1.5">
                                             <FontAwesomeIcon icon={faHistory} className="text-base" />
                                             <p className="text-[8px] font-black uppercase">Tidak ada laporan</p>
                                         </div>
                                     ) : (
                                         <div className="p-3 space-y-1">
-                                            {timelineFiltered.slice(0, timelineVisible).map((item) => {
+                                            {timelineFiltered?.slice(0, timelineVisible).map((item) => {
                                                 const isPos = (item.points ?? 0) >= 0
                                                 const displayDate = new Date(item.reported_at || item.created_at)
                                                 const time = displayDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -442,7 +442,7 @@ END:VCARD`
                                                     </div>
                                                 )
                                             })}
-                                            {timelineFiltered.length > timelineVisible && (
+                                            {timelineFiltered?.length > timelineVisible && (
                                                 <button
                                                     onClick={() => setTimelineVisible(v => v + 10)}
                                                     className="w-full mt-1 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 rounded-lg transition-all border border-dashed border-[var(--color-border)]"
@@ -504,14 +504,14 @@ END:VCARD`
                                         <div className="space-y-2">
                                             {[1, 2].map(i => <div key={i} className="h-16 rounded-xl bg-[var(--color-surface-alt)] animate-pulse" />)}
                                         </div>
-                                    ) : raportHistory.length === 0 ? (
+                                    ) : raportHistory?.length === 0 ? (
                                         <div className="py-10 flex flex-col items-center justify-center opacity-30 gap-2">
                                             <FontAwesomeIcon icon={faTableList} className="text-2xl" />
                                             <p className="text-[9px] font-black uppercase tracking-widest">Belum ada raport bulanan</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
-                                            {raportHistory.map((r) => {
+                                            {raportHistory?.map((r) => {
                                                 const avg = calcAvg(r)
                                                 const color = avg ? gradeColor(avg) : 'var(--color-text-muted)'
                                                 return (
