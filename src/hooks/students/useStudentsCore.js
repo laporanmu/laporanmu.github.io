@@ -1036,6 +1036,11 @@ Laporanmu System`
     }
 
     const handleBatchResetPoints = async () => {
+        const msg = resetPointsClassId 
+            ? `Reset semua poin siswa di kelas ini ke 0?` 
+            : `Reset SEMUA poin siswa di SELURUH kelas ke 0? Tindakan ini tidak bisa dibatalkan.`
+        if (!window.confirm(msg)) return
+
         setResettingPoints(true)
         try {
             let q = supabase.from('students').update({ total_points: 0 }).is('deleted_at', null)
@@ -1225,6 +1230,8 @@ Laporanmu System`
         handleBulkPhotoMatch, handleBulkPhotoUpload, handleClassBreakdown, handleBatchResetPoints,
         bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches,
         // State Helpers
+        resetPointsClassId, setResetPointsClassId, resettingPoints,
+        classBreakdownData, loadingBreakdown,
         setNewTagInput, newTagInput, tagToEdit, setTagToEdit, tagStats, duplicateWarning,
         checkingDuplicate, gSheetsUrl, setGSheetsUrl, fetchingGSheets, setFetchingGSheets,
         page, setPage, pageSize, setPageSize, jumpPage, setJumpPage, generatingPdf,

@@ -4,12 +4,12 @@ import { logAudit } from '../../lib/auditLogger'
 import { RiskThreshold, calculateCompleteness } from '../../utils/students/studentsConstants'
 
 export const SYSTEM_COLS = [
-    { key: 'name', label: 'Nama', synonyms: ['nama', 'name', 'nama lengkap', 'full name', 'student name', 'siswa'] },
-    { key: 'class_name', label: 'Kelas', synonyms: ['kelas', 'class', 'class_name', 'rombel'] },
-    { key: 'gender', label: 'Gender', synonyms: ['gender', 'jk', 'jenis kelamin', 'kelamin', 'sex'] },
-    { key: 'nisn', label: 'NISN', synonyms: ['nisn', 'nomor induk siswa nasional'] },
-    { key: 'phone', label: 'No. HP / WA', synonyms: ['phone', 'no_hp', 'hp', 'whatsapp', 'wa', 'telp', 'telepon', 'phone number', 'wali_phone'] },
-    { key: 'guardian_name', label: 'Nama Wali', synonyms: ['guardian_name', 'nama_wali', 'wali', 'parent name', 'nama orang tua'] },
+    { key: 'name', label: 'Nama', synonyms: ['nama', 'name', 'nama lengkap', 'full name', 'student name', 'siswa', 'nama siswa'] },
+    { key: 'class_name', label: 'Kelas', synonyms: ['kelas', 'class', 'class_name', 'rombel', 'rombongan belajar'] },
+    { key: 'gender', label: 'Gender', synonyms: ['gender', 'jk', 'jenis kelamin', 'kelamin', 'sex', 'l/p'] },
+    { key: 'nisn', label: 'NISN', synonyms: ['nisn', 'nomor induk siswa nasional', 'nisn siswa'] },
+    { key: 'phone', label: 'No. HP / WA', synonyms: ['phone', 'no_hp', 'hp', 'whatsapp', 'wa', 'telp', 'telepon', 'phone number', 'wali_phone', 'no. whatsapp', 'no whatsapp', 'no. hp / wa', 'no. hp', 'whatsapp number'] },
+    { key: 'guardian_name', label: 'Nama Wali', synonyms: ['guardian_name', 'nama_wali', 'wali', 'parent name', 'nama orang tua', 'nama wali', 'wali murid', 'nama ayah/ibu'] },
 ]
 
 export function useStudentsImportExport({
@@ -51,19 +51,7 @@ export function useStudentsImportExport({
     const [isExportModalOpen, setIsExportModalOpen] = useState(false)
     // Export Wizard state
     const [exportScope, setExportScope] = useState('filtered')   // 'filtered' | 'selected' | 'all'
-    const [exportColumns, setExportColumns] = useState({
-        id: false,
-        kode: true,
-        nisn: false,
-        nama: true,
-        gender: true,
-        kelas: true,
-        poin: true,
-        phone: true,
-        status: false,
-        tags: true,
-        kelengkapan: false,
-    })
+    const [exportColumns, setExportColumns] = useState(['kode', 'nama', 'gender', 'kelas', 'poin', 'phone', 'tags']) // Array for ordered keys
 
     const [importTab, setImportTab] = useState('guideline')
     const [importFileName, setImportFileName] = useState('')
@@ -187,10 +175,11 @@ export function useStudentsImportExport({
             // Mapping manual karena struktur berbeda dengan supabase response
             return sourceData.map(s => {
                 const row = {}
-                ALL_EXPORT_COLUMNS.forEach(col => {
-                    if (exportColumns[col.key]) {
+                exportColumns.forEach(key => {
+                    const col = ALL_EXPORT_COLUMNS.find(c => c.key === key)
+                    if (col) {
                         // Untuk kelas, gunakan className dari state
-                        if (col.key === 'kelas') row[col.label] = s.className || ''
+                        if (key === 'kelas') row[col.label] = s.className || ''
                         else row[col.label] = col.fn(s)
                     }
                 })
@@ -229,10 +218,15 @@ export function useStudentsImportExport({
         const { data, error } = await q
         if (error) throw error
 
+        // Mapping data berdasarkan urutan di exportColumns (Array)
         return (data || []).map(s => {
             const row = {}
-            ALL_EXPORT_COLUMNS.forEach(col => {
-                if (exportColumns[col.key]) row[col.label] = col.fn(s)
+            exportColumns.forEach(key => {
+                const col = ALL_EXPORT_COLUMNS.find(c => c.key === key)
+                if (col) {
+                    if (key === 'kelas') row[col.label] = s.classes?.name || ''
+                    else row[col.label] = col.fn(s)
+                }
             })
             return row
         })
@@ -286,7 +280,7 @@ export function useStudentsImportExport({
         const link = document.createElement('a')
         const blobUrl = URL.createObjectURL(blob)
         link.href = blobUrl
-        link.download = 'Template_Import_Siswa.xlsx'
+        link.download = 'Template Import Siswa.xlsx'
         link.click()
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
     }
@@ -518,6 +512,20 @@ export function useStudentsImportExport({
         addToast(`Selesai memperbarui ${newPrev.length} baris`, 'success')
     }
 
+    const handleImportCellEdit = (index, key, value) => {
+        const newPrev = [...importPreview]
+        const updatedRow = { ...newPrev[index], [key]: value }
+
+        // Special handling for class_id
+        if (key === 'class_id') {
+            updatedRow._className = classesList.find(c => c.id === value)?.name || value
+        }
+
+        newPrev[index] = updatedRow
+        setImportPreview(newPrev)
+        validateImportPreview(newPrev)
+    }
+
     const handleImportClick = () => {
         // Open the import modal on the Panduan tab first.
         // The actual file picker is triggered from inside the modal.
@@ -612,21 +620,21 @@ export function useStudentsImportExport({
         link.click()
     }
 
-    const handleExportCSV = async () => {
+    const handleExportCSV = async (filename, options = {}) => {
         setExporting(true)
         try {
             const rows = await getExportData()
             if (!rows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
             const headers = Object.keys(rows[0])
             const csvContent = [
-                headers.join(','),
+                ...(options.includeHeader !== false ? [headers.join(',')] : []),
                 ...rows.map(r => headers.map(h => {
                     const v = String(r[h] ?? '').replace(/"/g, '""')
                     return `"${v}"`
                 }).join(','))
             ].join('\n')
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-            downloadBlob(blob, `data_siswa_${new Date().toISOString().slice(0, 10)}.csv`)
+            downloadBlob(blob, `${filename || 'export_siswa'}.csv`)
             addToast(`Export CSV berhasil (${rows.length} siswa)`, 'success')
             await logAudit({
                 action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
@@ -637,11 +645,10 @@ export function useStudentsImportExport({
             addToast('Gagal export CSV', 'error')
         } finally {
             setExporting(false)
-            setIsExportModalOpen(false)
         }
     }
 
-    const handleExportExcel = async () => {
+    const handleExportExcel = async (filename) => {
         setExporting(true)
         try {
             const XLSX = await import('xlsx')
@@ -655,7 +662,7 @@ export function useStudentsImportExport({
             XLSX.utils.book_append_sheet(wb, ws, 'Data Siswa')
             const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
             const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-            downloadBlob(blob, `data_siswa_${new Date().toISOString().slice(0, 10)}.xlsx`)
+            downloadBlob(blob, `${filename || 'export_siswa'}.xlsx`)
             addToast(`Export Excel berhasil (${data.length} siswa)`, 'success')
             await logAudit({
                 action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
@@ -666,11 +673,10 @@ export function useStudentsImportExport({
             addToast('Gagal export Excel', 'error')
         } finally {
             setExporting(false)
-            setIsExportModalOpen(false)
         }
     }
 
-    const handleExportPDF = async () => {
+    const handleExportPDF = async (filename, options = {}) => {
         setExporting(true)
         try {
             const [{ default: jsPDF }, autoTableMod] = await Promise.all([
@@ -680,7 +686,7 @@ export function useStudentsImportExport({
             const autoTable = autoTableMod.default || autoTableMod
             const allRows = await getExportData()
             if (!allRows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
-            const doc = new jsPDF({ orientation: 'landscape' })
+            const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
             doc.setFontSize(13)
             doc.text('Laporan Data Siswa', 14, 12)
             doc.setFontSize(8)
@@ -695,14 +701,14 @@ export function useStudentsImportExport({
             const headers = Object.keys(allRows[0])
             const rows = allRows.map(r => headers.map(h => String(r[h] ?? '')))
             autoTable(doc, {
-                head: [headers],
+                head: options.includeHeader !== false ? [headers] : [],
                 body: rows,
                 startY: filterInfo.length ? 28 : 22,
                 styles: { fontSize: 7.5 },
                 headStyles: { fillColor: [79, 70, 229] },
                 alternateRowStyles: { fillColor: [245, 245, 255] },
             })
-            doc.save(`laporan_siswa_${new Date().toISOString().slice(0, 10)}.pdf`)
+            doc.save(`${filename || 'export_siswa'}.pdf`)
             addToast(`Export PDF berhasil (${allRows.length} siswa)`, 'success')
             await logAudit({
                 action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
@@ -713,7 +719,6 @@ export function useStudentsImportExport({
             addToast('Gagal export PDF', 'error')
         } finally {
             setExporting(false)
-            setIsExportModalOpen(false)
         }
     }
 
@@ -764,6 +769,7 @@ export function useStudentsImportExport({
         fetchFilteredForExport,
         getExportData,
         downloadBlob,
-        buildImportPreview
+        buildImportPreview,
+        handleImportCellEdit
     }
 }

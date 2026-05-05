@@ -741,6 +741,9 @@ const StudentMobileCard = memo(({
     const handleActionAreaClick = (e) => {
         e.stopPropagation();
     };
+    const stopTouch = (e) => {
+        e.stopPropagation();
+    };
 
     const quickActions = [
         { label: 'Sangat Aktif', amount: 5, color: 'text-emerald-500', icon: faPlus },
@@ -761,7 +764,7 @@ const StudentMobileCard = memo(({
             className={`group relative p-2 rounded-[2.2rem] border transition-all duration-300 ease-out select-none
                 ${showQuickAction ? 'z-[100]' : 'z-auto'}
                 ${isSelected
-                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/[0.03] shadow-lg shadow-[var(--color-primary)]/10 pb-2.5 translate-y-[-2px]'
+                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/[0.04] shadow-xl shadow-[var(--color-primary)]/10 ring-1 ring-[var(--color-primary)]/20'
                     : 'border-[var(--color-border)] bg-[var(--color-surface)] shadow-md shadow-black/[0.02]'}
                 ${student.is_pinned ? 'border-amber-400/40' : ''}
                 ${isPressed ? 'scale-[0.985] shadow-inner brightness-[0.98]' : 'scale-100'}
@@ -804,10 +807,10 @@ const StudentMobileCard = memo(({
                                 : <span>{isPrivacyMode ? '*' : (student.name || 'S').charAt(0)}</span>
                             }
 
-                            {/* Selection Checkmark Overlay */}
+                            {/* Selection Checkmark Badge - Top Left of Avatar */}
                             {isSelected && (
-                                <div className="absolute inset-0 bg-[var(--color-primary)]/40 flex items-center justify-center animate-in zoom-in-50 duration-200">
-                                    <FontAwesomeIcon icon={faCheck} className="text-white text-2xl" />
+                                <div className="absolute -top-1 -left-1 w-6 h-6 rounded-full bg-[var(--color-primary)] border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-md z-30 animate-in zoom-in-50 duration-200">
+                                    <FontAwesomeIcon icon={faCheck} className="text-white text-[10px]" />
                                 </div>
                             )}
                         </div>
@@ -868,6 +871,10 @@ const StudentMobileCard = memo(({
                                 const phone = student.phone.replace(/[^0-9]/g, '').replace(/^0/, '62')
                                 window.open(`https://wa.me/${phone}`, '_blank')
                             }}
+                            onMouseDown={stopTouch}
+                            onMouseUp={stopTouch}
+                            onTouchStart={stopTouch}
+                            onTouchEnd={stopTouch}
                             disabled={!student.phone}
                             title={student.phone ? `Hubungi WA: ${student.phone}` : 'Belum ada nomor WA'}
                             className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all
@@ -902,6 +909,10 @@ const StudentMobileCard = memo(({
                 {/* ACTION FOOTER - Isolated from Card Clicks */}
                 <div
                     onClick={handleActionAreaClick}
+                    onMouseDown={stopTouch}
+                    onMouseUp={stopTouch}
+                    onTouchStart={stopTouch}
+                    onTouchEnd={stopTouch}
                     className="mt-4 bg-[var(--color-surface-alt)] rounded-[2.2rem] p-1.5 flex items-center justify-between border border-[var(--color-border)] shadow-sm relative z-10"
                 >
                     {/* Profil */}

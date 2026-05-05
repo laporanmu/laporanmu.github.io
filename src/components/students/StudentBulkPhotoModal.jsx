@@ -32,7 +32,12 @@ export default function StudentBulkPhotoModal({
             isOpen={isOpen}
             onClose={() => { if (!uploadingBulkPhotos) onClose() }}
             title="Bulk Match Foto Siswa"
+            description="Unggah banyak foto sekaligus. Sistem akan mencocokkan nama file dengan data siswa secara otomatis."
+            icon={faCamera}
+            iconBg="bg-indigo-500/10"
+            iconColor="text-indigo-600"
             size="lg"
+            mobileVariant="bottom-sheet"
         >
             <div className="space-y-5">
                 <div className="flex flex-col gap-3">

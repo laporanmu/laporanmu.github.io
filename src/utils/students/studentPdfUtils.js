@@ -1,4 +1,5 @@
 import QRCode from 'qrcode'
+import { logAudit } from '../../lib/auditLogger'
 
 // ── Helper: Convert image URL to Base64 ──────────────────────────────────
 export const getBase64Image = (url) => {
@@ -770,11 +771,11 @@ export const generateStudentPDF = async (targets, captureRef = null, { addToast,
             doc.text('Dokumen Digital Otomatis · MBS Tanggul · Laporanmu', pageWidth / 2, 287, { align: 'center' });
         }
 
-        doc.save(`SURAT_AKSES_${targets.length > 1 ? 'BULK' : targets[0].name.toUpperCase().replace(/\s+/g, '_')}.pdf`);
-        addToast('Dokumen berhasil dibuat!', 'success');
+        doc.save(`${targets.length > 1 ? 'Kartu Akses - Massal' : 'Kartu Akses - ' + targets[0].name.toUpperCase().replace(/\s+/g, '_')}.pdf`);
+        addToast('Kartu akses berhasil dibuat!', 'success');
         await logAudit({
             action: 'EXPORT', source: 'OPERATIONAL', tableName: 'students',
-            recordId: student?.id || null, // null untuk bulk
+            recordId: targets.length === 1 ? targets[0].id : null,
             newData: { format: 'PDF', via: 'print_card', count: targets.length }
         })
     } catch (e) {

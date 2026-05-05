@@ -55,7 +55,12 @@ export default function StudentPrintModal({
             isOpen={isOpen}
             onClose={() => { setShowExportMenu(false); onClose?.() }}
             title={newlyCreatedStudent ? "Registrasi Berhasil!" : isBulk ? `Cetak Kartu (${studentsToShow.length} Siswa)` : "Akses & Kartu"}
+            description={newlyCreatedStudent ? "Data siswa telah tersimpan. Silakan simpan kode akses atau cetak kartu pelajar di bawah." : "Kelola akses portal orang tua dan cetak kartu identitas siswa."}
+            icon={newlyCreatedStudent ? faCheckCircle : faPrint}
+            iconBg={newlyCreatedStudent ? "bg-emerald-500/10" : "bg-indigo-500/10"}
+            iconColor={newlyCreatedStudent ? "text-emerald-600" : "text-indigo-600"}
             size={isBulk ? "xl" : "lg"}
+            mobileVariant="bottom-sheet"
         >
             <div className="space-y-4 py-1">
                 {newlyCreatedStudent && (

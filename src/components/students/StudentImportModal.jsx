@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faArrowLeft,
@@ -9,9 +10,15 @@ import {
     faDownload,
     faFileLines,
     faSpinner,
-    faTableList,
+    faFilter,
     faTags,
     faUpload,
+    faFileImport,
+    faCheckCircle,
+    faCopy,
+    faCircleExclamation,
+    faTriangleExclamation,
+    faPen
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 
@@ -44,9 +51,173 @@ export default function StudentImportModal(props) {
         setImportValidationOpen,
         importProgress,
         handleCommitImport,
+        handleImportClick,
         hasImportBlockingErrors,
         importReadyRows,
+        handleImportCellEdit,
+        importEditCell,
+        setImportEditCell,
     } = props
+
+    const [showClasses, setShowClasses] = useState(false)
+    const [filterIssuesOnly, setFilterIssuesOnly] = useState(false)
+
+    // Inline Editor Component - Memoized for high performance in large tables
+    const EditableCell = React.memo(({ rowIdx, colKey, value, importPreview, classesList, importEditCell, setImportEditCell, handleImportCellEdit }) => {
+        const isEditing = importEditCell?.row === rowIdx && importEditCell?.col === colKey
+        const [searchTerm, setSearchTerm] = useState('')
+        const cellRef = useRef(null)
+        const [coords, setCoords] = useState(null)
+
+        // Use useLayoutEffect for zero-latency positioning
+        React.useLayoutEffect(() => {
+            if (isEditing && cellRef.current) {
+                const rect = cellRef.current.getBoundingClientRect()
+                setCoords({
+                    anchorTop: rect.top,
+                    left: rect.left,
+                    width: rect.width
+                })
+            } else {
+                setCoords(null)
+            }
+        }, [isEditing])
+
+        const renderDropdown = (content) => {
+            if (!coords) return null
+
+            return createPortal(
+                <div
+                    className="fixed z-[9999]"
+                    style={{
+                        bottom: (window.innerHeight - coords.anchorTop) + 8,
+                        left: coords.left,
+                        minWidth: Math.max(coords.width, colKey === 'class_id' ? 220 : 140)
+                    }}
+                >
+                    <div className="flex flex-col bg-[var(--color-surface)] border border-[var(--color-primary)] rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl border-t-[var(--color-primary)]">
+                        {content}
+                    </div>
+                    <div className="fixed inset-0 -z-10 bg-black/0" onClick={() => setImportEditCell(null)} />
+                </div>,
+                document.body
+            )
+        }
+
+        if (isEditing) {
+            if (colKey === 'class_id') {
+                const filteredClasses = classesList.filter(c =>
+                    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+
+                return (
+                    <div ref={cellRef} className="relative">
+                        <div className="bg-[var(--color-primary)]/10 rounded-lg px-2 py-1 text-[var(--color-primary)] font-black border border-[var(--color-primary)] shadow-sm">
+                            {importPreview[rowIdx]._className || 'Pilih...'}
+                        </div>
+                        {renderDropdown(
+                            <>
+                                <div className="p-2 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/50">
+                                    <input
+                                        autoFocus
+                                        className="w-full bg-transparent text-[10px] font-bold outline-none placeholder:font-normal placeholder:opacity-30"
+                                        placeholder="Cari kelas..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Escape') setImportEditCell(null)
+                                            if (e.key === 'Enter' && filteredClasses.length > 0) {
+                                                handleImportCellEdit(rowIdx, colKey, filteredClasses[0].id)
+                                                setImportEditCell(null)
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="max-h-[160px] overflow-auto py-1 scrollbar-none">
+                                    {filteredClasses.length > 0 ? filteredClasses.map(c => (
+                                        <button
+                                            key={c.id}
+                                            className="w-full px-4 py-2 text-left text-[10px] font-bold hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors flex items-center justify-between group"
+                                            onClick={() => {
+                                                handleImportCellEdit(rowIdx, colKey, c.id)
+                                                setImportEditCell(null)
+                                            }}
+                                        >
+                                            <span className="truncate">{c.name}</span>
+                                            {value === c.id && <FontAwesomeIcon icon={faCheck} className="text-[8px]" />}
+                                        </button>
+                                    )) : (
+                                        <div className="px-3 py-3 text-[9px] text-[var(--color-text-muted)] italic text-center">Data tidak ditemukan</div>
+                                    )}
+                                </div>
+                                <button
+                                    className="p-2 text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-red-500 transition-colors border-t border-[var(--color-border)]"
+                                    onClick={() => setImportEditCell(null)}
+                                >
+                                    Batal
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )
+            }
+
+            if (colKey === 'gender') {
+                const options = [
+                    { id: 'L', name: 'Laki-laki' },
+                    { id: 'P', name: 'Perempuan' }
+                ]
+                return (
+                    <div ref={cellRef} className="relative">
+                        <div className="bg-[var(--color-primary)]/10 rounded-lg px-2 py-1 text-[var(--color-primary)] font-black uppercase text-center border border-[var(--color-primary)] shadow-sm">
+                            {value || '-'}
+                        </div>
+                        {renderDropdown(
+                            <div className="py-1">
+                                {options.map(opt => (
+                                    <button
+                                        key={opt.id}
+                                        className="w-full px-4 py-2.5 text-left text-[10px] font-bold hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] transition-colors flex items-center justify-between"
+                                        onClick={() => {
+                                            handleImportCellEdit(rowIdx, colKey, opt.id)
+                                            setImportEditCell(null)
+                                        }}
+                                    >
+                                        <span>{opt.name}</span>
+                                        {value === opt.id && <FontAwesomeIcon icon={faCheck} className="text-[8px]" />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )
+            }
+
+            return (
+                <input
+                    autoFocus
+                    className="w-full bg-[var(--color-surface)] border-2 border-[var(--color-primary)] rounded-lg px-2 py-1 text-[10px] font-black outline-none shadow-lg transition-all"
+                    value={value || ''}
+                    onChange={(e) => handleImportCellEdit(rowIdx, colKey, e.target.value)}
+                    onBlur={() => setImportEditCell(null)}
+                    onKeyDown={(e) => e.key === 'Enter' && setImportEditCell(null)}
+                />
+            )
+        }
+
+        const displayValue = colKey === 'class_id' ? (importPreview[rowIdx]._className || '-') : (value || '-')
+        const isEmpty = !value || value === '-'
+
+        return (
+            <div
+                className={`group cursor-pointer hover:bg-[var(--color-primary)]/5 px-1.5 py-0.5 -mx-1.5 rounded-md transition-all flex items-center justify-between gap-2 min-h-[20px] ${isEmpty ? 'text-red-500/40 italic font-normal' : ''}`}
+                onClick={() => setImportEditCell({ row: rowIdx, col: colKey })}
+            >
+                <span className="truncate">{displayValue}</span>
+                <FontAwesomeIcon icon={faPen} className="text-[7px] opacity-0 group-hover:opacity-30 transition-opacity" />
+            </div>
+        )
+    })
 
     if (!isOpen) return null
 
@@ -54,53 +225,61 @@ export default function StudentImportModal(props) {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Import Siswa"
-            size="md"
+            title="Import Data Siswa"
+            description="Unggah data siswa secara masal dari file Excel atau CSV. Sistem akan memvalidasi data secara otomatis."
+            icon={faFileImport}
+            iconBg="bg-emerald-500/10"
+            iconColor="text-emerald-600"
+            size="lg"
+            mobileVariant="bottom-sheet"
         >
-            {importStep === 2 && importPreview.length > 0 && (
-                <div className="flex items-center gap-2 -mt-1 mb-4 flex-wrap">
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-600 dark:text-indigo-400 truncate max-w-[200px]">
-                        <FontAwesomeIcon icon={faFileLines} className="text-[10px] shrink-0" />
-                        {importFileName}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)]">
-                        {importPreview.length} baris
-                    </span>
-                    {importDuplicates.length > 0 && (
-                        <span className="px-2.5 py-1 rounded-xl bg-violet-500/10 border border-violet-500/20 text-[10px] font-black text-violet-600">
-                            {importDuplicates.length} duplikat
-                        </span>
-                    )}
-                    <button
-                        onClick={() => importFileInputRef.current?.click()}
-                        className="ml-auto shrink-0 px-2.5 py-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-border)]/50 hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                        <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-[8px]" />
-                        Ganti File
-                    </button>
-                </div>
-            )}
-
-            <div className="flex items-center justify-center gap-3 mb-5">
+            {/* Header Progress Steppers */}
+            <div className="flex items-center justify-center gap-3 mb-6">
                 {[
-                    { step: 1, label: 'Upload', icon: faUpload, desc: 'Pilih File' },
-                    { step: 2, label: 'Mapping', icon: faArrowRightArrowLeft, desc: 'Atur Kolom' },
-                    { step: 3, label: 'Review', icon: faTableList, desc: 'Validasi' },
-                ].map(s => (
+                    { step: 1, label: 'Upload', desc: 'Pilih File' },
+                    { step: 2, label: 'Mapping', desc: 'Atur Kolom' },
+                    { step: 3, label: 'Review', desc: 'Validasi' },
+                ].map((s, idx) => (
                     <React.Fragment key={s.step}>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${importStep >= s.step ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]'}`}>
+                        <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black transition-all shadow-sm
+                                ${importStep >= s.step ? 'bg-[var(--color-primary)] text-white scale-110' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)] opacity-40'}`}>
                                 {importStep > s.step ? <FontAwesomeIcon icon={faCheck} className="text-[9px]" /> : s.step}
                             </div>
                             <div className="flex flex-col">
-                                <span className={`text-[9px] font-black uppercase tracking-widest leading-none ${importStep >= s.step ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-50'}`}>{s.label}</span>
-                                <span className="text-[7px] font-bold text-[var(--color-text-muted)] opacity-40 uppercase tracking-tighter mt-0.5">{s.desc}</span>
+                                <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-wider leading-none ${importStep >= s.step ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-50'}`}>{s.label}</span>
+                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-40 uppercase tracking-tight mt-1">{s.desc}</span>
                             </div>
                         </div>
                         {s.step < 3 && <div className={`w-6 h-0.5 rounded-full transition-all ${importStep > s.step ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)] opacity-30'}`} />}
                     </React.Fragment>
                 ))}
             </div>
+
+            {/* Consolidated File Status Bar (SaaS Style) */}
+            {importFileName && (
+                <div className="flex items-center justify-between gap-4 mb-6 px-1 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 shrink-0 shadow-sm">
+                            <FontAwesomeIcon icon={faFileLines} className="text-[10px]" />
+                            <span className="text-[10.5px] font-black truncate max-w-[240px]">{importFileName}</span>
+                        </div>
+                        {importPreview.length > 0 && (
+                            <div className="px-3.5 py-1.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black shadow-sm shrink-0">
+                                {importPreview.length} baris
+                            </div>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={handleImportClick}
+                        className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm group"
+                    >
+                        <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-[9px] group-hover:rotate-180 transition-transform duration-500" />
+                        Ganti File
+                    </button>
+                </div>
+            )}
 
             {importStep === 1 && (
                 <div className="space-y-2.5">
@@ -121,40 +300,56 @@ export default function StudentImportModal(props) {
                     >
                         <FontAwesomeIcon icon={faUpload} className={`text-sm transition-all ${importDragOver ? 'text-[var(--color-primary)] scale-110' : 'text-[var(--color-primary)]/60'}`} />
                         <div className="text-left">
-                            <p className="text-[9px] font-black text-[var(--color-primary)] uppercase tracking-widest leading-none">
+                            <p className="text-[11px] font-black text-[var(--color-primary)] uppercase tracking-wider leading-none">
                                 {importDragOver ? 'Lepaskan file di sini' : 'Drag & Drop atau Klik untuk Pilih File'}
                             </p>
-                            <p className="text-[8px] text-[var(--color-text-muted)] font-bold mt-0.5 opacity-60">Mendukung .csv dan .xlsx</p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1 opacity-60">Mendukung .csv dan .xlsx</p>
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5 opacity-80">
-                                <FontAwesomeIcon icon={faTags} className="text-emerald-500/70" /> Daftar Kelas Valid
-                            </span>
+                    <div className="flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 overflow-hidden">
+                        <div className="flex items-center justify-between p-3">
+                            <button
+                                onClick={() => setShowClasses(!showClasses)}
+                                className="flex items-center gap-2 group outline-none"
+                            >
+                                <span className="text-[10.5px] font-black uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5 opacity-80 group-hover:text-[var(--color-text)] transition-colors">
+                                    <FontAwesomeIcon icon={faTags} className="text-emerald-500/70" /> Daftar Kelas Valid
+                                </span>
+                                <FontAwesomeIcon
+                                    icon={faChevronDown}
+                                    className={`text-[9px] text-[var(--color-text-muted)] transition-transform duration-300 ${showClasses ? 'rotate-180' : ''}`}
+                                />
+                            </button>
                             <button
                                 onClick={handleDownloadTemplate}
-                                className="shrink-0 h-6 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:bg-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
+                                className="shrink-0 h-7 px-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
                             >
-                                <FontAwesomeIcon icon={faDownload} className="text-[7px]" /> Template
+                                <FontAwesomeIcon icon={faDownload} className="text-[10px]" /> Template
                             </button>
                         </div>
-                        <div className="flex flex-wrap gap-1 max-h-[58px] overflow-y-auto pr-1 pb-1 custom-scrollbar">
-                            {classesList.length > 0 ? classesList.map(c => (
-                                <span key={c.id} className="px-1.5 py-0.5 rounded bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] text-[8px] font-bold text-[var(--color-text)] shrink-0 hover:border-emerald-500/30 transition-colors">
-                                    {c.name}
-                                </span>
-                            )) : (
-                                <span className="text-[9px] text-[var(--color-text-muted)] italic">Belum ada kelas yang terdaftar.</span>
-                            )}
+
+                        <div className={`grid transition-all duration-300 ease-in-out ${showClasses ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                            <div className="overflow-hidden">
+                                <div className="px-3 pb-3 pt-0">
+                                    <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1 pb-1 custom-scrollbar">
+                                        {classesList.length > 0 ? classesList.map(c => (
+                                            <span key={c.id} className="px-2 py-0.5 rounded-lg bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] text-[10px] font-bold text-[var(--color-text)] shrink-0 hover:border-emerald-500/30 transition-colors">
+                                                {c.name}
+                                            </span>
+                                        )) : (
+                                            <span className="text-[11px] text-[var(--color-text-muted)] italic">Belum ada kelas yang terdaftar.</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)] shadow-sm">
-                        <div className="px-4 py-2.5 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kolom yang Dikenali</span>
-                            <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-50 px-2 py-0.5 rounded-full bg-[var(--color-border)]/30">Auto-Matching Active</span>
+                        <div className="px-4 py-3 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Kolom yang Dikenali</span>
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-50 px-2.5 py-1 rounded-full bg-[var(--color-border)]/30">Auto-Matching Active</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[var(--color-border)]">
                             <div className="flex flex-col">
@@ -163,17 +358,17 @@ export default function StudentImportModal(props) {
                                     { label: 'Kelas / Rombel', keys: 'class_name, kelas', req: true, note: 'Harus sesuai daftar di atas' },
                                     { label: 'Jenis Kelamin', keys: 'gender, jk', req: false, note: 'L (Laki) / P (Perempuan)' },
                                 ].map((r, i) => (
-                                    <div key={i} className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-[var(--color-surface-alt)]/30 transition-colors border-b border-[var(--color-border)] last:border-b-0">
+                                    <div key={i} className="flex items-center justify-between gap-4 px-4 py-2.5 hover:bg-[var(--color-surface-alt)]/30 transition-colors border-b border-[var(--color-border)] last:border-b-0">
                                         <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                                <span className="text-[9px] font-black text-[var(--color-text)]">{r.label}</span>
-                                                {r.req && <span className="text-red-500 text-[9px] font-black">*</span>}
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <span className="text-[11px] font-black text-[var(--color-text)]">{r.label}</span>
+                                                {r.req && <span className="text-red-500 text-[11px] font-black">*</span>}
                                             </div>
-                                            <p className="text-[7.5px] text-[var(--color-text-muted)] font-medium truncate opacity-70">{r.note}</p>
+                                            <p className="text-[10px] text-[var(--color-text-muted)] font-medium truncate opacity-70">{r.note}</p>
                                         </div>
-                                        <div className="shrink-0 flex items-center gap-1">
+                                        <div className="shrink-0 flex items-center gap-1.5">
                                             {r.keys.split(', ').map(k => (
-                                                <span key={k} className="px-1.5 py-0.5 rounded bg-[var(--color-primary)]/5 text-[var(--color-primary)] text-[7.5px] font-black border border-[var(--color-primary)]/10">
+                                                <span key={k} className="px-2 py-0.5 rounded-lg bg-[var(--color-primary)]/5 text-[var(--color-primary)] text-[10px] font-black border border-[var(--color-primary)]/10">
                                                     {k}
                                                 </span>
                                             ))}
@@ -187,17 +382,17 @@ export default function StudentImportModal(props) {
                                     { label: 'NISN', keys: 'nisn', req: false, note: 'Opsional, cegah duplikasi' },
                                     { label: 'Nama Wali', keys: 'guardian_name', req: false, note: 'Nama orang tua / wali' },
                                 ].map((r, i) => (
-                                    <div key={i} className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-[var(--color-surface-alt)]/30 transition-colors border-b border-[var(--color-border)] last:border-b-0">
+                                    <div key={i} className="flex items-center justify-between gap-4 px-4 py-2.5 hover:bg-[var(--color-surface-alt)]/30 transition-colors border-b border-[var(--color-border)] last:border-b-0">
                                         <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                                <span className="text-[9px] font-black text-[var(--color-text)]">{r.label}</span>
-                                                {r.req && <span className="text-red-500 text-[9px] font-black">*</span>}
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <span className="text-[11px] font-black text-[var(--color-text)]">{r.label}</span>
+                                                {r.req && <span className="text-red-500 text-[11px] font-black">*</span>}
                                             </div>
-                                            <p className="text-[7.5px] text-[var(--color-text-muted)] font-medium truncate opacity-70">{r.note}</p>
+                                            <p className="text-[10px] text-[var(--color-text-muted)] font-medium truncate opacity-70">{r.note}</p>
                                         </div>
-                                        <div className="shrink-0 flex items-center gap-1">
+                                        <div className="shrink-0 flex items-center gap-1.5">
                                             {r.keys.split(', ').map(k => (
-                                                <span key={k} className="px-1.5 py-0.5 rounded bg-[var(--color-primary)]/5 text-[var(--color-primary)] text-[7.5px] font-black border border-[var(--color-primary)]/10">
+                                                <span key={k} className="px-2 py-0.5 rounded-lg bg-[var(--color-primary)]/5 text-[var(--color-primary)] text-[10px] font-black border border-[var(--color-primary)]/10">
                                                     {k}
                                                 </span>
                                             ))}
@@ -219,31 +414,29 @@ export default function StudentImportModal(props) {
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-2.5 max-h-[40vh] overflow-y-auto pr-1 custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[45vh] overflow-y-auto pr-1 custom-scrollbar">
                         {SYSTEM_COLS.map(sys => {
                             const mapped = importColumnMapping[sys.key]
                             return (
-                                <div key={sys.key} className={`p-3 rounded-xl border transition-all ${mapped ? 'bg-emerald-500/4 border-emerald-500/20' : 'bg-[var(--color-surface-alt)]/50 border-[var(--color-border)]'}`}>
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[10px] font-black text-[var(--color-text)] flex items-center gap-1.5">
+                                <div key={sys.key} className={`p-2.5 rounded-xl border transition-all ${mapped ? 'bg-emerald-500/4 border-emerald-500/20' : 'bg-[var(--color-surface-alt)]/50 border-[var(--color-border)]'}`}>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex flex-col min-w-[70px] shrink-0">
+                                            <span className="text-[10px] font-black text-[var(--color-text)] flex items-center gap-1">
                                                 {sys.label}
-                                                {['name', 'class_name'].includes(sys.key) && <span className="text-red-500">*</span>}
+                                                {['name', 'class_name'].includes(sys.key) && <span className="text-red-500 text-[9px]">*</span>}
                                             </span>
-                                            <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-60 truncate">Data sistem</span>
+                                            <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-50 uppercase tracking-tight">Sistem</span>
                                         </div>
 
-                                        <div className="flex-1 flex items-center gap-2 group">
-                                            <div className="h-px bg-[var(--color-border)] flex-1 opacity-50" />
-                                            <FontAwesomeIcon icon={faArrowRight} className={`text-[9px] transition-colors ${mapped ? 'text-emerald-500' : 'text-[var(--color-text-muted)] opacity-30'}`} />
-                                            <div className="h-px bg-[var(--color-border)] flex-1 opacity-50" />
+                                        <div className="flex items-center gap-1.5 opacity-30">
+                                            <FontAwesomeIcon icon={faArrowRight} className={`text-[8px] ${mapped ? 'text-emerald-500 opacity-100' : ''}`} />
                                         </div>
 
-                                        <div className="flex flex-col min-w-0 flex-1">
+                                        <div className="flex-1 min-w-0 relative">
                                             <select
                                                 value={mapped || ''}
                                                 onChange={(e) => setImportColumnMapping(v => ({ ...v, [sys.key]: e.target.value }))}
-                                                className={`h-9 px-3 rounded-xl text-[10px] font-black border transition-all outline-none appearance-none cursor-pointer
+                                                className={`w-full h-8 px-2.5 pr-6 rounded-lg text-[10px] font-bold border transition-all outline-none appearance-none cursor-pointer
                                                 ${mapped
                                                         ? 'border-emerald-500/40 bg-[var(--color-surface)] text-emerald-600'
                                                         : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/50'}`}
@@ -253,6 +446,9 @@ export default function StudentImportModal(props) {
                                                     <option key={h} value={h}>{h}</option>
                                                 ))}
                                             </select>
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-30">
+                                                <FontAwesomeIcon icon={faChevronDown} className="text-[7px]" />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -271,48 +467,118 @@ export default function StudentImportModal(props) {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)]">
+                            {/* Compact Status & Filter Bar */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1.5 px-2.5 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
+                                <div className="flex items-center gap-6 overflow-x-auto scrollbar-none py-1">
+                                    {[
+                                        { label: 'Total', value: importPreview.length, color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-border)]/30', icon: faFileLines },
+                                        { label: 'Siap', value: importReadyRows.length, color: 'text-emerald-600', bg: 'bg-emerald-500/15', icon: faCheckCircle },
+                                        { label: 'Duplikat', value: importPreview.filter(r => r._isDupe).length, color: 'text-violet-600', bg: 'bg-violet-500/15', icon: faCopy },
+                                        { label: 'Error', value: importPreview.filter(r => r._hasError).length, color: 'text-red-600', bg: 'bg-red-500/15', icon: faCircleExclamation },
+                                    ].map((stat, i) => (
+                                        <div key={i} className="flex items-center gap-2.5 shrink-0">
+                                            <FontAwesomeIcon icon={stat.icon} className={`text-[10px] ${stat.color} opacity-70`} />
+                                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">{stat.label}</span>
+                                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black shadow-sm ${stat.bg} ${stat.color}`}>
+                                                {stat.value}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button
+                                    onClick={() => setFilterIssuesOnly(!filterIssuesOnly)}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[9.5px] font-black uppercase tracking-wider shrink-0
+                                        ${filterIssuesOnly
+                                            ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20'
+                                            : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-red-500/40 hover:text-red-500 shadow-sm'}`}
+                                >
+                                    <FontAwesomeIcon icon={filterIssuesOnly ? faCheck : faFilter} className={filterIssuesOnly ? 'animate-pulse' : ''} />
+                                    {filterIssuesOnly ? 'Hanya Isu' : 'Semua Baris'}
+                                </button>
+                            </div>
+
+                            <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)] shadow-sm">
                                 <div className="max-h-[40vh] overflow-auto scrollbar-none">
-                                    <table className="w-full text-[10px]">
-                                        <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10 border-b border-[var(--color-border)]">
-                                            <tr className="text-left font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                                <th className="px-3 py-2">Nama</th>
-                                                <th className="px-3 py-2">Kelas</th>
-                                                <th className="px-3 py-2">Gender</th>
-                                                <th className="px-3 py-2">WA</th>
-                                                <th className="px-3 py-2">NISN</th>
-                                                <th className="px-3 py-2">Status</th>
+                                    <table className="w-full border-collapse table-fixed">
+                                        <thead>
+                                            <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[17%]">Nama</th>
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[18%]">Kelas</th>
+                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[8%]">L/P</th>
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[18%]">Whatsapp</th>
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[17%]">NISN</th>
+                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[8%]">St</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-[var(--color-border)]">
-                                            {importPreview.slice(0, 300).map((r, i) => {
-                                                const isError = r._hasError
-                                                const isDupe = r._isDupe
-                                                const isWarn = r._hasWarn
-                                                return (
-                                                    <tr key={i} className={`hover:bg-[var(--color-surface-alt)]/40 transition-colors ${isError ? 'bg-red-500/3' : isDupe ? 'bg-violet-500/3' : ''}`}>
-                                                        <td className="px-3 py-1.5 font-bold text-[var(--color-text)]">{r.name}</td>
-                                                        <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{r._className}</td>
-                                                        <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{r.gender}</td>
-                                                        <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{r.phone || '-'}</td>
-                                                        <td className="px-3 py-1.5 text-[var(--color-text-muted)] font-bold">{r.nisn || '-'}</td>
-                                                        <td className="px-3 py-1.5">
-                                                            {isError ? <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 text-[8px] font-black">ERROR</span>
-                                                                : isDupe ? <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-600 text-[8px] font-black">DUPLIKAT</span>
-                                                                    : isWarn ? <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 text-[8px] font-black">WARN</span>
-                                                                        : <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 text-[8px] font-black">OK</span>}
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            })}
+                                        <tbody>
+                                            {importPreview
+                                                .map((r, originalIdx) => ({ ...r, originalIdx }))
+                                                .filter(r => !filterIssuesOnly || (r._hasError || r._isDupe || r._hasWarn))
+                                                .slice(0, 300)
+                                                .map((r) => {
+                                                    const i = r.originalIdx
+                                                    const isError = r._hasError
+                                                    const isDupe = r._isDupe
+                                                    const isWarn = r._hasWarn
+                                                    return (
+                                                        <tr key={i} className={`hover:bg-[var(--color-surface-alt)]/40 transition-colors border-b border-[var(--color-border)]/30 last:border-0 ${isError ? 'bg-red-500/3' : isDupe ? 'bg-violet-500/3' : ''}`}>
+                                                            <td className="px-2 py-1 font-bold text-[var(--color-text)] text-[10px] truncate">
+                                                                <EditableCell
+                                                                    rowIdx={i} colKey="name" value={r.name}
+                                                                    importPreview={importPreview} classesList={classesList}
+                                                                    importEditCell={importEditCell} setImportEditCell={setImportEditCell}
+                                                                    handleImportCellEdit={handleImportCellEdit}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1 text-[var(--color-text-muted)] font-bold text-[10px] truncate">
+                                                                <EditableCell
+                                                                    rowIdx={i} colKey="class_id" value={r.class_id}
+                                                                    importPreview={importPreview} classesList={classesList}
+                                                                    importEditCell={importEditCell} setImportEditCell={setImportEditCell}
+                                                                    handleImportCellEdit={handleImportCellEdit}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1 text-center text-[var(--color-text-muted)] font-bold text-[10px]">
+                                                                <EditableCell
+                                                                    rowIdx={i} colKey="gender" value={r.gender}
+                                                                    importPreview={importPreview} classesList={classesList}
+                                                                    importEditCell={importEditCell} setImportEditCell={setImportEditCell}
+                                                                    handleImportCellEdit={handleImportCellEdit}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1 text-[var(--color-text-muted)] font-bold text-[10px] truncate">
+                                                                <EditableCell
+                                                                    rowIdx={i} colKey="phone" value={r.phone}
+                                                                    importPreview={importPreview} classesList={classesList}
+                                                                    importEditCell={importEditCell} setImportEditCell={setImportEditCell}
+                                                                    handleImportCellEdit={handleImportCellEdit}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1 text-[var(--color-text-muted)] font-bold text-[10px] truncate">
+                                                                <EditableCell
+                                                                    rowIdx={i} colKey="nisn" value={r.nisn}
+                                                                    importPreview={importPreview} classesList={classesList}
+                                                                    importEditCell={importEditCell} setImportEditCell={setImportEditCell}
+                                                                    handleImportCellEdit={handleImportCellEdit}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1 text-center">
+                                                                {isError ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500/15 text-red-600 animate-pulse"><FontAwesomeIcon icon={faCircleExclamation} className="text-[10px]" /></span>
+                                                                    : isDupe ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-500/15 text-violet-600"><FontAwesomeIcon icon={faCopy} className="text-[10px]" /></span>
+                                                                        : isWarn ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/15 text-amber-600"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" /></span>
+                                                                            : <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/15 text-green-600"><FontAwesomeIcon icon={faCheckCircle} className="text-[10px]" /></span>}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
                                         </tbody>
                                     </table>
                                 </div>
-                                {importPreview.length > 300 && (
-                                    <div className="px-3 py-2 text-[9px] font-bold text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] border-t border-[var(--color-border)]">
-                                        Menampilkan 300 dari {importPreview.length} baris.
-                                    </div>
-                                )}
+                                <div className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] border-t border-[var(--color-border)] flex items-center justify-between">
+                                    <span>Menampilkan {Math.min(importPreview.filter(r => !filterIssuesOnly || (r._hasError || r._isDupe || r._hasWarn)).length, 300)} dari {importPreview.length} total baris</span>
+                                    {filterIssuesOnly && <span className="text-red-500 animate-pulse">Filter "Hanya Isu" Aktif</span>}
+                                </div>
                             </div>
 
                             {importIssues.length > 0 && (

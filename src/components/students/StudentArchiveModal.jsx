@@ -90,7 +90,17 @@ export default function StudentArchiveModal({
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Arsip Siswa" size="lg">
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Arsip Siswa"
+            description="Daftar siswa yang telah dihapus sementara. Anda dapat memulihkan data atau menghapusnya secara permanen."
+            icon={faBoxArchive}
+            iconBg="bg-amber-500/10"
+            iconColor="text-amber-600"
+            size="lg"
+            mobileVariant="bottom-sheet"
+        >
             <div className="space-y-3 relative">
 
                 {/* ====== DELETE CONFIRMATION OVERLAY (slides in smoothly) ====== */}

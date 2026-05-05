@@ -18,7 +18,12 @@ export default function StudentGSheetsModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Import dari Google Sheets"
+            description="Sinkronisasi data siswa secara otomatis melalui tautan publik Google Sheets Anda."
+            icon={faLink}
+            iconBg="bg-emerald-500/10"
+            iconColor="text-emerald-600"
             size="md"
+            mobileVariant="bottom-sheet"
         >
             <div className="space-y-5">
                 {/* Panduan Mini Sheets */}

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+    faLink,
     faCheck,
     faRocket,
     faLightbulb,
@@ -22,6 +23,7 @@ import {
     faMars,
     faVenus,
     faDownload,
+    faPen,
     faShieldHalved,
     faPenNib,
     faPaperPlane,
@@ -56,6 +58,7 @@ import {
     faBolt,
     faTags,
     faEye,
+    faLayerGroup,
     faEyeSlash,
     faCircleExclamation,
     faKeyboard,
@@ -70,7 +73,10 @@ import {
     faClipboardList,
     faSortAlphaDown,
     faArrowUp91,
-    faDoorOpen
+    faDoorOpen,
+    faLevelDownAlt,
+    faChartPie,
+    faClockRotateLeft
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { LIST_KAMAR } from '../reports/utils/raportConstants'
@@ -98,6 +104,7 @@ import { useStudentsCore } from '../../hooks/students/useStudentsCore'
 
 import StudentArchiveModal from '../../components/students/StudentArchiveModal'
 import StudentBulkPhotoModal from '../../components/students/StudentBulkPhotoModal'
+import StudentResetPointsModal from '../../components/students/StudentResetPointsModal'
 import StudentGSheetsModal from '../../components/students/StudentGSheetsModal'
 import StudentFormModal from '../../components/students/StudentFormModal'
 import StudentInlineAddRow from '../../components/students/StudentInlineAddRow'
@@ -130,6 +137,15 @@ import Pagination from '../../components/ui/Pagination'
 
 const MOBILE_BOTTOM_NAV_PX = 5
 
+function getPortalContainer(id) {
+    let el = document.getElementById(id);
+    if (!el) {
+        el = document.createElement('div');
+        el.id = id;
+        document.body.appendChild(el);
+    }
+    return el;
+}
 // ── Isolated Search Input ────────────────────────────────────────────────────
 // State ketikan HARUS di komponen terpisah supaya keystroke tidak
 // re-render seluruh StudentsPage (3000+ baris)
@@ -169,6 +185,127 @@ const DebouncedSearchInput = memo(({ searchQuery, onSearch, inputRef, isLoading 
 })
 DebouncedSearchInput.displayName = 'DebouncedSearchInput'
 
+// --- REUSABLE UI HELPERS (Isolated to prevent lag) ---
+const SelectedStudentsCarousel = memo(({
+    selectedStudents,
+    removingStudentId,
+    setRemovingStudentId,
+    toggleSelectStudent,
+    isPromoteMode = false,
+    bulkClassId = null,
+    classesList = []
+}) => {
+    const [activeIdx, setActiveIdx] = useState(0);
+    const scrollRef = useRef(null);
+
+    const handleScroll = () => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const count = selectedStudents.length;
+        if (count <= 1) return;
+        const cardWidth = el.scrollWidth / count;
+        const idx = Math.round(el.scrollLeft / cardWidth);
+        const nextIdx = Math.min(idx, count - 1);
+        if (nextIdx !== activeIdx) {
+            setActiveIdx(nextIdx);
+        }
+    };
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+                <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest flex items-center gap-2">
+                    <FontAwesomeIcon icon={faUsers} className="opacity-40" /> Siswa Terpilih
+                </label>
+                <span className="text-[10px] font-black text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full">{selectedStudents.length} Orang</span>
+            </div>
+            <div
+                ref={scrollRef}
+                onScroll={handleScroll}
+                className="flex gap-2.5 overflow-x-auto pb-4 pt-2 px-1 custom-scrollbar -mx-1 snap-x snap-mandatory"
+            >
+                {selectedStudents.map(student => {
+                    const isRemoving = removingStudentId === student.id;
+
+                    // Default styles
+                    let statusColor = 'border-[var(--color-border)] bg-[var(--color-surface)]';
+                    let icon = faUserTie;
+                    let iconColor = 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]';
+
+                    // Promote specific logic
+                    if (isPromoteMode && bulkClassId) {
+                        const targetClass = classesList.find(cl => cl.id === bulkClassId);
+                        const originLevel = parseInt(student.className) || 0;
+                        const targetLevel = targetClass ? (parseInt(targetClass.name) || 0) : 0;
+
+                        if (targetLevel < originLevel) {
+                            statusColor = 'bg-red-50 border-red-200';
+                            icon = faTriangleExclamation;
+                            iconColor = 'bg-red-500 text-white shadow-lg shadow-red-500/20';
+                        } else if (targetLevel === originLevel) {
+                            statusColor = 'bg-amber-50 border-amber-200';
+                            icon = faRotateLeft;
+                            iconColor = 'bg-amber-500 text-white shadow-lg shadow-amber-500/20';
+                        } else if (targetLevel > originLevel) {
+                            statusColor = 'bg-indigo-50 border-indigo-200';
+                            icon = faRocket;
+                            iconColor = 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20';
+                        }
+                    }
+
+                    return (
+                        <button
+                            key={student.id}
+                            type="button"
+                            onClick={() => {
+                                setRemovingStudentId(student.id);
+                                setTimeout(() => {
+                                    toggleSelectStudent(student.id);
+                                    setRemovingStudentId(null);
+                                }, 300);
+                            }}
+                            className={`flex-shrink-0 flex items-center gap-2.5 p-2 rounded-xl border transition-all duration-300 min-w-[170px] shadow-sm text-left group relative snap-center ${statusColor} ${isRemoving ? 'opacity-0 scale-95 blur-md translate-y-2' : 'hover:border-[var(--color-primary)]/40 hover:shadow-md active:scale-95'}`}
+                        >
+                            <div className="flex items-center gap-2.5 w-full transition-all duration-300 group-hover:blur-[2px] group-hover:opacity-30">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black overflow-hidden shrink-0 transition-all duration-500 group-hover:rotate-6 ${iconColor}`}>
+                                    {student.foto ? <img src={student.foto} alt="" className="w-full h-full object-cover" /> : (student.name?.charAt(0) || '?')}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] font-black text-[var(--color-text)] truncate leading-tight tracking-tight">{student.name}</p>
+                                    <p className="text-[8px] truncate font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1 text-[var(--color-text-muted)] opacity-60">
+                                        <FontAwesomeIcon icon={isPromoteMode && bulkClassId ? icon : faUserTie} className="text-[7px]" />
+                                        {student.className || 'Tanpa Kelas'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                                <div className="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/40 scale-75 group-hover:scale-110 transition-transform duration-300">
+                                    <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                </div>
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+            {selectedStudents.length > 1 && (
+                <div className="flex justify-center gap-1.5 -mt-2 mb-2 sm:hidden">
+                    {selectedStudents.slice(0, 10).map((_, i) => (
+                        <div
+                            key={i}
+                            className={`rounded-full transition-all duration-300 ${activeIdx === i
+                                ? 'w-5 h-1.5 bg-[var(--color-primary)]'
+                                : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30'
+                                }`}
+                        />
+                    ))}
+                    {selectedStudents.length > 10 && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)]/10" />
+                    )}
+                </div>
+            )}
+        </div>
+    );
+});
 
 
 export default function StudentsPage() {
@@ -308,7 +445,7 @@ export default function StudentsPage() {
         handleBulkFix, validateImportPreview, handleDownloadTemplate,
         handleExportCSV, handleExportExcel, handleExportPDF, handleFetchGSheets,
         fetchFilteredForExport, getExportData, importTab, setImportTab,
-        downloadBlob, buildImportPreview
+        downloadBlob, buildImportPreview, handleImportCellEdit
     } = importExport
 
     const timelineFiltered = useMemo(() =>
@@ -511,9 +648,6 @@ export default function StudentsPage() {
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">
                             Kelola {globalStats.total} data siswa aktif dalam sistem laporan.
                         </p>
-                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
-                            Untuk pengisian awal, gunakan menu import (Excel / GSheets) agar lebih cepat dan minim salah ketik.
-                        </p>
                     </div>
 
                     <div className="flex gap-2 items-center">
@@ -593,13 +727,16 @@ export default function StudentsPage() {
                                             <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data siswa tidak aktif</p>
                                         </div>
                                     </button>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); setResetPointsClassId(''); setActiveModal('resetPoints') }}
-                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <button 
+                                        onClick={() => { setResetPointsClassId(''); setActiveModal('resetPoints'); setIsHeaderMenuOpen(false); }}
+                                        disabled={!canEdit}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[var(--color-text)] transition-all group ${!canEdit ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[var(--color-surface-alt)]'}`}
+                                    >
                                         <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <FontAwesomeIcon icon={faRotateLeft} className="text-xs" />
                                         </div>
                                         <div className="text-left">
-                                            <p className="text-[11px] font-black leading-tight">Reset Poin</p>
+                                            <p className="text-[11px] font-black leading-tight">Reset Poin { !canEdit && '(Read-only)' }</p>
                                             <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Bersihkan semua poin untuk semester baru</p>
                                         </div>
                                     </button>
@@ -692,10 +829,10 @@ export default function StudentsPage() {
                         <button
                             onClick={handleAdd}
                             disabled={!canEdit}
-                            className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
+                            className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10"
                         >
-                            <FontAwesomeIcon icon={faPlus} />
-                            <span className="hidden sm:inline">{canEdit ? 'Tambah' : 'Read-only'}</span>
+                            <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                            <span>{canEdit ? 'Tambah Siswa' : 'Read-only'}</span>
                         </button>
                     </div>
                 </div>
@@ -1542,7 +1679,7 @@ export default function StudentsPage() {
                                             <div className="flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                                    {totalRows} Siswa ditemukan
+                                                    {totalRows} Data ditemukan
                                                 </span>
                                             </div>
                                             <div className="flex items-center bg-[var(--color-surface)] shadow-inner p-1 rounded-[1.2rem] border border-[var(--color-border)]">
@@ -1867,8 +2004,12 @@ export default function StudentsPage() {
                             setImportValidationOpen={setImportValidationOpen}
                             importProgress={importProgress}
                             handleCommitImport={handleCommitImport}
+                            handleImportClick={handleImportClick}
                             hasImportBlockingErrors={hasImportBlockingErrors}
                             importReadyRows={importReadyRows}
+                            handleImportCellEdit={handleImportCellEdit}
+                            importEditCell={importEditCell}
+                            setImportEditCell={setImportEditCell}
                         />
                     )}
                 </React.Suspense>
@@ -1877,6 +2018,17 @@ export default function StudentsPage() {
                 {/* dead-code Import modal block deleted */}
 
                 {/* ===================== */}
+                {/* Fitur 2 - Batch Reset Poin Modal */}
+                <StudentResetPointsModal
+                    isOpen={activeModal === 'resetPoints'}
+                    onClose={closeModal}
+                    classesList={classesList}
+                    resetPointsClassId={resetPointsClassId}
+                    setResetPointsClassId={setResetPointsClassId}
+                    resettingPoints={resettingPoints}
+                    handleBatchResetPoints={handleBatchResetPoints}
+                />
+
                 {/* BULK PHOTO MATCHER MODAL */}
                 <StudentBulkPhotoModal
                     isOpen={activeModal === 'bulkPhoto'}
@@ -1897,7 +2049,12 @@ export default function StudentsPage() {
                             isOpen={activeModal === 'bulkWA'}
                             onClose={() => closeModal()}
                             title="Guardian Broadcast Hub"
+                            description="Kirim pesan massal ke wali murid menggunakan template otomatis."
+                            icon={faWhatsapp}
+                            iconBg="bg-emerald-500/10"
+                            iconColor="text-emerald-600"
                             size="lg"
+                            mobileVariant="bottom-sheet"
                             footer={
                                 <div className="p-0 bg-[var(--color-surface)] flex items-center justify-between gap-4">
                                     <div className="flex-1">
@@ -2121,6 +2278,7 @@ export default function StudentsPage() {
                             iconBg="bg-[var(--color-primary)]/10"
                             iconColor="text-[var(--color-primary)]"
                             size="md"
+                            mobileVariant="bottom-sheet"
                             footer={
                                 <div className="flex gap-3 w-full">
                                     <button
@@ -2134,95 +2292,29 @@ export default function StudentsPage() {
                                         type="button"
                                         onClick={handleBulkPromote}
                                         disabled={submitting || !bulkClassId}
-                                        className="flex-[2] h-12 rounded-2xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-[var(--color-primary)]/20 active:scale-[0.98]"
+                                        className="flex-[2] h-12 rounded-2xl bg-[var(--color-primary)] text-white text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 md:gap-3 shadow-xl shadow-[var(--color-primary)]/20 active:scale-[0.98] whitespace-nowrap px-2"
                                     >
                                         {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (
                                             <>
-                                                <FontAwesomeIcon icon={faGraduationCap} />
-                                                Proses Kenaikan ({selectedStudentIds.length} Siswa)
+                                                <FontAwesomeIcon icon={faGraduationCap} className="text-xs md:text-sm" />
+                                                <span>Proses Kenaikan <span className="hidden sm:inline">({selectedStudentIds.length} Siswa)</span></span>
                                             </>
                                         )}
                                     </button>
                                 </div>
                             }
                         >
-                            <div className="space-y-6">
+                            <div className="space-y-4 md:space-y-6">
                                 {/* Selected Students Summary */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between px-1">
-                                        <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest flex items-center gap-2">
-                                            <FontAwesomeIcon icon={faUsers} className="opacity-40" /> Siswa Terpilih
-                                        </label>
-                                        <span className="text-[10px] font-black text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full">{selectedStudentIds.length} Orang</span>
-                                    </div>
-                                    <div className="flex gap-2.5 overflow-x-auto pb-4 pt-2 px-1 custom-scrollbar -mx-1">
-                                        {students.filter(s => selectedStudentIds.includes(s.id)).map(student => {
-                                            const targetClass = classesList.find(cl => cl.id === bulkClassId);
-                                            const originLevel = parseInt(student.className) || 0;
-                                            const targetLevel = targetClass ? (parseInt(targetClass.name) || 0) : 0;
-
-                                            const isDowngrade = bulkClassId && targetLevel < originLevel;
-                                            const isStay = bulkClassId && targetLevel === originLevel;
-                                            const isSkip = bulkClassId && targetLevel > originLevel + 1;
-                                            const isNormal = bulkClassId && targetLevel === originLevel + 1;
-
-                                            let statusColor = 'bg-[var(--color-surface)] border-[var(--color-border)]';
-                                            let iconColor = 'bg-[var(--color-primary)]/5 text-[var(--color-primary)]';
-                                            let icon = null;
-
-                                            if (isDowngrade) {
-                                                statusColor = 'bg-red-50 border-red-200 ring-2 ring-red-500/20';
-                                                iconColor = 'bg-red-500 text-white';
-                                                icon = faTriangleExclamation;
-                                            } else if (isStay) {
-                                                statusColor = 'bg-amber-50 border-amber-200 ring-2 ring-amber-500/20';
-                                                iconColor = 'bg-amber-500 text-white';
-                                                icon = faRotateLeft;
-                                            } else if (isSkip) {
-                                                statusColor = 'bg-indigo-50 border-indigo-200 ring-2 ring-indigo-500/20';
-                                                iconColor = 'bg-indigo-500 text-white';
-                                                icon = faRocket;
-                                            }
-
-                                            const isRemoving = removingStudentId === student.id;
-
-                                            return (
-                                                <button 
-                                                    key={student.id} 
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setRemovingStudentId(student.id);
-                                                        setTimeout(() => {
-                                                            toggleSelectStudent(student.id);
-                                                            setRemovingStudentId(null);
-                                                        }, 300);
-                                                    }}
-                                                    className={`flex-shrink-0 flex items-center gap-2.5 p-2 rounded-xl border transition-all duration-300 min-w-[170px] shadow-sm text-left group relative ${statusColor} ${isRemoving ? 'opacity-0 scale-95 blur-md translate-y-2' : 'hover:border-[var(--color-primary)]/40 hover:shadow-md active:scale-95'}`}
-                                                >
-                                                    <div className="flex items-center gap-2.5 w-full transition-all duration-300 group-hover:blur-[2px] group-hover:opacity-30">
-                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black overflow-hidden shrink-0 transition-all duration-500 group-hover:rotate-6 ${iconColor}`}>
-                                                            {icon ? <FontAwesomeIcon icon={icon} className={isDowngrade ? 'animate-pulse' : ''} /> : (student.foto ? <img src={student.foto} alt="" className="w-full h-full object-cover" /> : (student.name?.charAt(0) || '?'))}
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className={`text-[10px] font-black truncate leading-tight tracking-tight ${isDowngrade ? 'text-red-700' : isStay ? 'text-amber-700' : isSkip ? 'text-indigo-700' : 'text-[var(--color-text)]'}`}>{student.name}</p>
-                                                            <p className={`text-[8px] truncate font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1 ${isDowngrade ? 'text-red-500/80' : isStay ? 'text-amber-500/80' : isSkip ? 'text-indigo-500/80' : 'text-[var(--color-text-muted)] opacity-60'}`}>
-                                                                <FontAwesomeIcon icon={isDowngrade ? faArrowTrendDown : isStay ? faRotateLeft : isSkip ? faArrowTrendUp : faUserTie} className="text-[7px]" />
-                                                                {student.className || 'Tanpa Kelas'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Centered Delete Overlay */}
-                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-                                                        <div className="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/40 scale-75 group-hover:scale-110 transition-transform duration-300">
-                                                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
+                                <SelectedStudentsCarousel
+                                    selectedStudents={selectedStudents}
+                                    removingStudentId={removingStudentId}
+                                    setRemovingStudentId={setRemovingStudentId}
+                                    toggleSelectStudent={toggleSelectStudent}
+                                    isPromoteMode={true}
+                                    bulkClassId={bulkClassId}
+                                    classesList={classesList}
+                                />
 
                                 <div className="h-px bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent" />
 
@@ -2250,7 +2342,7 @@ export default function StudentsPage() {
                                             const targetClass = classesList.find(cl => cl.id === bulkClassId);
                                             const originLevel = parseInt(s?.className) || 0;
                                             const targetLevel = targetClass ? (parseInt(targetClass.name) || 0) : 0;
-                                            
+
                                             if (!bulkClassId) return false;
                                             if (condition === 'downgrade') return targetLevel < originLevel;
                                             if (condition === 'stay') return targetLevel === originLevel;
@@ -2278,7 +2370,7 @@ export default function StudentsPage() {
                                                             <p className="text-[9px] text-red-600/80 font-bold mt-1 leading-tight">Ada siswa yang dipindahkan ke level yang lebih rendah.</p>
                                                         </div>
                                                     </div>
-                                                    <button 
+                                                    <button
                                                         type="button"
                                                         onClick={() => removeBatch('downgrade')}
                                                         className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-[9px] font-black uppercase tracking-wider hover:bg-red-700 transition-all shadow-md active:scale-95 shrink-0"
@@ -2298,7 +2390,7 @@ export default function StudentsPage() {
                                                             <p className="text-[9px] text-amber-600/80 font-bold mt-1 leading-tight">Siswa ini akan tetap berada di tingkat yang sama.</p>
                                                         </div>
                                                     </div>
-                                                    <button 
+                                                    <button
                                                         type="button"
                                                         onClick={() => removeBatch('stay')}
                                                         className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-[9px] font-black uppercase tracking-wider hover:bg-amber-700 transition-all shadow-md active:scale-95 shrink-0"
@@ -2330,7 +2422,7 @@ export default function StudentsPage() {
                                         </label>
 
                                         {/* Quick Search Classes */}
-                                        <div className="relative flex-1 max-w-[200px]">
+                                        <div className="relative w-full sm:max-w-[200px]">
                                             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] opacity-30" />
                                             <input
                                                 type="text"
@@ -2352,6 +2444,7 @@ export default function StudentsPage() {
                                             </div>
                                         ) : classesList
                                             .filter(c => c.name.toLowerCase().includes(classSearchQuery.toLowerCase()))
+                                            .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
                                             .map(c => {
                                                 const isSelected = bulkClassId === c.id;
                                                 const isPutra = c.name.toUpperCase().includes('PUTRA');
@@ -2361,7 +2454,7 @@ export default function StudentsPage() {
                                                     <button
                                                         key={c.id}
                                                         type="button"
-                                                        onClick={() => setBulkClassId(c.id)}
+                                                        onClick={() => setBulkClassId(bulkClassId === c.id ? '' : c.id)}
                                                         className={`p-3 rounded-2xl border-2 text-left flex items-center gap-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.97] group relative overflow-hidden ${isSelected
                                                             ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-2xl shadow-[var(--color-primary)]/30 z-10'
                                                             : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)] shadow-sm'
@@ -2376,9 +2469,9 @@ export default function StudentsPage() {
                                                                 <p className="font-black text-[11px] uppercase tracking-wider truncate leading-tight">{c.name}</p>
                                                                 {/* Inline Gender Icon */}
                                                                 {(isPutra || isPutri) && (
-                                                                    <FontAwesomeIcon 
-                                                                        icon={isPutra ? faMars : faVenus} 
-                                                                        className={`text-[8px] ${isSelected ? 'text-white' : isPutra ? 'text-blue-500' : 'text-pink-500'} opacity-70`} 
+                                                                    <FontAwesomeIcon
+                                                                        icon={isPutra ? faMars : faVenus}
+                                                                        className={`text-[8px] ${isSelected ? 'text-white' : isPutra ? 'text-blue-500' : 'text-pink-500'} opacity-70`}
                                                                     />
                                                                 )}
                                                             </div>
@@ -2394,9 +2487,8 @@ export default function StudentsPage() {
 
                                                         {/* Bottom Gender Badge */}
                                                         {(isPutra || isPutri) && !isSelected && (
-                                                            <div className={`absolute bottom-0 right-0 px-2 py-0.5 rounded-tl-xl text-[7px] font-black uppercase tracking-tighter ${
-                                                                isPutra ? 'bg-blue-100 text-blue-600' : 'bg-pink-100 text-pink-600'
-                                                            }`}>
+                                                            <div className={`absolute bottom-0 right-0 px-2 py-0.5 rounded-tl-xl text-[7px] font-black uppercase tracking-tighter ${isPutra ? 'bg-blue-100 text-blue-600' : 'bg-pink-100 text-pink-600'
+                                                                }`}>
                                                                 {isPutra ? 'Putra' : 'Putri'}
                                                             </div>
                                                         )}
@@ -2440,6 +2532,7 @@ export default function StudentsPage() {
                             iconBg="bg-amber-500/10"
                             iconColor="text-amber-600"
                             size="sm"
+                            mobileVariant="bottom-sheet"
                             footer={
                                 <div className="flex gap-2.5">
                                     <button
@@ -2481,6 +2574,7 @@ export default function StudentsPage() {
                             iconBg="bg-red-500/10"
                             iconColor="text-red-500"
                             size="sm"
+                            mobileVariant="bottom-sheet"
                             footer={
                                 <div className="flex gap-2.5">
                                     <button
@@ -2533,8 +2627,13 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'classHistory'}
                             onClose={() => closeModal()}
-                            title={`Riwayat Kelas —” ${selectedStudent?.name || ''}`}
+                            title={`Riwayat Kelas — ${selectedStudent?.name || ''}`}
+                            description="Lacak setiap perubahan dan perpindahan kelas siswa."
+                            icon={faClockRotateLeft}
+                            iconBg="bg-purple-500/10"
+                            iconColor="text-purple-600"
                             size="md"
+                            mobileVariant="bottom-sheet"
                         >
                             <div className="space-y-4">
                                 <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20 flex items-center gap-3">
@@ -2592,8 +2691,13 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'classBreakdown'}
                             onClose={() => closeModal()}
-                            title={`Statistik Kelas —” ${classBreakdownData?.className || ''}`}
+                            title={`Statistik Kelas — ${classBreakdownData?.className || ''}`}
+                            description="Ringkasan data, demografi, dan performa poin per kelas."
+                            icon={faChartPie}
+                            iconBg="bg-indigo-500/10"
+                            iconColor="text-indigo-600"
                             size="md"
+                            mobileVariant="bottom-sheet"
                         >
                             {loadingBreakdown ? (
                                 <div className="text-center py-10 text-[var(--color-text-muted)]">
@@ -2652,99 +2756,6 @@ export default function StudentsPage() {
                     )
                 }
 
-                {/* Fitur 2 - Batch Reset Poin Modal */}
-                {
-                    activeModal === 'resetPoints' && (
-                        <Modal
-                            isOpen={activeModal === 'resetPoints'}
-                            onClose={() => closeModal()}
-                            title="Reset Poin Semester Baru"
-                            description="Set semua poin ke 0 untuk semester/tahun ajaran baru."
-                            icon={faRotateLeft}
-                            iconBg="bg-orange-500/10"
-                            iconColor="text-orange-500"
-                            size="sm"
-                            footer={
-                                <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => closeModal()}
-                                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all"
-                                    >
-                                        Batal
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleBatchResetPoints}
-                                        disabled={resettingPoints}
-                                        className="flex-[2] h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        {resettingPoints ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (
-                                            <>
-                                                <FontAwesomeIcon icon={faRotateLeft} className="text-xs" />
-                                                Reset Sekarang
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            }
-                        >
-                            <div className="space-y-4">
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1 ml-1 flex items-center gap-2">
-                                        <FontAwesomeIcon icon={faGraduationCap} className="opacity-40" /> Pilih Kelas (kosongkan untuk semua kelas)
-                                    </label>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[260px] overflow-y-auto pr-2 custom-scrollbar py-1">
-                                        {/* Option Semua Kelas */}
-                                        <button
-                                            type="button"
-                                            onClick={() => setResetPointsClassId('')}
-                                            className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.02] active:scale-95 group col-span-1 sm:col-span-2 mb-1 ${resetPointsClassId === ''
-                                                ? 'bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-500/20'
-                                                : 'border-amber-500/30 bg-amber-500/5 text-amber-600 hover:bg-amber-500/10'
-                                                }`}
-                                        >
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassId === '' ? 'bg-white/20 text-white' : 'bg-amber-500 text-white shadow-sm'
-                                                }`}>
-                                                <FontAwesomeIcon icon={faLayerGroup} className="text-xs" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-black text-[10px] uppercase tracking-wider truncate leading-tight">Semua Kelas</p>
-                                            </div>
-                                            {resetPointsClassId === '' && <FontAwesomeIcon icon={faCheck} className="text-[10px] opacity-60" />}
-                                        </button>
-
-                                        {classesList.map(c => (
-                                            <button
-                                                key={c.id}
-                                                type="button"
-                                                onClick={() => setResetPointsClassId(c.id)}
-                                                className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.02] active:scale-95 group ${resetPointsClassId === c.id
-                                                    ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
-                                                    : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'
-                                                    }`}
-                                            >
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassId === c.id ? 'bg-white/20 text-white' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                                                    }`}>
-                                                    <FontAwesomeIcon icon={faGraduationCap} className="text-xs" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-black text-[10px] uppercase tracking-wider truncate leading-tight">{c.name}</p>
-                                                </div>
-                                                {resetPointsClassId === c.id && <FontAwesomeIcon icon={faCheck} className="text-[10px] opacity-60" />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="p-3 bg-red-500/5 rounded-2xl border border-red-500/10 text-[10px] text-red-600 dark:text-red-400 font-bold leading-relaxed">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="mr-2" />
-                                    Tindakan ini tidak bisa dibatalkan. Semua poin akan direset ke 0 untuk rombongan kelas yang dipilih.
-                                </div>
-                            </div>
-                        </Modal>
-                    )
-                }
 
                 {/* Fitur 7 - Dynamic Tag Modal (SaaS UI) */}
                 {
@@ -2752,17 +2763,18 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'tag'}
                             onClose={() => closeModal()}
-                            title={`Kelola Label —” ${studentForTags?.name || ''}`}
+                            title={`Kelola Label — ${studentForTags?.name || ''}`}
                             description="Atur label siswa untuk segmentasi & filter"
                             icon={faTags}
                             iconBg="bg-indigo-500/10"
                             iconColor="text-indigo-600"
                             size="sm"
+                            mobileVariant="bottom-sheet"
                             footer={
                                 <div className="flex justify-end">
                                     <button
                                         onClick={() => closeModal()}
-                                        className="h-10 px-6 bg-gray-900 dark:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-gray-900/20"
+                                        className="h-11 px-8 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
                                     >
                                         Selesai
                                     </button>
@@ -2784,8 +2796,9 @@ export default function StudentsPage() {
                                                     placeholder="Ketik lalu Tekan Enter..."
                                                     className="w-full h-11 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl px-4 text-sm font-bold focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all outline-none"
                                                 />
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden group-focus-within:block">
-                                                    <span className="text-[9px] font-black bg-white/10 px-2 py-1 rounded border border-white/20 text-[var(--color-text-muted)]">ENTER â†µ</span>
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden group-focus-within:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+                                                    <span className="text-[9px] font-black text-[var(--color-text-muted)] tracking-tighter">ENTER</span>
+                                                    <FontAwesomeIcon icon={faLevelDownAlt} className="text-[9px] text-[var(--color-primary)] opacity-40 -rotate-90" />
                                                 </div>
                                             </div>
                                         </div>
@@ -2860,20 +2873,20 @@ export default function StudentsPage() {
                                                                     </button>
 
                                                                     {/* Manage Actions on Hover */}
-                                                                    <div className="flex opacity-0 group-hover:opacity-100 transition-opacity border-l border-[var(--color-border)] bg-white/50 backdrop-blur-sm rounded-r-lg">
+                                                                    <div className="flex opacity-0 group-hover:opacity-100 transition-opacity border-l border-[var(--color-border)] bg-white/50 backdrop-blur-sm rounded-r-lg overflow-hidden">
                                                                         <button
                                                                             onClick={() => { setTagToEdit(tag); setRenameInput(tag) }}
-                                                                            className="w-7 h-7 flex items-center justify-center text-[10px] text-blue-500 hover:bg-blue-500/10"
+                                                                            className="w-8 h-full flex items-center justify-center text-[10px] text-blue-500 hover:bg-blue-500/10 transition-colors"
                                                                             title="Ganti Nama Global"
                                                                         >
-                                                                            <FontAwesomeIcon icon={faEdit} />
+                                                                            <FontAwesomeIcon icon={faPen} />
                                                                         </button>
                                                                         <button
                                                                             onClick={() => handleGlobalDeleteTag(tag)}
-                                                                            className="w-7 h-7 flex items-center justify-center text-[10px] text-red-500 hover:bg-red-500/10"
+                                                                            className="w-8 h-full flex items-center justify-center text-[10px] text-red-500 hover:bg-red-500/10 transition-colors border-l border-[var(--color-border)]/50"
                                                                             title="Hapus Global"
                                                                         >
-                                                                            <FontAwesomeIcon icon={faTrash} />
+                                                                            <FontAwesomeIcon icon={faXmark} />
                                                                         </button>
                                                                     </div>
                                                                 </div>
@@ -2883,7 +2896,7 @@ export default function StudentsPage() {
                                                 })}
                                             </div>
                                             <p className="text-[8px] text-[var(--color-text-muted)] mt-2 px-1">
-                                                * Gunakan ikon <FontAwesomeIcon icon={faEdit} className="text-blue-500 mx-0.5" /> dan <FontAwesomeIcon icon={faTrash} className="text-red-500 mx-0.5" /> untuk merubah nama atau menghapus label dari SEMUA siswa sekaligus.
+                                                * Gunakan ikon <FontAwesomeIcon icon={faPen} className="text-blue-500 mx-0.5" /> dan <FontAwesomeIcon icon={faXmark} className="text-red-500 mx-0.5" /> untuk merubah nama atau menghapus label dari semua siswa sekaligus.
                                             </p>
                                         </div>
                                     </div>
@@ -3022,11 +3035,11 @@ export default function StudentsPage() {
                 {
                     selectedStudentIds.length > 0 && (
                         <div
-                            className="fixed left-1/2 -translate-x-1/2 z-[250] w-[95%] max-w-5xl animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)"
+                            className="fixed left-1/2 -translate-x-1/2 z-[250] w-[95%] md:w-max max-w-[95%] animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)"
                             style={{ bottom: `max(96px, calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 16px))` }}
                         >
                             <div className="relative">
-                                <div className="relative glass-morphism bg-gray-900/90 dark:bg-gray-800/95 backdrop-blur-3xl border border-white/20 rounded-2xl px-3 py-2 flex items-center gap-2 text-white overflow-hidden">
+                                <div className="relative glass-morphism bg-gray-900/90 dark:bg-gray-800/95 backdrop-blur-3xl border border-white/20 rounded-2xl px-3 py-2 flex items-center gap-4 text-white overflow-hidden shadow-2xl">
                                     {/* Animated scanline */}
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
 
@@ -3044,60 +3057,60 @@ export default function StudentsPage() {
                                     {/* Divider */}
                                     <div className="w-px h-6 bg-white/10 shrink-0 hidden md:block" />
 
-                                    {/* Center: action buttons — flex-wrap so labels always show */}
-                                    <div className="flex items-center flex-wrap gap-1 flex-1 justify-center py-0.5">
+                                    {/* Center: action buttons */}
+                                    <div className="flex items-center gap-1.5 py-0.5 overflow-x-auto no-scrollbar">
                                         <button
                                             onClick={handleBulkWA}
-                                            className="h-8 px-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all duration-200 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                                            className="h-8 w-8 md:w-auto md:px-3 shrink-0 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all duration-200 flex items-center justify-center md:justify-start gap-1.5 text-[9px] font-black uppercase tracking-widest"
                                             title="Broadcast WA"
                                         >
                                             <FontAwesomeIcon icon={faWhatsapp} className="text-sm" />
-                                            <span>Whatsapp</span>
+                                            <span className="hidden md:inline">Whatsapp</span>
                                         </button>
 
                                         <button
                                             onClick={handleBulkPrint}
-                                            className="h-8 px-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500 hover:text-white transition-all duration-200 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                                            className="h-8 w-8 md:w-auto md:px-3 shrink-0 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500 hover:text-white transition-all duration-200 flex items-center justify-center md:justify-start gap-1.5 text-[9px] font-black uppercase tracking-widest"
                                             title="Cetak Kartu"
                                         >
                                             <FontAwesomeIcon icon={faPrint} className="text-sm" />
-                                            <span>Cetak</span>
+                                            <span className="hidden md:inline">Cetak</span>
                                         </button>
 
                                         <button
                                             onClick={() => setActiveModal('bulkTag')}
-                                            className="h-8 px-3 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500 hover:text-white transition-all duration-200 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                                            className="h-8 w-8 md:w-auto md:px-3 shrink-0 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500 hover:text-white transition-all duration-200 flex items-center justify-center md:justify-start gap-1.5 text-[9px] font-black uppercase tracking-widest"
                                             title="Beri Label"
                                         >
                                             <FontAwesomeIcon icon={faTags} className="text-sm" />
-                                            <span>Label</span>
+                                            <span className="hidden md:inline">Label</span>
                                         </button>
 
                                         <button
                                             onClick={() => setActiveModal('bulkPromote')}
-                                            className="h-8 px-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500 hover:text-white transition-all duration-200 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                                            className="h-8 w-8 md:w-auto md:px-3 shrink-0 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500 hover:text-white transition-all duration-200 flex items-center justify-center md:justify-start gap-1.5 text-[9px] font-black uppercase tracking-widest"
                                             title="Naik Kelas"
                                         >
                                             <FontAwesomeIcon icon={faGraduationCap} className="text-sm" />
-                                            <span>Naik Kelas</span>
+                                            <span className="hidden md:inline">Naik</span>
                                         </button>
 
                                         <button
                                             onClick={() => setActiveModal('bulkPoint')}
-                                            className="h-8 px-3 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500 hover:text-white transition-all duration-200 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                                            className="h-8 w-8 md:w-auto md:px-3 shrink-0 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500 hover:text-white transition-all duration-200 flex items-center justify-center md:justify-start gap-1.5 text-[9px] font-black uppercase tracking-widest"
                                             title="Beri Poin"
                                         >
                                             <FontAwesomeIcon icon={faBolt} className="text-sm" />
-                                            <span>Poin</span>
+                                            <span className="hidden md:inline">Poin</span>
                                         </button>
 
                                         <button
                                             onClick={() => setActiveModal('bulkRoom')}
-                                            className="h-8 px-3 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500 hover:text-white transition-all duration-200 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                                            className="h-8 w-8 md:w-auto md:px-3 shrink-0 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500 hover:text-white transition-all duration-200 flex items-center justify-center md:justify-start gap-1.5 text-[9px] font-black uppercase tracking-widest"
                                             title="Tetapkan Kamar"
                                         >
                                             <FontAwesomeIcon icon={faDoorOpen} className="text-sm" />
-                                            <span>Kamar</span>
+                                            <span className="hidden md:inline">Kamar</span>
                                         </button>
                                     </div>
 
@@ -3123,24 +3136,34 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'bulkTag'}
                             onClose={() => closeModal()}
-                            title={`Aksi Label Massal —” ${selectedStudentIds.length} Siswa`}
+                            title={`Aksi Label Massal — ${selectedStudentIds.length} Siswa`}
                             description="Tambah atau hapus label untuk rombongan siswa terpilih."
                             icon={faTags}
                             iconBg="bg-indigo-500/10"
                             iconColor="text-indigo-600"
                             size="sm"
+                            mobileVariant="bottom-sheet"
                             footer={
                                 <div className="flex justify-end">
                                     <button
                                         onClick={() => closeModal()}
-                                        className="h-11 px-8 bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[var(--color-border)] transition-all active:scale-95"
+                                        className="h-11 px-8 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
                                     >
                                         Selesai
                                     </button>
                                 </div>
                             }
                         >
-                            <div className="space-y-6">
+                            <div className="space-y-4 md:space-y-6">
+                                {<SelectedStudentsCarousel
+                                    selectedStudents={selectedStudents}
+                                    removingStudentId={removingStudentId}
+                                    setRemovingStudentId={setRemovingStudentId}
+                                    toggleSelectStudent={toggleSelectStudent}
+                                />}
+
+                                <div className="h-px bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent" />
+
                                 {/* Mode Toggle */}
                                 <div className="flex p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
                                     <button
@@ -3202,12 +3225,13 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'bulkPoint'}
                             onClose={() => closeModal()}
-                            title={`Aksi Poin Massal —” ${selectedStudentIds.length} Siswa`}
+                            title={`Aksi Poin Massal — ${selectedStudentIds.length} Siswa`}
                             description="Berikan poin positif atau negatif ke seluruh siswa terpilih."
                             icon={faBolt}
                             iconBg="bg-orange-500/10"
                             iconColor="text-orange-500"
                             size="sm"
+                            mobileVariant="bottom-sheet"
                             footer={
                                 <div className="space-y-3">
                                     <div className="flex p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 gap-3 items-start">
@@ -3241,7 +3265,15 @@ export default function StudentsPage() {
                                 </div>
                             }
                         >
-                            <div className="space-y-6">
+                            <div className="space-y-4 md:space-y-6">
+                                {<SelectedStudentsCarousel
+                                    selectedStudents={selectedStudents}
+                                    removingStudentId={removingStudentId}
+                                    setRemovingStudentId={setRemovingStudentId}
+                                    toggleSelectStudent={toggleSelectStudent}
+                                />}
+
+                                <div className="h-px bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent" />
 
                                 <div className="space-y-4">
                                     <div>
@@ -3284,12 +3316,13 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={activeModal === 'bulkRoom'}
                             onClose={() => closeModal()}
-                            title={`Penetapan Kamar Massal \u2014 ${selectedStudentIds.length} Siswa`}
+                            title={`Penetapan Kamar Massal — ${selectedStudentIds.length} Siswa`}
                             description="Pindahkan santri terpilih ke kamar asrama secara sekaligus."
                             icon={faDoorOpen}
                             iconBg="bg-teal-500/10"
                             iconColor="text-teal-600"
                             size="sm"
+                            mobileVariant="bottom-sheet"
                             footer={
                                 <div className="space-y-3">
                                     {bulkRoomId && (
@@ -3326,7 +3359,15 @@ export default function StudentsPage() {
                                 </div>
                             }
                         >
-                            <div className="space-y-2">
+                            <div className="space-y-4 md:space-y-6">
+                                {<SelectedStudentsCarousel
+                                    selectedStudents={selectedStudents}
+                                    removingStudentId={removingStudentId}
+                                    setRemovingStudentId={setRemovingStudentId}
+                                    toggleSelectStudent={toggleSelectStudent}
+                                />}
+
+                                <div className="h-px bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent" />
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-3">Pilih Kamar Tujuan</label>
 
                                 {/* Opsi Kosongkan */}
