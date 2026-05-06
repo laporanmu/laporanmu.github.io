@@ -375,8 +375,6 @@ export default function StudentsPage() {
     // --- Stats Carousel Dot Indicator ---
     const statsScrollRef = useRef(null)
     const [activeStatIdx, setActiveStatIdx] = useState(0)
-    const STAT_CARD_COUNT = 4
-
 
 
     const handleTouchStart = (e) => {
@@ -852,36 +850,26 @@ export default function StudentsPage() {
                 </div>
 
                 {/* Stats Row Wrapper */}
-                <StatsCarousel count={STAT_CARD_COUNT} cols={4}>
+                <StatsCarousel count={4} cols={4}>
                     <StatCard
                         icon={faUsers}
                         label="Total Siswa"
                         value={globalStats.total}
-                        className="w-full"
-                        iconBg="bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]"
                     />
                     <StatCard
                         icon={faMars}
                         label="Putra"
                         value={globalStats.boys}
-                        className="w-full"
-                        borderColor="border-t-blue-500"
-                        iconBg="bg-blue-500/10 text-blue-500"
                     />
                     <StatCard
                         icon={faVenus}
                         label="Putri"
                         value={globalStats.girls}
-                        className="w-full"
-                        borderColor="border-t-pink-500"
-                        iconBg="bg-pink-500/10 text-pink-500"
                     />
                     <StatCard
                         icon={faTrophy}
                         label="Rata-rata Poin"
                         value={globalStats.avgPoints}
-                        className="w-full"
-                        valueClassName={globalStats.avgPoints >= 0 ? 'text-2xl text-[var(--color-text)]' : 'text-2xl text-red-500'}
                         trend={globalStats.avgPointsLastWeek !== null ? Math.abs(globalStats.avgPointsLastWeek) : null}
                         trendUp={globalStats.avgPointsLastWeek >= 0}
                         borderColor="border-t-emerald-500"
