@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react'
+import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faPlus,
@@ -27,15 +28,36 @@ import { LIST_KAMAR } from '../../pages/reports/utils/raportConstants'
 
 const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, small, placement = "bottom" }) => {
     const [isOpen, setIsOpen] = useState(false)
+    const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 })
     const ref = useRef(null)
+
+    // Calculate position when opening to use Portal (prevents clipping by modal/footer)
+    const toggle = () => {
+        if (!isOpen && ref.current) {
+            const rect = ref.current.getBoundingClientRect()
+            setCoords({
+                top: rect.top,
+                bottom: rect.bottom,
+                left: rect.left,
+                width: rect.width
+            })
+        }
+        setIsOpen(!isOpen)
+    }
 
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (ref.current && !ref.current.contains(e.target)) setIsOpen(false)
         }
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside)
+            window.addEventListener('scroll', () => setIsOpen(false), true) // Close on scroll for safety
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+            window.removeEventListener('scroll', () => setIsOpen(false), true)
+        }
+    }, [isOpen])
 
     const selectedOption = options.find(o => String(o.id) === String(value)) || (extraOption?.id === value ? extraOption : null)
 
@@ -43,7 +65,7 @@ const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, 
         <div className="relative" ref={ref}>
             <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggle}
                 className={`w-full flex items-center justify-between gap-2 ${small ? 'px-3 h-10' : 'pl-9 pr-3 h-10'} rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] relative group`}
             >
                 <div className="flex items-center gap-2 truncate">
@@ -55,8 +77,17 @@ const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, 
                 <FontAwesomeIcon icon={faChevronDown} className={`text-[10px] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {isOpen && (
-                <div className={`absolute ${placement === 'top' ? 'bottom-full mb-2 origin-bottom' : 'top-full mt-2 origin-top'} left-0 w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl z-[100] py-1.5 animate-in fade-in zoom-in-95 duration-200 overflow-hidden max-h-48 overflow-y-auto backdrop-blur-xl`}>
+            {isOpen && createPortal(
+                <div 
+                    className="fixed z-[10000] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl py-1.5 animate-in fade-in zoom-in-95 duration-200 overflow-hidden max-h-40 overflow-y-auto backdrop-blur-xl"
+                    style={{
+                        width: coords.width,
+                        left: coords.left,
+                        top: placement === 'top' ? 'auto' : coords.bottom + 8,
+                        bottom: placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
+                        transformOrigin: placement === 'top' ? 'bottom' : 'top'
+                    }}
+                >
                     {extraOption && (
                         <button
                             type="button"
@@ -82,7 +113,8 @@ const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, 
                             {opt.name}
                         </button>
                     ))}
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     )
