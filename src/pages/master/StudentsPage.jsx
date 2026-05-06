@@ -1414,17 +1414,26 @@ export default function StudentsPage() {
                                             <th className="px-6 py-4 text-left">Siswa</th>
 
                                             {visibleColumns.gender && (
-                                                <th className="px-6 py-4 text-center">Gender</th>
+                                                <th className="px-6 py-4 text-left">Gender</th>
                                             )}
                                             {visibleColumns.kelas && (
-                                                <th className="px-6 py-4 text-center">Kelas</th>
+                                                <th className="px-6 py-4 text-left">Kelas</th>
                                             )}
                                             {visibleColumns.poin && (
-                                                <th className="px-6 py-4 text-center">Poin</th>
+                                                <th className="px-6 py-4 text-left">Poin</th>
+                                            )}
+                                            {visibleColumns.last_report && (
+                                                <th className="px-6 py-4 text-left whitespace-nowrap">Lap. Terakhir</th>
+                                            )}
+                                            {visibleColumns.profil && (
+                                                <th className="px-6 py-4 text-left">Profil</th>
+                                            )}
+                                            {visibleColumns.tags && (
+                                                <th className="px-6 py-4 text-left">Label</th>
                                             )}
 
                                             {/* COLUMN TOGGLE BUTTON —” di dalam header Aksi */}
-                                            <th className="px-6 py-4 text-center pr-6 relative min-w-[240px]">
+                                            <th colSpan={4} className="px-6 py-4 text-center pr-6 relative min-w-[240px]">
                                                 <div className="flex items-center justify-center">
                                                     {visibleColumns.aksi && <span>Aksi</span>}
                                                 </div>
@@ -1472,6 +1481,9 @@ export default function StudentsPage() {
                                                                 { key: 'gender', label: 'Gender' },
                                                                 { key: 'kelas', label: 'Kelas' },
                                                                 { key: 'poin', label: 'Poin' },
+                                                                { key: 'last_report', label: 'Lap. Terakhir' },
+                                                                { key: 'profil', label: 'Profil' },
+                                                                { key: 'tags', label: 'Label' },
                                                                 { key: 'aksi', label: 'Aksi' },
                                                             ].map(({ key, label }) => (
                                                                 <button

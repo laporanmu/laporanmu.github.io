@@ -43,7 +43,7 @@ export default function StudentResetPointsModal({
             icon={faRotateLeft}
             iconBg="bg-orange-500/10"
             iconColor="text-orange-500"
-            size="sm"
+            size="md"
             mobileVariant="bottom-sheet"
             footer={
                 <div className="flex gap-3">
@@ -103,18 +103,18 @@ export default function StudentResetPointsModal({
                         </div>
 
                         {/* Class List */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-1">
                             {/* Option: Semua Kelas (hidden when searching) */}
                             {!resetPointsSearch && (
                                 <button
                                     type="button"
                                     onClick={() => setResetPointsClassId('')}
-                                    className={`col-span-full p-3 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.02] active:scale-95 group mb-1 ${resetPointsClassId === ''
+                                    className={`col-span-full p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group mb-1 ${resetPointsClassId === ''
                                             ? 'bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-500/20'
                                             : 'border-amber-500/30 bg-amber-500/5 text-amber-600 hover:bg-amber-500/10'
                                         }`}
                                 >
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassId === '' ? 'bg-white/20 text-white' : 'bg-amber-500 text-white shadow-sm'
+                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassId === '' ? 'bg-white/20 text-white' : 'bg-amber-500 text-white shadow-sm'
                                         }`}>
                                         <FontAwesomeIcon icon={faLayerGroup} className="text-xs" />
                                     </div>
@@ -131,12 +131,12 @@ export default function StudentResetPointsModal({
                                     key={c.id}
                                     type="button"
                                     onClick={() => setResetPointsClassId(c.id)}
-                                    className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.02] active:scale-95 group ${resetPointsClassId === c.id
+                                    className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all hover:scale-[1.01] active:scale-95 group ${resetPointsClassId === c.id
                                             ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
                                             : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'
                                         }`}
                                 >
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassId === c.id ? 'bg-white/20 text-white' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassId === c.id ? 'bg-white/20 text-white' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
                                         }`}>
                                         <FontAwesomeIcon icon={faGraduationCap} className="text-xs" />
                                     </div>

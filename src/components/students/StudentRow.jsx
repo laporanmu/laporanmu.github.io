@@ -468,14 +468,6 @@ const StudentRow = memo(({
                             <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60 uppercase tracking-wider truncate">
                                 {isPrivacyMode ? maskInfo(student.registration_code || student.code, 2) : (student.registration_code || student.code)}
                             </span>
-
-                            <div className="flex flex-wrap items-center gap-1">
-                                {(student.tags || []).map(tag => (
-                                    <span key={tag} className={`text-[8px] font-black px-1.2 py-0.3 rounded-md border uppercase tracking-wider whitespace-nowrap ${getTagColor(tag)}`}>
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -483,7 +475,7 @@ const StudentRow = memo(({
 
             {/* ── Gender ───────────────────────────────────────────────── */}
             {vc.gender && (
-                <td className="px-6 py-4 text-center">
+                <td className="px-6 py-4 text-left">
                     {editingField === 'gender' ? (
                         <InlineEditGender
                             value={student.gender}
@@ -491,7 +483,7 @@ const StudentRow = memo(({
                             onCancel={cancelEdit}
                         />
                     ) : (
-                        <div className="flex items-center justify-center group/gender">
+                        <div className="flex items-center justify-start group/gender">
                             <div className="relative">
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs shadow-inner transition-all
                                     ${student.gender === 'L' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-pink-500/10 text-pink-500 border border-pink-500/20'}`}>
@@ -512,7 +504,7 @@ const StudentRow = memo(({
 
             {/* ── Kelas ────────────────────────────────────────────────── */}
             {vc.kelas && (
-                <td className="px-6 py-4 text-center">
+                <td className="px-6 py-4 text-left">
                     {editingField === 'kelas' ? (
                         <InlineEditKelas
                             value={student.class_id}
@@ -521,7 +513,7 @@ const StudentRow = memo(({
                             onCancel={cancelEdit}
                         />
                     ) : (
-                        <div className="flex items-center justify-center group/kelas">
+                        <div className="flex items-center justify-start group/kelas">
                             <div className="relative">
                                 <button
                                     onClick={() => onClassBreakdown(student.class_id, student.className)}
@@ -542,9 +534,62 @@ const StudentRow = memo(({
                 </td>
             )}
 
-            {/* ── Poin ─────────────────────────────────────────────────── */}
+            {/* ── Laporan Terakhir ────────────────────────────────────────── */}
+            {vc.last_report && (
+                <td className="px-6 py-4 text-left">
+                    <div className="flex flex-col gap-0.5">
+                        <p className="text-[11px] font-black text-[var(--color-text)] whitespace-nowrap">
+                            {lastReportMap?.[student.id] ? formatRelativeDate(lastReportMap[student.id]) : '---'}
+                        </p>
+                        {lastReportMap?.[student.id] && (
+                            <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">Aktif</p>
+                        )}
+                    </div>
+                </td>
+            )}
+
+            {/* ── Kelengkapan Profil ──────────────────────────────────────── */}
+            {vc.profil && (
+                <td className="px-6 py-4 text-left">
+                    <div className="flex items-center gap-2">
+                        {(() => {
+                            const score = calculateCompleteness(student);
+                            return (
+                                <>
+                                    <div className="w-10 h-1.5 rounded-full bg-[var(--color-surface-alt)] overflow-hidden shrink-0 border border-[var(--color-border)]/50">
+                                        <div 
+                                            className={`h-full transition-all duration-1000 ${score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                            style={{ width: `${score}%` }}
+                                        />
+                                    </div>
+                                    <span className={`text-[10px] font-black ${score >= 80 ? 'text-emerald-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                                        {score}%
+                                    </span>
+                                </>
+                            );
+                        })()}
+                    </div>
+                </td>
+            )}
+
+            {/* ── Label/Tags ─────────────────────────────────────────────── */}
+            {vc.tags && (
+                <td className="px-6 py-4 text-left">
+                    <div className="flex flex-wrap items-center gap-1 max-w-[120px]">
+                        {(student.tags || []).length > 0 ? (
+                            student.tags.map(tag => (
+                                <span key={tag} className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider whitespace-nowrap transition-all hover:scale-105 cursor-default ${getTagColor(tag)}`}>
+                                    {tag}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-30 italic">No Label</span>
+                        )}
+                    </div>
+                </td>
+            )}
             {vc.poin && (
-                <td className="px-6 py-4 text-center">
+                <td className="px-6 py-4 text-left">
                     {editingField === 'poin' ? (
                         <InlineEditPoin
                             value={p}
@@ -552,7 +597,7 @@ const StudentRow = memo(({
                             onCancel={cancelEdit}
                         />
                     ) : (
-                        <div className="flex flex-col items-center gap-1 group/point">
+                        <div className="flex flex-col items-start gap-1 group/point">
                             <div className="flex items-center gap-1.5">
                                 <span className={`text-sm font-black tracking-tight ${p < 0 ? 'text-red-500' : p > 0 ? 'text-emerald-500' : 'text-[var(--color-text)] opacity-40'}`}>
                                     {p > 0 ? '+' : ''}{p}
