@@ -41,7 +41,8 @@ const Modal = memo(function Modal({
             return () => cancelAnimationFrame(frame)
         } else {
             setVisible(false)
-            closeTimer.current = setTimeout(() => setMounted(false), 260)
+            // Match unmount exactly with duration (200ms)
+            closeTimer.current = setTimeout(() => setMounted(false), 200)
         }
     }, [isOpen])
 
@@ -52,11 +53,9 @@ const Modal = memo(function Modal({
             document.body.style.overflow = 'hidden'
             if (scrollBarWidth > 0) document.body.style.paddingRight = `${scrollBarWidth}px`
         } else {
-            const t = setTimeout(() => {
-                document.body.style.overflow = ''
-                document.body.style.paddingRight = '0px'
-            }, 260) // Match unmount delay
-            return () => clearTimeout(t)
+            // RELEASE IMMEDIATELY for better perceived responsiveness
+            document.body.style.overflow = ''
+            document.body.style.paddingRight = '0px'
         }
         return () => {
             document.body.style.overflow = ''
@@ -90,19 +89,21 @@ const Modal = memo(function Modal({
     const isBottomSheet = mobileVariant === 'bottom-sheet'
 
     // Performance-optimized timing
-    const sheetEase = 'cubic-bezier(0.2, 0.8, 0.2, 1)' // Clean native-like spring
+    const sheetEase = visible 
+        ? 'cubic-bezier(0.2, 0.8, 0.2, 1)'  // Snappy entry
+        : 'cubic-bezier(0.3, 0, 1, 1)'      // Accelerating exit (feels faster)
     const duration = visible ? '300ms' : '200ms'
 
     const node = (
         <div
-            className={`fixed inset-0 z-[9999] flex transition-all duration-300
+            className={`fixed inset-0 z-[9999] flex transition-opacity
                 ${isBottomSheet ? 'items-end md:items-center justify-center md:p-6' : 'items-center justify-center p-4 md:p-6'}
                 ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
             `}
             style={{
                 visibility: visible ? 'visible' : 'hidden',
-                transitionProperty: 'opacity, visibility',
-                transitionDuration: duration
+                transitionDuration: duration,
+                transitionTimingFunction: 'ease'
             }}
             onClick={() => closeOnOutsideClick && onClose?.()}
             role="dialog"

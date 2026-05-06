@@ -852,28 +852,34 @@ export default function StudentsPage() {
                 {/* Stats Row Wrapper */}
                 <StatsCarousel count={4} cols={4}>
                     <StatCard
+                        key="total"
                         icon={faUsers}
                         label="Total Siswa"
                         value={globalStats.total}
+                        color="sky"
                     />
                     <StatCard
+                        key="boys"
                         icon={faMars}
                         label="Putra"
                         value={globalStats.boys}
+                        color="indigo"
                     />
                     <StatCard
+                        key="girls"
                         icon={faVenus}
                         label="Putri"
                         value={globalStats.girls}
+                        color="rose"
                     />
                     <StatCard
+                        key="points"
                         icon={faTrophy}
                         label="Rata-rata Poin"
                         value={globalStats.avgPoints}
                         trend={globalStats.avgPointsLastWeek !== null ? Math.abs(globalStats.avgPointsLastWeek) : null}
                         trendUp={globalStats.avgPointsLastWeek >= 0}
-                        borderColor="border-t-emerald-500"
-                        iconBg="bg-emerald-500/10 text-emerald-500"
+                        color="emerald"
                         onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
                     />
                 </StatsCarousel>
