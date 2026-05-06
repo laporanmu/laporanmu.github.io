@@ -480,6 +480,16 @@ export default function StudentsPage() {
     const shortcutBtnRef = useRef(null)
     const [headerMenuRect, setHeaderMenuRect] = useState(null)
     const [shortcutRect, setShortcutRect] = useState(null)
+    // Deferred unmount: keeps portal in DOM for 200ms after close so exit animation can play
+    const [headerMenuMounted, setHeaderMenuMounted] = useState(false)
+    useEffect(() => {
+        if (isHeaderMenuOpen) {
+            setHeaderMenuMounted(true)
+        } else {
+            const t = setTimeout(() => setHeaderMenuMounted(false), 200)
+            return () => clearTimeout(t)
+        }
+    }, [isHeaderMenuOpen])
 
     // Sticky positioning - keep portaled dropdowns anchored on scroll/resize
     useEffect(() => {
@@ -662,11 +672,15 @@ export default function StudentsPage() {
                         </button>
 
                         {/* Portaled Header Menu Dropdown */}
-                        {isHeaderMenuOpen && headerMenuRect && createPortal(
+                        {headerMenuMounted && headerMenuRect && createPortal(
                             <>
-                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsHeaderMenuOpen(false)} />
                                 <div
-                                    className="fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-200"
+                                    className={`fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px] transition-opacity duration-200 ${isHeaderMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+                                    onClick={() => setIsHeaderMenuOpen(false)}
+                                />
+                                <div
+                                    className={`fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-all duration-200 ease-out origin-top-right
+                                        ${isHeaderMenuOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'}`}
                                     style={{
                                         top: headerMenuRect.bottom + 8,
                                         left: Math.max(10, headerMenuRect.right - 224)

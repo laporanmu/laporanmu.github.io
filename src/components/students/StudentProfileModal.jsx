@@ -5,7 +5,7 @@ import {
     faHistory, faArrowTrendUp, faArrowTrendDown, faTableList, faClockRotateLeft,
     faTriangleExclamation, faCircleExclamation, faBolt, faChevronDown,
     faXmark, faPlus, faMinus, faStar, faFire, faCrown, faAddressCard, faCopy,
-    faInfoCircle, faChartLine, faFileLines, faUserTie, faShieldHalved
+    faInfoCircle, faChartLine, faFileLines, faUserTie, faShieldHalved, faGraduationCap
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
@@ -129,14 +129,14 @@ export default memo(function StudentProfileModal({
                                     <FontAwesomeIcon icon={faThumbtack} className="text-amber-300 text-sm animate-bounce" />
                                 )}
                             </div>
-                            
+
                             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-[11px] font-bold text-white/80 uppercase tracking-widest">
                                 <span className="flex items-center gap-1.5"><FontAwesomeIcon icon={faIdCard} className="opacity-60" /> {selectedStudent.registration_code}</span>
                                 <span className="w-1.5 h-1.5 rounded-full bg-white/30 hidden md:block" />
                                 <span className="flex items-center gap-1.5"><FontAwesomeIcon icon={faGraduationCap} className="opacity-60" /> {selectedStudent.className}</span>
                                 <span className="w-1.5 h-1.5 rounded-full bg-white/30 hidden md:block" />
                                 <span className="flex items-center gap-1.5">
-                                    <FontAwesomeIcon icon={selectedStudent.gender === 'L' ? faMars : faVenus} className="opacity-60" /> 
+                                    <FontAwesomeIcon icon={selectedStudent.gender === 'L' ? faMars : faVenus} className="opacity-60" />
                                     {selectedStudent.gender === 'L' ? 'Putra' : 'Putri'}
                                 </span>
                             </div>
@@ -262,7 +262,7 @@ export default memo(function StudentProfileModal({
                                     <FontAwesomeIcon icon={faChartLine} className="text-indigo-500" />
                                     Analisis Tren Perilaku
                                 </h3>
-                                
+
                                 {loadingHistory ? (
                                     <div className="flex gap-2 items-end h-32 px-1 animate-pulse">
                                         {[60, 80, 45, 70, 50, 90].map((h, i) => <div key={i} className="flex-1 rounded-t-xl bg-[var(--color-surface-alt)]" style={{ height: `${h}%` }} />)}
@@ -329,8 +329,8 @@ export default memo(function StudentProfileModal({
                                 </h3>
                                 <div className="flex gap-1 bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)]">
                                     {['all', 'pos', 'neg'].map(f => (
-                                        <button 
-                                            key={f} 
+                                        <button
+                                            key={f}
                                             onClick={() => setTimelineFilter(f)}
                                             className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all
                                                 ${timelineFilter === f ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)]'}`}
@@ -371,9 +371,9 @@ export default memo(function StudentProfileModal({
                                         )
                                     })
                                 )}
-                                
+
                                 {timelineFiltered.length > timelineVisible && (
-                                    <button 
+                                    <button
                                         onClick={() => setTimelineVisible(v => v + 10)}
                                         className="w-full py-4 rounded-2xl border-2 border-dashed border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all"
                                     >
@@ -402,7 +402,7 @@ export default memo(function StudentProfileModal({
                                 <FontAwesomeIcon icon={faFileLines} className="text-indigo-500" />
                                 Arsip Raport Bulanan
                             </h3>
-                            
+
                             {loadingRaport ? (
                                 <div className="animate-pulse space-y-3">
                                     {[1, 2].map(i => <div key={i} className="h-24 bg-[var(--color-surface-alt)] rounded-2xl" />)}
@@ -424,7 +424,7 @@ export default memo(function StudentProfileModal({
                                         ]
                                         const values = KRITERIA.map(k => r[k.key]).filter(v => v !== null)
                                         const avg = values.length ? (values.reduce((a, b) => a + Number(b), 0) / values.length).toFixed(1) : '---'
-                                        
+
                                         return (
                                             <div key={r.id} className="p-4 rounded-2xl bg-[var(--color-surface-alt)]/20 border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/30 transition-all">
                                                 <div className="flex items-center justify-between mb-4">

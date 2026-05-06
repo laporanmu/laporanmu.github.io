@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
-// Singleton portal manager to prevent 'removeChild' errors in concurrent mode or Android/Chrome Translate
+// Singleton portal manager
 const _portalContainers = {}
 function getPortalContainer(id) {
     if (!_portalContainers[id]) {
@@ -18,22 +18,45 @@ function getPortalContainer(id) {
     return _portalContainers[id]
 }
 
-export default function Modal({
+const Modal = memo(function Modal({
     isOpen, onClose, title, children, footer,
     size = 'md', variant = 'centered', mobileVariant = 'centered',
     noPadding = false, contentClassName = "",
     icon, iconBg, iconColor, description,
     closeOnOutsideClick = true
 }) {
+    const [mounted, setMounted] = useState(false)
+    const [visible, setVisible] = useState(false)
+    const closeTimer = useRef(null)
+
+    // Visibility management with double rAF for perfect entry transition
+    useEffect(() => {
+        clearTimeout(closeTimer.current)
+        if (isOpen) {
+            setMounted(true)
+            const frame = requestAnimationFrame(() => {
+                const secondFrame = requestAnimationFrame(() => setVisible(true))
+                return () => cancelAnimationFrame(secondFrame)
+            })
+            return () => cancelAnimationFrame(frame)
+        } else {
+            setVisible(false)
+            closeTimer.current = setTimeout(() => setMounted(false), 260)
+        }
+    }, [isOpen])
+
+    // Body scroll lock with layout shift prevention
     useEffect(() => {
         if (isOpen) {
-            // Prevent layout shift by calculating scrollbar width
             const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth
             document.body.style.overflow = 'hidden'
-            document.body.style.paddingRight = `${scrollBarWidth}px`
+            if (scrollBarWidth > 0) document.body.style.paddingRight = `${scrollBarWidth}px`
         } else {
-            document.body.style.overflow = ''
-            document.body.style.paddingRight = '0px'
+            const t = setTimeout(() => {
+                document.body.style.overflow = ''
+                document.body.style.paddingRight = '0px'
+            }, 260) // Match unmount delay
+            return () => clearTimeout(t)
         }
         return () => {
             document.body.style.overflow = ''
@@ -41,6 +64,7 @@ export default function Modal({
         }
     }, [isOpen])
 
+    // Escape key handler
     useEffect(() => {
         if (!isOpen) return
         const onKeyDown = (e) => {
@@ -50,7 +74,7 @@ export default function Modal({
         return () => window.removeEventListener('keydown', onKeyDown)
     }, [isOpen, onClose])
 
-    if (!isOpen) return null
+    if (!mounted) return null
 
     const sizeClasses = {
         sm: 'max-w-sm',
@@ -65,24 +89,48 @@ export default function Modal({
     const container = getPortalContainer('portal-modals-system')
     const isBottomSheet = mobileVariant === 'bottom-sheet'
 
+    // Performance-optimized timing
+    const sheetEase = 'cubic-bezier(0.2, 0.8, 0.2, 1)' // Clean native-like spring
+    const duration = visible ? '300ms' : '200ms'
+
     const node = (
         <div
-            className={`fixed inset-0 z-[9999] bg-slate-950/40 backdrop-blur-md transition-all duration-500
-                ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}
-                ${isBottomSheet ? 'flex items-end md:items-center justify-center md:p-6' : 'flex items-center justify-center p-4 md:p-6'}
+            className={`fixed inset-0 z-[9999] flex transition-all duration-300
+                ${isBottomSheet ? 'items-end md:items-center justify-center md:p-6' : 'items-center justify-center p-4 md:p-6'}
+                ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
             `}
+            style={{
+                visibility: visible ? 'visible' : 'hidden',
+                transitionProperty: 'opacity, visibility',
+                transitionDuration: duration
+            }}
             onClick={() => closeOnOutsideClick && onClose?.()}
             role="dialog"
             aria-modal="true"
         >
+            {/* Optimized Backdrop */}
+            <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] transition-opacity duration-300" />
+
+            {/* Modal Panel */}
             <div
-                className={`bg-[var(--color-surface)] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.3)] w-full relative transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform overflow-hidden flex flex-col border border-white/10
+                className={`bg-[var(--color-surface)] shadow-2xl w-full relative overflow-hidden flex flex-col border border-[var(--color-border)]/60 z-10
                     ${sizeClasses[size]}
                     ${isBottomSheet
-                        ? 'rounded-t-[2.5rem] md:rounded-[2.5rem] max-h-[92vh] md:max-h-[calc(100vh-6rem)] translate-y-0 animate-in slide-in-from-bottom-8 md:slide-in-from-top-4'
-                        : 'rounded-[2.5rem] max-h-[calc(100vh-6rem)] translate-y-0 animate-in zoom-in-95'
+                        ? 'rounded-t-[2.25rem] md:rounded-[2.25rem] max-h-[94vh] md:max-h-[calc(100vh-6rem)]'
+                        : 'rounded-[2.25rem] max-h-[calc(100vh-6rem)]'
                     }
                 `}
+                style={{
+                    transform: !visible
+                        ? (isBottomSheet ? 'translateY(100%)' : 'scale(0.96) translateY(10px)')
+                        : 'translateY(0) scale(1)',
+                    opacity: visible ? 1 : 0,
+                    transition: `transform ${duration} ${sheetEase}, opacity ${duration} ease`,
+                    // Critical Performance Flags
+                    backfaceVisibility: 'hidden',
+                    perspective: 1000,
+                    contain: 'content' // Isolate layout/paint
+                }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Drag Handle for Bottom Sheet */}
@@ -91,15 +139,15 @@ export default function Modal({
                 )}
 
                 {/* Header */}
-                <div className={`shrink-0 flex items-center justify-between mb-0 px-8 ${isBottomSheet ? 'pt-4 pb-4' : 'py-6'} border-b border-[var(--color-border)]/50 bg-[var(--color-surface)]/80 backdrop-blur-xl sticky top-0 z-10`}>
-                    <div className="flex items-center gap-4 min-w-0">
+                <div className={`shrink-0 flex items-center justify-between px-6 md:px-8 ${isBottomSheet ? 'pt-3 pb-4' : 'py-5'} border-b border-[var(--color-border)]/50 bg-[var(--color-surface)] sticky top-0 z-10`}>
+                    <div className="flex items-center gap-3.5 min-w-0">
                         {icon && (
-                            <div className={`w-10 h-10 rounded-2xl ${iconBg || 'bg-[var(--color-primary)]/10'} flex items-center justify-center shrink-0 shadow-sm border border-white/5 ${iconColor || 'text-[var(--color-primary)]'}`}>
-                                <FontAwesomeIcon icon={icon} className="text-base opacity-90" />
+                            <div className={`w-9 h-9 rounded-xl ${iconBg || 'bg-[var(--color-primary)]/10'} flex items-center justify-center shrink-0 ${iconColor || 'text-[var(--color-primary)]'}`}>
+                                <FontAwesomeIcon icon={icon} className="text-sm" />
                             </div>
                         )}
                         <div className="min-w-0">
-                            <h3 className={`font-black font-heading tracking-tight text-[var(--color-text)] leading-tight ${icon ? 'text-base' : 'text-lg md:text-xl'}`}>
+                            <h3 className={`font-black font-heading tracking-tight text-[var(--color-text)] leading-tight ${icon ? 'text-[15px]' : 'text-lg md:text-xl'}`}>
                                 {title}
                             </h3>
                             {description && (
@@ -111,22 +159,27 @@ export default function Modal({
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-10 h-10 text-[var(--color-text-muted)] hover:text-[var(--color-text)]
-              hover:bg-[var(--color-surface-alt)] rounded-2xl transition-all active:scale-90 flex items-center justify-center shrink-0 border border-transparent hover:border-[var(--color-border)]"
+                        className="w-10 h-10 text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] rounded-2xl transition-colors active:scale-90 flex items-center justify-center shrink-0"
                         aria-label="Close modal"
                     >
                         <FontAwesomeIcon icon={faXmark} className="text-lg" />
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className={`flex-1 min-h-0 overflow-y-auto custom-scrollbar ${noPadding ? '' : 'p-8'} ${contentClassName} scroll-smooth`}>
+                {/* Content Area */}
+                <div
+                    className={`flex-1 min-h-0 overflow-y-auto custom-scrollbar ${noPadding ? '' : 'px-6 md:px-8 py-6'} ${contentClassName}`}
+                    style={{
+                        overscrollBehavior: 'contain', // Prevent scroll chaining to background
+                        WebkitOverflowScrolling: 'touch' // Smooth inertial scroll on iOS
+                    }}
+                >
                     {children}
                 </div>
 
-                {/* Footer */}
+                {/* Footer Area */}
                 {footer && (
-                    <div className="shrink-0 p-8 pt-5 border-t border-[var(--color-border)]/50 bg-[var(--color-surface-alt)]/20 backdrop-blur-md">
+                    <div className="shrink-0 px-6 md:px-8 py-5 border-t border-[var(--color-border)]/50 bg-[var(--color-surface-alt)]/30">
                         {footer}
                     </div>
                 )}
@@ -135,4 +188,6 @@ export default function Modal({
     )
 
     return createPortal(node, container)
-}
+})
+
+export default Modal

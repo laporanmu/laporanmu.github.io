@@ -70,8 +70,11 @@ const StudentsHeader = memo(function StudentsHeader({
                         <FontAwesomeIcon icon={faSliders} />
                     </button>
 
-                    {isHeaderMenuOpen && (
-                        <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                    <div className={`fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-all duration-200 ease-out origin-top-right
+                        ${isHeaderMenuOpen
+                            ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
+                            : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
+                        }`}>
                             <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
                             <button onClick={() => { setIsHeaderMenuOpen(false); handleImportClick() }}
                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
@@ -149,7 +152,6 @@ const StudentsHeader = memo(function StudentsHeader({
                                 </div>
                             </button>
                         </div>
-                    )}
                 </div>
 
                 <button
