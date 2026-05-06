@@ -24,6 +24,23 @@ export default function StudentGSheetsModal({
             iconColor="text-emerald-600"
             size="md"
             mobileVariant="bottom-sheet"
+            footer={
+                <div className="flex items-center justify-end gap-3">
+                    <button
+                        onClick={onClose}
+                        className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] font-black text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)] transition-colors border border-[var(--color-border)]"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        onClick={handleFetchGSheets}
+                        disabled={fetchingGSheets || !gSheetsUrl.includes('docs.google.com/')}
+                        className="h-10 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 hover:brightness-110 text-white text-[11px] uppercase tracking-widest font-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20"
+                    >
+                        {fetchingGSheets ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengambil...</> : <><FontAwesomeIcon icon={faLink} /> Ambil Data Sheets</>}
+                    </button>
+                </div>
+            }
         >
             <div className="space-y-5">
                 {/* Panduan Mini Sheets */}
@@ -98,22 +115,6 @@ export default function StudentGSheetsModal({
                         />
                     </div>
                     <p className="text-[9px] text-[var(--color-text-muted)] pl-1">Minimal terdapat header kolom di baris pertama: <b>name/nama</b>, <b>gender/jk</b>, <b>phone</b>, <b>class_name/kelas</b></p>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-[var(--color-border)]">
-                    <button 
-                        onClick={onClose} 
-                        className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] font-black text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)] transition-colors border border-[var(--color-border)]"
-                    >
-                        Batal
-                    </button>
-                    <button 
-                        onClick={handleFetchGSheets} 
-                        disabled={fetchingGSheets || !gSheetsUrl.includes('docs.google.com/')}
-                        className="h-10 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 hover:brightness-110 text-white text-[11px] uppercase tracking-widest font-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20"
-                    >
-                        {fetchingGSheets ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengambil...</> : <><FontAwesomeIcon icon={faLink} /> Ambil Data Sheets</>}
-                    </button>
                 </div>
             </div>
         </Modal>
