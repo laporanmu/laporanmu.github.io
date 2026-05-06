@@ -445,7 +445,7 @@ export default function StudentsPage() {
         handleBulkFix, validateImportPreview, handleDownloadTemplate,
         handleExportCSV, handleExportExcel, handleExportPDF, handleFetchGSheets,
         fetchFilteredForExport, getExportData, importTab, setImportTab,
-        downloadBlob, buildImportPreview, handleImportCellEdit
+        downloadBlob, buildImportPreview, handleImportCellEdit, handleRemoveImportRow
     } = importExport
 
     const timelineFiltered = useMemo(() =>
@@ -2010,6 +2010,10 @@ export default function StudentsPage() {
                             handleImportCellEdit={handleImportCellEdit}
                             importEditCell={importEditCell}
                             setImportEditCell={setImportEditCell}
+                            handleRemoveImportRow={handleRemoveImportRow}
+                            importSkipDupes={importSkipDupes}
+                            setImportSkipDupes={setImportSkipDupes}
+                            handleBulkFix={handleBulkFix}
                         />
                     )}
                 </React.Suspense>

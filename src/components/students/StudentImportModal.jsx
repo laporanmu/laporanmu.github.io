@@ -18,7 +18,10 @@ import {
     faCopy,
     faCircleExclamation,
     faTriangleExclamation,
-    faPen
+    faPen,
+    faTrash,
+    faRotate,
+    faBolt
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 
@@ -57,6 +60,10 @@ export default function StudentImportModal(props) {
         handleImportCellEdit,
         importEditCell,
         setImportEditCell,
+        handleRemoveImportRow,
+        importSkipDupes,
+        setImportSkipDupes,
+        handleBulkFix
     } = props
 
     const [showClasses, setShowClasses] = useState(false)
@@ -205,16 +212,17 @@ export default function StudentImportModal(props) {
             )
         }
 
+        const isCentered = ['gender'].includes(colKey)
         const displayValue = colKey === 'class_id' ? (importPreview[rowIdx]._className || '-') : (value || '-')
         const isEmpty = !value || value === '-'
 
         return (
             <div
-                className={`group cursor-pointer hover:bg-[var(--color-primary)]/5 px-1.5 py-0.5 -mx-1.5 rounded-md transition-all flex items-center justify-between gap-2 min-h-[20px] ${isEmpty ? 'text-red-500/40 italic font-normal' : ''}`}
+                className={`group cursor-pointer hover:bg-[var(--color-primary)]/5 px-1.5 py-0.5 -mx-1.5 rounded-md transition-all flex items-center ${isCentered ? 'justify-center' : 'justify-between'} gap-2 min-h-[20px] ${isEmpty ? 'text-red-500/40 italic font-normal' : ''}`}
                 onClick={() => setImportEditCell({ row: rowIdx, col: colKey })}
             >
-                <span className="truncate">{displayValue}</span>
-                <FontAwesomeIcon icon={faPen} className="text-[7px] opacity-0 group-hover:opacity-30 transition-opacity" />
+                <span className={isCentered ? '' : 'truncate'}>{displayValue}</span>
+                {!isCentered && <FontAwesomeIcon icon={faPen} className="text-[7px] opacity-0 group-hover:opacity-30 transition-opacity" />}
             </div>
         )
     })
@@ -232,6 +240,65 @@ export default function StudentImportModal(props) {
             iconColor="text-emerald-600"
             size="lg"
             mobileVariant="bottom-sheet"
+            footer={
+                <div className="flex items-center justify-between gap-3">
+                    {importStep > 1 && (
+                        <button
+                            onClick={() => setImportStep(v => v - 1)}
+                            disabled={importing}
+                            className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-widest disabled:opacity-50 hover:bg-[var(--color-border)] transition-all flex items-center gap-2"
+                        >
+                            <FontAwesomeIcon icon={faArrowLeft} />
+                            Kembali
+                        </button>
+                    )}
+
+                    <div className="flex items-center gap-3 ml-auto">
+                        {importing && (
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] flex items-center gap-2">
+                                <FontAwesomeIcon icon={faSpinner} className="fa-spin text-[var(--color-primary)]" />
+                                {importProgress.done}/{importProgress.total}
+                            </span>
+                        )}
+
+                        {importStep === 1 ? (
+                            <button
+                                onClick={() => (importRawData.length > 0 && importFileName) ? setImportStep(2) : importFileInputRef.current?.click()}
+                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
+                            >
+                                {(importRawData.length > 0 && importFileName) ? (
+                                    <>Lanjutkan <FontAwesomeIcon icon={faArrowRight} /></>
+                                ) : (
+                                    <>Pilih File <FontAwesomeIcon icon={faUpload} /></>
+                                )}
+                            </button>
+                        ) : importStep === 2 ? (
+                            <button
+                                onClick={async () => {
+                                    setImportStep(3)
+                                    setImportLoading(true)
+                                    await buildImportPreview(importRawData, importColumnMapping)
+                                    setImportLoading(false)
+                                }}
+                                disabled={!importColumnMapping.name || !importColumnMapping.class_name}
+                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
+                            >
+                                Review Data <FontAwesomeIcon icon={faArrowRight} />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleCommitImport}
+                                disabled={importing || hasImportBlockingErrors || importReadyRows.length === 0}
+                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
+                            >
+                                {importing
+                                    ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengimport...</>
+                                    : <><FontAwesomeIcon icon={faCheck} /> Selesaikan Import</>}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            }
         >
             {/* Header Progress Steppers */}
             <div className="flex items-center justify-center gap-3 mb-6">
@@ -467,48 +534,92 @@ export default function StudentImportModal(props) {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {/* Compact Status & Filter Bar */}
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1.5 px-2.5 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
-                                <div className="flex items-center gap-6 overflow-x-auto scrollbar-none py-1">
+                            {/* Minimal Status & Action Bar */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] shadow-sm">
+                                {/* Stats Group */}
+                                <div className="flex items-center gap-2 p-1 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]/50">
                                     {[
-                                        { label: 'Total', value: importPreview.length, color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-border)]/30', icon: faFileLines },
-                                        { label: 'Siap', value: importReadyRows.length, color: 'text-emerald-600', bg: 'bg-emerald-500/15', icon: faCheckCircle },
-                                        { label: 'Duplikat', value: importPreview.filter(r => r._isDupe).length, color: 'text-violet-600', bg: 'bg-violet-500/15', icon: faCopy },
-                                        { label: 'Error', value: importPreview.filter(r => r._hasError).length, color: 'text-red-600', bg: 'bg-red-500/15', icon: faCircleExclamation },
+                                        { label: 'Total Baris', value: importPreview.length, color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-border)]/20', icon: faFileLines },
+                                        { label: 'Siap Import', value: importReadyRows.length, color: 'text-emerald-600', bg: 'bg-emerald-500/10', icon: faCheckCircle },
+                                        { label: 'Siswa Duplikat', value: importPreview.filter(r => r._isDupe).length, color: 'text-violet-600', bg: 'bg-violet-500/10', icon: faCopy },
+                                        { label: 'Ada Isu/Error', value: importPreview.filter(r => r._hasError).length, color: 'text-red-600', bg: 'bg-red-500/10', icon: faCircleExclamation },
                                     ].map((stat, i) => (
-                                        <div key={i} className="flex items-center gap-2.5 shrink-0">
-                                            <FontAwesomeIcon icon={stat.icon} className={`text-[10px] ${stat.color} opacity-70`} />
-                                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">{stat.label}</span>
-                                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black shadow-sm ${stat.bg} ${stat.color}`}>
-                                                {stat.value}
-                                            </span>
+                                        <div key={i} className={`flex items-center gap-2 px-2 py-1 rounded-lg ${stat.bg} ${stat.color} transition-all`} title={stat.label}>
+                                            <FontAwesomeIcon icon={stat.icon} className="text-[10px] opacity-70" />
+                                            <span className="text-[11px] font-black">{stat.value}</span>
                                         </div>
                                     ))}
                                 </div>
 
-                                <button
-                                    onClick={() => setFilterIssuesOnly(!filterIssuesOnly)}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[9.5px] font-black uppercase tracking-wider shrink-0
-                                        ${filterIssuesOnly
-                                            ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20'
-                                            : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-red-500/40 hover:text-red-500 shadow-sm'}`}
-                                >
-                                    <FontAwesomeIcon icon={filterIssuesOnly ? faCheck : faFilter} className={filterIssuesOnly ? 'animate-pulse' : ''} />
-                                    {filterIssuesOnly ? 'Hanya Isu' : 'Semua Baris'}
-                                </button>
+                                {/* Actions Group */}
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setImportSkipDupes(!importSkipDupes)}
+                                        className={`flex items-center gap-2 h-8 px-3 rounded-xl border text-[10px] font-black uppercase tracking-tight transition-all
+                                            ${importSkipDupes
+                                                ? 'bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-500/20'
+                                                : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-violet-500/40 hover:text-violet-600'}`}
+                                    >
+                                        <FontAwesomeIcon icon={faCopy} className="text-[9px]" />
+                                        <span className="hidden sm:inline">{importSkipDupes ? 'Lewati Duplikat' : 'Ikutkan Duplikat'}</span>
+                                        <span className="sm:hidden">{importSkipDupes ? 'Lewati' : 'Ikut'}</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setFilterIssuesOnly(!filterIssuesOnly)}
+                                        className={`flex items-center gap-2 h-8 px-3 rounded-xl border text-[10px] font-black uppercase tracking-tight transition-all
+                                            ${filterIssuesOnly
+                                                ? 'bg-red-500 text-white border-red-500 shadow-md shadow-red-500/20'
+                                                : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-red-500/40 hover:text-red-500'}`}
+                                    >
+                                        <FontAwesomeIcon icon={filterIssuesOnly ? faCheck : faFilter} className="text-[9px]" />
+                                        <span>{filterIssuesOnly ? 'Hanya Isu' : 'Semua'}</span>
+                                    </button>
+                                </div>
                             </div>
+
+                            {/* Bulk Fix Section - Smart Suggestion */}
+                            {importIssues.some(iss => iss.messages.some(m => m.includes('Kelas tidak valid'))) && (
+                                <div className="p-3 rounded-2xl bg-amber-500/5 border border-amber-500/15 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in zoom-in-95 duration-500">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                                            <FontAwesomeIcon icon={faBolt} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Perbaikan Massal Tersedia</p>
+                                            <p className="text-[10px] font-bold text-amber-600/80">Beberapa baris memiliki kelas yang tidak dikenali. Petakan semuanya ke satu kelas?</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    handleBulkFix('class_id', e.target.value);
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            className="h-9 px-3 rounded-xl bg-white border border-amber-500/30 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-amber-500/10 transition-all cursor-pointer"
+                                        >
+                                            <option value="">-- Pilih Kelas --</option>
+                                            {classesList.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)] shadow-sm">
                                 <div className="max-h-[40vh] overflow-auto scrollbar-none">
                                     <table className="w-full border-collapse table-fixed">
                                         <thead>
                                             <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[17%]">Nama</th>
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[18%]">Nama</th>
                                                 <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[18%]">Kelas</th>
-                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[8%]">L/P</th>
-                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[18%]">Whatsapp</th>
-                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[17%]">NISN</th>
-                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[8%]">St</th>
+                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[12%]">L/P</th>
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[20%]">Whatsapp</th>
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[20%]">NISN</th>
+                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[12%]">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -523,7 +634,7 @@ export default function StudentImportModal(props) {
                                                     const isWarn = r._hasWarn
                                                     return (
                                                         <tr key={i} className={`hover:bg-[var(--color-surface-alt)]/40 transition-colors border-b border-[var(--color-border)]/30 last:border-0 ${isError ? 'bg-red-500/3' : isDupe ? 'bg-violet-500/3' : ''}`}>
-                                                            <td className="px-2 py-1 font-bold text-[var(--color-text)] text-[10px] truncate">
+                                                            <td className="px-2 py-0.5 font-bold text-[var(--color-text)] text-[10px] truncate">
                                                                 <EditableCell
                                                                     rowIdx={i} colKey="name" value={r.name}
                                                                     importPreview={importPreview} classesList={classesList}
@@ -531,7 +642,7 @@ export default function StudentImportModal(props) {
                                                                     handleImportCellEdit={handleImportCellEdit}
                                                                 />
                                                             </td>
-                                                            <td className="px-2 py-1 text-[var(--color-text-muted)] font-bold text-[10px] truncate">
+                                                            <td className="px-2 py-0.5 text-[var(--color-text-muted)] font-bold text-[10px] truncate">
                                                                 <EditableCell
                                                                     rowIdx={i} colKey="class_id" value={r.class_id}
                                                                     importPreview={importPreview} classesList={classesList}
@@ -539,7 +650,7 @@ export default function StudentImportModal(props) {
                                                                     handleImportCellEdit={handleImportCellEdit}
                                                                 />
                                                             </td>
-                                                            <td className="px-2 py-1 text-center text-[var(--color-text-muted)] font-bold text-[10px]">
+                                                            <td className="px-2 py-0.5 text-center text-[var(--color-text-muted)] font-bold text-[10px]">
                                                                 <EditableCell
                                                                     rowIdx={i} colKey="gender" value={r.gender}
                                                                     importPreview={importPreview} classesList={classesList}
@@ -547,7 +658,7 @@ export default function StudentImportModal(props) {
                                                                     handleImportCellEdit={handleImportCellEdit}
                                                                 />
                                                             </td>
-                                                            <td className="px-2 py-1 text-[var(--color-text-muted)] font-bold text-[10px] truncate">
+                                                            <td className="px-2 py-0.5 text-[var(--color-text-muted)] font-bold text-[10px] truncate">
                                                                 <EditableCell
                                                                     rowIdx={i} colKey="phone" value={r.phone}
                                                                     importPreview={importPreview} classesList={classesList}
@@ -555,7 +666,7 @@ export default function StudentImportModal(props) {
                                                                     handleImportCellEdit={handleImportCellEdit}
                                                                 />
                                                             </td>
-                                                            <td className="px-2 py-1 text-[var(--color-text-muted)] font-bold text-[10px] truncate">
+                                                            <td className="px-2 py-0.5 text-[var(--color-text-muted)] font-bold text-[10px] truncate">
                                                                 <EditableCell
                                                                     rowIdx={i} colKey="nisn" value={r.nisn}
                                                                     importPreview={importPreview} classesList={classesList}
@@ -563,11 +674,21 @@ export default function StudentImportModal(props) {
                                                                     handleImportCellEdit={handleImportCellEdit}
                                                                 />
                                                             </td>
-                                                            <td className="px-2 py-1 text-center">
-                                                                {isError ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500/15 text-red-600 animate-pulse"><FontAwesomeIcon icon={faCircleExclamation} className="text-[10px]" /></span>
-                                                                    : isDupe ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-500/15 text-violet-600"><FontAwesomeIcon icon={faCopy} className="text-[10px]" /></span>
-                                                                        : isWarn ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/15 text-amber-600"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" /></span>
-                                                                            : <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/15 text-green-600"><FontAwesomeIcon icon={faCheckCircle} className="text-[10px]" /></span>}
+                                                            <td className="px-2 py-1">
+                                                                <div className="flex items-center justify-center gap-2">
+                                                                    {isError ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500/15 text-red-600 animate-pulse"><FontAwesomeIcon icon={faCircleExclamation} className="text-[10px]" /></span>
+                                                                        : isDupe ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-500/15 text-violet-600"><FontAwesomeIcon icon={faCopy} className="text-[10px]" /></span>
+                                                                            : isWarn ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/15 text-amber-600"><FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" /></span>
+                                                                                : <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/15 text-green-600"><FontAwesomeIcon icon={faCheckCircle} className="text-[10px]" /></span>}
+
+                                                                    <button
+                                                                        onClick={() => handleRemoveImportRow(i)}
+                                                                        className="w-5 h-5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center group/del"
+                                                                        title="Hapus Baris"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faTrash} className="text-[9px] group-hover/del:scale-110 transition-transform" />
+                                                                    </button>
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     )
@@ -576,7 +697,14 @@ export default function StudentImportModal(props) {
                                     </table>
                                 </div>
                                 <div className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] border-t border-[var(--color-border)] flex items-center justify-between">
-                                    <span>Menampilkan {Math.min(importPreview.filter(r => !filterIssuesOnly || (r._hasError || r._isDupe || r._hasWarn)).length, 300)} dari {importPreview.length} total baris</span>
+                                    <div className="flex items-center gap-4">
+                                        <span>Menampilkan {Math.min(importPreview.filter(r => !filterIssuesOnly || (r._hasError || r._isDupe || r._hasWarn)).length, 300)} dari {importPreview.length} total baris</span>
+                                        <div className="w-px h-3 bg-[var(--color-border)]" />
+                                        <span className="text-emerald-600 flex items-center gap-1.5">
+                                            <FontAwesomeIcon icon={faCheckCircle} className="text-[8px]" />
+                                            {importReadyRows.length} baris siap diimport
+                                        </span>
+                                    </div>
                                     {filterIssuesOnly && <span className="text-red-500 animate-pulse">Filter "Hanya Isu" Aktif</span>}
                                 </div>
                             </div>
@@ -623,63 +751,6 @@ export default function StudentImportModal(props) {
                 </div>
             )}
 
-            <div className="flex items-center justify-between gap-3 pt-4 mt-2 border-t border-[var(--color-border)]">
-                {importStep > 1 && (
-                    <button
-                        onClick={() => setImportStep(v => v - 1)}
-                        disabled={importing}
-                        className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-widest disabled:opacity-50 hover:bg-[var(--color-border)] transition-all flex items-center gap-2"
-                    >
-                        <FontAwesomeIcon icon={faArrowLeft} />
-                        Kembali
-                    </button>
-                )}
-
-                <div className="flex items-center gap-3">
-                    {importing && (
-                        <span className="text-[10px] font-bold text-[var(--color-text-muted)] flex items-center gap-2">
-                            <FontAwesomeIcon icon={faSpinner} className="fa-spin text-[var(--color-primary)]" />
-                            {importProgress.done}/{importProgress.total}
-                        </span>
-                    )}
-
-                    {importStep === 1 ? (
-                        <button
-                            onClick={() => importRawData.length > 0 ? setImportStep(2) : importFileInputRef.current?.click()}
-                            className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
-                        >
-                            {importRawData.length > 0 ? (
-                                <>Lanjutkan <FontAwesomeIcon icon={faArrowRight} /></>
-                            ) : (
-                                <>Pilih File <FontAwesomeIcon icon={faUpload} /></>
-                            )}
-                        </button>
-                    ) : importStep === 2 ? (
-                        <button
-                            onClick={async () => {
-                                setImportStep(3)
-                                setImportLoading(true)
-                                await buildImportPreview(importRawData, importColumnMapping)
-                                setImportLoading(false)
-                            }}
-                            disabled={!importColumnMapping.name || !importColumnMapping.class_name}
-                            className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
-                        >
-                            Review Data <FontAwesomeIcon icon={faArrowRight} />
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handleCommitImport}
-                            disabled={importing || hasImportBlockingErrors || importReadyRows.length === 0}
-                            className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
-                        >
-                            {importing
-                                ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengimport...</>
-                                : <><FontAwesomeIcon icon={faCheck} /> Selesaikan Import</>}
-                        </button>
-                    )}
-                </div>
-            </div>
         </Modal>
     )
 }

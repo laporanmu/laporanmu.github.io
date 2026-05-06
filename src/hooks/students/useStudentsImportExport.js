@@ -250,9 +250,8 @@ export function useStudentsImportExport({
             const rows = await parseCSVFile(new Blob([text], { type: 'text/csv' }))
             if (!rows.length) throw new Error('Sheet kosong')
             await buildImportPreview(rows)
-            setImportTab('preview')
-            closeModal()
             setIsImportModalOpen(true)
+            setImportStep(2)
             addToast(`${rows.length} baris berhasil dibaca dari Google Sheets`, 'success')
             await logAudit({
                 action: 'READ', source: 'SYSTEM', tableName: 'students',
@@ -526,14 +525,29 @@ export function useStudentsImportExport({
         validateImportPreview(newPrev)
     }
 
+    const handleRemoveImportRow = (idx) => {
+        const next = importPreview.filter((_, i) => i !== idx)
+        setImportPreview(next)
+        validateImportPreview(next)
+        addToast('Baris berhasil dihapus dari preview', 'success')
+    }
+
     const handleImportClick = () => {
         // Open the import modal on the Panduan tab first.
         // The actual file picker is triggered from inside the modal.
         if (!isImportModalOpen) {
+            // Reset all states for a fresh start
             setImportStep(1)
+            setImportFileName('')
+            setImportRawData([])
+            setImportPreview([])
+            setImportIssues([])
+            setImportDuplicates([])
+            setImportColumnMapping({})
+            setImportLoading(false)
             setIsImportModalOpen(true)
         } else {
-            // Already open (e.g. "Ganti File" button inside modal) —” open picker directly
+            // Already open (e.g. "Ganti File" button inside modal) — open picker directly
             importFileInputRef.current?.click()
         }
     }
@@ -770,6 +784,7 @@ export function useStudentsImportExport({
         getExportData,
         downloadBlob,
         buildImportPreview,
-        handleImportCellEdit
+        handleImportCellEdit,
+        handleRemoveImportRow
     }
 }
