@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+    faGraduationCap,
     faLink,
     faCheck,
     faRocket,
@@ -727,7 +728,7 @@ export default function StudentsPage() {
                                             <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data siswa tidak aktif</p>
                                         </div>
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => { setResetPointsClassId(''); setActiveModal('resetPoints'); setIsHeaderMenuOpen(false); }}
                                         disabled={!canEdit}
                                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[var(--color-text)] transition-all group ${!canEdit ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[var(--color-surface-alt)]'}`}
@@ -736,7 +737,7 @@ export default function StudentsPage() {
                                             <FontAwesomeIcon icon={faRotateLeft} className="text-xs" />
                                         </div>
                                         <div className="text-left">
-                                            <p className="text-[11px] font-black leading-tight">Reset Poin { !canEdit && '(Read-only)' }</p>
+                                            <p className="text-[11px] font-black leading-tight">Reset Poin {!canEdit && '(Read-only)'}</p>
                                             <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Bersihkan semua poin untuk semester baru</p>
                                         </div>
                                     </button>
