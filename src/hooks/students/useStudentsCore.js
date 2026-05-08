@@ -157,7 +157,9 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     // ---- REFS ----
     const formDataRef = useRef({
         name: '', gender: 'L', class_id: '', phone: '', photo_url: '',
-        nisn: '', guardian_name: '', guardian_relation: 'Ayah',
+        nisn: '', nis: '', nik: '', birth_date: '', birth_place: '',
+        religion: '', address: '',
+        guardian_name: '', guardian_relation: 'Ayah',
         status: 'aktif', tags: []
     })
     const importFileInputRef = useRef(null)
@@ -427,7 +429,9 @@ export function useStudentsCore({ addToast, addUndoToast }) {
         setSelectedStudent(null)
         formDataRef.current = {
             name: '', gender: 'L', class_id: '', phone: '', photo_url: '',
-            nisn: '', guardian_name: '', guardian_relation: 'Ayah',
+            nisn: '', nis: '', nik: '', birth_date: '', birth_place: '',
+            religion: '', address: '',
+            guardian_name: '', guardian_relation: 'Ayah',
             status: 'aktif', tags: []
         }
         setIsModalOpen(true)
@@ -442,6 +446,12 @@ export function useStudentsCore({ addToast, addUndoToast }) {
             phone: student.phone || '',
             photo_url: student.photo_url || '',
             nisn: student.nisn || '',
+            nis: student.nis || '',
+            nik: student.nik || '',
+            birth_date: student.birth_date || '',
+            birth_place: student.birth_place || '',
+            religion: student.religion || '',
+            address: student.address || '',
             guardian_name: student.guardian_name || '',
             guardian_relation: student.guardian_relation || 'Ayah',
             status: student.status || 'aktif',
@@ -515,6 +525,12 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                         phone: formData.phone,
                         photo_url: formData.photo_url,
                         nisn: formData.nisn || null,
+                        nis: formData.nis || null,
+                        nik: formData.nik || null,
+                        birth_date: formData.birth_date || null,
+                        birth_place: formData.birth_place || null,
+                        religion: formData.religion || null,
+                        address: formData.address || null,
                         guardian_name: formData.guardian_name || null,
                         guardian_relation: formData.guardian_relation || null,
                         status: formData.status || 'aktif',
@@ -553,6 +569,12 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                     phone: formData.phone,
                     photo_url: formData.photo_url,
                     nisn: formData.nisn || null,
+                    nis: formData.nis || null,
+                    nik: formData.nik || null,
+                    birth_date: formData.birth_date || null,
+                    birth_place: formData.birth_place || null,
+                    religion: formData.religion || null,
+                    address: formData.address || null,
                     guardian_name: formData.guardian_name || null,
                     guardian_relation: formData.guardian_relation || null,
                     status: formData.status || 'aktif',
@@ -1036,8 +1058,8 @@ Laporanmu System`
     }
 
     const handleBatchResetPoints = async () => {
-        const msg = resetPointsClassId 
-            ? `Reset semua poin siswa di kelas ini ke 0?` 
+        const msg = resetPointsClassId
+            ? `Reset semua poin siswa di kelas ini ke 0?`
             : `Reset SEMUA poin siswa di SELURUH kelas ke 0? Tindakan ini tidak bisa dibatalkan.`
         if (!window.confirm(msg)) return
 

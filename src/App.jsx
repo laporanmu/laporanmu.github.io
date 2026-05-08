@@ -7,7 +7,7 @@ import { FeatureFlagsProvider, useFeatureFlags } from './context/FeatureFlagsCon
 import { useTheme } from './context/ThemeContext'
 import DashboardLayout from './components/layout/DashboardLayout'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLock, faSpinner, faTools, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { faLock, faSpinner, faTools, faTriangleExclamation, faDoorOpen, faChevronLeft, faCircleQuestion } from '@fortawesome/free-solid-svg-icons'
 import GlobalErrorBoundary from './components/ui/GlobalErrorBoundary'
 import { Component } from 'react'
 
@@ -173,21 +173,38 @@ function FlagRoute({ children, flag, label }) {
 
   if (flags[flag] === false) return (
     <DashboardLayout>
-      <div className="p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
-          <FontAwesomeIcon icon={faLock} className="text-2xl text-red-500" />
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 relative overflow-hidden">
+        {/* Decorative Background Elements */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[var(--color-primary)]/5 rounded-full blur-[80px] pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col items-center max-w-sm w-full">
+          {/* Animated Icon Container */}
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-amber-500/20 rounded-3xl blur-xl animate-pulse" />
+            <div className="relative w-20 h-20 rounded-[2.5rem] bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-2xl shadow-orange-500/20">
+              <FontAwesomeIcon icon={faLock} className="text-3xl text-white drop-shadow-md" />
+            </div>
+          </div>
+
+          {/* Text Content */}
+          <div className="text-center space-y-3 mb-10">
+            <h2 className="text-2xl font-black text-[var(--color-text)] tracking-tight">
+              Modul Tidak Aktif
+            </h2>
+            <p className="text-[13px] text-[var(--color-text-muted)] leading-relaxed px-4 opacity-80">
+              Fitur <span className="font-bold text-[var(--color-text)] px-1.5 py-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)]">{label || flag}</span> saat ini sedang dinonaktifkan oleh administrator sistem.
+            </p>
+          </div>
+
+          {/* Action Button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="group relative h-12 px-8 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10 flex items-center gap-3"
+          >
+            <span className="opacity-70 group-hover:opacity-100 transition-opacity">←</span>
+            Kembali Sekarang
+          </button>
         </div>
-        <div>
-          <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Modul Tidak Aktif</h2>
-          <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">
-            Modul <strong>{label || flag}</strong> sedang dinonaktifkan oleh administrator.
-          </p>
-        </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:opacity-90 transition-all">
-          Kembali
-        </button>
       </div>
     </DashboardLayout>
   )
@@ -218,22 +235,34 @@ function RoleFlagRoute({ children, roles = [], flag, label }) {
   // Role tidak sesuai
   if (!hasRole) return (
     <DashboardLayout>
-      <div className="p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
-          <FontAwesomeIcon icon={faLock} className="text-2xl text-red-500" />
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-rose-500/5 rounded-full blur-[80px] pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col items-center max-w-sm w-full">
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-rose-500/20 rounded-3xl blur-xl" />
+            <div className="relative w-20 h-20 rounded-[2.5rem] bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center shadow-2xl shadow-rose-500/20">
+              <FontAwesomeIcon icon={faLock} className="text-3xl text-white drop-shadow-md" />
+            </div>
+          </div>
+
+          <div className="text-center space-y-3 mb-10">
+            <h2 className="text-2xl font-black text-[var(--color-text)] tracking-tight">
+              Akses Ditolak
+            </h2>
+            <p className="text-[13px] text-[var(--color-text-muted)] leading-relaxed px-4 opacity-80">
+              Maaf, halaman ini tidak dapat diakses oleh role <span className="font-bold text-rose-500 px-1.5 py-0.5 rounded-lg bg-rose-500/5 border border-rose-500/10 uppercase tracking-tighter text-[10px]">{(role?.charAt(0).toUpperCase() + role?.slice(1)) || 'Pengguna'}</span>.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate(-1)}
+            className="group h-12 px-8 rounded-2xl bg-rose-500 text-white text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-rose-500/20 flex items-center gap-3"
+          >
+            <span>←</span>
+            Kembali
+          </button>
         </div>
-        <div>
-          <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Akses Ditolak</h2>
-          <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">
-            Halaman ini tidak tersedia untuk role <strong>
-              {(role?.charAt(0).toUpperCase() + role?.slice(1)) || 'Kamu'}
-            </strong>.
-          </p>
-        </div>
-        <button onClick={() => navigate(-1)}
-          className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:opacity-90 transition-all">
-          Kembali
-        </button>
       </div>
     </DashboardLayout>
   )
@@ -241,20 +270,34 @@ function RoleFlagRoute({ children, roles = [], flag, label }) {
   // Flag off
   if (flag && flags[flag] === false) return (
     <DashboardLayout>
-      <div className="p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-          <FontAwesomeIcon icon={faLock} className="text-2xl text-amber-500" />
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[80px] pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col items-center max-w-sm w-full">
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-amber-500/20 rounded-3xl blur-xl animate-pulse" />
+            <div className="relative w-20 h-20 rounded-[2.5rem] bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-2xl shadow-orange-500/20">
+              <FontAwesomeIcon icon={faLock} className="text-3xl text-white drop-shadow-md" />
+            </div>
+          </div>
+
+          <div className="text-center space-y-3 mb-10">
+            <h2 className="text-2xl font-black text-[var(--color-text)] tracking-tight">
+              Modul Tidak Aktif
+            </h2>
+            <p className="text-[13px] text-[var(--color-text-muted)] leading-relaxed px-4 opacity-80">
+              Fitur <span className="font-bold text-[var(--color-text)] px-1.5 py-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)]">{label || flag}</span> saat ini sedang dinonaktifkan oleh administrator sistem.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate(-1)}
+            className="group h-12 px-8 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10 flex items-center gap-3"
+          >
+            <span>←</span>
+            Kembali Sekarang
+          </button>
         </div>
-        <div>
-          <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Modul Tidak Aktif</h2>
-          <p className="text-[12px] text-[var(--color-text-muted)] max-w-xs">
-            Modul <strong>{label || flag}</strong> sedang dinonaktifkan oleh administrator.
-          </p>
-        </div>
-        <button onClick={() => navigate(-1)}
-          className="h-9 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black hover:opacity-90 transition-all">
-          Kembali
-        </button>
       </div>
     </DashboardLayout>
   )
@@ -491,7 +534,7 @@ function AppRoutes() {
               </RoleFlagRoute>
             } />
             <Route path="/master/poin" element={
-              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.poin" label="Konfigurasi Poin">
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.violation_types" label="Jenis Pelanggaran">
                 <PoinPage />
               </RoleFlagRoute>
             } />

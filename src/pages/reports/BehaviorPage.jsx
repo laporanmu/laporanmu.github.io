@@ -37,6 +37,8 @@ export default function BehaviorPage() {
 
     // access.teacher_poin flag — kalau off, guru tidak bisa tambah/edit/hapus poin
     const { enabled: teacherPoinEnabled } = useFlag('access.teacher_poin')
+    const { enabled: canViolation } = useFlag('module.pelanggaran')
+    const { enabled: canAchievement } = useFlag('module.prestasi')
     const canInput = profile?.role === 'guru' ? teacherPoinEnabled : true
 
     const [reports, setReports] = useState([])
@@ -312,7 +314,14 @@ export default function BehaviorPage() {
                     class_name: s.classes?.name || '',
                 })))
             }
-            if (vtRes.data) setViolationTypes(vtRes.data)
+            if (vtRes.data) {
+                const filteredVTs = vtRes.data.filter(vt => {
+                    if (vt.points > 0) return canAchievement
+                    if (vt.points < 0) return canViolation
+                    return true
+                })
+                setViolationTypes(filteredVTs)
+            }
             if (classRes.data) setClassesList(classRes.data.map(c => c.name).filter(Boolean).sort())
         } catch { addToast('Gagal memuat metadata', 'error') }
     }, [addToast])
@@ -330,6 +339,10 @@ export default function BehaviorPage() {
 
             if (filterType === 'positive') q = q.gt('points', 0)
             if (filterType === 'negative') q = q.lt('points', 0)
+
+            // Granular Module Enforcement
+            if (!canViolation) q = q.gt('points', -1) // Hide all negatives
+            if (!canAchievement) q = q.lt('points', 1) // Hide all positives
 
             if (debouncedSearch) {
                 const [matchedS, matchedT] = await Promise.all([
@@ -356,18 +369,23 @@ export default function BehaviorPage() {
             setTotalRows(count ?? 0)
         } catch { addToast('Gagal memuat laporan', 'error') }
         finally { setLoading(false) }
-    }, [page, pageSize, debouncedSearch, filterType, filterClass, sortBy, students, addToast])
+    }, [page, pageSize, debouncedSearch, filterType, filterClass, sortBy, students, canViolation, canAchievement, addToast])
 
     const fetchStats = useCallback(async () => {
         try {
             const { data } = await supabase.from('reports').select('id,points,reported_at')
             if (data) {
                 const todayStr = new Date().toISOString().slice(0, 10)
+                const filtered = data.filter(r => {
+                    if (r.points > 0) return canAchievement
+                    if (r.points < 0) return canViolation
+                    return true
+                })
                 setStats({
-                    total: data.length,
-                    positive: data.filter(r => (r.points ?? 0) > 0).length,
-                    negative: data.filter(r => (r.points ?? 0) < 0).length,
-                    today: data.filter(r => r.reported_at?.startsWith(todayStr)).length,
+                    total: filtered.length,
+                    positive: filtered.filter(r => (r.points ?? 0) > 0).length,
+                    negative: filtered.filter(r => (r.points ?? 0) < 0).length,
+                    today: filtered.filter(r => r.reported_at?.startsWith(todayStr)).length,
                 })
             }
         } catch { }

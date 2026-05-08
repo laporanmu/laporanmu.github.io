@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { NavLink } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
@@ -54,6 +54,8 @@ function MenuButton({ icon, label, onClick, active = false }) {
 export default function BottomNav() {
     // openSheet: null | 'reports' | 'master' | 'admin'
     const [openSheet, setOpenSheet] = useState(null)
+    const [isVisible, setIsVisible] = useState(true)
+    const [lastScrollY, setLastScrollY] = useState(0)
     const { profile } = useAuth()
 
     const role = profile?.role?.toLowerCase()
@@ -63,9 +65,41 @@ export default function BottomNav() {
     const open = (section) => setOpenSheet(section)
     const close = () => setOpenSheet(null)
 
+    // ── Hide on Scroll Logic ──
+    useEffect(() => {
+        let lastY = window.scrollY
+        const handleScroll = () => {
+            const currentY = window.scrollY
+            const windowHeight = window.innerHeight
+            const docHeight = document.documentElement.scrollHeight
+            
+            // Sensitivitas deteksi bawah (tambah threshold ke 60px)
+            const isNearBottom = (windowHeight + currentY) >= (docHeight - 60)
+            const isNearTop = currentY < 50
+
+            // Scroll direction
+            const isScrollingUp = currentY < lastY
+            const isScrollingDown = currentY > lastY
+
+            if (isNearBottom || isNearTop || isScrollingUp) {
+                setIsVisible(true)
+            } else if (isScrollingDown && currentY > 100) {
+                setIsVisible(false)
+            }
+            
+            lastY = currentY
+        }
+
+        window.addEventListener("scroll", handleScroll, { passive: true })
+        return () => window.removeEventListener("scroll", handleScroll)
+    }, [])
+
     return (
         <>
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200]">
+            <nav 
+                className={`lg:hidden fixed bottom-0 left-0 right-0 z-[200] transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)
+                ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}
+            >
                 <div className="mx-auto max-w-7xl px-3 pb-3">
                     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
 
@@ -105,4 +139,4 @@ export default function BottomNav() {
             <MasterSheet isOpen={openSheet !== null} section={openSheet} onClose={close} />
         </>
     )
-}
+}

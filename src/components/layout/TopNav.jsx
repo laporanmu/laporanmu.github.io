@@ -354,6 +354,31 @@ export default function TopNav({ title, subtitle }) {
         </div>
     )
 
+    // ── Hide on Scroll Logic ──
+    const [isVisible, setIsVisible] = useState(true)
+
+    useEffect(() => {
+        let lastY = window.scrollY
+        const handleScroll = () => {
+            const currentY = window.scrollY
+            
+            // Tampilkan jika:
+            // 1. Scroll ke atas
+            // 2. Masih di paling atas (< 50px)
+            if (currentY < lastY || currentY < 50) {
+                setIsVisible(true)
+            } else if (currentY > lastY && currentY > 100) {
+                // Sembunyikan jika scroll ke bawah > 100px
+                setIsVisible(false)
+            }
+            
+            lastY = currentY
+        }
+
+        window.addEventListener("scroll", handleScroll, { passive: true })
+        return () => window.removeEventListener("scroll", handleScroll)
+    }, [])
+
     return (
         <>
             {/* Animasi bell shake untuk notif urgent */}
@@ -367,7 +392,10 @@ export default function TopNav({ title, subtitle }) {
                 }
             `}</style>
 
-            <header className="sticky top-0 z-40">
+            <header 
+                className={`sticky top-0 z-40 transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)
+                ${!isVisible ? 'lg:translate-y-0 -translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}
+            >
                 <div className="mx-auto max-w-[1800px] px-3 sm:px-4 lg:px-6 pt-3">
 
                     {/* ===================== */}

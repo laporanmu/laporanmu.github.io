@@ -36,6 +36,8 @@ export default function PoinPage() {
     const { addToast } = useToast()
     const { profile } = useAuth()
     const { enabled: canEdit } = useFlag('access.teacher_Poin')
+    const { enabled: canViolation } = useFlag('module.pelanggaran')
+    const { enabled: canAchievement } = useFlag('module.prestasi')
     const [poin, setPoin] = useState([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
@@ -113,12 +115,16 @@ export default function PoinPage() {
             const { data, error } = await supabase.from('point_rules').select('*').order('name')
             if (error) throw error
             if (data) {
-                setPoin(data)
+                const filtered = data.filter(v => {
+                    if (v.is_negative) return canViolation
+                    return canAchievement
+                })
+                setPoin(filtered)
                 const s = {
-                    total: data.length,
-                    poin: data.filter(v => v.is_negative).length,
-                    achievements: data.filter(v => !v.is_negative).length,
-                    avgPoints: data.length ? Math.round(data.reduce((acc, v) => acc + Math.abs(v.points), 0) / data.length) : 0
+                    total: filtered.length,
+                    poin: filtered.filter(v => v.is_negative).length,
+                    achievements: filtered.filter(v => !v.is_negative).length,
+                    avgPoints: filtered.length ? Math.round(filtered.reduce((acc, v) => acc + Math.abs(v.points), 0) / filtered.length) : 0
                 }
                 setStats(s)
             }

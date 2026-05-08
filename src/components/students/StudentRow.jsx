@@ -195,7 +195,7 @@ const Sparkline = ({ data = [], width = 30, height = 12 }) => {
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-const StudentRow = memo(({
+export const StudentRow = memo(({
     student,
     isSelected = false,
     lastReportMap,
@@ -247,14 +247,33 @@ const StudentRow = memo(({
     const boltRef = useRef(null)
     const nameRef = useRef(null)
 
+    const hoverTimerRef = useRef(null)
+    const closeTimerRef = useRef(null)
+
     const handleMouseEnter = () => {
-        if (!nameRef.current) return
-        const rect = nameRef.current.getBoundingClientRect()
-        setPopoverPos({
-            top: rect.top - 8, // viewport-relative
-            left: rect.left    // viewport-relative
-        })
-        setShowQuickViewPopover(true)
+        if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+        if (showQuickViewPopover) return
+
+        hoverTimerRef.current = setTimeout(() => {
+            if (!nameRef.current) return
+            const rect = nameRef.current.getBoundingClientRect()
+            setPopoverPos({
+                top: rect.top - 12,
+                left: rect.left
+            })
+            setShowQuickViewPopover(true)
+        }, 400) // Enterprise delay for stability
+    }
+
+    const handleMouseLeave = () => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+        closeTimerRef.current = setTimeout(() => {
+            setShowQuickViewPopover(false)
+        }, 300) // Buffer to move mouse into the card
+    }
+
+    const handlePopoverEnter = () => {
+        if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     }
 
     // ── Inline edit state ──────────────────────────────────────────────────
@@ -370,7 +389,7 @@ const StudentRow = memo(({
                                         ref={nameRef}
                                         className="relative flex items-center gap-1.5"
                                         onMouseEnter={handleMouseEnter}
-                                        onMouseLeave={() => setShowQuickViewPopover(false)}
+                                        onMouseLeave={handleMouseLeave}
                                     >
                                         <button
                                             onClick={() => onViewProfile(student)}
@@ -382,39 +401,83 @@ const StudentRow = memo(({
                                         {/* Premium Quick View Popover - PORTALED to avoid clipping */}
                                         {showQuickViewPopover && !isPrivacyMode && createPortal(
                                             <div
-                                                className="fixed z-[9999] w-64 p-4 rounded-2xl glass shadow-2xl border border-[var(--color-primary)]/20 animate-in fade-in slide-in-from-bottom-2 duration-300 pointer-events-none"
+                                                onMouseEnter={handlePopoverEnter}
+                                                onMouseLeave={handleMouseLeave}
+                                                className="fixed z-[9999] w-72 p-5 rounded-[2rem] glass shadow-2xl border border-[var(--color-primary)]/20 animate-in fade-in slide-in-from-bottom-3 duration-300 pointer-events-auto"
                                                 style={{
                                                     top: popoverPos.top,
                                                     left: popoverPos.left,
-                                                    transform: 'translateY(-100%)' // Pindah ke atas anchor
+                                                    transform: 'translateY(-100%)' 
                                                 }}
                                             >
-                                                <div className="flex items-center gap-3 mb-3 pb-3 border-b border-[var(--color-border)]">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}>
-                                                        {student.photo_url ? <img src={student.photo_url} className="w-full h-full object-cover rounded-xl" /> : (student.name || 'S').charAt(0)}
+                                                {/* Header Profile Section */}
+                                                <div className="flex items-center gap-4 mb-4 pb-4 border-b border-[var(--color-border)]/50">
+                                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black shadow-inner relative group/pop-img
+                                                        ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 text-[var(--color-primary)]'}`}>
+                                                        {student.photo_url ? (
+                                                            <img src={student.photo_url} className="w-full h-full object-cover rounded-2xl" />
+                                                        ) : (
+                                                            <span>{(student.name || 'S').charAt(0)}</span>
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/pop-img:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
+                                                            <FontAwesomeIcon icon={faPlus} className="text-white text-xs" />
+                                                        </div>
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-[11px] font-black text-[var(--color-text)] truncate">{student.name}</p>
-                                                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{student.registration_code || student.code || 'NO ID'}</p>
+                                                        <p className="text-sm font-black text-[var(--color-text)] truncate mb-0.5">{student.name}</p>
+                                                        <p className="text-[10px] font-bold text-[var(--color-primary)] uppercase tracking-[0.2em]">{student.className || 'Tanpa Kelas'}</p>
+                                                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-40 uppercase tracking-widest mt-1">{student.registration_code || student.code || 'NO ID'}</p>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="p-2 rounded-xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)]">
-                                                        <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Status Poin</p>
-                                                        <p className={`text-xs font-black ${p >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{p} Poin</p>
+
+                                                {/* Quick Stats Grid */}
+                                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                                    <div className="p-3 rounded-2xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 transition-colors">
+                                                        <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1 opacity-60">Status Poin</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${p >= 0 ? 'bg-emerald-500 animate-pulse' : 'bg-red-500 animate-pulse'}`} />
+                                                            <p className={`text-xs font-black ${p >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{p} Poin</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="p-2 rounded-xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)]">
-                                                        <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Profil</p>
-                                                        <p className="text-xs font-black text-[var(--color-primary)]">{calculateCompleteness(student)}%</p>
+                                                    <div className="p-3 rounded-2xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 transition-colors">
+                                                        <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1 opacity-60">Kelengkapan</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex-1 h-1 rounded-full bg-[var(--color-border)] overflow-hidden">
+                                                                <div className="h-full bg-[var(--color-primary)]" style={{ width: `${calculateCompleteness(student)}%` }} />
+                                                            </div>
+                                                            <p className="text-xs font-black text-[var(--color-primary)]">{calculateCompleteness(student)}%</p>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                {student.phone && (
-                                                    <div className="mt-2 flex items-center gap-2 text-[9px] font-bold text-[var(--color-text-muted)]">
-                                                        <FontAwesomeIcon icon={faIdCard} className="opacity-50" />
-                                                        <span>WA: {student.phone}</span>
-                                                    </div>
-                                                )}
-                                                <div className="absolute bottom-[-6px] left-6 w-3 h-3 bg-[var(--color-surface)] border-r border-b border-[var(--color-primary)]/20 rotate-45"></div>
+
+                                                {/* Interactive Action Area */}
+                                                <div className="flex items-center gap-2">
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); onViewProfile(student) }}
+                                                        className="flex-1 h-10 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-[var(--color-primary)]/20"
+                                                    >
+                                                        Lihat Profil
+                                                    </button>
+                                                    {student.phone && (
+                                                        <button 
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation();
+                                                                const msg = buildWAMessage?.(student, 'intro') || `Halo ${student.name}, saya dari sekolah...`;
+                                                                openWAForStudent?.(student, msg);
+                                                            }}
+                                                            className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20"
+                                                            title="Chat WhatsApp"
+                                                        >
+                                                            <FontAwesomeIcon icon={faWhatsapp} className="text-sm" />
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* Tooltip Arrow */}
+                                                <div className="absolute bottom-[-6px] left-8 w-3 h-3 bg-[var(--color-surface)] border-r border-b border-[var(--color-primary)]/20 rotate-45"></div>
+                                                
+                                                {/* Invisible Bridge (Safe Area) — Menghubungkan nama dengan popover agar hover tidak putus */}
+                                                <div className="absolute -bottom-4 left-0 right-0 h-4 bg-transparent" />
                                             </div>,
                                             getPortalContainer('portal-quick-view')
                                         )}
@@ -534,60 +597,6 @@ const StudentRow = memo(({
                 </td>
             )}
 
-            {/* ── Laporan Terakhir ────────────────────────────────────────── */}
-            {vc.last_report && (
-                <td className="px-6 py-4 text-left">
-                    <div className="flex flex-col gap-0.5">
-                        <p className="text-[11px] font-black text-[var(--color-text)] whitespace-nowrap">
-                            {lastReportMap?.[student.id] ? formatRelativeDate(lastReportMap[student.id]) : '---'}
-                        </p>
-                        {lastReportMap?.[student.id] && (
-                            <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">Aktif</p>
-                        )}
-                    </div>
-                </td>
-            )}
-
-            {/* ── Kelengkapan Profil ──────────────────────────────────────── */}
-            {vc.profil && (
-                <td className="px-6 py-4 text-left">
-                    <div className="flex items-center gap-2">
-                        {(() => {
-                            const score = calculateCompleteness(student);
-                            return (
-                                <>
-                                    <div className="w-10 h-1.5 rounded-full bg-[var(--color-surface-alt)] overflow-hidden shrink-0 border border-[var(--color-border)]/50">
-                                        <div 
-                                            className={`h-full transition-all duration-1000 ${score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
-                                            style={{ width: `${score}%` }}
-                                        />
-                                    </div>
-                                    <span className={`text-[10px] font-black ${score >= 80 ? 'text-emerald-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                                        {score}%
-                                    </span>
-                                </>
-                            );
-                        })()}
-                    </div>
-                </td>
-            )}
-
-            {/* ── Label/Tags ─────────────────────────────────────────────── */}
-            {vc.tags && (
-                <td className="px-6 py-4 text-left">
-                    <div className="flex flex-wrap items-center gap-1 max-w-[120px]">
-                        {(student.tags || []).length > 0 ? (
-                            student.tags.map(tag => (
-                                <span key={tag} className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider whitespace-nowrap transition-all hover:scale-105 cursor-default ${getTagColor(tag)}`}>
-                                    {tag}
-                                </span>
-                            ))
-                        ) : (
-                            <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-30 italic">No Label</span>
-                        )}
-                    </div>
-                </td>
-            )}
             {vc.poin && (
                 <td className="px-6 py-4 text-left">
                     {editingField === 'poin' ? (
@@ -679,6 +688,61 @@ const StudentRow = memo(({
                 </td>
             )}
 
+            {/* ── Laporan Terakhir ────────────────────────────────────────── */}
+            {vc.last_report && (
+                <td className="px-6 py-4 text-left">
+                    <div className="flex flex-col gap-0.5">
+                        <p className="text-[11px] font-black text-[var(--color-text)] whitespace-nowrap">
+                            {lastReportMap?.[student.id] ? formatRelativeDate(lastReportMap[student.id]) : '---'}
+                        </p>
+                        {lastReportMap?.[student.id] && (
+                            <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest opacity-60">Aktif</p>
+                        )}
+                    </div>
+                </td>
+            )}
+
+            {/* ── Kelengkapan Profil ──────────────────────────────────────── */}
+            {vc.profil && (
+                <td className="px-6 py-4 text-left">
+                    <div className="flex items-center gap-2">
+                        {(() => {
+                            const score = calculateCompleteness(student);
+                            return (
+                                <>
+                                    <div className="w-10 h-1.5 rounded-full bg-[var(--color-surface-alt)] overflow-hidden shrink-0 border border-[var(--color-border)]/50">
+                                        <div 
+                                            className={`h-full transition-all duration-1000 ${score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                            style={{ width: `${score}%` }}
+                                        />
+                                    </div>
+                                    <span className={`text-[10px] font-black ${score >= 80 ? 'text-emerald-600' : score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                                        {score}%
+                                    </span>
+                                </>
+                            );
+                        })()}
+                    </div>
+                </td>
+            )}
+
+            {/* ── Label/Tags ─────────────────────────────────────────────── */}
+            {vc.tags && (
+                <td className="px-6 py-4 text-left">
+                    <div className="flex flex-wrap items-center gap-1 max-w-[120px]">
+                        {(student.tags || []).length > 0 ? (
+                            student.tags.map(tag => (
+                                <span key={tag} className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider whitespace-nowrap transition-all hover:scale-105 cursor-default ${getTagColor(tag)}`}>
+                                    {tag}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-30 italic">No Label</span>
+                        )}
+                    </div>
+                </td>
+            )}
+
             {/* ── Aksi ─────────────────────────────────────────────────── */}
             {vc.aksi && (
                 <td className="px-6 py-4 w-48">
@@ -722,7 +786,7 @@ const StudentRow = memo(({
 StudentRow.displayName = 'StudentRow'
 
 // ─── Mobile Card ─────────────────────────────────────────────────────────────
-const StudentMobileCard = memo(({
+export const StudentMobileCard = memo(({
     student,
     isSelected = false,
     onToggleSelect,
@@ -1152,5 +1216,158 @@ export const StudentSkeletonCard = () => (
     </div>
 )
 
-export { StudentRow, StudentMobileCard }
+// ─── Mobile List Row ─────────────────────────────────────────────────────────
+export const StudentMobileListRow = memo(({
+    student,
+    isSelected = false,
+    hasSelection = false,
+    onToggleSelect,
+    onViewProfile,
+    onEdit,
+    onTogglePin,
+    onQuickPoint,
+    isPrivacyMode,
+    RiskThreshold,
+    canEdit
+}) => {
+    const p = student.total_points || 0
+    const isRisk = p <= RiskThreshold
+    
+    const maskInfo = (str, visibleLen = 3) => {
+        if (!str) return '---'
+        if (str.length <= visibleLen) return str[0] + '*'.repeat(str.length - 1)
+        return str.substring(0, visibleLen) + '***'
+    }
+
+    return (
+        <div className="w-full overflow-x-auto snap-x snap-mandatory flex [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] group">
+            {/* Main Content Pane */}
+            <div
+                className={`w-full shrink-0 snap-center flex items-center gap-4 px-4 py-4 transition-all duration-300 active:scale-[0.98]
+                    ${isSelected ? 'bg-[var(--color-primary)]/[0.06]' : 'bg-[var(--color-surface)]'}
+                    ${student.is_pinned ? 'border-l-[5px] border-l-amber-400' : ''}`}
+                onClick={() => {
+                    if (hasSelection) {
+                        onToggleSelect(student.id)
+                    } else {
+                        onViewProfile(student)
+                    }
+                }}
+            >
+                {/* Selection Indicator */}
+                <div
+                    className="flex items-center justify-center shrink-0"
+                    onClick={(e) => { e.stopPropagation(); onToggleSelect(student.id) }}
+                >
+                    <div className={`w-6 h-6 rounded-lg border-2 transition-all duration-500 flex items-center justify-center
+                        ${isSelected 
+                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] rotate-0 scale-110 shadow-lg shadow-[var(--color-primary)]/20' 
+                            : 'border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 rotate-[-15deg] hover:rotate-0 hover:border-[var(--color-primary)]/50'}`}>
+                        {isSelected && <FontAwesomeIcon icon={faCheck} className="text-white text-[10px] animate-in zoom-in-50" />}
+                    </div>
+                </div>
+
+                {/* Avatar Section */}
+                <div className="relative shrink-0">
+                    <div
+                        className={`w-14 h-14 rounded-[1.25rem] flex items-center justify-center text-lg font-black shadow-sm border transition-all duration-500
+                            ${isRisk ? 'bg-red-50 text-red-500 border-red-100 shadow-red-100' : 'bg-white text-[var(--color-primary)] border-[var(--color-border)]'}
+                            ${isPrivacyMode ? 'blur-md grayscale opacity-60' : 'group-hover:scale-105 group-hover:rotate-2'}`}
+                    >
+                        {student.photo_url && !isPrivacyMode ? (
+                            <img src={student.photo_url} className="w-full h-full object-cover rounded-[1.25rem]" alt="" />
+                        ) : (
+                            <span className="opacity-80">{isPrivacyMode ? '*' : (student.name || 'S').charAt(0)}</span>
+                        )}
+                    </div>
+                    {/* Tiny Rank Indicator */}
+                    {student._rank <= 3 && student._rank >= 1 && p > 0 && (
+                        <div className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full border-[3px] border-[var(--color-surface)] flex items-center justify-center shadow-md animate-in slide-in-from-bottom-2
+                            ${student._rank === 1 ? 'bg-gradient-to-tr from-amber-600 to-amber-400' : student._rank === 2 ? 'bg-gradient-to-tr from-slate-500 to-slate-300' : 'bg-gradient-to-tr from-orange-600 to-orange-400'}`}>
+                            <FontAwesomeIcon icon={student._rank === 1 ? faCrown : faMedal} className="text-white text-[9px]" />
+                        </div>
+                    )}
+                </div>
+
+                {/* Name & Basic Info */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        <p className="text-[16px] font-black text-[var(--color-text)] tracking-tight truncate leading-tight">
+                            {isPrivacyMode ? maskInfo(student.name, 4) : student.name}
+                        </p>
+                        {student.is_pinned && <FontAwesomeIcon icon={faThumbtack} className="text-amber-500 text-[10px] shrink-0" />}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)]/50">
+                            <FontAwesomeIcon icon={faUserTie} className="text-[9px] text-[var(--color-text-muted)] opacity-70" />
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide truncate max-w-[80px]">
+                                {student.className}
+                            </span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg border shadow-sm
+                            ${student.gender === 'L' ? 'bg-blue-50 border-blue-100 text-blue-600' : 'bg-pink-50 border-pink-100 text-pink-600'}`}>
+                            <FontAwesomeIcon icon={student.gender === 'L' ? faMars : faVenus} className="text-[9px]" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                {student.gender === 'L' ? 'Laki' : 'Pr'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Points & Trend */}
+                <div className="flex flex-col items-end gap-1.5 shrink-0 pl-2">
+                    <div className={`text-[13px] font-black px-3.5 py-1.5 rounded-2xl border text-center min-w-[60px] shadow-sm flex items-center justify-center gap-2 transition-all duration-300
+                        ${p < 0 ? 'bg-red-50 border-red-200 text-red-600 shadow-red-50' : p > 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-emerald-50' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                        {p > 0 && <FontAwesomeIcon icon={faArrowTrendUp} className="text-[9px] animate-bounce" />}
+                        {p < 0 && <FontAwesomeIcon icon={faArrowTrendDown} className="text-[9px] animate-bounce" />}
+                        <span className="tracking-tighter">{p > 0 ? '+' : ''}{p}</span>
+                    </div>
+                    <div className="opacity-60 pr-1">
+                        <Sparkline data={student.trendHistory} width={30} height={10} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Swipe Actions Pane (Glass Effect) */}
+            {canEdit && (
+                <div className="shrink-0 flex items-stretch snap-end border-l border-[var(--color-border)]/50 bg-[var(--color-surface-alt)]/30 backdrop-blur-xl">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onQuickPoint(student) }} 
+                        className="w-[80px] flex flex-col items-center justify-center gap-1.5 group/btn relative transition-all active:scale-95"
+                    >
+                        <div className="w-11 h-11 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover/btn:bg-amber-500 group-hover/btn:text-white group-hover/btn:rotate-12 transition-all duration-300">
+                            <FontAwesomeIcon icon={faBolt} className="text-[18px]" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-600">Poin</span>
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onTogglePin(student) }} 
+                        className={`w-[80px] flex flex-col items-center justify-center gap-1.5 group/btn relative transition-all active:scale-95
+                            ${student.is_pinned ? 'text-amber-600 bg-amber-500/5' : 'text-blue-500 hover:text-white'}`}
+                    >
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover/btn:scale-110
+                            ${student.is_pinned ? 'bg-amber-500/10' : 'bg-blue-500/10 group-hover/btn:bg-blue-600'}`}>
+                            <FontAwesomeIcon icon={faThumbtack} className={`text-[16px] ${student.is_pinned ? 'rotate-0' : 'rotate-45'}`} />
+                        </div>
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${student.is_pinned ? 'text-amber-600' : 'text-blue-600'}`}>
+                            {student.is_pinned ? 'Unpin' : 'Pin'}
+                        </span>
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onEdit(student) }} 
+                        className="w-[80px] flex flex-col items-center justify-center gap-1.5 group/btn relative transition-all active:scale-95"
+                    >
+                        <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center group-hover/btn:bg-indigo-600 group-hover/btn:text-white group-hover/btn:rotate-[-12deg] transition-all duration-300">
+                            <FontAwesomeIcon icon={faEdit} className="text-[18px]" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-indigo-600">Edit</span>
+                    </button>
+                </div>
+            )}
+        </div>
+    )
+})
+
+StudentMobileListRow.displayName = 'StudentMobileListRow'
+
 export default StudentRow

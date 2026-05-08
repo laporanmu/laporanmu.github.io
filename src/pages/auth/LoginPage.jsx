@@ -65,7 +65,16 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (!lockoutUntil) {
-            emailInputRef.current?.focus()
+            // Load remembered email
+            const savedEmail = localStorage.getItem('laporanmu_remembered_email')
+            if (savedEmail) {
+                setEmail(savedEmail)
+                setRememberMe(true)
+                // If we have saved email, focus password instead
+                setTimeout(() => passwordInputRef.current?.focus(), 100)
+            } else {
+                emailInputRef.current?.focus()
+            }
         }
     }, [lockoutUntil])
 
@@ -113,6 +122,13 @@ export default function LoginPage() {
                 setErrorMessage(`${msg} (Sisa percobaan: ${remaining})`);
             }
             return
+        }
+
+        // Handle "Remember Me" persistence
+        if (rememberMe) {
+            localStorage.setItem('laporanmu_remembered_email', email)
+        } else {
+            localStorage.removeItem('laporanmu_remembered_email')
         }
 
         // Reset on success
