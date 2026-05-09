@@ -89,16 +89,21 @@ export default function StudentPrintModal({
                                 style={{ background: 'transparent' }}
                             >
                                 {/* Front Card */}
-                                <div className="w-[300px] h-[188px] bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-xl text-white relative shadow-xl overflow-hidden shadow-indigo-500/20 shrink-0 scale-95 sm:scale-100 origin-center transition-transform">
-                                    <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/5 rounded-full blur-2xl" />
+                                <div className={`w-[300px] h-[188px] rounded-xl text-white relative shadow-xl overflow-hidden shrink-0 scale-95 sm:scale-100 origin-center transition-all duration-500 ring-1 ring-white/20 ${student.gender === 'P' ? 'bg-gradient-to-br from-rose-500 to-rose-700 shadow-rose-500/20' : 'bg-gradient-to-br from-indigo-600 to-indigo-800 shadow-indigo-500/20'}`}>
+                                    {/* Security Pattern Overlay */}
+                                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")` }} />
+                                    
+                                    <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full blur-2xl" />
+                                    <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-black/10 rounded-full blur-xl" />
+                                    
                                     <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-                                        <div className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                        <div className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10 shadow-sm">
                                             <span className="font-black text-[9px]">L</span>
                                         </div>
                                         <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-80 text-white">Laporanmu</span>
                                     </div>
                                     <div className="absolute top-9 left-4 right-4 bottom-7 flex gap-3 z-10">
-                                        <div className="w-[62px] h-[78px] rounded-lg bg-white/10 border border-white/20 p-1.5 shrink-0 shadow-lg overflow-hidden">
+                                        <div className="w-[62px] h-[78px] rounded-lg bg-white/10 border border-white/20 p-1.5 shrink-0 shadow-lg overflow-hidden relative group">
                                             {student.photo_url ? (
                                                 <img src={student.photo_url} alt="" className="w-full h-full object-cover rounded-md" />
                                             ) : (
@@ -109,28 +114,28 @@ export default function StudentPrintModal({
                                         </div>
                                         <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">
                                             <div>
-                                                <h3 className="text-[11px] font-black leading-[1.1] uppercase mb-0.5 drop-shadow-sm line-clamp-2">
+                                                <h3 className="text-[12px] font-black leading-[1.1] uppercase mb-0.5 drop-shadow-md line-clamp-2 tracking-tight">
                                                     {isPrivacyMode ? maskInfo(student.name, 4) : student.name}
                                                 </h3>
                                                 <div className="space-y-0.5">
-                                                    <p className="text-[8px] font-black text-white/90 uppercase tracking-tight leading-tight">{student.className}</p>
-                                                    <p className="text-[6px] font-bold text-white/40 uppercase tracking-widest leading-none">MUHAMMADIYAH BOARDING SCHOOL TANGGUL</p>
+                                                    <p className="text-[8px] font-black text-white/90 uppercase tracking-tight leading-tight flex items-center gap-1">
+                                                        <FontAwesomeIcon icon={faGraduationCap} className="text-[7px] opacity-60" />
+                                                        {student.className}
+                                                    </p>
+                                                    <p className="text-[5.5px] font-bold text-white/40 uppercase tracking-[0.1em] leading-none">MUHAMMADIYAH BOARDING SCHOOL TANGGUL</p>
                                                 </div>
                                             </div>
-                                            <div className="pt-1.5 border-t border-white/10">
-                                                <p className="text-[5px] font-bold opacity-30 uppercase tracking-widest mb-0.5 leading-none">NOMOR REGISTRASI</p>
-                                                <p className="text-[9px] font-mono font-bold tracking-wider text-indigo-100 leading-tight">
+                                            <div className="pt-2 border-t border-white/10">
+                                                <p className="text-[5px] font-black opacity-40 uppercase tracking-[0.2em] mb-0.5 leading-none">NOMOR REGISTRASI</p>
+                                                <p className="text-[10px] font-mono font-black tracking-widest text-white leading-tight">
                                                     {isPrivacyMode ? maskInfo(student.code || student.registration_code, 3) : (student.code || student.registration_code)}
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="absolute bottom-2.5 left-4 right-4 flex items-center justify-between opacity-20">
-                                        <div className="flex items-center gap-1 text-white">
-                                            <FontAwesomeIcon icon={faGraduationCap} className="text-[7px]" />
-                                            <span className="text-[6px] font-black uppercase tracking-[0.3em]">KARTU PELAJAR</span>
-                                        </div>
-                                        <span className="text-[5px] font-black uppercase tracking-[0.2em] text-white">2026/2027</span>
+                                    <div className="absolute bottom-2.5 left-4 right-4 flex items-center justify-between opacity-30">
+                                        <span className="text-[6px] font-black uppercase tracking-[0.4em]">KARTU PELAJAR</span>
+                                        <span className="text-[6px] font-black uppercase tracking-[0.2em] text-white">2026/2027</span>
                                     </div>
                                 </div>
 
@@ -143,7 +148,13 @@ export default function StudentPrintModal({
                                             <LazyQRCodeCanvas
                                                 value={`${window.location.origin}/check?code=${student.code || student.registration_code}&pin=${student.pin}`}
                                                 size={65}
-                                                level="M"
+                                                level="H"
+                                                imageSettings={{
+                                                    src: "/logo.png", // Asumsi ada logo di path ini
+                                                    height: 15,
+                                                    width: 15,
+                                                    excavate: true,
+                                                }}
                                             />
                                         </React.Suspense>
                                     </div>
@@ -163,7 +174,7 @@ export default function StudentPrintModal({
                                 <div className="bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl p-3 space-y-3 no-print">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                                            <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-primary)]/30 transition-colors group">
                                                 <label className="block text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">ID REG</label>
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[12px] font-black text-[var(--color-primary)] font-mono">
@@ -173,11 +184,11 @@ export default function StudentPrintModal({
                                                         if (isPrivacyMode) return addToast?.('Mode Privasi aktif', 'warning')
                                                         navigator.clipboard.writeText(student.code || student.registration_code);
                                                         addToast?.('Kode dicopy', 'success')
-                                                    }} className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"><FontAwesomeIcon icon={faLink} /></button>
+                                                    }} className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity"><FontAwesomeIcon icon={faLink} /></button>
                                                 </div>
                                             </div>
-                                            <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                                                <label className="block text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">PIN</label>
+                                            <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm hover:border-emerald-500/30 transition-colors group">
+                                                <label className="block text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">PIN AKSES</label>
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[12px] font-black text-emerald-500 font-mono tracking-wider">
                                                         {isPrivacyMode ? '****' : student.pin}
@@ -186,17 +197,17 @@ export default function StudentPrintModal({
                                                         if (isPrivacyMode) return addToast?.('Mode Privasi aktif', 'warning')
                                                         navigator.clipboard.writeText(student.pin);
                                                         addToast?.('PIN dicopy', 'success')
-                                                    }} className="text-[10px] text-[var(--color-text-muted)] hover:text-emerald-500"><FontAwesomeIcon icon={faLink} /></button>
+                                                    }} className="text-[10px] text-[var(--color-text-muted)] hover:text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity"><FontAwesomeIcon icon={faLink} /></button>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <button
                                             onClick={() => openWAForStudent?.(student, buildWAMessage?.(student, waTemplate))}
-                                            className="h-10 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 px-4 w-full"
+                                            className="h-10 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 px-4 w-full group"
                                         >
-                                            <FontAwesomeIcon icon={faWhatsapp} className="text-sm" />
-                                            BAGIKAN KE WALI MURID
+                                            <FontAwesomeIcon icon={faWhatsapp} className="text-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                                            KIRIM KE WALI MURID
                                         </button>
                                     </div>
                                 </div>

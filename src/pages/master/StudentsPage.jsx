@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+    faTimes,
     faLink,
     faCheck,
     faRocket,
@@ -892,38 +893,38 @@ export default function StudentsPage() {
                 {/* Stats Row Wrapper */}
                 {canShowStats && (
                     <StatsCarousel count={4} cols={4}>
-                    <StatCard
-                        key="total"
-                        icon={faUsers}
-                        label="Total Siswa"
-                        value={globalStats.total}
-                        color="sky"
-                    />
-                    <StatCard
-                        key="boys"
-                        icon={faMars}
-                        label="Putra"
-                        value={globalStats.boys}
-                        color="indigo"
-                    />
-                    <StatCard
-                        key="girls"
-                        icon={faVenus}
-                        label="Putri"
-                        value={globalStats.girls}
-                        color="rose"
-                    />
-                    <StatCard
-                        key="points"
-                        icon={faTrophy}
-                        label="Rata-rata Poin"
-                        value={globalStats.avgPoints}
-                        trend={globalStats.avgPointsLastWeek !== null ? Math.abs(globalStats.avgPointsLastWeek) : null}
-                        trendUp={globalStats.avgPointsLastWeek >= 0}
-                        color="emerald"
-                        onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
-                    />
-                </StatsCarousel>
+                        <StatCard
+                            key="total"
+                            icon={faUsers}
+                            label="Total Siswa"
+                            value={globalStats.total}
+                            color="sky"
+                        />
+                        <StatCard
+                            key="boys"
+                            icon={faMars}
+                            label="Putra"
+                            value={globalStats.boys}
+                            color="indigo"
+                        />
+                        <StatCard
+                            key="girls"
+                            icon={faVenus}
+                            label="Putri"
+                            value={globalStats.girls}
+                            color="rose"
+                        />
+                        <StatCard
+                            key="points"
+                            icon={faTrophy}
+                            label="Rata-rata Poin"
+                            value={globalStats.avgPoints}
+                            trend={globalStats.avgPointsLastWeek !== null ? Math.abs(globalStats.avgPointsLastWeek) : null}
+                            trendUp={globalStats.avgPointsLastWeek >= 0}
+                            color="emerald"
+                            onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
+                        />
+                    </StatsCarousel>
                 )}
 
                 {/*  INSIGHT ROW */}
@@ -2738,139 +2739,181 @@ export default function StudentsPage() {
                             isOpen={activeModal === 'tag'}
                             onClose={() => closeModal()}
                             title={`Kelola Label — ${studentForTags?.name || ''}`}
-                            description="Atur label siswa untuk segmentasi & filter"
+                            description="Klasifikasikan siswa dengan sistem label dinamis."
                             icon={faTags}
-                            iconBg="bg-indigo-500/10"
-                            iconColor="text-indigo-600"
+                            iconBg="bg-violet-500/10"
+                            iconColor="text-violet-600"
                             size="sm"
                             mobileVariant="bottom-sheet"
                             footer={
-                                <div className="flex justify-end">
+                                <div className="flex gap-2 sm:gap-3 w-full">
+                                    <button
+                                        type="button"
+                                        onClick={() => closeModal()}
+                                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
+                                    >
+                                        <FontAwesomeIcon icon={faTimes} className="text-[10px] opacity-50" />
+                                        Batal
+                                    </button>
                                     <button
                                         onClick={() => closeModal()}
-                                        className="h-11 px-8 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
+                                        className="flex-[2] h-11 px-2 sm:px-6 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/25 border border-white/10"
                                     >
-                                        Selesai
+                                        <FontAwesomeIcon icon={faCheckCircle} className="text-xs opacity-80 shrink-0" />
+                                        <span className="truncate">Simpan Perubahan</span>
                                     </button>
                                 </div>
                             }
                         >
-                            <div className="space-y-4">
+                            <div className="space-y-7 py-2">
                                 {studentForTags && (
-                                    <div className="space-y-6">
-                                        {/* Input Section */}
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tambah Label Baru</label>
+                                    <div className="space-y-8">
+                                        {/* Create New Tag */}
+                                        <div className="relative">
+                                            <div className="flex items-center justify-between mb-2.5 px-1">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">Label Baru / Cari</label>
+                                                <div className="h-px flex-1 mx-4 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-30" />
+                                            </div>
                                             <div className="relative group">
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-40 group-focus-within:text-violet-500 group-focus-within:opacity-100 transition-all">
+                                                    <FontAwesomeIcon icon={faTags} className="text-xs" />
+                                                </div>
                                                 <input
                                                     type="text"
                                                     value={newTagInput}
                                                     onChange={e => setNewTagInput(e.target.value)}
                                                     onKeyDown={handleAddCustomTag}
-                                                    placeholder="Ketik lalu Tekan Enter..."
-                                                    className="w-full h-11 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl px-4 text-sm font-bold focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all outline-none"
+                                                    placeholder="Tulis label dan tekan enter..."
+                                                    className="w-full h-12 bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl pl-11 pr-14 text-sm font-bold focus:bg-white focus:border-violet-500 focus:ring-4 focus:ring-violet-500/5 transition-all outline-none placeholder:font-medium placeholder:opacity-30"
                                                 />
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden group-focus-within:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm pointer-events-none animate-in fade-in zoom-in-95 duration-200">
-                                                    <span className="text-[9px] font-black text-[var(--color-text-muted)] tracking-tighter">ENTER</span>
-                                                    <FontAwesomeIcon icon={faLevelDownAlt} className="text-[9px] text-[var(--color-primary)] opacity-40 -rotate-90" />
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                                    <div className="px-2 py-1 rounded-lg bg-white border border-[var(--color-border)] shadow-sm text-[8px] font-black text-violet-500 animate-pulse">
+                                                        ENTER
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Active Tags Pool */}
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Label Saat Ini</label>
-                                                <span className="text-[9px] font-black text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full">
+                                        {/* Current Selected Tags */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2 px-1">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">Tersemat Saat Ini</label>
+                                                <span className="ml-auto text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full ring-1 ring-emerald-500/20">
                                                     {(studentForTags.tags || []).length} AKTIF
                                                 </span>
                                             </div>
-                                            <div className="flex flex-wrap gap-2 min-h-[40px] p-3 rounded-2xl bg-[var(--color-surface-alt)]/30 border border-dashed border-[var(--color-border)]">
+
+                                            <div className="flex flex-wrap gap-2.5 p-4 rounded-3xl bg-emerald-500/[0.02] border border-emerald-500/10 min-h-[60px] content-start transition-all">
                                                 {(studentForTags.tags || []).length === 0 ? (
-                                                    <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 m-auto">Belum ada label terpilih</p>
+                                                    <div className="w-full py-2 flex flex-col items-center justify-center opacity-20">
+                                                        <FontAwesomeIcon icon={faTags} className="mb-1 text-sm" />
+                                                        <span className="text-[8px] font-bold uppercase tracking-widest">Belum ada label</span>
+                                                    </div>
                                                 ) : (
                                                     (studentForTags.tags || []).map(tag => (
                                                         <button
                                                             key={tag}
                                                             onClick={() => handleToggleTag(studentForTags, tag)}
-                                                            className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all hover:scale-105 active:scale-95 ${getTagColor(tag)}`}
+                                                            className="group flex items-center gap-2 pl-3 pr-2 py-1.5 bg-white border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-700 shadow-sm hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all active:scale-95"
                                                         >
+                                                            <span className="opacity-70 group-hover:hidden">#</span>
                                                             {tag}
-                                                            <FontAwesomeIcon icon={faXmark} className="text-[9px] opacity-40 group-hover:opacity-100 transition-opacity" />
+                                                            <div className="w-4 h-4 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:bg-red-500/10 transition-colors">
+                                                                <FontAwesomeIcon icon={faXmark} className="text-[8px]" />
+                                                            </div>
                                                         </button>
                                                     ))
                                                 )}
                                             </div>
                                         </div>
 
-                                        {/* Suggested Pool */}
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pilih dari Database / Edit Global</label>
-                                            <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin">
+                                        {/* Database Library */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2 px-1">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">Database Label</label>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar content-start">
                                                 {Array.from(new Set([...AvailableTags, ...allUsedTags])).sort().map(tag => {
                                                     const isActive = (studentForTags.tags || []).includes(tag);
                                                     const isEditing = tagToEdit === tag;
 
-                                                    return (
-                                                        <div key={tag} className={`relative flex items-center transition-all ${isEditing ? 'w-full' : ''}`}>
-                                                            {isEditing ? (
-                                                                <div className="flex-1 flex gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                                                                    <input
-                                                                        autoFocus
-                                                                        type="text"
-                                                                        value={renameInput}
-                                                                        onChange={e => setRenameInput(e.target.value)}
-                                                                        className="flex-1 h-8 bg-white border border-[var(--color-primary)] rounded-lg px-3 text-xs font-bold outline-none shadow-lg shadow-[var(--color-primary)]/10"
-                                                                        onKeyDown={e => {
-                                                                            if (e.key === 'Enter') handleGlobalRenameTag(tag, renameInput)
-                                                                            if (e.key === 'Escape') setTagToEdit(null)
-                                                                        }}
-                                                                    />
-                                                                    <button onClick={() => handleGlobalRenameTag(tag, renameInput)} className="w-8 h-8 rounded-lg bg-[var(--color-primary)] text-white text-[10px] shrink-0">
-                                                                        <FontAwesomeIcon icon={faCheck} />
-                                                                    </button>
-                                                                    <button onClick={() => setTagToEdit(null)} className="w-8 h-8 rounded-lg bg-gray-100 text-gray-400 text-[10px] shrink-0">
-                                                                        <FontAwesomeIcon icon={faXmark} />
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="group flex items-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:border-[var(--color-primary)]/30 transition-all">
+                                                    if (isEditing) {
+                                                        return (
+                                                            <div key={tag} className="flex items-center rounded-full border-2 border-violet-500 bg-white shadow-xl shadow-violet-500/10 animate-in zoom-in-95 duration-200 overflow-hidden">
+                                                                <input
+                                                                    autoFocus
+                                                                    type="text"
+                                                                    value={renameInput}
+                                                                    onChange={e => setRenameInput(e.target.value)}
+                                                                    className="w-28 pl-4 pr-2 py-1.5 text-[10px] font-black text-violet-700 outline-none bg-transparent"
+                                                                    onKeyDown={e => {
+                                                                        if (e.key === 'Enter') handleGlobalRenameTag(tag, renameInput)
+                                                                        if (e.key === 'Escape') setTagToEdit(null)
+                                                                    }}
+                                                                />
+                                                                <div className="flex items-center border-l border-violet-100 bg-violet-50/50">
                                                                     <button
-                                                                        onClick={() => handleToggleTag(studentForTags, tag)}
-                                                                        className={`px-3 py-1.5 text-xs font-bold transition-all rounded-l-lg ${isActive
-                                                                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
-                                                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'
-                                                                            }`}
+                                                                        onClick={() => handleGlobalRenameTag(tag, renameInput)}
+                                                                        className="w-8 h-8 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all"
+                                                                        title="Simpan"
                                                                     >
-                                                                        {tag}
-                                                                        {isActive && <FontAwesomeIcon icon={faCheck} className="ml-2 text-[10px]" />}
+                                                                        <FontAwesomeIcon icon={faCheck} className="text-[8px]" />
                                                                     </button>
-
-                                                                    {/* Manage Actions on Hover */}
-                                                                    <div className="flex opacity-0 group-hover:opacity-100 transition-opacity border-l border-[var(--color-border)] bg-white/50 backdrop-blur-sm rounded-r-lg overflow-hidden">
-                                                                        <button
-                                                                            onClick={() => { setTagToEdit(tag); setRenameInput(tag) }}
-                                                                            className="w-8 h-full flex items-center justify-center text-[10px] text-blue-500 hover:bg-blue-500/10 transition-colors"
-                                                                            title="Ganti Nama Global"
-                                                                        >
-                                                                            <FontAwesomeIcon icon={faPen} />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleGlobalDeleteTag(tag)}
-                                                                            className="w-8 h-full flex items-center justify-center text-[10px] text-red-500 hover:bg-red-500/10 transition-colors border-l border-[var(--color-border)]/50"
-                                                                            title="Hapus Global"
-                                                                        >
-                                                                            <FontAwesomeIcon icon={faXmark} />
-                                                                        </button>
-                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => setTagToEdit(null)}
+                                                                        className="w-8 h-8 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                                                                        title="Batal"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faXmark} className="text-[9px]" />
+                                                                    </button>
                                                                 </div>
-                                                            )}
+                                                            </div>
+                                                        )
+                                                    }
+
+                                                    return (
+                                                        <div key={tag} className="group relative">
+                                                            <div className={`flex items-center gap-0 rounded-full border transition-all duration-300 shadow-sm overflow-hidden ${isActive
+                                                                    ? 'bg-violet-600 border-violet-600 shadow-lg shadow-violet-600/20'
+                                                                    : 'bg-white border-[var(--color-border)] hover:border-violet-500/50'
+                                                                }`}>
+                                                                {/* Main Toggle Button */}
+                                                                <button
+                                                                    onClick={() => handleToggleTag(studentForTags, tag)}
+                                                                    className={`flex items-center gap-2 pl-4 pr-3 py-2 text-[10px] font-black transition-all ${isActive ? 'text-white' : 'text-[var(--color-text-muted)] hover:text-violet-600'
+                                                                        }`}
+                                                                >
+                                                                    {isActive ? <FontAwesomeIcon icon={faCheck} className="text-[8px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-violet-400 transition-colors" />}
+                                                                    {tag}
+                                                                </button>
+
+                                                                {/* Integrated Management Strip (Slide-in) */}
+                                                                <div className="flex items-center w-0 group-hover:w-16 transition-all duration-300 opacity-0 group-hover:opacity-100 overflow-hidden border-l border-transparent group-hover:border-white/20 group-hover:bg-black/5">
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setTagToEdit(tag); setRenameInput(tag) }}
+                                                                        className={`w-8 h-8 flex items-center justify-center transition-colors ${isActive ? 'text-white/70 hover:text-white' : 'text-blue-500 hover:bg-blue-50'}`}
+                                                                        title="Ubah Nama"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faPen} className="text-[7px]" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); handleGlobalDeleteTag(tag) }}
+                                                                        className={`w-8 h-8 flex items-center justify-center transition-colors ${isActive ? 'text-white/70 hover:text-white' : 'text-red-500 hover:bg-red-50'}`}
+                                                                        title="Hapus Global"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faXmark} className="text-[8px]" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     )
                                                 })}
                                             </div>
-                                            <p className="text-[8px] text-[var(--color-text-muted)] mt-2 px-1">
-                                                * Gunakan ikon <FontAwesomeIcon icon={faPen} className="text-blue-500 mx-0.5" /> dan <FontAwesomeIcon icon={faXmark} className="text-red-500 mx-0.5" /> untuk merubah nama atau menghapus label dari semua siswa sekaligus.
+                                            <p className="text-[8px] text-[var(--color-text-muted)] mt-4 px-1 opacity-50 italic">
+                                                * Gunakan ikon <FontAwesomeIcon icon={faPen} className="text-blue-500 mx-0.5" /> dan <FontAwesomeIcon icon={faXmark} className="text-red-500 mx-0.5" /> untuk merubah nama atau menghapus label dari database global.
                                             </p>
                                         </div>
                                     </div>
