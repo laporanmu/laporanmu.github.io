@@ -52,7 +52,8 @@ const StudentFormModal = memo(function StudentFormModal({
 
     const [form, setForm] = useState(INIT)
     const [metadataFields, setMetadataFields] = useState([]) // [{key, value}]
-    const [nisnTouched, setNisnTouched] = useState(false)
+    const [touched, setTouched] = useState({})
+    const [attemptedSubmit, setAttemptedSubmit] = useState(false)
     const [duplicateWarning, setDuplicateWarning] = useState(null)
     const [showOptional, setShowOptional] = useState(false)
     const [showMetadata, setShowMetadata] = useState(false)
@@ -61,6 +62,23 @@ const StudentFormModal = memo(function StudentFormModal({
     const [avatarFile, setAvatarFile] = useState(null)
     const dupTimerRef = useRef(null)
     const photoRef = useRef(null)
+
+    // Helper to determine validation status
+    const getStatus = (field, isRequired = false) => {
+        const value = form[field]
+        const isTouched = touched[field] || attemptedSubmit
+        
+        if (isRequired) {
+            if (isTouched && (!value || (typeof value === 'string' && !value.trim()))) return 'error'
+            if (value && (typeof value === 'string' ? value.trim() : true)) return 'success'
+        } else {
+            if (value && (typeof value === 'string' ? value.trim() : true)) return 'success'
+        }
+        return 'normal'
+    }
+
+    const setFieldTouched = (field) => setTouched(prev => ({ ...prev, [field]: true }))
+
 
     const handleFileChange = useCallback((e) => {
         const file = e.target.files[0]
@@ -116,9 +134,11 @@ const StudentFormModal = memo(function StudentFormModal({
             setShowOptional(false)
             setShowMetadata(false)
         }
-        setNisnTouched(false)
+        setTouched({})
+        setAttemptedSubmit(false)
         setDuplicateWarning(null)
     }, [isOpen, selectedStudent])
+
 
     const checkDuplicate = useCallback(async (name, classId) => {
         if (!name || name.trim().length < 3 || !classId) { setDuplicateWarning(null); return }
@@ -152,12 +172,21 @@ const StudentFormModal = memo(function StudentFormModal({
 
     const handleSubmit = (e) => {
         e.preventDefault()
+        setAttemptedSubmit(true)
+
+        // Validate required
+        if (!form.name.trim() || !form.class_id) {
+            // Focus first error (simplified)
+            return
+        }
+
         const metadata = { kamar: form.kamar }
         metadataFields.forEach(m => {
             if (m.key.trim() && m.key.trim() !== 'kamar') metadata[m.key.trim()] = m.value
         })
         onSubmit({ ...form, metadata })
     }
+
 
     if (!isOpen) return null
 
@@ -185,9 +214,10 @@ const StudentFormModal = memo(function StudentFormModal({
                     <button
                         type="submit"
                         form="student-form-modal"
-                        disabled={submitting || !form.name.trim() || !form.class_id}
+                        disabled={submitting}
                         className="flex-[2] h-11 px-2 sm:px-6 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/25 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
                     >
+
                         {submitting ? (
                             <>
                                 <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
@@ -213,10 +243,10 @@ const StudentFormModal = memo(function StudentFormModal({
                     {/* Avatar */}
                     <div className="relative group shrink-0 mx-auto sm:mx-0">
                         <div
-                            className="w-[88px] h-[88px] rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-primary)] overflow-hidden transition-all hover:border-[var(--color-primary)] cursor-pointer"
+                            className={`w-[88px] h-[88px] rounded-2xl bg-[var(--color-surface-alt)] border flex items-center justify-center overflow-hidden transition-all cursor-pointer ${form.photo_url || avatarPreview ? 'border-emerald-500/50' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'}`}
                             onClick={() => photoRef.current?.click()}
                         >
-                            <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-[var(--color-border)] group-hover:border-[var(--color-primary)] transition-all overflow-hidden bg-[var(--color-surface-alt)] flex items-center justify-center relative">
+                            <div className={`w-20 h-20 rounded-2xl border-2 border-dashed transition-all overflow-hidden bg-[var(--color-surface-alt)] flex items-center justify-center relative ${form.photo_url || avatarPreview ? 'border-emerald-500/30' : 'border-[var(--color-border)] group-hover:border-[var(--color-primary)]'}`}>
                                 {(avatarPreview || form.photo_url) ? (
                                     <img
                                         src={avatarPreview || form.photo_url}
@@ -268,11 +298,22 @@ const StudentFormModal = memo(function StudentFormModal({
                                         setField('name', e.target.value)
                                         handleDupCheck(e.target.value, form.class_id)
                                     }}
+                                    onBlur={() => setFieldTouched('name')}
                                     placeholder="Masukkan nama lengkap siswa..."
-                                    className={`w-full pl-9 pr-3 h-11 rounded-xl border bg-[var(--color-surface)] outline-none transition-all text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 ${form.name ? 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]' : 'border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'}`}
+                                    className={`w-full pl-9 pr-3 h-11 rounded-xl border bg-[var(--color-surface)] outline-none transition-all text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 
+                                        ${getStatus('name', true) === 'error' ? 'border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/5' : 
+                                          getStatus('name', true) === 'success' ? 'border-emerald-500/50 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-emerald-50/5' : 
+                                          'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'}`}
                                     autoFocus
                                 />
-                                <FontAwesomeIcon icon={faUser} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors ${form.name ? 'text-[var(--color-text-muted)] opacity-50 group-focus-within:text-[var(--color-primary)]' : 'text-rose-500 opacity-70'}`} />
+                                <FontAwesomeIcon icon={faUser} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors 
+                                    ${getStatus('name', true) === 'error' ? 'text-rose-500' : 
+                                      getStatus('name', true) === 'success' ? 'text-emerald-500' : 
+                                      'text-[var(--color-text-muted)] opacity-50 group-focus-within:text-[var(--color-primary)]'}`} />
+                                
+                                {getStatus('name', true) === 'success' && (
+                                    <FontAwesomeIcon icon={faCheckCircle} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 text-[10px] animate-in zoom-in" />
+                                )}
                             </div>
                         </div>
 
@@ -284,11 +325,13 @@ const StudentFormModal = memo(function StudentFormModal({
                                         type="text"
                                         value={form.nisn}
                                         onChange={(e) => setField('nisn', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                        onBlur={() => setNisnTouched(true)}
-                                        placeholder="Cth: 0056781234"
-                                        className={`w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 ${nisnTouched && form.nisn && form.nisn.length !== 10 ? 'border-amber-500 focus:border-amber-500 focus:ring-amber-500 bg-amber-50/10' : ''}`}
+                                        onBlur={() => setFieldTouched('nisn')}
+                                        placeholder="10 Digit"
+                                        className={`w-full pl-9 pr-3 h-11 rounded-xl border outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 bg-[var(--color-surface)]
+                                            ${touched.nisn && form.nisn && form.nisn.length !== 10 ? 'border-amber-500 bg-amber-50/10' : 
+                                              getStatus('nisn') === 'success' ? 'border-emerald-500/30 bg-emerald-50/5' : 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'}`}
                                     />
-                                    <FontAwesomeIcon icon={faIdCard} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
+                                    <FontAwesomeIcon icon={faIdCard} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors ${getStatus('nisn') === 'success' ? 'text-emerald-500' : 'text-[var(--color-text-muted)] opacity-50 group-focus-within:text-[var(--color-primary)]'}`} />
                                 </div>
                             </div>
 
@@ -299,15 +342,24 @@ const StudentFormModal = memo(function StudentFormModal({
                                         type="text"
                                         value={form.nis}
                                         onChange={(e) => setField('nis', e.target.value.replace(/\D/g, ''))}
+                                        onBlur={() => setFieldTouched('nis')}
                                         placeholder="Cth: 2024001"
-                                        className="w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40"
+                                        className={`w-full pl-9 pr-3 h-11 rounded-xl border outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 bg-[var(--color-surface)]
+                                            ${getStatus('nis') === 'success' ? 'border-emerald-500/30 bg-emerald-50/5' : 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'}`}
                                     />
-                                    <FontAwesomeIcon icon={faIdBadge} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
+                                    <FontAwesomeIcon icon={faIdBadge} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors ${getStatus('nis') === 'success' ? 'text-emerald-500' : 'text-[var(--color-text-muted)] opacity-50 group-focus-within:text(--color-primary)'}`} />
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent opacity-50"></div>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-40">Detail Personal</span>
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent opacity-50"></div>
+                </div>
+
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -414,17 +466,10 @@ const StudentFormModal = memo(function StudentFormModal({
                     </div>
                 </div>
 
-                <div className="relative group">
-                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Alamat Lengkap</label>
-                    <div className="relative">
-                        <textarea
-                            value={form.address}
-                            onChange={(e) => setField('address', e.target.value)}
-                            placeholder="Masukkan alamat lengkap rumah siswa..."
-                            className="w-full pl-9 pr-3 py-3 min-h-[80px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 resize-none"
-                        />
-                        <FontAwesomeIcon icon={faMap} className="absolute left-3.5 top-4 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
-                    </div>
+                <div className="flex items-center gap-3 pt-2">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent opacity-50"></div>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-40">Penempatan & Akademik</span>
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent opacity-50"></div>
                 </div>
 
                 {/* 2. Placement - Flat layout */}
@@ -438,6 +483,7 @@ const StudentFormModal = memo(function StudentFormModal({
                             placeholder="Pilih Kamar"
                             icon={faDoorOpen}
                             extraOption={{ id: '-', name: 'Lainnya / Kosong' }}
+                            status={getStatus('kamar')}
                         />
                     </div>
                     <div className="space-y-1.5">
@@ -449,13 +495,16 @@ const StudentFormModal = memo(function StudentFormModal({
                             onChange={(val) => {
                                 setField('class_id', val)
                                 handleDupCheck(form.name, val)
+                                setFieldTouched('class_id')
                             }}
                             options={classesList}
                             placeholder="Pilih Kelas"
                             icon={faGraduationCap}
+                            status={getStatus('class_id', true)}
                         />
                     </div>
                 </div>
+
 
                 {/* Duplicate Warning */}
                 {duplicateWarning && (

@@ -13,11 +13,24 @@ import { faChevronDown } from '@fortawesome/free-solid-svg-icons'
  * @param {object} icon - FontAwesome icon for the prefix
  * @param {object} extraOption - Optional {id, name} to show at the top (e.g. "Other/None")
  * @param {boolean} small - Use smaller padding/height
+ * @param {string} status - Validation status: 'error', 'success', or 'normal'
  */
-const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, small }) => {
+const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, small, status = 'normal' }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, placement: 'bottom', maxHeight: 240 })
     const ref = useRef(null)
+
+    const statusClasses = {
+        error: 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500 bg-rose-50/5 dark:bg-rose-500/5',
+        success: 'border-emerald-500/50 focus:border-emerald-500 focus:ring-emerald-500 bg-emerald-50/5 dark:bg-emerald-500/5',
+        normal: 'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]'
+    }
+
+    const iconStatusClasses = {
+        error: 'text-rose-500 opacity-80',
+        success: 'text-emerald-500 opacity-80',
+        normal: 'text-[var(--color-text-muted)] opacity-50 group-focus-within:text-[var(--color-primary)] group-hover:text-[var(--color-primary)]'
+    }
 
     const updateCoords = useCallback(() => {
         if (ref.current) {
@@ -72,15 +85,15 @@ const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, 
             <button
                 type="button"
                 onClick={toggle}
-                className={`w-full flex items-center justify-between gap-2 ${small ? 'px-3 h-11' : 'pl-9 pr-3 h-11'} rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] relative group`}
+                className={`w-full flex items-center justify-between gap-2 ${small ? 'px-3 h-11' : 'pl-9 pr-3 h-11'} rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] focus:ring-1 outline-none transition-all text-[13px] relative group`}
             >
                 <div className="flex items-center gap-2 truncate">
-                    {icon && !small && <FontAwesomeIcon icon={icon} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)] group-hover:text-[var(--color-primary)]" />}
+                    {icon && !small && <FontAwesomeIcon icon={icon} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors ${iconStatusClasses[status]}`} />}
                     <span className={selectedOption ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-60'}>
                         {selectedOption ? selectedOption.name : placeholder}
                     </span>
                 </div>
-                <FontAwesomeIcon icon={faChevronDown} className={`text-[10px] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                <FontAwesomeIcon icon={faChevronDown} className={`text-[10px] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'text-[var(--color-text-muted)]'}`} />
             </button>
 
             {isOpen && createPortal(

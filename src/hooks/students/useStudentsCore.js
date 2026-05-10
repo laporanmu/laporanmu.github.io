@@ -817,12 +817,17 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const handleToggleTag = async (student, tag) => {
         if (!tag || !student) return
         const current = student.tags || []
-        const next = current.includes(tag) ? current.filter(t => t !== tag) : [...current, tag]
+        const isRemoving = current.includes(tag)
+        const next = isRemoving ? current.filter(t => t !== tag) : [...current, tag]
+        
+        // Optimistic Update: Update UI immediately
+        setStudentForTags({ ...student, tags: next })
+        
         try {
             const { error } = await supabase.from('students').update({ tags: next }).eq('id', student.id)
             if (error) throw error
-            setStudentForTags({ ...student, tags: next })
-            addToast(`Label diperbarui`, 'success')
+            
+            addToast(`Label ${isRemoving ? 'dilepas' : 'disematkan'}`, 'success')
             await logAudit({
                 action: 'UPDATE', source: 'MASTER', tableName: 'students',
                 recordId: student.id,
@@ -830,7 +835,12 @@ export function useStudentsCore({ addToast, addUndoToast }) {
                 newData: { tags: next }
             })
             fetchData(); fetchUsedTags()
-        } catch { addToast('Gagal', 'error') }
+        } catch (err) { 
+            console.error('Toggle tag error:', err)
+            addToast('Gagal memperbarui label', 'error')
+            // Rollback on error
+            setStudentForTags(student)
+        }
     }
 
     const handleBulkTagApply = async (tag) => {
@@ -1174,8 +1184,8 @@ Laporanmu System`
         setBroadcastResults({}); setBroadcastIndex(-1); setActiveModal('bulkWA')
     }
 
-    const handleGlobalDeleteTag = async (tag) => {
-        if (!window.confirm(`Hapus label?`)) return
+    const handleGlobalDeleteTag = async (tag, skipConfirm = false) => {
+        if (!skipConfirm && !window.confirm(`Hapus label?`)) return
         setSubmitting(true)
         try {
             const { data } = await supabase.from('students').select('id, tags').contains('tags', [tag]).is('deleted_at', null)

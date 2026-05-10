@@ -76,6 +76,7 @@ const Modal = memo(function Modal({
     if (!mounted) return null
 
     const sizeClasses = {
+        xs: 'max-w-xs',
         sm: 'max-w-sm',
         md: 'max-w-lg',
         lg: 'max-w-2xl',

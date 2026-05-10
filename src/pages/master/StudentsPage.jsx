@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+    faArrowRightArrowLeft,
     faTimes,
     faLink,
     faCheck,
@@ -352,7 +353,7 @@ export default function StudentsPage() {
         generateStudentPDF, handlePrintSingle, handlePrintThermal, handleSavePNG, handleBulkPrint,
         handleBulkPhotoMatch, handleBulkPhotoUpload, handleClassBreakdown, handleBatchResetPoints,
         // State Helpers
-        setNewTagInput, newTagInput, tagToEdit, setTagToEdit, duplicateWarning,
+        tagToEdit, setTagToEdit, duplicateWarning,
         checkingDuplicate, gSheetsUrl, setGSheetsUrl, fetchingGSheets, setFetchingGSheets,
         page, setPage, pageSize, setPageSize, jumpPage, setJumpPage, generatingPdf,
         studentForTags, setStudentForTags, renameInput, setRenameInput,
@@ -366,7 +367,13 @@ export default function StudentsPage() {
         selectedStudents, selectedStudentsWithPhone, selectedIdSet, generateCode, handleAddCustomTag,
         bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches,
     } = core
+    const tagInputRef = useRef(null)
+    const [confirmDeleteTag, setConfirmDeleteTag] = useState(null)
 
+    // Sync input local dengan state awal core jika diperlukan (opsional)
+    useEffect(() => {
+        if (activeModal !== 'tag' && tagInputRef.current) tagInputRef.current.value = ''
+    }, [activeModal])
     // --- Pull-to-Refresh Logic ---
     const [pullDistance, setPullDistance] = useState(0)
     const [isRefreshing, setIsRefreshing] = useState(false)
@@ -2605,56 +2612,70 @@ export default function StudentsPage() {
                             title={`Riwayat Kelas — ${selectedStudent?.name || ''}`}
                             description="Lacak setiap perubahan dan perpindahan kelas siswa."
                             icon={faClockRotateLeft}
-                            iconBg="bg-purple-500/10"
-                            iconColor="text-purple-600"
+                            iconBg="bg-violet-500/10"
+                            iconColor="text-violet-600"
                             size="md"
                             mobileVariant="bottom-sheet"
+                            footer={
+                                <button 
+                                    onClick={() => closeModal()} 
+                                    className="w-full h-11 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-bold uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all shadow-xl shadow-[var(--color-primary)]/25 border border-white/10"
+                                >
+                                    Selesai & Tutup
+                                </button>
+                            }
                         >
-                            <div className="space-y-4">
-                                <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20 flex items-center gap-3">
-                                    <FontAwesomeIcon icon={faClockRotateLeft} className="text-purple-500 text-lg shrink-0" />
+                            <div className="space-y-6">
+                                <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+                                        <FontAwesomeIcon icon={faClockRotateLeft} className="text-violet-500 text-sm" />
+                                    </div>
                                     <div>
-                                        <p className="text-xs font-black text-purple-600 dark:text-purple-400">Tracking perpindahan kelas</p>
-                                        <p className="text-[10px] text-[var(--color-text-muted)]">Tercatat setiap kali siswa berpindah kelas.</p>
+                                        <p className="text-[11px] font-black text-violet-600 uppercase tracking-wider">Tracking perpindahan kelas</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 font-medium">Tercatat setiap kali siswa berpindah kelas di sistem.</p>
                                     </div>
                                 </div>
 
                                 {loadingClassHistory ? (
-                                    <div className="text-center py-6 text-[var(--color-text-muted)]">
-                                        <FontAwesomeIcon icon={faSpinner} className="fa-spin mr-2" /> Memuat...
+                                    <div className="text-center py-10 text-[var(--color-text-muted)]">
+                                        <FontAwesomeIcon icon={faSpinner} className="fa-spin text-xl opacity-20 mb-3 block mx-auto" />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Memuat Data...</span>
                                     </div>
                                 ) : classHistory.length === 0 ? (
-                                    <div className="text-center py-8 text-[var(--color-text-muted)]">
-                                        <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-3xl opacity-20 mb-2 block" />
-                                        <p className="text-sm font-bold">Belum ada riwayat perpindahan kelas</p>
-                                        <p className="text-[11px] mt-1 opacity-60">Siswa ini belum pernah berpindah kelas sejak terdaftar.</p>
+                                    <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
+                                            <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-2xl text-slate-300" />
+                                        </div>
+                                        <p className="text-sm font-black text-slate-800">Belum ada riwayat</p>
+                                        <p className="text-[10px] mt-1.5 text-slate-400 font-medium px-8 leading-relaxed">Siswa ini belum pernah berpindah kelas sejak pertama kali terdaftar di sistem.</p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2 max-h-72 overflow-auto">
+                                    <div className="space-y-2.5 max-h-80 overflow-auto pr-1 custom-scrollbar">
                                         {classHistory.map((h, idx) => (
-                                            <div key={h.id || idx} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                                                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
-                                                    <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-[11px]" />
+                                            <div key={h.id || idx} className="group flex items-center gap-4 p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-violet-200 hover:shadow-md hover:shadow-violet-500/5 transition-all">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-violet-50 group-hover:text-violet-500 flex items-center justify-center shrink-0 transition-colors border border-slate-100 group-hover:border-violet-100">
+                                                    <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-xs" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 text-xs font-bold">
-                                                        <span className="text-[var(--color-text-muted)]">{h.from_class?.name || 'Tidak diketahui'}</span>
-                                                        <span className="text-[var(--color-text-muted)] opacity-50">â†’</span>
-                                                        <span className="text-[var(--color-text)]">{h.to_class?.name || 'Tidak diketahui'}</span>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <span className="text-[11px] font-black text-slate-400">{h.from_class?.name || '???'}</span>
+                                                        <FontAwesomeIcon icon={faArrowRight} className="text-[8px] text-slate-300" />
+                                                        <span className="text-[11px] font-black text-slate-800">{h.to_class?.name || '???'}</span>
                                                     </div>
-                                                    <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{h.note || '-'} Â· {formatRelativeDate(h.changed_at)}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-[9px] font-bold text-slate-400">{formatRelativeDate(h.changed_at)}</span>
+                                                        <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                                        <span className="text-[9px] font-medium text-slate-400">{h.note || 'Tanpa catatan'}</span>
+                                                    </div>
                                                 </div>
-                                                <span className="text-[10px] text-[var(--color-text-muted)] shrink-0">{new Date(h.changed_at).toLocaleDateString('id-ID')}</span>
+                                                <div className="text-right shrink-0">
+                                                    <div className="text-[9px] font-black text-slate-800">{new Date(h.changed_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</div>
+                                                    <div className="text-[8px] font-bold text-slate-400 mt-0.5">{new Date(h.changed_at).getFullYear()}</div>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 )}
-
-                                <div className="flex justify-end pt-2">
-                                    <button onClick={() => closeModal()} className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] h-9 px-5 text-[10px] font-black uppercase tracking-widest rounded-lg">
-                                        Tutup
-                                    </button>
-                                </div>
                             </div>
                         </Modal>
                     )
@@ -2743,26 +2764,16 @@ export default function StudentsPage() {
                             icon={faTags}
                             iconBg="bg-violet-500/10"
                             iconColor="text-violet-600"
-                            size="sm"
+                            size="md"
                             mobileVariant="bottom-sheet"
                             footer={
-                                <div className="flex gap-2 sm:gap-3 w-full">
-                                    <button
-                                        type="button"
-                                        onClick={() => closeModal()}
-                                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
-                                    >
-                                        <FontAwesomeIcon icon={faTimes} className="text-[10px] opacity-50" />
-                                        Batal
-                                    </button>
-                                    <button
-                                        onClick={() => closeModal()}
-                                        className="flex-[2] h-11 px-2 sm:px-6 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/25 border border-white/10"
-                                    >
-                                        <FontAwesomeIcon icon={faCheckCircle} className="text-xs opacity-80 shrink-0" />
-                                        <span className="truncate">Simpan Perubahan</span>
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() => closeModal()}
+                                    className="w-full h-11 px-6 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/25 border border-white/10"
+                                >
+                                    <FontAwesomeIcon icon={faCheckCircle} className="text-xs opacity-80 shrink-0" />
+                                    <span className="truncate">Selesai & Tutup</span>
+                                </button>
                             }
                         >
                             <div className="space-y-7 py-2">
@@ -2780,9 +2791,13 @@ export default function StudentsPage() {
                                                 </div>
                                                 <input
                                                     type="text"
-                                                    value={newTagInput}
-                                                    onChange={e => setNewTagInput(e.target.value)}
-                                                    onKeyDown={handleAddCustomTag}
+                                                    ref={tagInputRef}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && tagInputRef.current.value.trim()) {
+                                                            handleToggleTag(studentForTags, tagInputRef.current.value.trim());
+                                                            tagInputRef.current.value = '';
+                                                        }
+                                                    }}
                                                     placeholder="Tulis label dan tekan enter..."
                                                     className="w-full h-12 bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl pl-11 pr-14 text-sm font-bold focus:bg-white focus:border-violet-500 focus:ring-4 focus:ring-violet-500/5 transition-all outline-none placeholder:font-medium placeholder:opacity-30"
                                                 />
@@ -2877,22 +2892,30 @@ export default function StudentsPage() {
                                                     return (
                                                         <div key={tag} className="group relative">
                                                             <div className={`flex items-center gap-0 rounded-full border transition-all duration-300 shadow-sm overflow-hidden ${isActive
-                                                                    ? 'bg-violet-600 border-violet-600 shadow-lg shadow-violet-600/20'
-                                                                    : 'bg-white border-[var(--color-border)] hover:border-violet-500/50'
+                                                                ? 'bg-violet-600 border-violet-600 shadow-lg shadow-violet-600/20'
+                                                                : 'bg-white border-[var(--color-border)] hover:border-violet-500/50'
                                                                 }`}>
                                                                 {/* Main Toggle Button */}
                                                                 <button
+                                                                    type="button"
                                                                     onClick={() => handleToggleTag(studentForTags, tag)}
-                                                                    className={`flex items-center gap-2 pl-4 pr-3 py-2 text-[10px] font-black transition-all ${isActive ? 'text-white' : 'text-[var(--color-text-muted)] hover:text-violet-600'
+                                                                    className={`flex-1 flex items-center gap-2 pl-4 pr-3 py-2 text-[10px] font-black transition-all ${isActive ? 'text-white' : 'text-[var(--color-text-muted)] hover:text-violet-600'
                                                                         }`}
                                                                 >
-                                                                    {isActive ? <FontAwesomeIcon icon={faCheck} className="text-[8px]" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-violet-400 transition-colors" />}
-                                                                    {tag}
+                                                                    <div className="shrink-0 flex items-center justify-center">
+                                                                        {isActive ? (
+                                                                            <FontAwesomeIcon icon={faCheck} className="text-[8px]" />
+                                                                        ) : (
+                                                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-violet-400 transition-colors" />
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="truncate">{tag}</span>
                                                                 </button>
 
                                                                 {/* Integrated Management Strip (Slide-in) */}
-                                                                <div className="flex items-center w-0 group-hover:w-16 transition-all duration-300 opacity-0 group-hover:opacity-100 overflow-hidden border-l border-transparent group-hover:border-white/20 group-hover:bg-black/5">
+                                                                <div className="flex items-center w-0 group-hover:w-16 transition-all duration-300 opacity-0 group-hover:opacity-100 overflow-hidden border-l border-transparent group-hover:border-white/20 group-hover:bg-black/5 shrink-0">
                                                                     <button
+                                                                        type="button"
                                                                         onClick={(e) => { e.stopPropagation(); setTagToEdit(tag); setRenameInput(tag) }}
                                                                         className={`w-8 h-8 flex items-center justify-center transition-colors ${isActive ? 'text-white/70 hover:text-white' : 'text-blue-500 hover:bg-blue-50'}`}
                                                                         title="Ubah Nama"
@@ -2900,7 +2923,8 @@ export default function StudentsPage() {
                                                                         <FontAwesomeIcon icon={faPen} className="text-[7px]" />
                                                                     </button>
                                                                     <button
-                                                                        onClick={(e) => { e.stopPropagation(); handleGlobalDeleteTag(tag) }}
+                                                                        type="button"
+                                                                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteTag(tag) }}
                                                                         className={`w-8 h-8 flex items-center justify-center transition-colors ${isActive ? 'text-white/70 hover:text-white' : 'text-red-500 hover:bg-red-50'}`}
                                                                         title="Hapus Global"
                                                                     >
@@ -3443,6 +3467,47 @@ export default function StudentsPage() {
                         </Modal>
                     )
                 }
+                {/* Global Tag Delete Confirmation */}
+                <Modal
+                    isOpen={!!confirmDeleteTag}
+                    onClose={() => setConfirmDeleteTag(null)}
+                    title="Konfirmasi Hapus Label"
+                    description="Label akan dihapus secara permanen dari database."
+                    icon={faTrash}
+                    iconBg="bg-red-50"
+                    iconColor="text-red-500"
+                    size="sm"
+                    footer={
+                        <div className="flex gap-2 w-full">
+                            <button
+                                onClick={() => setConfirmDeleteTag(null)}
+                                className="flex-1 h-11 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-bold uppercase hover:bg-slate-50 transition-all"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    const tag = confirmDeleteTag;
+                                    setConfirmDeleteTag(null);
+                                    await handleGlobalDeleteTag(tag, true);
+                                }}
+                                className="flex-[1.5] h-11 rounded-xl bg-red-500 text-white text-[10px] font-bold uppercase shadow-xl shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                <FontAwesomeIcon icon={faTrash} className="text-[10px] opacity-70" />
+                                Ya, Hapus Label
+                            </button>
+                        </div>
+                    }
+                >
+                    <div className="py-2">
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                            Label <span className="px-2 py-0.5 rounded-md bg-red-50 text-red-600 font-bold border border-red-100 mx-1">{confirmDeleteTag}</span> akan dihapus dari seluruh data siswa.
+                        </p>
+                        <p className="text-[11px] text-slate-500 font-medium mt-2">
+                            Aksi ini akan membersihkan label tersebut secara global. Riwayat data lainnya tetap aman.
+                        </p>
+                    </div>
+                </Modal>
             </div >
         </DashboardLayout >
     )
