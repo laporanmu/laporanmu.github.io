@@ -26,8 +26,7 @@ import {
     faCheckDouble,
     faStar,
     faFire,
-    faPaperPlane,
-    faShieldHalved
+    faPaperPlane
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import useLongPress from '../../hooks/useLongPress'
@@ -221,7 +220,16 @@ export const StudentRow = memo(({
     openWAForStudent,
     waTemplate
 }) => {
-    const vc = { gender: true, kelas: true, poin: true, aksi: true, ...visibleColumns }
+    const vc = { 
+        gender: true, 
+        kelas: true, 
+        poin: true, 
+        last_report: true, 
+        profil: true, 
+        tags: true, 
+        aksi: true, 
+        ...visibleColumns 
+    }
     const [lastAction, setLastAction] = useState(null) // { amount, reason, timestamp }
     const lastActionTimerRef = useRef(null)
 
@@ -747,8 +755,20 @@ export const StudentRow = memo(({
             {vc.aksi && (
                 <td className="px-6 py-4 w-48">
                     <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => onViewProfile(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-emerald-500/10 transition-all text-sm" title="Profil">
+                        <button onClick={() => onViewProfile(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-emerald-500/10 transition-all text-sm" title="Lihat Profil">
                             <FontAwesomeIcon icon={faUserTie} />
+                        </button>
+
+                        <button
+                            disabled={!student.phone}
+                            onClick={() => openWAForStudent(student, buildWAMessage(student, 'general'))}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all text-sm
+                                ${student.phone 
+                                    ? 'text-[var(--color-text-muted)] hover:text-emerald-600 hover:bg-emerald-500/10' 
+                                    : 'text-slate-400 opacity-60 grayscale cursor-not-allowed'}`}
+                            title={student.phone ? "Hubungi via WhatsApp" : "Nomer WA belum diatur"}
+                        >
+                            <FontAwesomeIcon icon={faWhatsapp} />
                         </button>
                         {onEdit && (
                             <button onClick={() => onEdit(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all text-sm" title="Edit">
@@ -764,9 +784,7 @@ export const StudentRow = memo(({
                         <button onClick={() => onViewClassHistory(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-purple-500 hover:bg-purple-500/10 transition-all text-sm" title="Riwayat Perilaku">
                             <FontAwesomeIcon icon={faClockRotateLeft} />
                         </button>
-                        <button onClick={() => onViewProfile(student, 'audit')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-indigo-500/10 transition-all text-sm" title="Audit Forensik">
-                            <FontAwesomeIcon icon={faShieldHalved} />
-                        </button>
+
                         {onConfirmDelete && (
                             <button onClick={() => onConfirmDelete(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Hapus">
                                 <FontAwesomeIcon icon={faBoxArchive} />

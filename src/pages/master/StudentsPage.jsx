@@ -130,6 +130,9 @@ const LazyStudentExportModal = React.lazy(() =>
 const LazyStudentImportModal = React.lazy(() =>
     import('../../components/students/StudentImportModal')
 )
+const LazyStudentTagModal = React.lazy(() =>
+    import('../../components/students/StudentTagModal')
+)
 
 // BehaviorHeatmap outside StudentsPage to prevent re-creation on every render 
 // helper for pagination 
@@ -367,13 +370,6 @@ export default function StudentsPage() {
         selectedStudents, selectedStudentsWithPhone, selectedIdSet, generateCode, handleAddCustomTag,
         bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches,
     } = core
-    const tagInputRef = useRef(null)
-    const [confirmDeleteTag, setConfirmDeleteTag] = useState(null)
-
-    // Sync input local dengan state awal core jika diperlukan (opsional)
-    useEffect(() => {
-        if (activeModal !== 'tag' && tagInputRef.current) tagInputRef.current.value = ''
-    }, [activeModal])
     // --- Pull-to-Refresh Logic ---
     const [pullDistance, setPullDistance] = useState(0)
     const [isRefreshing, setIsRefreshing] = useState(false)
@@ -490,7 +486,8 @@ export default function StudentsPage() {
         gender: true,
         kelas: true,
         poin: true,
-        phone: true,
+        last_report: true,
+        profil: true,
         tags: true,
         aksi: true
     })
@@ -596,8 +593,10 @@ export default function StudentsPage() {
         }
 
         const handleGlobalClick = (e) => {
-            // Header menu & shortcut are now portaled with backdrop dismiss
-            if (colMenuRef.current && !colMenuRef.current.contains(e.target)) {
+            // Check if click is outside gear icon AND outside the portaled menu
+            if (colMenuRef.current && 
+                !colMenuRef.current.contains(e.target) && 
+                !e.target.closest('#portal-column-menu')) {
                 setIsColMenuOpen(false)
             }
         }
@@ -1485,7 +1484,7 @@ export default function StudentsPage() {
                                             )}
 
                                             {/* COLUMN TOGGLE BUTTON —” di dalam header Aksi */}
-                                            <th colSpan={4} className="px-6 py-4 text-center pr-6 relative min-w-[240px]">
+                                            <th className="px-6 py-4 text-center pr-6 relative min-w-[240px]">
                                                 <div className="flex items-center justify-center">
                                                     {visibleColumns.aksi && <span>Aksi</span>}
                                                 </div>
@@ -1523,6 +1522,8 @@ export default function StudentsPage() {
                                                     {/* Dropdown Menu —” Portal agar tidak ter-clip oleh overflow tabel */}
                                                     {isColMenuOpen && createPortal(
                                                         <div
+                                                            id="portal-column-menu"
+                                                            onMouseDown={(e) => e.stopPropagation()}
                                                             className={`absolute z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${colMenuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
                                                             style={{ top: colMenuPos.top, right: colMenuPos.right }}
                                                         >
@@ -2753,197 +2754,24 @@ export default function StudentsPage() {
                 }
 
 
-                {/* Fitur 7 - Dynamic Tag Modal (SaaS UI) */}
+                {/* Modal Kelola Label —” lazy loaded */}
                 {
                     activeModal === 'tag' && (
-                        <Modal
-                            isOpen={activeModal === 'tag'}
-                            onClose={() => closeModal()}
-                            title={`Kelola Label — ${studentForTags?.name || ''}`}
-                            description="Klasifikasikan siswa dengan sistem label dinamis."
-                            icon={faTags}
-                            iconBg="bg-violet-500/10"
-                            iconColor="text-violet-600"
-                            size="md"
-                            mobileVariant="bottom-sheet"
-                            footer={
-                                <button
-                                    onClick={() => closeModal()}
-                                    className="w-full h-11 px-6 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/25 border border-white/10"
-                                >
-                                    <FontAwesomeIcon icon={faCheckCircle} className="text-xs opacity-80 shrink-0" />
-                                    <span className="truncate">Selesai & Tutup</span>
-                                </button>
-                            }
-                        >
-                            <div className="space-y-7 py-2">
-                                {studentForTags && (
-                                    <div className="space-y-8">
-                                        {/* Create New Tag */}
-                                        <div className="relative">
-                                            <div className="flex items-center justify-between mb-2.5 px-1">
-                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">Label Baru / Cari</label>
-                                                <div className="h-px flex-1 mx-4 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-30" />
-                                            </div>
-                                            <div className="relative group">
-                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-40 group-focus-within:text-violet-500 group-focus-within:opacity-100 transition-all">
-                                                    <FontAwesomeIcon icon={faTags} className="text-xs" />
-                                                </div>
-                                                <input
-                                                    type="text"
-                                                    ref={tagInputRef}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && tagInputRef.current.value.trim()) {
-                                                            handleToggleTag(studentForTags, tagInputRef.current.value.trim());
-                                                            tagInputRef.current.value = '';
-                                                        }
-                                                    }}
-                                                    placeholder="Tulis label dan tekan enter..."
-                                                    className="w-full h-12 bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl pl-11 pr-14 text-sm font-bold focus:bg-white focus:border-violet-500 focus:ring-4 focus:ring-violet-500/5 transition-all outline-none placeholder:font-medium placeholder:opacity-30"
-                                                />
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                                    <div className="px-2 py-1 rounded-lg bg-white border border-[var(--color-border)] shadow-sm text-[8px] font-black text-violet-500 animate-pulse">
-                                                        ENTER
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Current Selected Tags */}
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-2 px-1">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">Tersemat Saat Ini</label>
-                                                <span className="ml-auto text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full ring-1 ring-emerald-500/20">
-                                                    {(studentForTags.tags || []).length} AKTIF
-                                                </span>
-                                            </div>
-
-                                            <div className="flex flex-wrap gap-2.5 p-4 rounded-3xl bg-emerald-500/[0.02] border border-emerald-500/10 min-h-[60px] content-start transition-all">
-                                                {(studentForTags.tags || []).length === 0 ? (
-                                                    <div className="w-full py-2 flex flex-col items-center justify-center opacity-20">
-                                                        <FontAwesomeIcon icon={faTags} className="mb-1 text-sm" />
-                                                        <span className="text-[8px] font-bold uppercase tracking-widest">Belum ada label</span>
-                                                    </div>
-                                                ) : (
-                                                    (studentForTags.tags || []).map(tag => (
-                                                        <button
-                                                            key={tag}
-                                                            onClick={() => handleToggleTag(studentForTags, tag)}
-                                                            className="group flex items-center gap-2 pl-3 pr-2 py-1.5 bg-white border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-700 shadow-sm hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all active:scale-95"
-                                                        >
-                                                            <span className="opacity-70 group-hover:hidden">#</span>
-                                                            {tag}
-                                                            <div className="w-4 h-4 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:bg-red-500/10 transition-colors">
-                                                                <FontAwesomeIcon icon={faXmark} className="text-[8px]" />
-                                                            </div>
-                                                        </button>
-                                                    ))
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Database Library */}
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-2 px-1">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
-                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">Database Label</label>
-                                            </div>
-
-                                            <div className="flex flex-wrap gap-2 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar content-start">
-                                                {Array.from(new Set([...AvailableTags, ...allUsedTags])).sort().map(tag => {
-                                                    const isActive = (studentForTags.tags || []).includes(tag);
-                                                    const isEditing = tagToEdit === tag;
-
-                                                    if (isEditing) {
-                                                        return (
-                                                            <div key={tag} className="flex items-center rounded-full border-2 border-violet-500 bg-white shadow-xl shadow-violet-500/10 animate-in zoom-in-95 duration-200 overflow-hidden">
-                                                                <input
-                                                                    autoFocus
-                                                                    type="text"
-                                                                    value={renameInput}
-                                                                    onChange={e => setRenameInput(e.target.value)}
-                                                                    className="w-28 pl-4 pr-2 py-1.5 text-[10px] font-black text-violet-700 outline-none bg-transparent"
-                                                                    onKeyDown={e => {
-                                                                        if (e.key === 'Enter') handleGlobalRenameTag(tag, renameInput)
-                                                                        if (e.key === 'Escape') setTagToEdit(null)
-                                                                    }}
-                                                                />
-                                                                <div className="flex items-center border-l border-violet-100 bg-violet-50/50">
-                                                                    <button
-                                                                        onClick={() => handleGlobalRenameTag(tag, renameInput)}
-                                                                        className="w-8 h-8 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all"
-                                                                        title="Simpan"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faCheck} className="text-[8px]" />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => setTagToEdit(null)}
-                                                                        className="w-8 h-8 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-all"
-                                                                        title="Batal"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faXmark} className="text-[9px]" />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        )
-                                                    }
-
-                                                    return (
-                                                        <div key={tag} className="group relative">
-                                                            <div className={`flex items-center gap-0 rounded-full border transition-all duration-300 shadow-sm overflow-hidden ${isActive
-                                                                ? 'bg-violet-600 border-violet-600 shadow-lg shadow-violet-600/20'
-                                                                : 'bg-white border-[var(--color-border)] hover:border-violet-500/50'
-                                                                }`}>
-                                                                {/* Main Toggle Button */}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleToggleTag(studentForTags, tag)}
-                                                                    className={`flex-1 flex items-center gap-2 pl-4 pr-3 py-2 text-[10px] font-black transition-all ${isActive ? 'text-white' : 'text-[var(--color-text-muted)] hover:text-violet-600'
-                                                                        }`}
-                                                                >
-                                                                    <div className="shrink-0 flex items-center justify-center">
-                                                                        {isActive ? (
-                                                                            <FontAwesomeIcon icon={faCheck} className="text-[8px]" />
-                                                                        ) : (
-                                                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-violet-400 transition-colors" />
-                                                                        )}
-                                                                    </div>
-                                                                    <span className="truncate">{tag}</span>
-                                                                </button>
-
-                                                                {/* Integrated Management Strip (Slide-in) */}
-                                                                <div className="flex items-center w-0 group-hover:w-16 transition-all duration-300 opacity-0 group-hover:opacity-100 overflow-hidden border-l border-transparent group-hover:border-white/20 group-hover:bg-black/5 shrink-0">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={(e) => { e.stopPropagation(); setTagToEdit(tag); setRenameInput(tag) }}
-                                                                        className={`w-8 h-8 flex items-center justify-center transition-colors ${isActive ? 'text-white/70 hover:text-white' : 'text-blue-500 hover:bg-blue-50'}`}
-                                                                        title="Ubah Nama"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faPen} className="text-[7px]" />
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteTag(tag) }}
-                                                                        className={`w-8 h-8 flex items-center justify-center transition-colors ${isActive ? 'text-white/70 hover:text-white' : 'text-red-500 hover:bg-red-50'}`}
-                                                                        title="Hapus Global"
-                                                                    >
-                                                                        <FontAwesomeIcon icon={faXmark} className="text-[8px]" />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                            <p className="text-[8px] text-[var(--color-text-muted)] mt-4 px-1 opacity-50 italic">
-                                                * Gunakan ikon <FontAwesomeIcon icon={faPen} className="text-blue-500 mx-0.5" /> dan <FontAwesomeIcon icon={faXmark} className="text-red-500 mx-0.5" /> untuk merubah nama atau menghapus label dari database global.
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </Modal>
+                        <React.Suspense fallback={null}>
+                            <LazyStudentTagModal
+                                isOpen={activeModal === 'tag'}
+                                onClose={closeModal}
+                                student={studentForTags}
+                                allUsedTags={allUsedTags}
+                                handleToggleTag={handleToggleTag}
+                                tagToEdit={tagToEdit}
+                                setTagToEdit={setTagToEdit}
+                                renameInput={renameInput}
+                                setRenameInput={setRenameInput}
+                                handleGlobalRenameTag={handleGlobalRenameTag}
+                                handleGlobalDeleteTag={handleGlobalDeleteTag}
+                            />
+                        </React.Suspense>
                     )
                 }
 
@@ -3467,47 +3295,6 @@ export default function StudentsPage() {
                         </Modal>
                     )
                 }
-                {/* Global Tag Delete Confirmation */}
-                <Modal
-                    isOpen={!!confirmDeleteTag}
-                    onClose={() => setConfirmDeleteTag(null)}
-                    title="Konfirmasi Hapus Label"
-                    description="Label akan dihapus secara permanen dari database."
-                    icon={faTrash}
-                    iconBg="bg-red-50"
-                    iconColor="text-red-500"
-                    size="sm"
-                    footer={
-                        <div className="flex gap-2 w-full">
-                            <button
-                                onClick={() => setConfirmDeleteTag(null)}
-                                className="flex-1 h-11 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-bold uppercase hover:bg-slate-50 transition-all"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                onClick={async () => {
-                                    const tag = confirmDeleteTag;
-                                    setConfirmDeleteTag(null);
-                                    await handleGlobalDeleteTag(tag, true);
-                                }}
-                                className="flex-[1.5] h-11 rounded-xl bg-red-500 text-white text-[10px] font-bold uppercase shadow-xl shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all flex items-center justify-center gap-2"
-                            >
-                                <FontAwesomeIcon icon={faTrash} className="text-[10px] opacity-70" />
-                                Ya, Hapus Label
-                            </button>
-                        </div>
-                    }
-                >
-                    <div className="py-2">
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                            Label <span className="px-2 py-0.5 rounded-md bg-red-50 text-red-600 font-bold border border-red-100 mx-1">{confirmDeleteTag}</span> akan dihapus dari seluruh data siswa.
-                        </p>
-                        <p className="text-[11px] text-slate-500 font-medium mt-2">
-                            Aksi ini akan membersihkan label tersebut secara global. Riwayat data lainnya tetap aman.
-                        </p>
-                    </div>
-                </Modal>
             </div >
         </DashboardLayout >
     )
