@@ -9,7 +9,8 @@ import {
     faClipboardList, faCalendarWeek, faShieldHalved,
     faUsers, faChalkboardTeacher, faSchool, faExclamationTriangle, faCalendarAlt,
     faPersonWalkingArrowRight, faUserGear, faClockRotateLeft, faScrewdriverWrench,
-    faDatabase, faBoxArchive, faServer, faPalette, faNewspaper, faRobot, faCube
+    faDatabase, faBoxArchive, faServer, faPalette, faNewspaper, faRobot, faCube,
+    faBook, faUserPlus, faCalendarDays, faQrcode, faFileInvoice, faMoneyBillWave, faWallet
 } from "@fortawesome/free-solid-svg-icons"
 import { useTheme } from "../../context/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
@@ -56,14 +57,27 @@ const MASTER_ITEMS = [
     { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Pusat database seluruh santri aktif dalam sistem" },
     { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Data akun pengajar, musyrif, dan staf sekolah" },
     { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Pengaturan struktur kelas dan pembagian asrama" },
+    { to: "/master/subjects", label: "Mata Pelajaran", icon: faBook, desc: "Daftar kurikulum mata pelajaran sekolah" },
     { to: "/master/poin", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Konfigurasi kategori poin prestasi & pelanggaran" },
     { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Manajemen semester dan periode kalender akademik" },
+    { to: "/master/enrollment", label: "PSB / Enrollment", icon: faUserPlus, desc: "Manajemen pendaftaran dan penerimaan siswa baru", color: "bg-emerald-500/10 text-emerald-600" },
+]
+
+const ACADEMIC_ITEMS = [
+    { to: "/academic/attendance", label: "Presensi Siswa", icon: faQrcode, desc: "Absensi real-time via scan QR kartu siswa", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/academic/schedule", label: "Jadwal Pelajaran", icon: faCalendarDays, desc: "Atur plotting jadwal KBM dan guru pengajar", color: "bg-purple-500/10 text-purple-600" },
+    { to: "/academic/raport", label: "E-Rapor & Nilai", icon: faFileInvoice, desc: "Input nilai harian, ujian, dan cetak raport", color: "bg-emerald-500/10 text-emerald-600" },
+]
+
+const FINANCE_ITEMS = [
+    { to: "/finance/invoices", label: "Tagihan SPP", icon: faMoneyBillWave, desc: "Kelola tagihan bulanan dan iuran sekolah", color: "bg-amber-500/10 text-amber-600" },
+    { to: "/finance/payments", label: "Riwayat Bayar", icon: faWallet, desc: "Rekapitulasi pembayaran dan tunggakan wali", color: "bg-emerald-500/10 text-emerald-600" },
 ]
 
 const REPORTS_ITEMS = [
     { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen izin keluar masuk area santri", color: "bg-red-500/10 text-red-500" },
-    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Laporan perkembangan poin & prestasi bulanan", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/attendance", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
+    { to: "/raport", label: "Rekap Poin Bulanan", icon: faClipboardList, desc: "Laporan perkembangan poin & prestasi bulanan", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/attendance", label: "Laporan Absensi", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
     { to: "/behavior", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
 ]
 
@@ -273,12 +287,16 @@ export default function TopNav({ title, subtitle }) {
     })
 
     const [masterOpen, setMasterOpen] = useState(false)
+    const [academicOpen, setAcademicOpen] = useState(false)
+    const [financeOpen, setFinanceOpen] = useState(false)
     const [reportsOpen, setReportsOpen] = useState(false)
     const [adminOpen, setAdminOpen] = useState(false)
     const [profileOpen, setProfileOpen] = useState(false)
     const [notifOpen, setNotifOpen] = useState(false)
 
     const masterRef = useRef(null)
+    const academicRef = useRef(null)
+    const financeRef = useRef(null)
     const reportsRef = useRef(null)
     const adminRef = useRef(null)
     const mobileProfileRef = useRef(null)
@@ -294,6 +312,8 @@ export default function TopNav({ title, subtitle }) {
     useEffect(() => {
         const onClick = (e) => {
             if (masterRef.current && !masterRef.current.contains(e.target)) setMasterOpen(false)
+            if (academicRef.current && !academicRef.current.contains(e.target)) setAcademicOpen(false)
+            if (financeRef.current && !financeRef.current.contains(e.target)) setFinanceOpen(false)
             if (reportsRef.current && !reportsRef.current.contains(e.target)) setReportsOpen(false)
             if (adminRef.current && !adminRef.current.contains(e.target)) setAdminOpen(false)
 
@@ -361,7 +381,7 @@ export default function TopNav({ title, subtitle }) {
         let lastY = window.scrollY
         const handleScroll = () => {
             const currentY = window.scrollY
-            
+
             // Tampilkan jika:
             // 1. Scroll ke atas
             // 2. Masih di paling atas (< 50px)
@@ -371,7 +391,7 @@ export default function TopNav({ title, subtitle }) {
                 // Sembunyikan jika scroll ke bawah > 100px
                 setIsVisible(false)
             }
-            
+
             lastY = currentY
         }
 
@@ -392,7 +412,7 @@ export default function TopNav({ title, subtitle }) {
                 }
             `}</style>
 
-            <header 
+            <header
                 className={`sticky top-0 z-40 transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)
                 ${!isVisible ? 'lg:translate-y-0 -translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}
             >
@@ -478,98 +498,81 @@ export default function TopNav({ title, subtitle }) {
                                 >
                                     <span aria-hidden="true">L</span>
                                 </div>
+
                                 <div>
                                     <p className="text-sm font-extrabold text-[var(--color-text)] leading-tight">{title || "Dashboard"}</p>
-                                    <p className="text-[9px] font-bold tracking-widest uppercase text-[var(--color-text-muted)]">
-                                        {subtitle || today}
-                                    </p>
+                                    <p className="text-[9px] font-bold tracking-widest uppercase text-[var(--color-text-muted)]">{subtitle || today}</p>
                                 </div>
                             </div>
-
-                            {/* Center: Tabs */}
                             <div className="flex justify-center">
-                                <nav className="flex items-center gap-2 bg-[var(--color-surface-alt)]/60 rounded-2xl p-1.5">
+                                <nav className="flex items-center gap-1.5 bg-[var(--color-surface-alt)]/60 rounded-2xl p-1.5">
                                     <NavLink to="/dashboard" className={tabClass}>Dashboard</NavLink>
-
-                                    {/* Reports Dropdown */}
-                                    <div className="relative" ref={reportsRef}>
-                                        <button
-                                            onClick={() => setReportsOpen(v => !v)}
-                                            aria-label="Menu Laporan"
-                                            className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2
-                                                ${reportsOpen
-                                                    ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]"
-                                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`}
-                                            type="button"
-                                        >
-                                            <FontAwesomeIcon icon={faClipboardList} />
-                                            Reports
-                                            <FontAwesomeIcon icon={faChevronDown} className={`text-xs transition-transform ${reportsOpen ? "rotate-180" : ""}`} />
+                                    <div className="relative" ref={academicRef}>
+                                        <button onClick={() => setAcademicOpen(v => !v)} className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 ${academicOpen ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`} type="button">
+                                            <FontAwesomeIcon icon={faCalendarAlt} className="opacity-70" /> Akademik <FontAwesomeIcon icon={faChevronDown} className={`text-[10px] transition-transform ${academicOpen ? "rotate-180" : ""}`} />
                                         </button>
-
-                                        {reportsOpen && (
-                                            <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
-                                                <div className="px-3 py-2 text-[11px] font-extrabold tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">
-                                                    Laporan & Rekap
-                                                </div>
+                                        {academicOpen && (
+                                            <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                                <div className="px-3 py-2 text-[10px] font-black tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">Mesin Akademik</div>
                                                 <div className="p-2">
-                                                    {filteredReportsItems.map(it => (
-                                                        <button
-                                                            key={it.to}
-                                                            onClick={() => { setReportsOpen(false); navigate(it.to) }}
-                                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group"
-                                                            type="button"
-                                                        >
-                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${it.color}`}>
-                                                                <FontAwesomeIcon icon={it.icon} className="text-xs" />
-                                                            </div>
-                                                            <div className="text-left">
-                                                                <p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p>
-                                                                <p className="text-[9px] text-[var(--color-text-muted)] font-medium leading-tight mt-0.5">{it.desc}</p>
-                                                            </div>
+                                                    {ACADEMIC_ITEMS.map(it => (
+                                                        <button key={it.to} onClick={() => { setAcademicOpen(false); navigate(it.to) }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group" type="button">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${it.color}`}><FontAwesomeIcon icon={it.icon} className="text-xs" /></div>
+                                                            <div className="text-left"><p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p><p className="text-[9px] text-[var(--color-text-muted)] font-medium leading-tight mt-0.5">{it.desc}</p></div>
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* Master Dropdown */}
-                                    <div className="relative" ref={masterRef}>
-                                        <button
-                                            onClick={() => setMasterOpen(v => !v)}
-                                            aria-label="Menu Master Data"
-                                            className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2
-                                                ${masterOpen
-                                                    ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]"
-                                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`}
-                                            type="button"
-                                        >
-                                            <FontAwesomeIcon icon={faLayerGroup} />
-                                            Master
-                                            <FontAwesomeIcon icon={faChevronDown} className={`text-xs transition-transform ${masterOpen ? "rotate-180" : ""}`} />
+                                    <div className="relative" ref={financeRef}>
+                                        <button onClick={() => setFinanceOpen(v => !v)} className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 ${financeOpen ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`} type="button">
+                                            <FontAwesomeIcon icon={faMoneyBillWave} className="opacity-70" /> Keuangan <FontAwesomeIcon icon={faChevronDown} className={`text-[10px] transition-transform ${financeOpen ? "rotate-180" : ""}`} />
                                         </button>
-
-                                        {masterOpen && (
-                                            <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
-                                                <div className="px-3 py-2 text-[11px] font-extrabold tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">
-                                                    Master Data
-                                                </div>
+                                        {financeOpen && (
+                                            <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                                <div className="px-3 py-2 text-[10px] font-black tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">Manajemen Keuangan</div>
                                                 <div className="p-2">
-                                                    {filteredMasterItems.map(it => (
-                                                        <button
-                                                            key={it.to}
-                                                            onClick={() => { setMasterOpen(false); navigate(it.to) }}
-                                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group"
-                                                            type="button"
-                                                        >
-                                                            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
-                                                                <FontAwesomeIcon icon={it.icon} className="text-xs" />
-                                                            </div>
-                                                            <div className="text-left">
-                                                                <p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p>
-                                                                <p className="text-[9px] text-[var(--color-text-muted)] font-medium leading-tight mt-0.5">{it.desc}</p>
-                                                            </div>
+                                                    {FINANCE_ITEMS.map(it => (
+                                                        <button key={it.to} onClick={() => { setFinanceOpen(false); navigate(it.to) }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group" type="button">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${it.color}`}><FontAwesomeIcon icon={it.icon} className="text-xs" /></div>
+                                                            <div className="text-left"><p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p><p className="text-[9px] text-[var(--color-text-muted)] font-medium leading-tight mt-0.5">{it.desc}</p></div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="relative" ref={reportsRef}>
+                                        <button onClick={() => setReportsOpen(v => !v)} className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 ${reportsOpen ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`} type="button">
+                                            <FontAwesomeIcon icon={faClipboardList} className="opacity-70" /> Laporan <FontAwesomeIcon icon={faChevronDown} className={`text-[10px] transition-transform ${reportsOpen ? "rotate-180" : ""}`} />
+                                        </button>
+                                        {reportsOpen && (
+                                            <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                                <div className="px-3 py-2 text-[10px] font-black tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">Rekapitulasi</div>
+                                                <div className="p-2">
+                                                    {REPORTS_ITEMS.map(it => (
+                                                        <button key={it.to} onClick={() => { setReportsOpen(false); navigate(it.to) }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group" type="button">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${it.color}`}><FontAwesomeIcon icon={it.icon} className="text-xs" /></div>
+                                                            <div className="text-left"><p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p><p className="text-[9px] text-[var(--color-text-muted)] font-medium leading-tight mt-0.5">{it.desc}</p></div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="relative" ref={masterRef}>
+                                        <button onClick={() => setMasterOpen(v => !v)} className={`px-3 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 ${masterOpen ? "bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white/50 dark:hover:bg-white/5"}`} type="button">
+                                            <FontAwesomeIcon icon={faLayerGroup} className="opacity-70" /> Master <FontAwesomeIcon icon={faChevronDown} className={`text-[10px] transition-transform ${masterOpen ? "rotate-180" : ""}`} />
+                                        </button>
+                                        {masterOpen && (
+                                            <div className="absolute left-0 mt-2 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                                <div className="px-3 py-2 text-[10px] font-black tracking-widest text-[var(--color-text-muted)] uppercase border-b border-[var(--color-border)]">Pusat Data Master</div>
+                                                <div className="p-2">
+                                                    {MASTER_ITEMS.map(it => (
+                                                        <button key={it.to} onClick={() => { setMasterOpen(false); navigate(it.to) }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition group" type="button">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-indigo-500/10 text-indigo-600`}><FontAwesomeIcon icon={it.icon} className="text-xs" /></div>
+                                                            <div className="text-left"><p className="text-[11px] font-black text-[var(--color-text)] leading-tight">{it.label}</p><p className="text-[9px] text-[var(--color-text-muted)] font-medium leading-tight mt-0.5">{it.desc}</p></div>
                                                         </button>
                                                     ))}
                                                 </div>
@@ -626,7 +629,7 @@ export default function TopNav({ title, subtitle }) {
                                                     </div>
                                                 </div>
                                             )}
-                                    </div>
+                                        </div>
                                     )}
 
                                     {/* Divider */}
