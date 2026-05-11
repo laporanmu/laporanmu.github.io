@@ -753,7 +753,7 @@ export const StudentRow = memo(({
 
             {/* ── Aksi ─────────────────────────────────────────────────── */}
             {vc.aksi && (
-                <td className="px-6 py-4 w-48">
+                <td className="px-6 py-4 min-w-[280px]">
                     <div className="flex items-center justify-center gap-1">
                         <button onClick={() => onViewProfile(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-emerald-500/10 transition-all text-sm" title="Lihat Profil">
                             <FontAwesomeIcon icon={faUserTie} />
@@ -793,10 +793,6 @@ export const StudentRow = memo(({
                     </div>
                 </td>
             )}
-
-            {/* Spacer — sejajar dengan th grid icon */}
-            <td className="w-10 px-3" />
-
         </tr>
     )
 })

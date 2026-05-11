@@ -1191,6 +1191,15 @@ Laporanmu System`
             const { data } = await supabase.from('students').select('id, tags').contains('tags', [tag]).is('deleted_at', null)
             if (data) {
                 await Promise.all(data.map(s => supabase.from('students').update({ tags: (s.tags || []).filter(t => t !== tag) }).eq('id', s.id)))
+                
+                // CRITICAL: Also update the currently active student in modal to reflect changes immediately
+                if (studentForTags && studentForTags.tags?.includes(tag)) {
+                    setStudentForTags(prev => ({
+                        ...prev,
+                        tags: (prev.tags || []).filter(t => t !== tag)
+                    }))
+                }
+
                 await logAudit({
                     action: 'DELETE', source: 'MASTER', tableName: 'students',
                     newData: { global_delete_tag: true, tag, affected_count: data.length }
@@ -1207,6 +1216,15 @@ Laporanmu System`
             const { data } = await supabase.from('students').select('id, tags').contains('tags', [oldTag]).is('deleted_at', null)
             if (data) {
                 await Promise.all(data.map(s => supabase.from('students').update({ tags: (s.tags || []).map(t => t === oldTag ? newTag : t) }).eq('id', s.id)))
+                
+                // CRITICAL: Also update the currently active student in modal to reflect changes immediately
+                if (studentForTags && studentForTags.tags?.includes(oldTag)) {
+                    setStudentForTags(prev => ({
+                        ...prev,
+                        tags: (prev.tags || []).map(t => t === oldTag ? newTag : t)
+                    }))
+                }
+
                 await logAudit({
                     action: 'UPDATE', source: 'MASTER', tableName: 'students',
                     newData: { global_rename_tag: true, old_tag: oldTag, new_tag: newTag, affected_count: data.length }

@@ -167,128 +167,179 @@ export default function StudentPrintModal({
                                         <span className="text-[5px] font-black uppercase tracking-[0.25em]">MBS TANGGUL</span>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Actions for this student (only if not bulk to save space) */}
-                            {!isBulk && (
-                                <div className="bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl p-3 space-y-3 no-print">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-primary)]/30 transition-colors group">
-                                                <label className="block text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">ID REG</label>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[12px] font-black text-[var(--color-primary)] font-mono">
-                                                        {isPrivacyMode ? maskInfo(student.code || student.registration_code, 2) : (student.code || student.registration_code)}
-                                                    </span>
-                                                    <button onClick={() => {
-                                                        if (isPrivacyMode) return addToast?.('Mode Privasi aktif', 'warning')
-                                                        navigator.clipboard.writeText(student.code || student.registration_code);
-                                                        addToast?.('Kode dicopy', 'success')
-                                                    }} className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity"><FontAwesomeIcon icon={faLink} /></button>
-                                                </div>
-                                            </div>
-                                            <div className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm hover:border-emerald-500/30 transition-colors group">
-                                                <label className="block text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5 opacity-60">PIN AKSES</label>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[12px] font-black text-emerald-500 font-mono tracking-wider">
-                                                        {isPrivacyMode ? '****' : student.pin}
-                                                    </span>
-                                                    <button onClick={() => {
-                                                        if (isPrivacyMode) return addToast?.('Mode Privasi aktif', 'warning')
-                                                        navigator.clipboard.writeText(student.pin);
-                                                        addToast?.('PIN dicopy', 'success')
-                                                    }} className="text-[10px] text-[var(--color-text-muted)] hover:text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity"><FontAwesomeIcon icon={faLink} /></button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            onClick={() => openWAForStudent?.(student, buildWAMessage?.(student, waTemplate))}
-                                            className="h-10 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 px-4 w-full group"
-                                        >
-                                            <FontAwesomeIcon icon={faWhatsapp} className="text-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
-                                            KIRIM KE WALI MURID
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-
-                {/* Bulk / Footer Actions */}
-                <div className="bg-[var(--color-surface-alt)]/80 border border-[var(--color-border)] rounded-2xl p-4 space-y-3 no-print sticky bottom-0 z-20 backdrop-blur-xl">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        {!isBulk && propsSelectedStudent && (
-                            <button
-                                onClick={() => {
-                                    if (isPrivacyMode) return addToast?.('Mode Privasi aktif', 'warning');
-                                    handleResetPin?.(propsSelectedStudent);
-                                }}
-                                disabled={resettingPin}
-                                className="h-9 px-3 rounded-lg border border-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5"
-                            >
-                                <FontAwesomeIcon icon={resettingPin ? faSpinner : faRotateLeft} className={resettingPin ? 'fa-spin' : ''} />
-                                Reset PIN Akses
-                            </button>
-                        )}
-                        
-                        <div className={`flex gap-2 items-center ${isBulk ? 'w-full' : ''}`}>
-                            {isBulk ? (
-                                <button
-                                    onClick={() => generateStudentPDF?.(studentsToShow)}
-                                    disabled={generatingPdf}
-                                    className="flex-1 h-11 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-xl shadow-[var(--color-primary)]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                                >
-                                    {generatingPdf 
-                                        ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Menyiapkan PDF...</>
-                                        : <><FontAwesomeIcon icon={faPrint} /> Cetak Semua ({studentsToShow.length})</>
-                                    }
-                                </button>
-                            ) : (
-                                <div className="relative ml-auto">
-                                    <button
-                                        onClick={() => setShowExportMenu(v => !v)}
-                                        disabled={generatingPdf}
-                                        className="h-9 px-4 rounded-lg bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-                                    >
-                                        {generatingPdf
-                                            ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Menyiapkan...</>
-                                            : <><FontAwesomeIcon icon={faDownload} /> Ekspor <FontAwesomeIcon icon={faChevronDown} className="text-[8px] opacity-70" /></>
-                                        }
-                                    </button>
-                                    {showExportMenu && (
-                                        <>
-                                            <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
-                                            <div className="absolute bottom-full mb-1.5 right-0 z-20 w-48 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2 duration-200">
-                                                <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 pt-2.5 pb-1 opacity-50">Pilih Format</p>
-                                                <div className="p-1.5 space-y-1">
-                                                    <button
-                                                        onClick={() => { handlePrintSingle?.(propsSelectedStudent); setShowExportMenu(false); }}
-                                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-bold text-[var(--color-text)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] rounded-lg transition-colors text-left"
-                                                    >
-                                                        <FontAwesomeIcon icon={faFileLines} className="w-4 text-center text-[11px] text-[var(--color-primary)]" /> Surat Akses PDF
-                                                    </button>
-                                                    <button
-                                                        onClick={() => { handleSavePNG?.(propsSelectedStudent); setShowExportMenu(false); }}
-                                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-bold text-[var(--color-text)] hover:bg-emerald-500/10 hover:text-emerald-600 rounded-lg transition-colors text-left"
-                                                    >
-                                                        <FontAwesomeIcon icon={faImage} className="w-4 text-center text-[11px] text-emerald-500" /> Simpan PNG
-                                                    </button>
-                                                    <button
-                                                        onClick={() => { handlePrintThermal?.(propsSelectedStudent); setShowExportMenu(false); }}
-                                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-bold text-[var(--color-text)] hover:bg-orange-500/10 hover:text-orange-600 rounded-lg transition-colors text-left"
-                                                    >
-                                                        <FontAwesomeIcon icon={faPrint} className="w-4 text-center text-[11px] text-orange-500" /> Struk Thermal
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
+                ))}
+            </div>
+
+                {/* Actions Section */}
+                <div className={`no-print ${isBulk ? 'sticky bottom-0 z-20 backdrop-blur-xl bg-[var(--color-surface-alt)]/80 border border-[var(--color-border)] rounded-2xl p-4 shadow-2xl shadow-black/10' : ''}`}>
+                    {!isBulk && studentsToShow.length > 0 ? (
+                        /* Enterprise Unified Control Center - High Density */
+                        <div className="bg-[var(--color-surface-alt)]/40 border border-[var(--color-border)] rounded-[1.5rem] overflow-hidden shadow-2xl shadow-black/5 backdrop-blur-md">
+                            <div className="p-4 space-y-4">
+                                {/* Section Header: Access Status */}
+                                <div className="flex items-center justify-between px-1">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-[8px] font-black uppercase tracking-wider text-[var(--color-text)]">Status Akses: <span className="text-emerald-500">Aktif</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[var(--color-primary)]/5 border border-[var(--color-primary)]/10">
+                                        <FontAwesomeIcon icon={faGraduationCap} className="text-[7px] text-[var(--color-primary)]" />
+                                        <span className="text-[7px] font-black uppercase text-[var(--color-primary)]">{studentsToShow[0].className}</span>
+                                    </div>
+                                </div>
+
+                                {/* Main Interaction Hub: High Density Grid */}
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                                    {/* ID Registrasi Box - Col Span 5 */}
+                                    <div className="lg:col-span-5 group relative">
+                                        <div className="relative px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm group-hover:border-[var(--color-primary)]/40 transition-all h-full flex flex-col justify-center">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">Kode Registrasi</label>
+                                                <FontAwesomeIcon icon={faLink} className="text-[7px] text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-[12px] font-black text-[var(--color-primary)] font-mono tracking-tight whitespace-nowrap">
+                                                    {isPrivacyMode ? maskInfo(studentsToShow[0].code || studentsToShow[0].registration_code, 2) : (studentsToShow[0].code || studentsToShow[0].registration_code)}
+                                                </span>
+                                                <button 
+                                                    onClick={() => {
+                                                        if (isPrivacyMode) return addToast?.('Nonaktifkan Mode Privasi untuk menyalin', 'warning');
+                                                        navigator.clipboard.writeText(studentsToShow[0].code || studentsToShow[0].registration_code);
+                                                        addToast?.('ID Berhasil disalin', 'success');
+                                                    }}
+                                                    className="shrink-0 h-6 px-2 rounded-lg bg-[var(--color-primary)]/5 text-[var(--color-primary)] text-[8px] font-black uppercase tracking-wider hover:bg-[var(--color-primary)] hover:text-white transition-all transform active:scale-90"
+                                                >
+                                                    Salin
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* PIN Box - Col Span 3 */}
+                                    <div className="lg:col-span-3 group relative">
+                                        <div className="relative px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm group-hover:border-emerald-500/40 transition-all h-full flex flex-col justify-center">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">PIN Akses</label>
+                                                <FontAwesomeIcon icon={faLink} className="text-[7px] text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-[12px] font-black text-emerald-600 font-mono tracking-[0.15em]">
+                                                    {isPrivacyMode ? '••••' : studentsToShow[0].pin}
+                                                </span>
+                                                <button 
+                                                    onClick={() => {
+                                                        if (isPrivacyMode) return addToast?.('Mode Privasi aktif', 'warning');
+                                                        navigator.clipboard.writeText(studentsToShow[0].pin);
+                                                        addToast?.('PIN Berhasil disalin', 'success');
+                                                    }}
+                                                    className="shrink-0 h-6 px-2 rounded-lg bg-emerald-500/5 text-emerald-600 text-[8px] font-black uppercase tracking-wider hover:bg-emerald-500 hover:text-white transition-all transform active:scale-90"
+                                                >
+                                                    Salin
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Primary Action: WhatsApp - Col Span 4 */}
+                                    <button
+                                        onClick={() => openWAForStudent?.(studentsToShow[0], buildWAMessage?.(studentsToShow[0], waTemplate))}
+                                        className="lg:col-span-4 h-full min-h-[50px] rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[9px] font-black uppercase tracking-[0.1em] hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 px-4 group whitespace-nowrap"
+                                    >
+                                        <FontAwesomeIcon icon={faWhatsapp} className="text-base transition-transform group-hover:rotate-12 shrink-0" />
+                                        <span>Bagikan ke Wali Murid</span>
+                                    </button>
+                                </div>
+
+                                {/* Compact Divider */}
+                                <div className="relative h-px flex items-center" aria-hidden="true">
+                                    <div className="w-full border-t border-[var(--color-border)] opacity-30" />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="px-2 bg-[var(--color-surface-alt)] text-[6px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-40">Manajemen Sistem</span>
+                                    </div>
+                                </div>
+
+                                {/* Bottom Utility Row - High Density */}
+                                <div className="flex items-center justify-between gap-3 pt-1">
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                if (isPrivacyMode) return addToast?.('Mode Privasi aktif', 'warning');
+                                                handleResetPin?.(studentsToShow[0]);
+                                            }}
+                                            disabled={resettingPin}
+                                            className="h-9 px-4 rounded-lg border border-red-500/10 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 group active:scale-95 whitespace-nowrap"
+                                        >
+                                            <FontAwesomeIcon icon={resettingPin ? faSpinner : faRotateLeft} className={`${resettingPin ? 'fa-spin' : 'group-hover:-rotate-180 transition-transform duration-300'}`} />
+                                            Reset PIN
+                                        </button>
+                                        <p className="hidden xl:block text-[7px] text-[var(--color-text-muted)] italic opacity-40 leading-none">PIN otomatis digenerate.</p>
+                                    </div>
+
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowExportMenu(v => !v)}
+                                            disabled={generatingPdf}
+                                            className="h-9 px-4 rounded-lg bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 active:scale-95 whitespace-nowrap"
+                                        >
+                                            {generatingPdf
+                                                ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Proses...</>
+                                                : <><FontAwesomeIcon icon={faDownload} /> Cetak & Ekspor <FontAwesomeIcon icon={faChevronDown} className={`text-[8px] transition-transform duration-300 ${showExportMenu ? 'rotate-180' : ''}`} /></>
+                                            }
+                                        </button>
+                                        {showExportMenu && (
+                                            <>
+                                                <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                                                <div className="absolute bottom-full mb-2 right-0 z-20 w-52 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                                    <div className="bg-[var(--color-surface-alt)]/80 px-3 py-2 border-b border-[var(--color-border)]">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text)] leading-none">Format Ekspor</p>
+                                                    </div>
+                                                    <div className="p-1 space-y-0.5">
+                                                        <button
+                                                            onClick={() => { handlePrintSingle?.(studentsToShow[0]); setShowExportMenu(false); }}
+                                                            className="w-full flex items-center gap-3 px-2 py-2 text-[10px] font-bold text-[var(--color-text)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] rounded-lg transition-all text-left group"
+                                                        >
+                                                            <FontAwesomeIcon icon={faFileLines} className="w-4 text-[var(--color-primary)]" />
+                                                            Surat Akses PDF
+                                                        </button>
+                                                        <button
+                                                            onClick={() => { handleSavePNG?.(studentsToShow[0]); setShowExportMenu(false); }}
+                                                            className="w-full flex items-center gap-3 px-2 py-2 text-[10px] font-bold text-[var(--color-text)] hover:bg-emerald-500/10 hover:text-emerald-600 rounded-lg transition-all text-left group"
+                                                        >
+                                                            <FontAwesomeIcon icon={faImage} className="w-4 text-emerald-500" />
+                                                            Simpan Gambar (PNG)
+                                                        </button>
+                                                        <button
+                                                            onClick={() => { handlePrintThermal?.(studentsToShow[0]); setShowExportMenu(false); }}
+                                                            className="w-full flex items-center gap-3 px-2 py-2 text-[10px] font-bold text-[var(--color-text)] hover:bg-orange-500/10 hover:text-orange-600 rounded-lg transition-all text-left group"
+                                                        >
+                                                            <FontAwesomeIcon icon={faPrint} className="w-4 text-orange-500" />
+                                                            Struk Kasir (Thermal)
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        /* Bulk Mode Sticky Actions */
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <button
+                                onClick={() => generateStudentPDF?.(studentsToShow)}
+                                disabled={generatingPdf}
+                                className="flex-1 h-12 rounded-2xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-[0.1em] hover:brightness-110 shadow-xl shadow-[var(--color-primary)]/30 transition-all flex items-center justify-center gap-3 disabled:opacity-60"
+                            >
+                                {generatingPdf 
+                                    ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Menyiapkan Berkas PDF...</>
+                                    : <><FontAwesomeIcon icon={faPrint} className="text-base" /> Cetak Semua ({studentsToShow.length})</>
+                                }
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </Modal>

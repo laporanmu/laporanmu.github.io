@@ -94,6 +94,7 @@ import { SortOptions, RiskThreshold, AvailableTags, getTagColor, calculateComple
 import { useStudentsImportExport } from '../../hooks/students/useStudentsImportExport'
 import { generateStudentPDF as _generateStudentPDF, handlePrintThermal as _handlePrintThermal, handleSavePNG as _handleSavePNG } from '../../utils/students/studentPdfUtils'
 import { useStudentsCore } from '../../hooks/students/useStudentsCore'
+import StudentClassHistoryModal from '../../components/students/StudentClassHistoryModal'
 
 // NOTE(perf): library import/export di-load on-demand via dynamic import
 // NOTE(perf): jsPDF/html2canvas/qrcode/autotable di-load on-demand via dynamic import
@@ -594,8 +595,8 @@ export default function StudentsPage() {
 
         const handleGlobalClick = (e) => {
             // Check if click is outside gear icon AND outside the portaled menu
-            if (colMenuRef.current && 
-                !colMenuRef.current.contains(e.target) && 
+            if (colMenuRef.current &&
+                !colMenuRef.current.contains(e.target) &&
                 !e.target.closest('#portal-column-menu')) {
                 setIsColMenuOpen(false)
             }
@@ -1484,13 +1485,13 @@ export default function StudentsPage() {
                                             )}
 
                                             {/* COLUMN TOGGLE BUTTON —” di dalam header Aksi */}
-                                            <th className="px-6 py-4 text-center pr-6 relative min-w-[240px]">
+                                            <th className="px-6 py-4 text-center pr-6 relative min-w-[280px]">
                                                 <div className="flex items-center justify-center">
                                                     {visibleColumns.aksi && <span>Aksi</span>}
                                                 </div>
 
                                                 {/* Toggle Button —” absolute kanan, seperti checkbox di kiri */}
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2" ref={colMenuRef}>
+                                                <div className="absolute right-6 top-1/2 -translate-y-1/2" ref={colMenuRef}>
                                                     <button
                                                         onClick={(e) => {
                                                             const rect = e.currentTarget.getBoundingClientRect()
@@ -1564,7 +1565,7 @@ export default function StudentsPage() {
                                             ))
                                         ) : students.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} className="px-6 py-20">
+                                                <td colSpan={9} className="px-6 py-20">
                                                     <EmptyState
                                                         variant="plain"
                                                         icon={activeFilterCount > 0 || searchQuery ? faSearch : faUsers}
@@ -2605,82 +2606,13 @@ export default function StudentsPage() {
                 />
 
                 {/* Modal Riwayat Kelas */}
-                {
-                    activeModal === 'classHistory' && (
-                        <Modal
-                            isOpen={activeModal === 'classHistory'}
-                            onClose={() => closeModal()}
-                            title={`Riwayat Kelas — ${selectedStudent?.name || ''}`}
-                            description="Lacak setiap perubahan dan perpindahan kelas siswa."
-                            icon={faClockRotateLeft}
-                            iconBg="bg-violet-500/10"
-                            iconColor="text-violet-600"
-                            size="md"
-                            mobileVariant="bottom-sheet"
-                            footer={
-                                <button 
-                                    onClick={() => closeModal()} 
-                                    className="w-full h-11 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-bold uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all shadow-xl shadow-[var(--color-primary)]/25 border border-white/10"
-                                >
-                                    Selesai & Tutup
-                                </button>
-                            }
-                        >
-                            <div className="space-y-6">
-                                <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10 flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
-                                        <FontAwesomeIcon icon={faClockRotateLeft} className="text-violet-500 text-sm" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] font-black text-violet-600 uppercase tracking-wider">Tracking perpindahan kelas</p>
-                                        <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 font-medium">Tercatat setiap kali siswa berpindah kelas di sistem.</p>
-                                    </div>
-                                </div>
-
-                                {loadingClassHistory ? (
-                                    <div className="text-center py-10 text-[var(--color-text-muted)]">
-                                        <FontAwesomeIcon icon={faSpinner} className="fa-spin text-xl opacity-20 mb-3 block mx-auto" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Memuat Data...</span>
-                                    </div>
-                                ) : classHistory.length === 0 ? (
-                                    <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
-                                            <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-2xl text-slate-300" />
-                                        </div>
-                                        <p className="text-sm font-black text-slate-800">Belum ada riwayat</p>
-                                        <p className="text-[10px] mt-1.5 text-slate-400 font-medium px-8 leading-relaxed">Siswa ini belum pernah berpindah kelas sejak pertama kali terdaftar di sistem.</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2.5 max-h-80 overflow-auto pr-1 custom-scrollbar">
-                                        {classHistory.map((h, idx) => (
-                                            <div key={h.id || idx} className="group flex items-center gap-4 p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-violet-200 hover:shadow-md hover:shadow-violet-500/5 transition-all">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-violet-50 group-hover:text-violet-500 flex items-center justify-center shrink-0 transition-colors border border-slate-100 group-hover:border-violet-100">
-                                                    <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-xs" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2.5">
-                                                        <span className="text-[11px] font-black text-slate-400">{h.from_class?.name || '???'}</span>
-                                                        <FontAwesomeIcon icon={faArrowRight} className="text-[8px] text-slate-300" />
-                                                        <span className="text-[11px] font-black text-slate-800">{h.to_class?.name || '???'}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-[9px] font-bold text-slate-400">{formatRelativeDate(h.changed_at)}</span>
-                                                        <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                        <span className="text-[9px] font-medium text-slate-400">{h.note || 'Tanpa catatan'}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right shrink-0">
-                                                    <div className="text-[9px] font-black text-slate-800">{new Date(h.changed_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</div>
-                                                    <div className="text-[8px] font-bold text-slate-400 mt-0.5">{new Date(h.changed_at).getFullYear()}</div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </Modal>
-                    )
-                }
+                <StudentClassHistoryModal
+                    isOpen={activeModal === 'classHistory'}
+                    onClose={() => closeModal()}
+                    selectedStudent={selectedStudent}
+                    loading={loadingClassHistory}
+                    history={classHistory}
+                />
 
                 {/* Fitur 1 - Class Breakdown Modal */}
                 {

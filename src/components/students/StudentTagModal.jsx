@@ -82,8 +82,8 @@ const StudentTagModal = ({
                             <FontAwesomeIcon icon={faCheckCircle} className="opacity-70" />
                             Selesai & Simpan
                         </button>
-                        <button 
-                            onClick={onClose} 
+                        <button
+                            onClick={onClose}
                             className="w-24 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
                         >
                             Tutup
@@ -96,15 +96,13 @@ const StudentTagModal = ({
                         <div className="space-y-6">
                             {/* Section: Quick Add */}
                             <div className="relative">
-                                <div className="flex items-center justify-between mb-3 px-1">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-violet-500" />
-                                        <label className="text-[11px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Cari atau Buat Baru</label>
-                                    </div>
-                                    <div className="h-px flex-1 ml-4 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-30" />
+                                <div className="flex items-center justify-center mb-4">
+                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
+                                    <span className="px-4 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-60">Cari atau Buat Baru</span>
+                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
                                 </div>
                                 <div className="relative group">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-40 group-focus-within:text-violet-500 group-focus-within:opacity-100 transition-all">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-40 group-focus-within:text-[var(--color-primary)] group-focus-within:opacity-100 transition-all">
                                         <FontAwesomeIcon icon={faTags} className="text-xs" />
                                     </div>
                                     <input
@@ -117,30 +115,41 @@ const StudentTagModal = ({
                                             }
                                         }}
                                         placeholder="Ketik nama label lalu tekan Enter..."
-                                        className="w-full h-12 bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl pl-11 pr-14 text-sm font-bold focus:bg-white focus:border-violet-500 focus:ring-4 focus:ring-violet-500/5 transition-all outline-none placeholder:font-medium placeholder:opacity-30"
+                                        className="w-full h-12 bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl pl-11 pr-14 text-sm font-bold focus:bg-white focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/5 transition-all outline-none placeholder:font-medium placeholder:opacity-30"
                                     />
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                        <div className="px-2 py-1 rounded-lg bg-white border border-[var(--color-border)] shadow-sm text-[8px] font-black text-violet-500">
-                                            ENTER
-                                        </div>
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                                        <button
+                                            onClick={() => {
+                                                if (tagInputRef.current?.value.trim()) {
+                                                    handleToggleTag(student, tagInputRef.current.value.trim());
+                                                    tagInputRef.current.value = '';
+                                                }
+                                            }}
+                                            className="h-8 px-3 rounded-xl bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-md shadow-[var(--color-primary)]/20"
+                                        >
+                                            Tambah
+                                        </button>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Section: Active Tags */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 px-1">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                                    <label className="text-[11px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Label Tersemat</label>
-                                    <span className="ml-auto text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full ring-1 ring-emerald-500/20 uppercase tracking-tighter">
-                                        {studentTags.length} Aktif
-                                    </span>
+                                <div className="flex items-center justify-center mb-1">
+                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
+                                    <span className="px-4 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-60">Label Tersemat</span>
+                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
                                 </div>
 
-                                <div className="flex flex-wrap gap-2 p-3.5 rounded-2xl bg-emerald-500/[0.02] border border-emerald-500/10 min-h-[60px] content-start transition-all">
+                                <div className="flex flex-wrap gap-2 p-3.5 rounded-2xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] min-h-[60px] content-start transition-all relative">
+                                    <div className="absolute -top-3 right-4">
+                                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full ring-1 ring-emerald-500/20 uppercase tracking-tighter shadow-sm">
+                                            {studentTags.length} - Aktif
+                                        </span>
+                                    </div>
                                     {studentTags.length === 0 ? (
                                         <div className="w-full py-2 flex flex-col items-center justify-center opacity-30">
-                                            <FontAwesomeIcon icon={faTags} className="mb-1 text-sm text-emerald-500" />
+                                            <FontAwesomeIcon icon={faTags} className="mb-1 text-sm text-[var(--color-text-muted)]" />
                                             <span className="text-[8px] font-bold uppercase tracking-widest">Belum ada label</span>
                                         </div>
                                     ) : (
@@ -148,11 +157,11 @@ const StudentTagModal = ({
                                             <button
                                                 key={tag}
                                                 onClick={() => handleToggleTag(student, tag)}
-                                                className="group flex items-center gap-2 pl-3 pr-2 py-1.5 bg-white border border-emerald-500/20 rounded-full text-[11px] font-black text-emerald-700 shadow-sm hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all active:scale-95"
+                                                className="group flex items-center gap-2 pl-3 pr-2 py-1.5 bg-white border border-[var(--color-border)] rounded-full text-[11px] font-black text-[var(--color-text)] shadow-sm hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all active:scale-95"
                                             >
-                                                <span className="opacity-70 group-hover:hidden">#</span>
+                                                <span className="opacity-70 group-hover:hidden text-emerald-500">#</span>
                                                 {tag}
-                                                <div className="w-4 h-4 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:bg-red-500/10 transition-colors">
+                                                <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-red-500/10 transition-colors">
                                                     <FontAwesomeIcon icon={faXmark} className="text-[8px]" />
                                                 </div>
                                             </button>
@@ -163,9 +172,10 @@ const StudentTagModal = ({
 
                             {/* Section: Global Library */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 px-1">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
-                                    <label className="text-[11px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Katalog Label Global</label>
+                                <div className="flex items-center justify-center mb-1">
+                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
+                                    <span className="px-4 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-60">Katalog Label Global</span>
+                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
                                 </div>
 
                                 <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar content-start p-1">
@@ -210,20 +220,20 @@ const StudentTagModal = ({
                                         return (
                                             <div key={tag} className="group relative">
                                                 <div className={`flex items-center gap-0 rounded-full border transition-all duration-300 shadow-sm overflow-hidden ${isActive
-                                                    ? 'bg-violet-600 border-violet-600 shadow-lg shadow-violet-600/20'
-                                                    : 'bg-white border-[var(--color-border)] hover:border-violet-500/50'
+                                                    ? 'bg-[var(--color-primary)] border-[var(--color-primary)] shadow-lg shadow-[var(--color-primary)]/20'
+                                                    : 'bg-white border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
                                                     }`}>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleToggleTag(student, tag)}
-                                                        className={`flex-1 flex items-center gap-2 pl-4 pr-3 py-2 text-[11px] font-black transition-all ${isActive ? 'text-white' : 'text-[var(--color-text-muted)] hover:text-violet-600'
+                                                        className={`flex-1 flex items-center gap-2 pl-4 pr-3 py-2 text-[11px] font-black transition-all ${isActive ? 'text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'
                                                             }`}
                                                     >
                                                         <div className="shrink-0 flex items-center justify-center">
                                                             {isActive ? (
                                                                 <FontAwesomeIcon icon={faCheck} className="text-[8px]" />
                                                             ) : (
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-violet-400 transition-colors" />
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-[var(--color-primary)]/40 transition-colors" />
                                                             )}
                                                         </div>
                                                         <span className="truncate">{tag}</span>
