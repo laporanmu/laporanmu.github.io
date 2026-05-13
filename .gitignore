@@ -28,3 +28,10 @@ dist-ssr
 .env.*
 !.env.example
 
+# Dev notes
+tasks.md
+
+# Generated output files in assets
+src/assets/*.pdf
+src/assets/*.xlsx
+
