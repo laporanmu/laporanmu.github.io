@@ -8,7 +8,15 @@ export const SYSTEM_COLS = [
     { key: 'class_name', label: 'Kelas', synonyms: ['kelas', 'class', 'class_name', 'rombel', 'rombongan belajar'] },
     { key: 'gender', label: 'Gender', synonyms: ['gender', 'jk', 'jenis kelamin', 'kelamin', 'sex', 'l/p'] },
     { key: 'nisn', label: 'NISN', synonyms: ['nisn', 'nomor induk siswa nasional', 'nisn siswa'] },
+    { key: 'nis', label: 'NIS', synonyms: ['nis', 'nomor induk siswa', 'no induk'] },
+    { key: 'nik', label: 'NIK', synonyms: ['nik', 'nomor induk kependudukan', 'no ktp'] },
     { key: 'phone', label: 'No. HP / WA', synonyms: ['phone', 'no_hp', 'hp', 'whatsapp', 'wa', 'telp', 'telepon', 'phone number', 'wali_phone', 'no. whatsapp', 'no whatsapp', 'no. hp / wa', 'no. hp', 'whatsapp number'] },
+    { key: 'birth_place', label: 'Tempat Lahir', synonyms: ['tempat lahir', 'birth_place', 'birthplace', 'tmp_lahir'] },
+    { key: 'birth_date', label: 'Tanggal Lahir', synonyms: ['tanggal lahir', 'birth_date', 'tgl_lahir', 'tgl lahir'] },
+    { key: 'religion', label: 'Agama', synonyms: ['agama', 'religion'] },
+    { key: 'address', label: 'Alamat', synonyms: ['alamat', 'address', 'alamat lengkap'] },
+    { key: 'father_name', label: 'Nama Ayah', synonyms: ['nama ayah', 'father_name', 'father name', 'nama bapak'] },
+    { key: 'mother_name', label: 'Nama Ibu', synonyms: ['nama ibu', 'mother_name', 'mother name', 'nama mama'] },
     { key: 'guardian_name', label: 'Nama Wali', synonyms: ['guardian_name', 'nama_wali', 'wali', 'parent name', 'nama orang tua', 'nama wali', 'wali murid', 'nama ayah/ibu'] },
 ]
 
@@ -156,9 +164,18 @@ export function useStudentsImportExport({
         { key: 'id', label: 'ID', fn: s => s.id },
         { key: 'kode', label: 'Kode Registrasi', fn: s => s.registration_code || '' },
         { key: 'nisn', label: 'NISN', fn: s => s.nisn || '' },
+        { key: 'nis', label: 'NIS', fn: s => s.nis || '' },
+        { key: 'nik', label: 'NIK', fn: s => s.nik || '' },
         { key: 'nama', label: 'Nama', fn: s => s.name || '' },
         { key: 'gender', label: 'Gender', fn: s => s.gender === 'L' ? 'Putra' : 'Putri' },
         { key: 'kelas', label: 'Kelas', fn: s => s.classes?.name || '' },
+        { key: 'birth_place', label: 'Tempat Lahir', fn: s => s.birth_place || '' },
+        { key: 'birth_date', label: 'Tanggal Lahir', fn: s => s.birth_date || '' },
+        { key: 'religion', label: 'Agama', fn: s => s.religion || '' },
+        { key: 'address', label: 'Alamat', fn: s => s.address || '' },
+        { key: 'father_name', label: 'Nama Ayah', fn: s => s.metadata?.father?.name || s.father_name || '' },
+        { key: 'mother_name', label: 'Nama Ibu', fn: s => s.metadata?.mother?.name || s.mother_name || '' },
+        { key: 'guardian_name', label: 'Nama Wali', fn: s => s.guardian_name || '' },
         { key: 'poin', label: 'Poin', fn: s => s.total_points ?? 0 },
         { key: 'phone', label: 'Phone/WA', fn: s => s.phone || '' },
         { key: 'status', label: 'Status', fn: s => s.status || 'aktif' },
@@ -346,7 +363,15 @@ export function useStudentsImportExport({
             const className = getVal(r, 'class_name')
             const genderRaw = getVal(r, 'gender')
             const nisn = getVal(r, 'nisn')
+            const nis = getVal(r, 'nis')
+            const nik = getVal(r, 'nik')
             const phone = normalizePhone(getVal(r, 'phone'))
+            const birthPlace = getVal(r, 'birth_place')
+            const birthDate = getVal(r, 'birth_date')
+            const religion = getVal(r, 'religion')
+            const address = getVal(r, 'address')
+            const fatherName = getVal(r, 'father_name')
+            const motherName = getVal(r, 'mother_name')
             const guardianName = getVal(r, 'guardian_name')
 
             let gender = genderRaw
@@ -366,9 +391,22 @@ export function useStudentsImportExport({
                 gender,
                 phone,
                 nisn,
+                nis: nis || null,
+                nik: nik || null,
+                birth_place: birthPlace || null,
+                birth_date: birthDate || null,
+                religion: religion || null,
+                address: address || null,
                 class_id: classObj?.id || '',
                 guardian_name: guardianName || null,
                 photo_url: null,
+                metadata: {
+                    father: { name: fatherName || '' },
+                    mother: { name: motherName || '' },
+                    address_detail: {
+                        street: address || ''
+                    }
+                },
                 _className: className || '',
                 _isDupe: false,
                 _hasError: false,

@@ -57,3 +57,36 @@ export const formatRelativeDate = (isoString) => {
     if (diffDays < 365) return `${Math.floor(diffDays / 30)} bln lalu`
     return `${Math.floor(diffDays / 365)} thn lalu`
 };
+export const EDUCATION_LEVELS = [
+    'Tidak Sekolah', 'SD/MI', 'SMP/MTs', 'SMA/MA/SMK',
+    'D1', 'D2', 'D3', 'D4/S1', 'S2', 'S3'
+]
+
+export const OCCUPATION_LIST = [
+    'Tidak Bekerja', 'PNS', 'TNI/Polri', 'Guru/Dosen',
+    'Wiraswasta', 'Karyawan Swasta', 'Pedagang', 'Petani',
+    'Nelayan', 'Buruh', 'Ibu Rumah Tangga', 'Pensiunan',
+    'Lainnya'
+]
+
+export const INCOME_RANGES = [
+    'Kurang dari Rp 1.000.000',
+    'Rp 1.000.000 - Rp 3.000.000',
+    'Rp 3.000.000 - Rp 5.000.000',
+    'Rp 5.000.000 - Rp 10.000.000',
+    'Lebih dari Rp 10.000.000'
+]
+
+export const SPECIAL_NEEDS = [
+    'Tidak Ada', 'Tunanetra', 'Tunarungu', 'Tunagrahita',
+    'Tunadaksa', 'Tunalaras', 'Autis', 'ADHD', 'Lainnya'
+]
+
+export const LIVING_WITH = [
+    'Orang Tua', 'Wali', 'Kos', 'Asrama', 'Panti Asuhan', 'Lainnya'
+]
+
+export const TRANSPORT_MODES = [
+    'Jalan Kaki', 'Sepeda', 'Motor', 'Mobil', 'Angkutan Umum',
+    'Ojek Online', 'Antar Jemput Sekolah', 'Lainnya'
+]

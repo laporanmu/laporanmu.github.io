@@ -18,4 +18,11 @@
 - [ ] **Skeleton States**: Refine list loading state to match the high-fidelity design of the main dashboard.
 
 ---
-*Last updated: 21 April 2026*
+---
+*Last updated: 12 Mei 2026*
+
+## 5. Student Registration Form (Enterprise Polish)
+- [ ] **Step 3 Structural Fix**: Separate "Dokumen & EMIS" card from "Alamat & Domisili" card. They are currently nested improperly (Dokumen nested inside Alamat).
+- [ ] **Standardize Headers**: Apply 'Modern Iconic Accent' style to "Dokumen & EMIS" header (use `faFileAlt` and Amber accent) to match other sections.
+- [ ] **Review Card Verification**: Final check on the glassmorphism summary card to ensure all fields are displaying correctly and responsive.
+- [ ] **Tag Balance Audit**: Final run of `check_balance.py` diagnostic script to ensure no stray tags exist after structural changes.

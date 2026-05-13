@@ -911,8 +911,10 @@ Laporanmu System`
 
     const buildWAMessage = (student, templateId) => {
         let template = waTemplate
-        if (templateId === 'points') template = `*Laporan Poin Perilaku Ananda {nama}*\n\nSaat ini Ananda memiliki total *{poin} poin* di sistem Laporanmu.\n\n_Terus semangatkan kedisiplinan dan prestasi ananda._\n\nWassalam.`
-        else if (templateId === 'security') template = `*PEMInformasiHUAN KEAMANAN*\n\nInformasi akses Portal Orang Tua untuk ananda {nama}:\nID Reg : {kode}\nPIN    : {pin}\nPortal : [URL]\n\n_Mohon jaga kerahasiaan PIN anda._`
+        if (templateId === 'general') template = `Assalamualaikum Wr. Wb.\n\nBapak/Ibu Wali dari Ananda *{nama}* ({kelas}).\n\n`
+        else if (templateId === 'intro') template = `Assalamualaikum Wr. Wb.\n\nPerkenalkan, saya dari *Laporanmu*. Ini terkait Ananda *{nama}* ({kelas}).\n\n`
+        else if (templateId === 'points') template = `*Laporan Poin Perilaku Ananda {nama}*\n\nSaat ini Ananda memiliki total *{poin} poin* di sistem Laporanmu.\n\n_Terus semangatkan kedisiplinan dan prestasi ananda._\n\nWassalam.`
+        else if (templateId === 'security') template = `*PEMBERITAHUAN KEAMANAN*\n\nInformasi akses Portal Orang Tua untuk ananda {nama}:\nID Reg : {kode}\nPIN    : {pin}\nPortal : [URL]\n\n_Mohon jaga kerahasiaan PIN anda._`
         else if (templateId === 'custom') template = customWaMsg || 'Halo Bapak/Ibu wali dari {nama}.'
 
         return template

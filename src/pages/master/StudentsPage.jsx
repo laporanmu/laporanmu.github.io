@@ -483,15 +483,26 @@ export default function StudentsPage() {
         , [behaviorHistory, timelineFilter])
 
     // UI States for Column Visibility
-    const [visibleColumns, setVisibleColumns] = useState({
-        gender: true,
-        kelas: true,
-        poin: true,
-        last_report: true,
-        profil: true,
-        tags: true,
-        aksi: true
+    const [visibleColumns, setVisibleColumns] = useState(() => {
+        try {
+            const saved = localStorage.getItem('students_visible_columns')
+            if (saved) return JSON.parse(saved)
+        } catch (err) { console.error('Error loading visible columns:', err) }
+        return {
+            gender: true,
+            kelas: true,
+            status: true,
+            poin: true,
+            last_report: false,
+            profil: true,
+            tags: true,
+            aksi: true
+        }
     })
+
+    useEffect(() => {
+        localStorage.setItem('students_visible_columns', JSON.stringify(visibleColumns))
+    }, [visibleColumns])
     const [mobileView, setMobileView] = useState(() => {
         try { return localStorage.getItem('students_mobile_view') || 'card' } catch { return 'card' }
     }) // 'card' | 'list'
@@ -1471,6 +1482,9 @@ export default function StudentsPage() {
                                             {visibleColumns.kelas && (
                                                 <th className="px-6 py-4 text-left">Kelas</th>
                                             )}
+                                            {visibleColumns.status && (
+                                                <th className="px-6 py-4 text-left">Status</th>
+                                            )}
                                             {visibleColumns.poin && (
                                                 <th className="px-6 py-4 text-left">Poin</th>
                                             )}
@@ -1534,6 +1548,7 @@ export default function StudentsPage() {
                                                             {[
                                                                 { key: 'gender', label: 'Gender' },
                                                                 { key: 'kelas', label: 'Kelas' },
+                                                                { key: 'status', label: 'Status' },
                                                                 { key: 'poin', label: 'Poin' },
                                                                 { key: 'last_report', label: 'Lap. Terakhir' },
                                                                 { key: 'profil', label: 'Profil' },
@@ -2242,9 +2257,12 @@ export default function StudentsPage() {
                                 timelineVisible={timelineVisible}
                                 setTimelineVisible={setTimelineVisible}
                                 timelineFiltered={timelineFiltered}
+                                raportHistory={raportHistory}
                                 loadingRaport={loadingRaport}
                                 addToast={addToast}
                                 onOpenTagModal={() => { setStudentForTags(selectedStudent); setActiveModal('tag') }}
+                                buildWAMessage={buildWAMessage}
+                                openWAForStudent={openWAForStudent}
                             />
                         </React.Suspense>
                     )

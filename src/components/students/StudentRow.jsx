@@ -605,6 +605,18 @@ export const StudentRow = memo(({
                 </td>
             )}
 
+            {/* ── Status ────────────────────────────────────────────────── */}
+            {vc.status && (
+                <td className="px-6 py-4 text-left">
+                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider
+                        ${student.status === 'aktif' ? 'bg-emerald-500/10 text-emerald-600' :
+                            student.status === 'lulus' ? 'bg-blue-500/10 text-blue-600' :
+                                'bg-slate-500/10 text-slate-500'}`}>
+                        {student.status || 'aktif'}
+                    </span>
+                </td>
+            )}
+
             {vc.poin && (
                 <td className="px-6 py-4 text-left">
                     {editingField === 'poin' ? (
@@ -991,8 +1003,13 @@ export const StudentMobileCard = memo(({
                             onClick={(e) => {
                                 e.stopPropagation()
                                 if (!student.phone) return
-                                const phone = student.phone.replace(/[^0-9]/g, '').replace(/^0/, '62')
-                                window.open(`https://wa.me/${phone}`, '_blank')
+                                if (openWAForStudent && buildWAMessage) {
+                                    openWAForStudent(student, buildWAMessage(student, 'general'))
+                                } else {
+                                    const phone = student.phone.replace(/[^0-9]/g, '').replace(/^0/, '62')
+                                    const text = encodeURIComponent(`Assalamualaikum Wr. Wb.\n\nBapak/Ibu Wali dari Ananda *${student.name}*.\n\n`)
+                                    window.open(`https://wa.me/${phone}?text=${text}`, '_blank')
+                                }
                             }}
                             onMouseDown={stopTouch}
                             onMouseUp={stopTouch}
