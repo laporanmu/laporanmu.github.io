@@ -1237,9 +1237,9 @@ export default function StudentsPage() {
 
                     {/* Row 2: Expandable filter panel */}
                     {showAdvancedFilter && (
-                        <div className="border-t border-[var(--color-border)] p-4 bg-[var(--color-surface-alt)]/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+                        <div className="border-t border-[var(--color-border)] p-3.5 bg-[var(--color-surface-alt)]/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
                             {/* Header Panel with Standardized "Vertical Bar" Pattern */}
-                            <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2.5">
                                     <div className="w-1 h-3.5 bg-indigo-500 rounded-full" />
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 flex items-center gap-2">
@@ -1249,7 +1249,7 @@ export default function StudentsPage() {
                                 </div>
                                 <button
                                     onClick={resetAllFilters}
-                                    className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-100"
+                                    className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-100"
                                 >
                                     <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
                                     Reset Semua Filter
