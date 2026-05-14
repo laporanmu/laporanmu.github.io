@@ -603,9 +603,6 @@ export default function TeachersPage() {
                         <Breadcrumb badge="Master Data" items={['Faculty Members']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Data Guru</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} data {filterType === 'karyawan' ? 'karyawan' : filterType === 'guru' ? 'guru' : 'guru dan karyawan'} dalam sistem.</p>
-                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
-                            Atur filter status dan jenis di atas tabel sebelum export supaya file lebih terarah.
-                        </p>
                     </div>
                     <div className="flex gap-2 items-center">
                         {/* Sliders dropdown */}
@@ -705,7 +702,7 @@ export default function TeachersPage() {
                         { icon: faChalkboardTeacher, label: 'Guru', value: stats.guru, borderColor: 'border-t-indigo-500', iconBg: 'bg-indigo-500/10 text-indigo-500', onClick: () => { setFilterType('guru'); setPage(1) } },
                         { icon: faBriefcase, label: 'Karyawan', value: stats.karyawan, borderColor: 'border-t-blue-500', iconBg: 'bg-blue-500/10 text-blue-500', onClick: () => { setFilterType('karyawan'); setPage(1) } },
                     ].map((s, i) => (
-                        <StatCard 
+                        <StatCard
                             key={i}
                             icon={s.icon}
                             label={s.label}
