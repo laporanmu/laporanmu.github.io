@@ -86,6 +86,7 @@ import { LIST_KAMAR } from '../reports/utils/raportConstants'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
 import Modal from '../../components/ui/Modal'
+import RichSelect from '../../components/ui/RichSelect'
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
@@ -119,8 +120,8 @@ const LazyQRCodeCanvas = React.lazy(() =>
     import('qrcode.react').then((m) => ({ default: m.QRCodeCanvas }))
 )
 
-const LazyStudentPrintModal = React.lazy(() =>
-    import('../../components/students/StudentPrintModal')
+const LazyStudentAccessCardModal = React.lazy(() =>
+    import('../../components/students/StudentAccessCardModal')
 )
 const LazyStudentProfileModal = React.lazy(() =>
     import('../../components/students/StudentProfileModal')
@@ -1236,13 +1237,19 @@ export default function StudentsPage() {
 
                     {/* Row 2: Expandable filter panel */}
                     {showAdvancedFilter && (
-                        <div className="border-t border-[var(--color-border)] p-3 bg-[var(--color-surface-alt)]/40 animate-in fade-in slide-in-from-top-2">
-                            {/* Header Panel with Reset button */}
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">Filter Lanjutan</h3>
+                        <div className="border-t border-[var(--color-border)] p-4 bg-[var(--color-surface-alt)]/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+                            {/* Header Panel with Standardized "Vertical Bar" Pattern */}
+                            <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-1 h-3.5 bg-indigo-500 rounded-full" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 flex items-center gap-2">
+                                        <FontAwesomeIcon icon={faSliders} className="text-[9px] opacity-60" />
+                                        Filter Lanjutan
+                                    </span>
+                                </div>
                                 <button
                                     onClick={resetAllFilters}
-                                    className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 transition-colors flex items-center gap-1.5"
+                                    className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-100"
                                 >
                                     <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
                                     Reset Semua Filter
@@ -1253,71 +1260,72 @@ export default function StudentsPage() {
                                 {/* Kelas */}
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Kelas</label>
-                                    <select
+                                    <RichSelect
                                         value={filterClass}
-                                        onChange={(e) => { setFilterClass(e.target.value); setFilterClasses([]); setPage(1) }}
-                                        className="select-field h-8 sm:h-9 text-[11px] sm:text-xs w-full rounded-lg sm:rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_0.6rem_center] px-2.5 pr-7"
-                                    >
-                                        <option value="">Semua Kelas</option>
-                                        {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
+                                        onChange={(val) => { setFilterClass(val); setFilterClasses([]); setPage(1) }}
+                                        options={classesList.map(c => ({ id: c.id, name: c.name }))}
+                                        placeholder="Semua Kelas"
+                                        small
+                                        searchable
+                                    />
                                 </div>
 
                                 {/* Gender */}
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Gender</label>
-                                    <select
+                                    <RichSelect
                                         value={filterGender}
-                                        onChange={(e) => { setFilterGender(e.target.value); setPage(1) }}
-                                        className="select-field h-8 sm:h-9 text-[11px] sm:text-xs w-full rounded-lg sm:rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_0.6rem_center] px-2.5 pr-7"
-                                    >
-                                        <option value="">Semua</option>
-                                        <option value="L">Putra</option>
-                                        <option value="P">Putri</option>
-                                    </select>
+                                        onChange={(val) => { setFilterGender(val); setPage(1) }}
+                                        options={[
+                                            { id: '', name: 'Semua' },
+                                            { id: 'L', name: 'Putra' },
+                                            { id: 'P', name: 'Putri' },
+                                        ]}
+                                        placeholder="Semua"
+                                        small
+                                    />
                                 </div>
 
                                 {/* Status */}
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Status</label>
-                                    <select
+                                    <RichSelect
                                         value={filterStatus}
-                                        onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
-                                        className="select-field h-8 sm:h-9 text-[11px] sm:text-xs w-full rounded-lg sm:rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_0.6rem_center] px-2.5 pr-7"
-                                    >
-                                        <option value="">Semua Status</option>
-                                        <option value="aktif">Aktif</option>
-                                        <option value="lulus">Lulus</option>
-                                        <option value="pindah">Pindah</option>
-                                        <option value="keluar">Keluar</option>
-                                    </select>
+                                        onChange={(val) => { setFilterStatus(val); setPage(1) }}
+                                        options={[
+                                            { id: '', name: 'Semua Status' },
+                                            { id: 'aktif', name: 'Aktif' },
+                                            { id: 'lulus', name: 'Lulus' },
+                                            { id: 'pindah', name: 'Pindah' },
+                                            { id: 'keluar', name: 'Keluar' },
+                                        ]}
+                                        placeholder="Semua Status"
+                                        small
+                                    />
                                 </div>
 
                                 {/* Label/Tag */}
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Label</label>
-                                    <select
+                                    <RichSelect
                                         value={filterTag}
-                                        onChange={(e) => { setFilterTag(e.target.value); setPage(1) }}
-                                        className="select-field h-8 sm:h-9 text-[11px] sm:text-xs w-full rounded-lg sm:rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_0.6rem_center] px-2.5 pr-7"
-                                    >
-                                        <option value="">Semua Label</option>
-                                        {Array.from(new Set([...AvailableTags, ...allUsedTags])).sort().map(t => (
-                                            <option key={t} value={t}>{t}</option>
-                                        ))}
-                                    </select>
+                                        onChange={(val) => { setFilterTag(val); setPage(1) }}
+                                        options={Array.from(new Set([...AvailableTags, ...allUsedTags])).sort().map(t => ({ id: t, name: t }))}
+                                        placeholder="Semua Label"
+                                        small
+                                        searchable
+                                    />
                                 </div>
 
                                 {/* Urutkan */}
                                 <div className="col-span-1">
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Urutkan</label>
-                                    <select
+                                    <RichSelect
                                         value={sortBy}
-                                        onChange={(e) => setSortBy(e.target.value)}
-                                        className="select-field h-8 sm:h-9 text-[11px] sm:text-xs w-full rounded-lg sm:rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] transition-all font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[position:right_0.6rem_center] px-2.5 pr-7"
-                                    >
-                                        {SortOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                    </select>
+                                        onChange={(val) => setSortBy(val)}
+                                        options={SortOptions.map(opt => ({ id: opt.value, name: opt.label }))}
+                                        small
+                                    />
                                 </div>
 
                                 {/* Custom Poin Range */}
@@ -1361,10 +1369,62 @@ export default function StudentsPage() {
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* Desktop Only: Quick Menu & Actions Relocation */}
+                                <div className="hidden lg:block lg:col-span-3 pl-4 ml-4 border-l border-[var(--color-border)]/30">
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Menu Cepat & Aksi</label>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            {[
+                                                { label: 'Semua', icon: faUsers, active: !filterMissing && sortBy !== 'created_at' && sortBy !== 'total_points_desc', onClick: () => { setFilterMissing(''); setSortBy('name_asc'); } },
+                                                { label: 'Foto Kosong', icon: faImage, active: filterMissing === 'photo', onClick: () => { setFilterMissing('photo'); setPage(1); } },
+                                                { label: 'Tanpa WA', icon: faWhatsapp, active: filterMissing === 'wa', onClick: () => { setFilterMissing('wa'); setPage(1); } },
+                                                { label: 'Top Performer', icon: faTrophy, active: sortBy === 'total_points_desc', onClick: () => { setSortBy('total_points_desc'); setPage(1); } },
+                                                { label: 'Siswa Baru', icon: faPlus, active: sortBy === 'created_at', onClick: () => { setSortBy('created_at'); setPage(1); } },
+                                            ].map((s, i) => (
+                                                <button key={i} onClick={s.onClick}
+                                                    className={`h-8 px-2.5 rounded-lg border flex items-center gap-2 transition-all ${s.active ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                                    <FontAwesomeIcon icon={s.icon} className="text-[9px]" />
+                                                    <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">{s.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            {activeFilterCount > 0 && (
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            const XLSX = await import('xlsx')
+                                                            const rows = await fetchFilteredForExport()
+                                                            const ws = XLSX.utils.json_to_sheet(rows)
+                                                            const wb = XLSX.utils.book_new()
+                                                            XLSX.utils.book_append_sheet(wb, ws, 'Filter')
+                                                            const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+                                                            const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+                                                            downloadBlob(blob, `export_filter_${new Date().toISOString().slice(0, 10)}.xlsx`)
+                                                            addToast(`${rows.length} baris berhasil diekspor sebagai Excel`, 'success')
+                                                        } catch { addToast('Gagal export', 'error') }
+                                                    }}
+                                                    className="h-8 px-3 rounded-lg bg-teal-500/10 text-teal-600 hover:bg-teal-500 hover:text-white transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-teal-500/20"
+                                                >
+                                                    <FontAwesomeIcon icon={faDownload} className="text-[8px]" />
+                                                    Export
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => setShowAdvancedFilter(false)}
+                                                className="h-8 px-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all"
+                                            >
+                                                Tutup Panel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Full Width Section: Data Needs Presets - Compact */}
-                            <div className="pt-3 border-t border-[var(--color-border)]/30 mt-1">
+                            {/* Mobile/Tablet Only: Data Needs Presets - Separate row */}
+                            <div className="lg:hidden pt-3 border-t border-[var(--color-border)]/30 mt-1">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                                     <div className="flex flex-wrap items-center gap-1.5">
                                         <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mr-2">Cepat:</span>
@@ -1894,14 +1954,14 @@ export default function StudentsPage() {
                                                         />
 
                                                         <div className="grid grid-cols-[1fr_112px] gap-2">
-                                                            <select
+                                                            <RichSelect
                                                                 value={inlineForm.class_id}
-                                                                onChange={e => setInlineForm(p => ({ ...p, class_id: e.target.value }))}
-                                                                className="select-field text-[11px] h-11 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] font-black outline-none focus:border-[var(--color-primary)]"
-                                                            >
-                                                                <option value="">Pilih kelas</option>
-                                                                {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                                            </select>
+                                                                onChange={val => setInlineForm(p => ({ ...p, class_id: val }))}
+                                                                options={classesList.map(c => ({ id: c.id, name: c.name }))}
+                                                                placeholder="Pilih kelas"
+                                                                small
+                                                                searchable
+                                                            />
                                                             <div className="flex items-center justify-end gap-1">
                                                                 {['L', 'P'].map(g => (
                                                                     <button
@@ -2207,7 +2267,7 @@ export default function StudentsPage() {
                 {/* Modal Cetak Kartu & Akses Siswa (lazy-loaded) */}
                 <React.Suspense fallback={null}>
                     {isPrintModalOpen && (
-                        <LazyStudentPrintModal
+                        <LazyStudentAccessCardModal
                             isOpen={isPrintModalOpen}
                             onClose={() => {
                                 setIsPrintModalOpen(false);

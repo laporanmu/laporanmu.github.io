@@ -30,32 +30,32 @@ export default function StudentGSheetsModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Import dari Google Sheets"
-            description="Sinkronisasi data siswa secara otomatis melalui tautan publik Google Sheets Anda."
+            description={<span className="block truncate">Sinkronisasi secara otomatis melalui tautan publik Google Sheets.</span>}
             icon={faLink}
             iconBg="bg-emerald-500/10"
             iconColor="text-emerald-600"
             size="md"
             mobileVariant="bottom-sheet"
             footer={
-                <div className="flex items-center justify-between w-full">
+                <div className="flex items-center justify-between w-full gap-4">
                     <button
                         onClick={onDownloadTemplate}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:bg-emerald-500/5 transition-all"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:bg-emerald-500/5 transition-all whitespace-nowrap shrink-0"
                     >
                         <FontAwesomeIcon icon={faDownload} />
                         Download Template
                     </button>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0">
                         <button
                             onClick={onClose}
-                            className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] font-black text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)] transition-colors border border-[var(--color-border)]"
+                            className="h-10 px-4 rounded-xl bg-[var(--color-surface-alt)] font-black text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)] transition-colors border border-[var(--color-border)] whitespace-nowrap"
                         >
                             Batal
                         </button>
                         <button
                             onClick={handleFetchGSheets}
                             disabled={fetchingGSheets || urlStatus !== 'valid'}
-                            className="h-10 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 hover:brightness-110 text-white text-[11px] uppercase tracking-widest font-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                            className="h-10 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 hover:brightness-110 text-white text-[11px] uppercase tracking-widest font-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20 active:scale-95 whitespace-nowrap"
                         >
                             {fetchingGSheets ? (
                                 <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Sinkronisasi...</>
@@ -130,7 +130,7 @@ export default function StudentGSheetsModal({
                         </p>
                     </div>
                 </div>
-                
+
                 {/* 3. Input URL with Smart Validation Feedback */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between px-1">
@@ -141,9 +141,9 @@ export default function StudentGSheetsModal({
                     </div>
                     <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <FontAwesomeIcon 
-                                icon={faLink} 
-                                className={`transition-colors duration-300 ${urlStatus === 'valid' ? 'text-emerald-500' : 'text-[var(--color-text-muted)] opacity-50'}`} 
+                            <FontAwesomeIcon
+                                icon={faLink}
+                                className={`transition-colors duration-300 ${urlStatus === 'valid' ? 'text-emerald-500' : 'text-[var(--color-text-muted)] opacity-50'}`}
                             />
                         </div>
                         <input

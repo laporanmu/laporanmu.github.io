@@ -4,12 +4,21 @@ import {
     faClockRotateLeft, 
     faSpinner, 
     faArrowRightArrowLeft, 
-    faArrowRight 
+    faArrowRight,
+    faCalendarDays,
+    faNoteSticky,
+    faCircle,
+    faCheckCircle,
+    faTimeline
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { EmptyState } from '../ui/DataDisplay'
 import { formatRelativeDate } from '../../utils/students/studentsConstants'
 
+/**
+ * StudentClassHistoryModal Component
+ * Displays a vertical timeline of a student's class movement history.
+ */
 export default function StudentClassHistoryModal({
     isOpen,
     onClose,
@@ -22,78 +31,107 @@ export default function StudentClassHistoryModal({
             isOpen={isOpen}
             onClose={onClose}
             title={`Riwayat Kelas — ${selectedStudent?.name || ''}`}
-            description="Lacak setiap perubahan dan perpindahan kelas siswa."
+            description="Lacak setiap perubahan dan perpindahan kelas siswa secara kronologis."
             icon={faClockRotateLeft}
             iconBg="bg-violet-500/10"
             iconColor="text-violet-600"
             size="md"
             mobileVariant="bottom-sheet"
             footer={
-                <button
-                    onClick={onClose}
-                    className="w-full h-11 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-bold uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all shadow-xl shadow-[var(--color-primary)]/25 border border-white/10"
-                >
-                    Selesai & Tutup
-                </button>
+                <div className="flex gap-3 w-full">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 border border-white/10"
+                    >
+                        <FontAwesomeIcon icon={faCheckCircle} className="text-sm opacity-70" />
+                        Selesai & Simpan
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="w-28 h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
+                    >
+                        Tutup
+                    </button>
+                </div>
             }
         >
-            <div className="space-y-6">
-                {/* Context Header */}
-                <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
-                        <FontAwesomeIcon icon={faClockRotateLeft} className="text-violet-500 text-sm" />
-                    </div>
-                    <div>
-                        <p className="text-[11px] font-black text-violet-600 uppercase tracking-wider leading-none">Tracking perpindahan kelas</p>
-                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5 font-medium leading-relaxed">Tercatat setiap kali siswa berpindah kelas di sistem.</p>
-                    </div>
-                </div>
-
+            <div className="space-y-4 py-1">
+                {/* Reduced spacing and paddings to eliminate excessive empty space */}
                 {loading ? (
                     <div className="text-center py-12 text-[var(--color-text-muted)]">
-                        <FontAwesomeIcon icon={faSpinner} className="fa-spin text-xl opacity-20 mb-3 block mx-auto" />
-                        <span className="text-[10px] font-black uppercase tracking-widest opacity-50">Memuat Data Riwayat...</span>
+                        <div className="relative w-12 h-12 mx-auto mb-4">
+                            <div className="absolute inset-0 rounded-full border-4 border-indigo-500/10" />
+                            <div className="absolute inset-0 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Sinkronisasi Data...</span>
                     </div>
                 ) : history.length === 0 ? (
-                    <EmptyState 
-                        variant="dashed"
-                        color="slate"
-                        icon={faArrowRightArrowLeft}
-                        title="Belum ada riwayat"
-                        description="Siswa ini belum pernah berpindah kelas sejak pertama kali terdaftar di sistem."
-                    />
+                    <div className="py-2">
+                        <EmptyState 
+                            variant="dashed"
+                            color="slate"
+                            icon={faArrowRightArrowLeft}
+                            title="Belum ada riwayat"
+                            description="Siswa ini belum pernah berpindah kelas sejak pertama kali terdaftar."
+                        />
+                    </div>
                 ) : (
-                    <div className="space-y-2.5 max-h-[400px] overflow-auto pr-1 custom-scrollbar">
-                        {history.map((h, idx) => (
-                            <div 
-                                key={h.id || idx} 
-                                className="group flex items-center gap-4 p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-violet-200 hover:shadow-md hover:shadow-violet-500/5 transition-all"
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-violet-50 group-hover:text-violet-500 flex items-center justify-center shrink-0 transition-colors border border-slate-100 group-hover:border-violet-100">
-                                    <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-xs" />
+                    <div className="space-y-4">
+                        {/* Section Header Consistent with Tag Modal */}
+                        <div className="flex items-center gap-2.5 px-1">
+                            <div className="w-1 h-3.5 bg-indigo-500 rounded-full" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)] flex items-center gap-2">
+                                <FontAwesomeIcon icon={faTimeline} className="text-[9px] opacity-40" />
+                                Riwayat Kronologis
+                            </span>
+                            <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
+                        </div>
+
+                        <div className="relative pl-8 space-y-5 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar pb-2">
+                            {/* Vertical Timeline Line */}
+                            <div className="absolute left-3.5 top-2 bottom-6 w-[2px] bg-gradient-to-b from-indigo-500 via-indigo-200 to-transparent opacity-30" />
+
+                            {history.map((h, idx) => (
+                                <div key={h.id || idx} className="relative animate-in slide-in-from-left-4 duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
+                                    {/* Timeline Dot */}
+                                    <div className="absolute -left-[32.5px] top-1.5 w-6 h-6 rounded-xl bg-white border-2 border-indigo-500 flex items-center justify-center z-10 shadow-sm group">
+                                        <FontAwesomeIcon icon={faCircle} className="text-[6px] text-indigo-500 group-hover:scale-150 transition-transform" />
+                                    </div>
+
+                                    <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/5 transition-all group">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/50 text-slate-400 font-black text-[10px] tracking-tight border border-slate-200/50">
+                                                    {h.from_class?.name || 'MABA'}
+                                                </div>
+                                                <FontAwesomeIcon icon={faArrowRight} className="text-[10px] text-indigo-500 opacity-40" />
+                                                <div className="px-4 py-1.5 rounded-lg bg-indigo-500 text-white font-black text-[11px] tracking-tight shadow-lg shadow-indigo-500/10">
+                                                    {h.to_class?.name || 'ERROR'}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-100 shrink-0 self-start sm:self-center">
+                                                <FontAwesomeIcon icon={faCalendarDays} className="text-[9px] text-slate-400" />
+                                                <span className="text-[10px] font-black text-slate-600">{new Date(h.changed_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Additional Info Footer */}
+                                        <div className="mt-4 pt-3 border-t border-dashed border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 opacity-80">
+                                            <div className="flex items-center gap-2">
+                                                <FontAwesomeIcon icon={faNoteSticky} className="text-[10px] text-indigo-400" />
+                                                <span className="text-[10px] font-bold text-[var(--color-text-muted)] italic line-clamp-1">
+                                                    {h.note || 'Pindah otomatis via kenaikan kelas'}
+                                                </span>
+                                            </div>
+                                            <div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter bg-indigo-50 px-2 py-0.5 rounded">
+                                                {formatRelativeDate(h.changed_at)}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2.5">
-                                        <span className="text-[11px] font-black text-slate-400">{h.from_class?.name || '???'}</span>
-                                        <FontAwesomeIcon icon={faArrowRight} className="text-[8px] text-slate-300" />
-                                        <span className="text-[11px] font-black text-slate-800">{h.to_class?.name || '???'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[9px] font-bold text-slate-400">{formatRelativeDate(h.changed_at)}</span>
-                                        <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                        <span className="text-[9px] font-medium text-slate-400 truncate">{h.note || 'Tanpa catatan'}</span>
-                                    </div>
-                                </div>
-                                <div className="text-right shrink-0">
-                                    <div className="text-[9px] font-black text-slate-800">
-                                        {new Date(h.changed_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
-                                    </div>
-                                    <div className="text-[8px] font-bold text-slate-400 mt-0.5">
-                                        {new Date(h.changed_at).getFullYear()}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

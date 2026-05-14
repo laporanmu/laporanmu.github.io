@@ -18,6 +18,8 @@ import {
     faIdCard,
     faDoorOpen,
     faVenusMars,
+    faMars,
+    faVenus,
     faGraduationCap,
     faPen,
     faCircleInfo,
@@ -800,6 +802,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                     icon={faDoorOpen}
                                     extraOption={{ id: '-', name: 'Lainnya / Kosong' }}
                                     status={getStatus('kamar')}
+                                    searchable
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -817,6 +820,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                     placeholder="Pilih Kelas"
                                     icon={faGraduationCap}
                                     status={getStatus('class_id', true)}
+                                    searchable
                                 />
                                 {/* Duplicate Warning */}
                                 {duplicateWarning && (
@@ -855,7 +859,7 @@ const StudentFormModal = memo(function StudentFormModal({
 
                         <div className="space-y-4">
                             {/* Parents Info Card */}
-                            <div className="p-4 border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] space-y-6">
+                            <div className="p-4 border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] space-y-4">
                                 {/* AYAH */}
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2.5 pt-2">
@@ -936,15 +940,9 @@ const StudentFormModal = memo(function StudentFormModal({
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3 pt-2">
-                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent opacity-30"></div>
-                                    <div className="w-1 h-1 rounded-full bg-[var(--color-border)] opacity-30"></div>
-                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent opacity-30"></div>
-                                </div>
-
                                 {/* IBU */}
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-2.5 pt-2">
+                                    <div className="flex items-center gap-2.5">
                                         <div className="w-1 h-4 bg-rose-500 rounded-full" />
                                         <FontAwesomeIcon icon={faUser} className="text-rose-500 text-[10px] opacity-70" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Data Ibu</span>
@@ -1025,7 +1023,7 @@ const StudentFormModal = memo(function StudentFormModal({
 
                             {/* Guardian Info Card */}
                             <div className="p-4 border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] space-y-4">
-                                <div className="flex items-center gap-2.5 pt-2 mb-1">
+                                <div className="flex items-center gap-2.5 pt-2">
                                     <div className="w-1 h-4 bg-[var(--color-primary)] rounded-full" />
                                     <FontAwesomeIcon icon={faPhone} className="text-[var(--color-primary)] text-[10px] opacity-70" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Info Wali & Kontak</span>
@@ -1101,7 +1099,7 @@ const StudentFormModal = memo(function StudentFormModal({
                         {/* Address & Docs content */}
                         <div className="space-y-4">
                             <div className="p-4 border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] space-y-4">
-                                <div className="flex items-center gap-2.5 pt-2 mb-1">
+                                <div className="flex items-center gap-2.5 pt-2">
                                     <div className="w-1 h-4 bg-emerald-500 rounded-full" />
                                     <FontAwesomeIcon icon={faMapMarkerAlt} className="text-emerald-500 text-[10px] opacity-70" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Alamat & Domisili</span>
@@ -1195,61 +1193,62 @@ const StudentFormModal = memo(function StudentFormModal({
                                         />
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="p-4 border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] space-y-4">
-                                    <div className="flex items-center gap-3 mb-1">
-                                        <div className="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
-                                            <FontAwesomeIcon icon={faFileAlt} className="text-xs" />
-                                        </div>
-                                        <h4 className="text-[11px] font-bold text-[var(--color-text)]">Dokumen & EMIS</h4>
-                                    </div>
-                                    <div className="relative group">
-                                        <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">No. Akta Kelahiran</label>
-                                        <input
-                                            type="text" value={form.no_akta}
-                                            onChange={(e) => setField('no_akta', e.target.value)}
-                                            className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-amber-500"
-                                            placeholder="Cth: 12345/01/2024"
-                                        />
-                                    </div>
-                                    <div className="relative group">
-                                        <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Kebutuhan Khusus</label>
-                                        <RichSelect
-                                            value={form.special_needs}
-                                            onChange={(val) => setField('special_needs', val)}
-                                            options={SPECIAL_NEEDS.map(o => ({ id: o, name: o }))}
-                                            placeholder="Pilih Kebutuhan"
-                                            icon={faWalking} small
-                                        />
-                                    </div>
-                                    <div className="relative group">
-                                        <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Hobi</label>
-                                        <input
-                                            type="text" value={form.hobby}
-                                            onChange={(e) => setField('hobby', e.target.value)}
-                                            className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-amber-500"
-                                            placeholder="Cth: Membaca, Olahraga"
-                                        />
-                                    </div>
-                                    <div className="relative group">
-                                        <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Cita-cita</label>
-                                        <input
-                                            type="text" value={form.aspiration}
-                                            onChange={(e) => setField('aspiration', e.target.value)}
-                                            className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-amber-500"
-                                            placeholder="Cth: Guru, Insinyur"
-                                        />
-                                    </div>
-                                    <div className="relative group">
-                                        <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Transportasi</label>
-                                        <RichSelect
-                                            value={form.transport}
-                                            onChange={(val) => setField('transport', val)}
-                                            options={TRANSPORT_MODES.map(o => ({ id: o, name: o }))}
-                                            placeholder="Pilih Transportasi"
-                                            icon={faWalking} small
-                                        />
-                                    </div>
+                            {/* ── Dokumen & EMIS ── */}
+                            <div className="p-4 border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] space-y-4">
+                                <div className="flex items-center gap-2.5 pt-2">
+                                    <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                                    <FontAwesomeIcon icon={faFileAlt} className="text-amber-500 text-[10px] opacity-70" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Dokumen & EMIS</span>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
+                                </div>
+                                <div className="relative group">
+                                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">No. Akta Kelahiran</label>
+                                    <input
+                                        type="text" value={form.no_akta}
+                                        onChange={(e) => setField('no_akta', e.target.value)}
+                                        className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-amber-500"
+                                        placeholder="Cth: 12345/01/2024"
+                                    />
+                                </div>
+                                <div className="relative group">
+                                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Kebutuhan Khusus</label>
+                                    <RichSelect
+                                        value={form.special_needs}
+                                        onChange={(val) => setField('special_needs', val)}
+                                        options={SPECIAL_NEEDS.map(o => ({ id: o, name: o }))}
+                                        placeholder="Pilih Kebutuhan"
+                                        icon={faWalking} small
+                                    />
+                                </div>
+                                <div className="relative group">
+                                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Hobi</label>
+                                    <input
+                                        type="text" value={form.hobby}
+                                        onChange={(e) => setField('hobby', e.target.value)}
+                                        className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-amber-500"
+                                        placeholder="Cth: Membaca, Olahraga"
+                                    />
+                                </div>
+                                <div className="relative group">
+                                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Cita-cita</label>
+                                    <input
+                                        type="text" value={form.aspiration}
+                                        onChange={(e) => setField('aspiration', e.target.value)}
+                                        className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-amber-500"
+                                        placeholder="Cth: Guru, Insinyur"
+                                    />
+                                </div>
+                                <div className="relative group">
+                                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Transportasi</label>
+                                    <RichSelect
+                                        value={form.transport}
+                                        onChange={(val) => setField('transport', val)}
+                                        options={TRANSPORT_MODES.map(o => ({ id: o, name: o }))}
+                                        placeholder="Pilih Transportasi"
+                                        icon={faWalking} small
+                                    />
                                 </div>
                             </div>
 
@@ -1319,72 +1318,115 @@ const StudentFormModal = memo(function StudentFormModal({
                                     </div>
                                 </div>
                             </div>
-                            {/* SUMMARY REVIEW CARD - ENTERPRISE EDITION */}
-                            <div className="p-6 rounded-[2rem] bg-gradient-to-br from-slate-900 via-slate-950 to-black text-white shadow-2xl space-y-6 border border-white/10 relative overflow-hidden group/review">
+                            {/* SUMMARY REVIEW CARD - ADAPTIVE ENTERPRISE EDITION */}
+                            <div className="p-6 rounded-[3rem] bg-[var(--color-surface-alt)]/40 backdrop-blur-xl border border-[var(--color-border)] text-[var(--color-text)] shadow-2xl space-y-5 relative overflow-hidden group/review">
+                                {/* Themed Decorative Blurs */}
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] -mr-32 -mt-32 group-hover/review:bg-emerald-500/20 transition-all duration-1000" />
                                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-[80px] -ml-24 -mb-24 group-hover/review:bg-indigo-500/20 transition-all duration-1000" />
+                                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, var(--color-text) 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
 
-                                {/* Background Pattern */}
-                                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
-
+                                {/* Header + Completion Ring */}
                                 <div className="flex items-center justify-between relative z-10">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                                            <FontAwesomeIcon icon={faEye} className="text-emerald-400 text-xs" />
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                            <FontAwesomeIcon icon={faEye} className="text-emerald-500 text-sm" />
                                         </div>
                                         <div>
-                                            <span className="text-[11px] font-black uppercase tracking-wider text-white">Review Konfirmasi</span>
-                                            <p className="text-[9px] text-slate-400 font-medium">Pastikan semua data sudah akurat</p>
+                                            <span className="text-[12px] font-black uppercase tracking-wider text-[var(--color-text)]">Review Konfirmasi</span>
+                                            <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Validasi akhir data santri</p>
                                         </div>
                                     </div>
-                                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[8px] font-black uppercase tracking-wider animate-pulse">Siap Simpan</span>
+                                    {/* Completion Ring */}
+                                    {(() => {
+                                        const fields = [form.name, form.nisn, form.class_id, form.gender, form.birth_place, form.birth_date, form.mother_name, form.phone, form.address]
+                                        const filled = fields.filter(Boolean).length
+                                        const pct = Math.round((filled / fields.length) * 100)
+                                        const radius = 16, circ = 2 * Math.PI * radius, offset = circ - (pct / 100) * circ
+                                        return (
+                                            <div className="relative w-14 h-14 shrink-0">
+                                                <svg className="w-14 h-14 -rotate-90" viewBox="0 0 40 40">
+                                                    <circle cx="20" cy="20" r={radius} fill="none" stroke="var(--color-border)" strokeWidth="3.5" />
+                                                    <circle cx="20" cy="20" r={radius} fill="none" stroke={pct === 100 ? '#10b981' : '#6366f1'} strokeWidth="3.5" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000" />
+                                                </svg>
+                                                <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-black ${pct === 100 ? 'text-emerald-500' : 'text-indigo-500'}`}>{pct}%</span>
+                                            </div>
+                                        )
+                                    })()}
                                 </div>
 
-                                <div className="space-y-4 relative z-10">
+                                <div className="space-y-3 relative z-10">
                                     {/* Identitas Section */}
-                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <FontAwesomeIcon icon={faIdCard} className="text-[10px] text-indigo-400" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-indigo-300/70">Data Pokok</span>
+                                    <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <FontAwesomeIcon icon={faIdCard} className="text-[10px] text-indigo-500" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500/80">Identitas Santri</span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-y-3 gap-x-4">
                                             <div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">Siswa</p>
-                                                <p className="text-[11px] font-bold text-slate-100 truncate">{form.name || '---'}</p>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Nama</p>
+                                                <p className="text-[11px] font-bold text-[var(--color-text)] truncate">{form.name || <span className="text-[var(--color-text-muted)] italic opacity-40">belum diisi</span>}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">NISN</p>
-                                                <p className="text-[11px] font-bold text-slate-100">{form.nisn || '---'}</p>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">NISN / NIS</p>
+                                                <p className="text-[11px] font-bold text-[var(--color-text)]">{form.nisn || '---'} / {form.nis || '---'}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">Kelas</p>
-                                                <p className="text-[11px] font-bold text-slate-100">{classesList.find(c => c.id === form.class_id)?.name || '---'}</p>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Kelas</p>
+                                                <p className="text-[11px] font-bold text-[var(--color-text)]">{classesList.find(c => c.id === form.class_id)?.name || '---'}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">Status</p>
-                                                <p className="text-[11px] font-bold text-emerald-400 capitalize">{form.status}</p>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Gender / Status</p>
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    {form.gender === 'L' ? (
+                                                        <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20">
+                                                            <FontAwesomeIcon icon={faMars} className="text-[9px] text-indigo-500" />
+                                                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-tight">Putra</span>
+                                                        </div>
+                                                    ) : form.gender === 'P' ? (
+                                                        <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20">
+                                                            <FontAwesomeIcon icon={faVenus} className="text-[9px] text-rose-500" />
+                                                            <span className="text-[10px] font-bold text-rose-500 uppercase tracking-tight">Putri</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[11px] font-bold text-[var(--color-text)]">---</span>
+                                                    )}
+                                                    <span className="text-[var(--color-text-muted)] mx-0.5 opacity-30">·</span>
+                                                    <span className="text-emerald-500 text-[10px] font-black uppercase tracking-wider">{form.status || '---'}</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">TTL</p>
+                                                <p className="text-[11px] font-bold text-[var(--color-text)] truncate">{form.birth_place || '---'}, {form.birth_date || '---'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Kamar</p>
+                                                <p className="text-[11px] font-bold text-[var(--color-text)]">{form.kamar || '---'}</p>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Keluarga Section */}
-                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <FontAwesomeIcon icon={faUsers} className="text-[10px] text-rose-400" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-rose-300/70">Keluarga & Kontak</span>
+                                    <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <FontAwesomeIcon icon={faUsers} className="text-[10px] text-rose-500" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-rose-500/80">Keluarga & Kontak</span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-y-3 gap-x-4">
                                             <div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">Ayah</p>
-                                                <p className="text-[11px] font-bold text-slate-100 truncate">{form.father_name || '---'}</p>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Ayah</p>
+                                                <p className="text-[11px] font-bold text-[var(--color-text)] truncate">{form.father_name || '---'}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">Ibu</p>
-                                                <p className="text-[11px] font-bold text-slate-100 truncate">{form.mother_name || '---'}</p>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Ibu</p>
+                                                <p className="text-[11px] font-bold text-[var(--color-text)] truncate">{form.mother_name || '---'}</p>
                                             </div>
-                                            <div className="col-span-2">
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">Kontak Utama (Wali)</p>
-                                                <p className="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5">
+                                            <div>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Wali</p>
+                                                <p className="text-[11px] font-bold text-[var(--color-text)] truncate">{form.guardian_name || '---'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Kontak WA</p>
+                                                <p className="text-[11px] font-bold text-emerald-500 flex items-center gap-1.5">
                                                     <FontAwesomeIcon icon={faWhatsapp} className="text-[10px]" />
                                                     {form.phone || '---'}
                                                 </p>
@@ -1392,34 +1434,60 @@ const StudentFormModal = memo(function StudentFormModal({
                                         </div>
                                     </div>
 
-                                    {/* Alamat & EMIS Section */}
-                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <FontAwesomeIcon icon={faMap} className="text-[10px] text-emerald-400" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-300/70">Alamat & EMIS</span>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {/* Alamat Section */}
+                                        <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <FontAwesomeIcon icon={faMapMarkerAlt} className="text-[10px] text-emerald-500" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500/80">Alamat</span>
+                                            </div>
+                                            <div className="space-y-2.5">
+                                                <div>
+                                                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Alamat Lengkap</p>
+                                                    <p className="text-[11px] font-bold text-[var(--color-text)] line-clamp-2 leading-relaxed">{form.address || '---'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">Kota / Prov</p>
+                                                    <p className="text-[11px] font-bold text-[var(--color-text)] truncate">{form.address_city || '---'}, {form.address_province || '---'}</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                                            <div className="col-span-2">
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">Alamat</p>
-                                                <p className="text-[11px] font-bold text-slate-100 line-clamp-1">{form.address || '---'}</p>
+
+                                        {/* Dokumen Section */}
+                                        <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <FontAwesomeIcon icon={faFileAlt} className="text-[10px] text-amber-500" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-amber-500/80">Dokumen</span>
                                             </div>
-                                            <div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">NIK Siswa</p>
-                                                <p className="text-[11px] font-bold text-slate-100">{form.nik || '---'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">No. KK</p>
-                                                <p className="text-[11px] font-bold text-slate-100">{form.no_kk || '---'}</p>
+                                            <div className="space-y-2.5">
+                                                <div>
+                                                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">NIK Siswa</p>
+                                                    <p className="text-[11px] font-bold text-[var(--color-text)]">{form.nik || '---'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-tight opacity-60">No. Akta</p>
+                                                    <p className="text-[11px] font-bold text-[var(--color-text)]">{form.no_akta || '---'}</p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="pt-3 border-t border-white/10 flex items-center gap-2.5 relative z-10">
-                                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                                        <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-400 text-[10px]" />
+                                {/* Footer */}
+                                <div className="pt-4 border-t border-[var(--color-border)] flex items-center justify-between relative z-10">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                            <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-500 text-[10px]" />
+                                        </div>
+                                        <p className="text-[10px] text-[var(--color-text-muted)] italic leading-snug">Data valid & siap disimpan.</p>
                                     </div>
-                                    <p className="text-[9px] text-slate-400 italic leading-snug">Sistem telah memvalidasi kelengkapan data. Anda dapat menyimpan perubahan sekarang.</p>
+                                    <div className="flex -space-x-2">
+                                        {[1, 2, 3].map(i => (
+                                            <div key={i} className="w-5 h-5 rounded-full border-2 border-[var(--color-surface)] bg-emerald-500/20 flex items-center justify-center">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>

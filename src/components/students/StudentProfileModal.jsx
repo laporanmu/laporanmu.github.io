@@ -6,7 +6,7 @@ import {
     faUserTie, faGraduationCap, faCopy,
     faInfoCircle, faBolt, faPlus, faMinus,
     faMapMarkerAlt, faCalendarAlt, faPrayingHands, faIdBadge, faDoorOpen,
-    faHeart, faAddressCard
+    faHeart, faAddressCard, faUsers
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
@@ -34,11 +34,11 @@ export default memo(function StudentProfileModal({
     }
 
     const InfoRow = ({ label, value, icon }) => (
-        <div className="space-y-0.5">
-            <p className="text-[7px] font-black uppercase text-[var(--color-text-muted)] tracking-widest mb-0.5 flex items-center gap-1">
-                {icon && <FontAwesomeIcon icon={icon} className="opacity-40" />} {label}
+        <div className="space-y-1">
+            <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest flex items-center gap-1.5 opacity-80">
+                {icon && <FontAwesomeIcon icon={icon} className="opacity-50 text-[8px]" />} {label}
             </p>
-            <p className="text-[10px] font-bold text-[var(--color-text)] truncate">{value || '-'}</p>
+            <p className="text-[12px] font-bold text-[var(--color-text)] truncate">{value || '-'}</p>
         </div>
     )
 
@@ -186,8 +186,8 @@ export default memo(function StudentProfileModal({
                                     t === 'stats' ? faChartLine :
                                         t === 'log' ? faHistory :
                                             t === 'audit' ? faClockRotateLeft : faFileLines
-                            } className="text-xs" />
-                            <span className="text-[7px] font-black uppercase tracking-widest">{t === 'log' ? 'Perilaku' : t === 'raport' ? 'Raport' : t}</span>
+                            } className="text-sm mb-1" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">{t === 'log' ? 'Perilaku' : t === 'raport' ? 'Raport' : t}</span>
                             {profileTab === t && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-indigo-500 rounded-full" />}
 
                             {t === 'stats' && behaviorHistory.length > 0 && <div className="absolute top-2 right-4 w-1.5 h-1.5 bg-rose-500 rounded-full border border-white" />}
@@ -198,18 +198,18 @@ export default memo(function StudentProfileModal({
 
                 <div>
                     {profileTab === 'info' && (
-                        <div className="space-y-4">
-                            <div className="p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-4">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faIdCard} className="text-[10px]" />
-                                    </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Profil Pribadi</p>
+                        <div className="space-y-6">
+                            <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-5">
+                                <div className="flex items-center gap-2.5 pt-1">
+                                    <div className="w-1 h-4 bg-indigo-500 rounded-full" />
+                                    <FontAwesomeIcon icon={faIdCard} className="text-indigo-500 text-[10px] opacity-70" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Profil Pribadi</span>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+                                <div className="grid grid-cols-2 gap-y-5 gap-x-6">
                                     <div className="col-span-2">
-                                        <p className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest mb-0.5">NISN / NIS / NIK</p>
-                                        <p className="text-[11px] font-bold text-[var(--color-text)] tracking-wider">
+                                        <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest mb-1 opacity-80 text-indigo-600/70">NISN / NIS / NIK</p>
+                                        <p className="text-[13px] font-bold text-[var(--color-text)] tracking-wider">
                                             {isPrivacyMode ? maskInfo(selectedStudent.nisn, 4) : (selectedStudent.nisn || '---')} /
                                             {isPrivacyMode ? maskInfo(selectedStudent.nis, 4) : (selectedStudent.nis || '---')} /
                                             {isPrivacyMode ? maskInfo(selectedStudent.nik, 4) : (selectedStudent.nik || '---')}
@@ -222,98 +222,106 @@ export default memo(function StudentProfileModal({
                                 </div>
                             </div>
 
-                            <div className="p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-4">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faUserTie} className="text-[10px]" />
-                                    </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Data Ayah Kandung</p>
+                            {/* ── Data Orang Tua & Wali (Unified Grid) ── */}
+                            <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-6">
+                                <div className="flex items-center gap-2.5 pt-1">
+                                    <div className="w-1 h-4 bg-indigo-500 rounded-full" />
+                                    <FontAwesomeIcon icon={faUsers} className="text-indigo-500 text-[10px] opacity-70" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Data Orang Tua & Wali</span>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                 </div>
-                                {selectedStudent.metadata?.father?.name || selectedStudent.metadata?.father?.nik ? (
-                                    <div className="grid grid-cols-2 gap-y-4 gap-x-6">
-                                        <InfoRow label="Nama Ayah" value={isPrivacyMode ? maskInfo(selectedStudent.metadata?.father?.name, 4) : (selectedStudent.metadata?.father?.name || '-')} />
-                                        <InfoRow label="NIK Ayah" value={isPrivacyMode ? maskInfo(selectedStudent.metadata?.father?.nik, 4) : (selectedStudent.metadata?.father?.nik || '-')} />
-                                        <InfoRow label="Pendidikan" value={selectedStudent.metadata?.father?.edu || '-'} />
-                                        <InfoRow label="Pekerjaan" value={selectedStudent.metadata?.father?.job || '-'} />
-                                    </div>
-                                ) : (
-                                    <SectionEmptyState label="Ayah" icon={faUserTie} />
-                                )}
-                            </div>
 
-                            <div className="p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-4">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-6 h-6 rounded-lg bg-pink-500/10 text-pink-500 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faHeart} className="text-[10px]" />
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {/* Kolom Ayah */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-2">
+                                            <FontAwesomeIcon icon={faUserTie} className="text-[10px] text-indigo-500/60" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Ayah</span>
+                                        </div>
+                                        {selectedStudent.metadata?.father?.name || selectedStudent.metadata?.father?.nik ? (
+                                            <div className="space-y-3 px-1">
+                                                <InfoRow label="Nama Ayah" value={isPrivacyMode ? maskInfo(selectedStudent.metadata?.father?.name, 4) : (selectedStudent.metadata?.father?.name || '-')} />
+                                                <InfoRow label="NIK Ayah" value={isPrivacyMode ? maskInfo(selectedStudent.metadata?.father?.nik, 4) : (selectedStudent.metadata?.father?.nik || '-')} />
+                                                <InfoRow label="Pekerjaan" value={selectedStudent.metadata?.father?.job || '-'} />
+                                            </div>
+                                        ) : (
+                                            <SectionEmptyState label="Ayah" icon={faUserTie} />
+                                        )}
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-pink-500">Data Ibu Kandung</p>
-                                </div>
-                                {selectedStudent.metadata?.mother?.name || selectedStudent.metadata?.mother?.nik ? (
-                                    <div className="grid grid-cols-2 gap-y-4 gap-x-6">
-                                        <InfoRow label="Nama Ibu" value={isPrivacyMode ? maskInfo(selectedStudent.metadata?.mother?.name, 4) : (selectedStudent.metadata?.mother?.name || '-')} />
-                                        <InfoRow label="NIK Ibu" value={isPrivacyMode ? maskInfo(selectedStudent.metadata?.mother?.nik, 4) : (selectedStudent.metadata?.mother?.nik || '-')} />
-                                        <InfoRow label="Pendidikan" value={selectedStudent.metadata?.mother?.edu || '-'} />
-                                        <InfoRow label="Pekerjaan" value={selectedStudent.metadata?.mother?.job || '-'} />
-                                    </div>
-                                ) : (
-                                    <SectionEmptyState label="Ibu" icon={faHeart} />
-                                )}
-                            </div>
 
-                            <div className="p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-4">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faIdBadge} className="text-[10px]" />
+                                    {/* Kolom Ibu */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-2">
+                                            <FontAwesomeIcon icon={faHeart} className="text-[10px] text-pink-500/60" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Ibu</span>
+                                        </div>
+                                        {selectedStudent.metadata?.mother?.name || selectedStudent.metadata?.mother?.nik ? (
+                                            <div className="space-y-3 px-1">
+                                                <InfoRow label="Nama Ibu" value={isPrivacyMode ? maskInfo(selectedStudent.metadata?.mother?.name, 4) : (selectedStudent.metadata?.mother?.name || '-')} />
+                                                <InfoRow label="NIK Ibu" value={isPrivacyMode ? maskInfo(selectedStudent.metadata?.mother?.nik, 4) : (selectedStudent.metadata?.mother?.nik || '-')} />
+                                                <InfoRow label="Pekerjaan" value={selectedStudent.metadata?.mother?.job || '-'} />
+                                            </div>
+                                        ) : (
+                                            <SectionEmptyState label="Ibu" icon={faHeart} />
+                                        )}
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Informasi Wali</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-y-4 gap-x-6">
-                                    <InfoRow label="Nama Wali" value={isPrivacyMode ? maskInfo(selectedStudent.guardian_name, 4) : (selectedStudent.guardian_name || '-')} />
-                                    <InfoRow label="Hubungan" value={selectedStudent.guardian_relation || '-'} />
-                                    <div className="col-span-2">
-                                        <p className="text-[7px] font-black uppercase text-[var(--color-text-muted)] tracking-widest mb-1">Kontak Wali / Ortu</p>
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-xs font-bold text-[var(--color-text)] tracking-wider">{isPrivacyMode ? maskInfo(selectedStudent.phone, 4) : (selectedStudent.phone || '---')}</p>
-                                            {selectedStudent.phone && !isPrivacyMode && (
-                                                <div className="flex gap-1">
-                                                    <button onClick={() => { try { copyToClipboard(selectedStudent.phone, 'HP') } catch (e) { console.error(e) } }} className="w-6 h-6 rounded-lg bg-[var(--color-surface-alt)] flex items-center justify-center text-[10px] hover:bg-[var(--color-border)] transition-colors">
-                                                        <FontAwesomeIcon icon={faCopy} className="opacity-40" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            if (openWAForStudent && buildWAMessage) {
-                                                                openWAForStudent(selectedStudent, buildWAMessage(selectedStudent, 'general'))
-                                                            } else {
-                                                                const cleanPhone = (selectedStudent.phone || '').replace(/\D/g, '')
-                                                                const waPhone = cleanPhone.startsWith('0') ? `62${cleanPhone.substring(1)}` : cleanPhone
-                                                                const text = encodeURIComponent(`Assalamualaikum Wr. Wb.\n\nBapak/Ibu Wali dari Ananda *${selectedStudent.name}*.\n\n`)
-                                                                window.open(`https://wa.me/${waPhone}?text=${text}`, '_blank')
-                                                            }
-                                                        }}
-                                                        className="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[10px] hover:brightness-110 transition-all"
-                                                    >
-                                                        <FontAwesomeIcon icon={faWhatsapp} />
-                                                    </button>
+
+                                    {/* Kolom Wali / Kontak */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-2">
+                                            <FontAwesomeIcon icon={faIdBadge} className="text-[10px] text-emerald-500/60" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kontak Wali Utama</span>
+                                        </div>
+                                            <div className="space-y-1 px-1">
+                                            <InfoRow label="Nama Wali / Ortu" value={isPrivacyMode ? maskInfo(selectedStudent.guardian_name, 4) : (selectedStudent.guardian_name || '-')} />
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest mb-1 flex items-center gap-1.5 opacity-80">
+                                                    <FontAwesomeIcon icon={faWhatsapp} className="text-emerald-500 text-[10px]" /> No. HP / WhatsApp
+                                                </p>
+                                                <div className="flex items-center justify-between group/wa">
+                                                    <p className="text-[12px] font-bold text-[var(--color-text)] tracking-wider">
+                                                        {isPrivacyMode ? maskInfo(selectedStudent.phone, 4) : (selectedStudent.phone || '---')}
+                                                    </p>
+                                                    {selectedStudent.phone && !isPrivacyMode && (
+                                                        <div className="flex gap-1.5 opacity-0 group-hover/wa:opacity-100 transition-opacity">
+                                                            <button onClick={() => copyToClipboard(selectedStudent.phone, 'HP')} className="w-6 h-6 rounded-lg bg-[var(--color-surface-alt)] flex items-center justify-center text-[10px] hover:bg-[var(--color-border)] transition-colors">
+                                                                <FontAwesomeIcon icon={faCopy} className="opacity-40" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (openWAForStudent && buildWAMessage) {
+                                                                        openWAForStudent(selectedStudent, buildWAMessage(selectedStudent, 'general'))
+                                                                    } else {
+                                                                        const cleanPhone = (selectedStudent.phone || '').replace(/\D/g, '')
+                                                                        const waPhone = cleanPhone.startsWith('0') ? `62${cleanPhone.substring(1)}` : cleanPhone
+                                                                        const text = encodeURIComponent(`Assalamualaikum Wr. Wb.\n\nBapak/Ibu Wali dari Ananda *${selectedStudent.name}*.\n\n`)
+                                                                        window.open(`https://wa.me/${waPhone}?text=${text}`, '_blank')
+                                                                    }
+                                                                }}
+                                                                className="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[10px] hover:brightness-110 transition-all shadow-sm"
+                                                            >
+                                                                <FontAwesomeIcon icon={faWhatsapp} />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
+                                            </div>
+                                            {!isPrivacyMode && selectedStudent.phone && (
+                                                <button onClick={handleSaveContact} className="w-full mt-2 h-8 rounded-lg border border-indigo-500/20 bg-indigo-500/5 text-indigo-600 text-[8px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all flex items-center justify-center gap-2">
+                                                    <FontAwesomeIcon icon={faAddressCard} className="text-[9px]" /> Simpan Kontak VCF
+                                                </button>
                                             )}
                                         </div>
                                     </div>
-                                    {!isPrivacyMode && (
-                                        <div className="col-span-2 pt-2">
-                                            <button onClick={handleSaveContact} className="w-full h-9 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-indigo-600 text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all flex items-center justify-center gap-2">
-                                                <FontAwesomeIcon icon={faAddressCard} /> Simpan Kontak VCF
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
-                            <div className="p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-4">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faMapMarkerAlt} className="text-[10px]" />
-                                    </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Alamat & Domisili</p>
+                            <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-5">
+                                <div className="flex items-center gap-2.5 pt-1">
+                                    <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                                    <FontAwesomeIcon icon={faMapMarkerAlt} className="text-emerald-500 text-[10px] opacity-70" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Alamat & Domisili</span>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                 </div>
                                 {selectedStudent.address || selectedStudent.metadata?.address_detail?.rt || selectedStudent.metadata?.address?.rt ? (
                                     <div className="space-y-4">
@@ -335,12 +343,12 @@ export default memo(function StudentProfileModal({
                                 )}
                             </div>
 
-                            <div className="p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-4">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faIdBadge} className="text-[10px]" />
-                                    </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Dokumen Sipil</p>
+                            <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm space-y-5">
+                                <div className="flex items-center gap-2.5 pt-1">
+                                    <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                                    <FontAwesomeIcon icon={faIdBadge} className="text-amber-500 text-[10px] opacity-70" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Dokumen Sipil</span>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                 </div>
                                 {selectedStudent.metadata?.documents?.no_kk || selectedStudent.metadata?.docs?.no_kk || selectedStudent.metadata?.documents?.no_akta || selectedStudent.metadata?.docs?.no_akta ? (
                                     <div className="grid grid-cols-2 gap-y-4 gap-x-6">
@@ -385,11 +393,11 @@ export default memo(function StudentProfileModal({
                                 if (entries.length === 0) return null
                                 return (
                                     <div className="p-3.5 rounded-2xl border border-violet-500/10 bg-[var(--color-surface)] shadow-sm space-y-4">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <div className="w-6 h-6 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center">
-                                                <FontAwesomeIcon icon={faInfoCircle} className="text-[10px]" />
-                                            </div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-violet-500">Info Khusus</p>
+                                        <div className="flex items-center gap-2.5 pt-1 mb-2">
+                                            <div className="w-1 h-4 bg-violet-500 rounded-full" />
+                                            <FontAwesomeIcon icon={faInfoCircle} className="text-violet-500 text-[10px] opacity-70" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Info Khusus</span>
+                                            <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                         </div>
                                         <div className="flex flex-wrap gap-2 max-h-[120px] overflow-auto custom-scrollbar">
                                             {entries.map(([key, val]) => (

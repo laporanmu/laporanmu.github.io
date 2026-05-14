@@ -74,17 +74,17 @@ const StudentTagModal = ({
                 size="md"
                 mobileVariant="bottom-sheet"
                 footer={
-                    <div className="flex gap-2.5 w-full">
+                    <div className="flex gap-3 w-full">
                         <button
                             onClick={onClose}
-                            className="flex-1 h-10 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-white/10"
+                            className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 border border-white/10"
                         >
-                            <FontAwesomeIcon icon={faCheckCircle} className="opacity-70" />
+                            <FontAwesomeIcon icon={faCheckCircle} className="text-sm opacity-70" />
                             Selesai & Simpan
                         </button>
                         <button
                             onClick={onClose}
-                            className="w-24 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
+                            className="w-28 h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
                         >
                             Tutup
                         </button>
@@ -95,15 +95,15 @@ const StudentTagModal = ({
                     {student && (
                         <div className="space-y-6">
                             {/* Section: Quick Add */}
-                            <div className="relative">
-                                <div className="flex items-center justify-center mb-4">
-                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
-                                    <span className="px-4 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-60">Cari atau Buat Baru</span>
-                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2.5 px-1">
+                                    <div className="w-1 h-3.5 bg-indigo-500 rounded-full" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Cari atau Buat Baru</span>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                 </div>
                                 <div className="relative group">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-40 group-focus-within:text-[var(--color-primary)] group-focus-within:opacity-100 transition-all">
-                                        <FontAwesomeIcon icon={faTags} className="text-xs" />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-40 group-focus-within:text-indigo-500 group-focus-within:opacity-100 transition-all">
+                                        <FontAwesomeIcon icon={faTags} className="text-sm" />
                                     </div>
                                     <input
                                         type="text"
@@ -115,9 +115,9 @@ const StudentTagModal = ({
                                             }
                                         }}
                                         placeholder="Ketik nama label lalu tekan Enter..."
-                                        className="w-full h-12 bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl pl-11 pr-14 text-sm font-bold focus:bg-white focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/5 transition-all outline-none placeholder:font-medium placeholder:opacity-30"
+                                        className="w-full h-12 bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-2xl pl-12 pr-28 text-sm font-bold focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none placeholder:font-medium placeholder:opacity-30"
                                     />
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
                                         <button
                                             onClick={() => {
                                                 if (tagInputRef.current?.value.trim()) {
@@ -125,7 +125,7 @@ const StudentTagModal = ({
                                                     tagInputRef.current.value = '';
                                                 }
                                             }}
-                                            className="h-8 px-3 rounded-xl bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-md shadow-[var(--color-primary)]/20"
+                                            className="h-8 px-4 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-indigo-600/20"
                                         >
                                             Tambah
                                         </button>
@@ -135,15 +135,14 @@ const StudentTagModal = ({
 
                             {/* Section: Active Tags */}
                             <div className="space-y-4">
-                                <div className="flex items-center justify-center mb-1">
-                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
-                                    <span className="px-4 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-60">Label Tersemat</span>
-                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
+                                <div className="flex items-center gap-2.5 px-1">
+                                    <div className="w-1 h-3.5 bg-emerald-500 rounded-full" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Label Tersemat</span>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                 </div>
-
-                                <div className="flex flex-wrap gap-2 p-3.5 rounded-2xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] min-h-[60px] content-start transition-all relative">
-                                    <div className="absolute -top-3 right-4">
-                                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full ring-1 ring-emerald-500/20 uppercase tracking-tighter shadow-sm">
+                                <div className="flex flex-wrap gap-2.5 p-4 rounded-3xl bg-emerald-500/5 border border-emerald-500/10 min-h-[70px] content-start transition-all relative">
+                                    <div className="absolute -top-3 right-6">
+                                        <span className="text-[10px] font-black text-emerald-600 bg-white px-3 py-1 rounded-full ring-1 ring-emerald-500/20 uppercase tracking-tighter shadow-md">
                                             {studentTags.length} - Aktif
                                         </span>
                                     </div>
@@ -171,11 +170,11 @@ const StudentTagModal = ({
                             </div>
 
                             {/* Section: Global Library */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-center mb-1">
-                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
-                                    <span className="px-4 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-60">Katalog Label Global</span>
-                                    <div className="h-px flex-1 bg-[var(--color-border)] opacity-40" />
+                            <div className="space-y-4 pt-2">
+                                <div className="flex items-center gap-2.5 px-1">
+                                    <div className="w-1 h-3.5 bg-violet-500 rounded-full" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Katalog Label Global</span>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                 </div>
 
                                 <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar content-start p-1">

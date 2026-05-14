@@ -1,24 +1,28 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { faChevronDown, faSearch, faXmark, faCheck } from '@fortawesome/free-solid-svg-icons'
 
 /**
- * RichSelect - A premium, reusable dropdown component with auto-flip and portal support.
- * 
- * @param {any} value - Current selected value
- * @param {Function} onChange - Callback when value changes
- * @param {Array} options - List of {id, name} objects
- * @param {string} placeholder - Text when no value is selected
- * @param {object} icon - FontAwesome icon for the prefix
- * @param {object} extraOption - Optional {id, name} to show at the top (e.g. "Other/None")
- * @param {boolean} small - Use smaller padding/height
- * @param {string} status - Validation status: 'error', 'success', or 'normal'
+ * RichSelect - A premium, reusable dropdown component with auto-flip, portal, and search support.
  */
-const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, small, status = 'normal' }) => {
+const RichSelect = ({ 
+    value, 
+    onChange, 
+    options = [], 
+    placeholder = 'Pilih...', 
+    icon, 
+    extraOption, 
+    small, 
+    status = 'normal',
+    searchable = false,
+    className = ""
+}) => {
     const [isOpen, setIsOpen] = useState(false)
+    const [search, setSearch] = useState('')
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, placement: 'bottom', maxHeight: 240 })
     const ref = useRef(null)
+    const searchInputRef = useRef(null)
 
     const statusClasses = {
         error: 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500 bg-rose-50/5 dark:bg-rose-500/5',
@@ -35,13 +39,13 @@ const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, 
     const updateCoords = useCallback(() => {
         if (ref.current) {
             const rect = ref.current.getBoundingClientRect()
-            const dropdownHeight = 260 
+            const dropdownHeight = searchable ? 320 : 260 
             const margin = 16
             
             const spaceBelow = window.innerHeight - rect.bottom - margin
             const spaceAbove = rect.top - margin
             
-            const shouldFlip = spaceBelow < dropdownHeight && spaceAbove > 100
+            const shouldFlip = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
 
             setCoords({
                 top: rect.top,
@@ -52,11 +56,14 @@ const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, 
                 maxHeight: shouldFlip ? spaceAbove : spaceBelow
             })
         }
-    }, [])
+    }, [searchable])
 
     const toggle = () => {
         const nextState = !isOpen
-        if (nextState) updateCoords()
+        if (nextState) {
+            updateCoords()
+            setSearch('')
+        }
         setIsOpen(nextState)
     }
 
@@ -64,6 +71,9 @@ const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, 
         if (isOpen) {
             window.addEventListener('scroll', updateCoords, true)
             window.addEventListener('resize', updateCoords)
+            if (searchable && searchInputRef.current) {
+                setTimeout(() => searchInputRef.current?.focus(), 100)
+            }
             
             const handleClickOutside = (e) => {
                 if (ref.current && !ref.current.contains(e.target)) setIsOpen(false)
@@ -76,16 +86,22 @@ const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, 
                 document.removeEventListener('mousedown', handleClickOutside)
             }
         }
-    }, [isOpen, updateCoords])
+    }, [isOpen, updateCoords, searchable])
+
+    const filteredOptions = useMemo(() => {
+        if (!search) return options
+        const s = search.toLowerCase()
+        return options.filter(o => o.name?.toLowerCase().includes(s) || o.id?.toString().toLowerCase().includes(s))
+    }, [options, search])
 
     const selectedOption = options.find(o => String(o.id) === String(value)) || (extraOption?.id === value ? extraOption : null)
 
     return (
-        <div className="relative" ref={ref}>
+        <div className={`relative ${className}`} ref={ref}>
             <button
                 type="button"
                 onClick={toggle}
-                className={`w-full flex items-center justify-between gap-2 ${small ? 'px-3 h-11' : 'pl-9 pr-3 h-11'} rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] focus:ring-1 outline-none transition-all text-[13px] relative group`}
+                className={`w-full flex items-center justify-between gap-2 ${small ? 'px-3 h-8 sm:h-9' : 'pl-9 pr-3 h-11'} rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm`}
             >
                 <div className="flex items-center gap-2 truncate">
                     {icon && !small && <FontAwesomeIcon icon={icon} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors ${iconStatusClasses[status]}`} />}
@@ -93,52 +109,82 @@ const RichSelect = ({ value, onChange, options, placeholder, icon, extraOption, 
                         {selectedOption ? selectedOption.name : placeholder}
                     </span>
                 </div>
-                <FontAwesomeIcon icon={faChevronDown} className={`text-[10px] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'text-[var(--color-text-muted)]'}`} />
+                <FontAwesomeIcon icon={faChevronDown} className={`text-[9px] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`} />
             </button>
 
             {isOpen && createPortal(
                 <div 
-                    className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl py-1.5 overflow-y-auto animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'} 
-                    [scrollbar-width:thin] 
-                    [&::-webkit-scrollbar]:w-1.5
-                    [&::-webkit-scrollbar-track]:bg-transparent
-                    [&::-webkit-scrollbar-thumb]:bg-slate-300
-                    [&::-webkit-scrollbar-thumb]:rounded-full
-                    [&::-webkit-scrollbar-button]:hidden`}
+                    className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
                     onMouseDown={(e) => e.stopPropagation()}
                     style={{
                         width: coords.width,
                         left: coords.left,
                         top: coords.placement === 'top' ? 'auto' : coords.bottom + 8,
                         bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
-                        maxHeight: Math.min(240, coords.maxHeight - 20)
                     }}
                 >
-                    {extraOption && (
-                        <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onChange(extraOption.id); setIsOpen(false); }}
-                            className={`w-full text-left px-4 py-2 text-[12px] font-semibold hover:bg-[var(--color-primary)]/5 transition-all flex items-center gap-3 border-b border-[var(--color-border)] mb-1 ${value === extraOption.id ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-amber-600'}`}
-                        >
-                            <div className={`w-1.5 h-1.5 rounded-full ${value === extraOption.id ? 'bg-[var(--color-primary)]' : 'bg-amber-600'}`} />
-                            {extraOption.name}
-                        </button>
-                    )}
-                    {options.length === 0 ? (
-                        <div className="px-4 py-3 text-center">
-                            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest opacity-50">Data Kosong</p>
+                    {/* Search Bar */}
+                    {searchable && (
+                        <div className="p-2 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                            <div className="relative">
+                                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] opacity-40" />
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Cari..."
+                                    className="w-full h-8 pl-8 pr-8 rounded-lg border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all font-bold"
+                                />
+                                {search && (
+                                    <button 
+                                        onClick={() => setSearch('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 transition-colors"
+                                    >
+                                        <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    ) : options.map((opt) => (
-                        <button
-                            key={opt.id}
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onChange(opt.id); setIsOpen(false); }}
-                            className={`w-full text-left px-4 py-2 text-[12px] font-semibold hover:bg-[var(--color-primary)]/5 transition-all flex items-center gap-3 ${String(value) === String(opt.id) ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-[var(--color-text)]'}`}
-                        >
-                            <div className={`w-1.5 h-1.5 rounded-full transition-all ${String(value) === String(opt.id) ? 'bg-[var(--color-primary)] scale-125' : 'bg-[var(--color-border)] group-hover:bg-[var(--color-text-muted)]'}`} />
-                            {opt.name}
-                        </button>
-                    ))}
+                    )}
+
+                    <div 
+                        className="py-1.5 overflow-y-auto custom-scrollbar"
+                        style={{ maxHeight: Math.min(searchable ? 280 : 240, coords.maxHeight - 80) }}
+                    >
+                        {extraOption && (
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onChange(extraOption.id); setIsOpen(false); }}
+                                className={`w-full text-left px-4 py-2 text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group ${value === extraOption.id ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-amber-600'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${value === extraOption.id ? 'bg-[var(--color-primary)]' : 'bg-amber-600'}`} />
+                                    {extraOption.name}
+                                </div>
+                                {value === extraOption.id && <FontAwesomeIcon icon={faCheck} className="text-[10px]" />}
+                            </button>
+                        )}
+                        
+                        {filteredOptions.length === 0 ? (
+                            <div className="px-4 py-6 text-center">
+                                <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-40">Tidak ditemukan</p>
+                            </div>
+                        ) : filteredOptions.map((opt) => (
+                            <button
+                                key={opt.id}
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onChange(opt.id); setIsOpen(false); }}
+                                className={`w-full text-left px-4 py-2 text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group ${String(value) === String(opt.id) ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-[var(--color-text)]'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-1.5 h-1.5 rounded-full transition-all ${String(value) === String(opt.id) ? 'bg-[var(--color-primary)] scale-125 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.4)]' : 'bg-[var(--color-border)] group-hover:bg-[var(--color-text-muted)]'}`} />
+                                    {opt.name}
+                                </div>
+                                {String(value) === String(opt.id) && <FontAwesomeIcon icon={faCheck} className="text-[10px] animate-in zoom-in-50 duration-300" />}
+                            </button>
+                        ))}
+                    </div>
                 </div>,
                 document.body
             )}
