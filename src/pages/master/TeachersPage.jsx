@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
+import RichSelect from '../../components/ui/RichSelect'
 import { TeacherRow, TeacherMobileCard, STATUS_CONFIG } from '../../components/teachers/TeacherRow'
 import TeacherFormModal from '../../components/teachers/TeacherFormModal'
 import { ActionBadge, DiffViewer, AuditTimeline } from '../../pages/admin/LogsPage'
@@ -758,58 +759,119 @@ export default function TeachersPage() {
                     </div>
 
                     {showAdvFilter && (
-                        <div className="border-t border-[var(--color-border)] px-4 py-4 bg-[var(--color-surface-alt)]/40">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Jenis</label>
-                                    <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">
-                                        <option value="">Semua Jenis</option>
-                                        <option value="guru">Guru</option>
-                                        <option value="karyawan">Karyawan</option>
-                                    </select>
+                        <div className="border-t border-[var(--color-border)] p-3.5 bg-[var(--color-surface-alt)]/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+                            {/* Header Panel with Standardized "Vertical Bar" Pattern */}
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-1 h-3.5 bg-indigo-500 rounded-full" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 flex items-center gap-2">
+                                        <FontAwesomeIcon icon={faSliders} className="text-[9px] opacity-60" />
+                                        Filter Lanjutan
+                                    </span>
                                 </div>
-                                <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Mata Pelajaran</label>
-                                    <select value={filterSubject} onChange={e => { setFilterSubject(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">
-                                        <option value="">Semua Mapel</option>{subjectsList.map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Jenis Kelamin</label>
-                                    <select value={filterGender} onChange={e => { setFilterGender(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">
-                                        <option value="">Semua Gender</option><option value="L">Laki-laki</option><option value="P">Perempuan</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Status Guru</label>
-                                    <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">
-                                        <option value="">Semua Status</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option><option value="cuti">Cuti</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Urutkan</label>
-                                    <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1) }} className="input-field h-9 text-sm w-full rounded-xl">
-                                        <option value="name_asc">Nama A–Z</option><option value="name_desc">Nama Z–A</option><option value="subject_asc">Mapel A–Z</option><option value="join_desc">Bergabung Terbaru</option><option value="join_asc">Bergabung Terlama</option>
-                                    </select>
-                                </div>
+                                <button
+                                    onClick={resetAllFilters}
+                                    className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-100"
+                                >
+                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
+                                    Reset Semua Filter
+                                </button>
                             </div>
-                            <div className="pt-1 mb-4">
-                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Filter Cepat</label>
-                                <div className="flex gap-1.5 overflow-x-auto pb-1">
-                                    {[
-                                        { label: 'Semua', icon: faUsers, active: !filterMissing && filterStatus === 'active', onClick: () => { setFilterMissing(''); setFilterStatus('active'); setSortBy('name_asc') } },
-                                        { label: 'Tanpa WA', icon: faWhatsapp, active: filterMissing === 'wa', onClick: () => { setFilterMissing('wa'); setPage(1) } },
-                                        { label: 'Nonaktif', icon: faUserTie, active: filterStatus === 'inactive', onClick: () => { setFilterStatus('inactive'); setPage(1) } },
-                                        { label: 'Cuti', icon: faBoxArchive, active: filterStatus === 'cuti', onClick: () => { setFilterStatus('cuti'); setPage(1) } },
-                                    ].map((s, i) => (
-                                        <button key={i} onClick={s.onClick} className={`whitespace-nowrap h-9 px-3 rounded-xl border flex items-center gap-2 transition-all ${s.active ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
-                                            <FontAwesomeIcon icon={s.icon} className="text-[10px]" /><span className="text-[9px] font-black uppercase tracking-widest">{s.label}</span>
-                                        </button>
-                                    ))}
+
+                            <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-4">
+                                {/* Primary Grid: Selects */}
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                    <div>
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Jenis</label>
+                                        <RichSelect
+                                            value={filterType}
+                                            onChange={val => { setFilterType(val); setPage(1) }}
+                                            options={[
+                                                { id: '', name: 'Semua Jenis' },
+                                                { id: 'guru', name: 'Guru' },
+                                                { id: 'karyawan', name: 'Karyawan' }
+                                            ]}
+                                            placeholder="Semua Jenis"
+                                            small
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Mata Pelajaran</label>
+                                        <RichSelect
+                                            value={filterSubject}
+                                            onChange={val => { setFilterSubject(val); setPage(1) }}
+                                            options={[
+                                                { id: '', name: 'Semua Mapel' },
+                                                ...subjectsList.map(s => ({ id: s, name: s }))
+                                            ]}
+                                            placeholder="Semua Mapel"
+                                            small
+                                            searchable
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Gender</label>
+                                        <RichSelect
+                                            value={filterGender}
+                                            onChange={val => { setFilterGender(val); setPage(1) }}
+                                            options={[
+                                                { id: '', name: 'Semua' },
+                                                { id: 'L', name: 'Laki-laki' },
+                                                { id: 'P', name: 'Perempuan' }
+                                            ]}
+                                            placeholder="Semua"
+                                            small
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Status</label>
+                                        <RichSelect
+                                            value={filterStatus}
+                                            onChange={val => { setFilterStatus(val); setPage(1) }}
+                                            options={[
+                                                { id: '', name: 'Semua Status' },
+                                                { id: 'active', name: 'Aktif' },
+                                                { id: 'inactive', name: 'Nonaktif' },
+                                                { id: 'cuti', name: 'Cuti' }
+                                            ]}
+                                            placeholder="Semua Status"
+                                            small
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Urutkan</label>
+                                        <RichSelect
+                                            value={sortBy}
+                                            onChange={val => { setSortBy(val); setPage(1) }}
+                                            options={[
+                                                { id: 'name_asc', name: 'Nama A–Z' },
+                                                { id: 'name_desc', name: 'Nama Z–A' },
+                                                { id: 'subject_asc', name: 'Mapel A–Z' },
+                                                { id: 'join_desc', name: 'Bergabung Terbaru' },
+                                                { id: 'join_asc', name: 'Bergabung Terlama' }
+                                            ]}
+                                            placeholder="Urutkan"
+                                            small
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex justify-end pt-3 border-t border-[var(--color-border)]/50">
-                                <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20">Reset Filter</button>
+
+                                {/* Secondary Grid: Quick Filters */}
+                                <div>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Menu Cepat & Aksi</label>
+                                    <div className="flex gap-1.5 overflow-x-auto pb-1">
+                                        {[
+                                            { label: 'Semua', icon: faUsers, active: !filterMissing && filterStatus === 'active', onClick: () => { setFilterMissing(''); setFilterStatus('active'); setSortBy('name_asc') } },
+                                            { label: 'Tanpa WA', icon: faWhatsapp, active: filterMissing === 'wa', onClick: () => { setFilterMissing('wa'); setPage(1) } },
+                                            { label: 'Nonaktif', icon: faUserTie, active: filterStatus === 'inactive', onClick: () => { setFilterStatus('inactive'); setPage(1) } },
+                                            { label: 'Cuti', icon: faBoxArchive, active: filterStatus === 'cuti', onClick: () => { setFilterStatus('cuti'); setPage(1) } },
+                                        ].map((s, i) => (
+                                            <button key={i} onClick={s.onClick} className={`whitespace-nowrap h-9 px-3 rounded-xl border flex items-center gap-2 transition-all ${s.active ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md shadow-[var(--color-primary)]/20' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                                <FontAwesomeIcon icon={s.icon} className="text-[10px]" /><span className="text-[9px] font-black uppercase tracking-widest">{s.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
