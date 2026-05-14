@@ -155,12 +155,12 @@ const InlineEditPoin = ({ value, onSave, onCancel }) => {
 
 const Sparkline = ({ data = [], width = 30, height = 12 }) => {
     if (!data || data.length < 2) return null
-    
+
     // Calculate bounds
     const max = Math.max(...data, 2)
     const min = Math.min(...data, -2)
     const range = max - min || 1
-    
+
     // Generate points string
     const points = data.map((val, i) => {
         const x = (i / (data.length - 1)) * width
@@ -182,10 +182,10 @@ const Sparkline = ({ data = [], width = 30, height = 12 }) => {
                 points={points}
                 className={latest > 0 ? 'text-emerald-500' : latest < 0 ? 'text-red-500' : 'text-gray-400'}
             />
-            <circle 
-                cx={width} 
-                cy={height - ((latest - min) / range) * height} 
-                r="1.5" 
+            <circle
+                cx={width}
+                cy={height - ((latest - min) / range) * height}
+                r="1.5"
                 fill="currentColor"
                 className={latest > 0 ? 'text-emerald-500 animate-pulse' : latest < 0 ? 'text-red-500 animate-pulse' : 'text-gray-400'}
             />
@@ -220,15 +220,15 @@ export const StudentRow = memo(({
     openWAForStudent,
     waTemplate
 }) => {
-    const vc = { 
-        gender: true, 
-        kelas: true, 
-        poin: true, 
-        last_report: true, 
-        profil: true, 
-        tags: true, 
-        aksi: true, 
-        ...visibleColumns 
+    const vc = {
+        gender: true,
+        kelas: true,
+        poin: true,
+        last_report: true,
+        profil: true,
+        tags: true,
+        aksi: true,
+        ...visibleColumns
     }
     const [lastAction, setLastAction] = useState(null) // { amount, reason, timestamp }
     const lastActionTimerRef = useRef(null)
@@ -415,7 +415,7 @@ export const StudentRow = memo(({
                                                 style={{
                                                     top: popoverPos.top,
                                                     left: popoverPos.left,
-                                                    transform: 'translateY(-100%)' 
+                                                    transform: 'translateY(-100%)'
                                                 }}
                                             >
                                                 {/* Header Profile Section */}
@@ -460,15 +460,15 @@ export const StudentRow = memo(({
 
                                                 {/* Interactive Action Area */}
                                                 <div className="flex items-center gap-2">
-                                                    <button 
+                                                    <button
                                                         onClick={(e) => { e.stopPropagation(); onViewProfile(student) }}
                                                         className="flex-1 h-10 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-[var(--color-primary)]/20"
                                                     >
                                                         Lihat Profil
                                                     </button>
                                                     {student.phone && (
-                                                        <button 
-                                                            onClick={(e) => { 
+                                                        <button
+                                                            onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 const msg = buildWAMessage?.(student, 'intro') || `Halo ${student.name}, saya dari sekolah...`;
                                                                 openWAForStudent?.(student, msg);
@@ -483,7 +483,7 @@ export const StudentRow = memo(({
 
                                                 {/* Tooltip Arrow */}
                                                 <div className="absolute bottom-[-6px] left-8 w-3 h-3 bg-[var(--color-surface)] border-r border-b border-[var(--color-primary)]/20 rotate-45"></div>
-                                                
+
                                                 {/* Invisible Bridge (Safe Area) — Menghubungkan nama dengan popover agar hover tidak putus */}
                                                 <div className="absolute -bottom-4 left-0 right-0 h-4 bg-transparent" />
                                             </div>,
@@ -731,7 +731,7 @@ export const StudentRow = memo(({
                             return (
                                 <>
                                     <div className="w-10 h-1.5 rounded-full bg-[var(--color-surface-alt)] overflow-hidden shrink-0 border border-[var(--color-border)]/50">
-                                        <div 
+                                        <div
                                             className={`h-full transition-all duration-1000 ${score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
                                             style={{ width: `${score}%` }}
                                         />
@@ -775,8 +775,8 @@ export const StudentRow = memo(({
                             disabled={!student.phone}
                             onClick={() => openWAForStudent(student, buildWAMessage(student, 'general'))}
                             className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all text-sm
-                                ${student.phone 
-                                    ? 'text-[var(--color-text-muted)] hover:text-emerald-600 hover:bg-emerald-500/10' 
+                                ${student.phone
+                                    ? 'text-[var(--color-text-muted)] hover:text-emerald-600 hover:bg-emerald-500/10'
                                     : 'text-slate-400 opacity-60 grayscale cursor-not-allowed'}`}
                             title={student.phone ? "Hubungi via WhatsApp" : "Nomer WA belum diatur"}
                         >
@@ -798,7 +798,7 @@ export const StudentRow = memo(({
                         </button>
 
                         {onConfirmDelete && (
-                            <button onClick={() => onConfirmDelete(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Hapus">
+                            <button onClick={() => onConfirmDelete(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Arsipkan">
                                 <FontAwesomeIcon icon={faBoxArchive} />
                             </button>
                         )}
@@ -861,15 +861,15 @@ export const StudentMobileCard = memo(({
 
     const longPressProps = useLongPress(() => {
         onToggleSelect(student.id)
-    }, { 
-        delay: 600, 
+    }, {
+        delay: 600,
         onClick: () => {
             if (hasSelection) {
                 onToggleSelect(student.id)
             } else {
                 onViewProfile(student)
             }
-        } 
+        }
     })
 
     const stopPropagation = (e) => e.stopPropagation();
@@ -1233,7 +1233,7 @@ export const StudentSkeletonCard = () => (
                     <div className="w-1/2 h-3 bg-[var(--color-surface-alt)]/60 rounded-md" />
                 </div>
             </div>
-            
+
             <div className="mt-4 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-1">
                     <div className="w-24 h-8 bg-[var(--color-surface-alt)]/80 rounded-2xl border border-[var(--color-border)]/40" />
@@ -1241,7 +1241,7 @@ export const StudentSkeletonCard = () => (
                 </div>
                 <div className="w-8 h-8 bg-[var(--color-surface-alt)]/80 rounded-xl border border-[var(--color-border)]/40" />
             </div>
-            
+
             <div className="mt-4 h-11 bg-[var(--color-surface-alt)] rounded-[2.2rem] border border-[var(--color-border)] shadow-sm" />
         </div>
     </div>
@@ -1263,7 +1263,7 @@ export const StudentMobileListRow = memo(({
 }) => {
     const p = student.total_points || 0
     const isRisk = p <= RiskThreshold
-    
+
     const maskInfo = (str, visibleLen = 3) => {
         if (!str) return '---'
         if (str.length <= visibleLen) return str[0] + '*'.repeat(str.length - 1)
@@ -1291,8 +1291,8 @@ export const StudentMobileListRow = memo(({
                     onClick={(e) => { e.stopPropagation(); onToggleSelect(student.id) }}
                 >
                     <div className={`w-6 h-6 rounded-lg border-2 transition-all duration-500 flex items-center justify-center
-                        ${isSelected 
-                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] rotate-0 scale-110 shadow-lg shadow-[var(--color-primary)]/20' 
+                        ${isSelected
+                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] rotate-0 scale-110 shadow-lg shadow-[var(--color-primary)]/20'
                             : 'border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 rotate-[-15deg] hover:rotate-0 hover:border-[var(--color-primary)]/50'}`}>
                         {isSelected && <FontAwesomeIcon icon={faCheck} className="text-white text-[10px] animate-in zoom-in-50" />}
                     </div>
@@ -1362,8 +1362,8 @@ export const StudentMobileListRow = memo(({
             {/* Swipe Actions Pane (Glass Effect) */}
             {canEdit && (
                 <div className="shrink-0 flex items-stretch snap-end border-l border-[var(--color-border)]/50 bg-[var(--color-surface-alt)]/30 backdrop-blur-xl">
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onQuickPoint(student) }} 
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onQuickPoint(student) }}
                         className="w-[80px] flex flex-col items-center justify-center gap-1.5 group/btn relative transition-all active:scale-95"
                     >
                         <div className="w-11 h-11 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover/btn:bg-amber-500 group-hover/btn:text-white group-hover/btn:rotate-12 transition-all duration-300">
@@ -1371,8 +1371,8 @@ export const StudentMobileListRow = memo(({
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-widest text-amber-600">Poin</span>
                     </button>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onTogglePin(student) }} 
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onTogglePin(student) }}
                         className={`w-[80px] flex flex-col items-center justify-center gap-1.5 group/btn relative transition-all active:scale-95
                             ${student.is_pinned ? 'text-amber-600 bg-amber-500/5' : 'text-blue-500 hover:text-white'}`}
                     >
@@ -1384,8 +1384,8 @@ export const StudentMobileListRow = memo(({
                             {student.is_pinned ? 'Unpin' : 'Pin'}
                         </span>
                     </button>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onEdit(student) }} 
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(student) }}
                         className="w-[80px] flex flex-col items-center justify-center gap-1.5 group/btn relative transition-all active:scale-95"
                     >
                         <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center group-hover/btn:bg-indigo-600 group-hover/btn:text-white group-hover/btn:rotate-[-12deg] transition-all duration-300">

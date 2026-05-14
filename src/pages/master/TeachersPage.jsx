@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faPlus, faEdit, faTrash, faSearch, faTimes, faSpinner,
@@ -25,6 +26,7 @@ import { logAudit } from '../../lib/auditLogger'
 import RichSelect from '../../components/ui/RichSelect'
 import { TeacherRow, TeacherMobileCard, STATUS_CONFIG } from '../../components/teachers/TeacherRow'
 import TeacherFormModal from '../../components/teachers/TeacherFormModal'
+import TeacherProfileModal from '../../components/teachers/TeacherProfileModal'
 import { ActionBadge, DiffViewer, AuditTimeline } from '../../pages/admin/LogsPage'
 import Pagination from '../../components/ui/Pagination'
 import Papa from 'papaparse'
@@ -45,7 +47,15 @@ const maskInfo = (str, vis = 4) => {
     return str.substring(0, vis) + '***'
 }
 
-
+function getPortalContainer(id) {
+    let el = document.getElementById(id);
+    if (!el) {
+        el = document.createElement('div');
+        el.id = id;
+        document.body.appendChild(el);
+    }
+    return el;
+}
 
 export default function TeachersPage() {
     // core
@@ -56,6 +66,7 @@ export default function TeachersPage() {
     const [subjectsList, setSubjectsList] = useState([])
     const [classesList, setClassesList] = useState([])
     const [stats, setStats] = useState({ total: 0, active: 0, male: 0, female: 0, guru: 0, karyawan: 0 })
+    const [uploadingPhoto, setUploadingPhoto] = useState(false)
     // filters
     const [searchQuery, setSearchQuery] = useState('')
     const debouncedSearch = useDebounce(searchQuery, 350)
@@ -82,14 +93,12 @@ export default function TeachersPage() {
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
     // modals
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
     const [isArchivedOpen, setIsArchivedOpen] = useState(false)
     const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [isImportModalOpen, setIsImportModalOpen] = useState(false)
     const [isExportModalOpen, setIsExportModalOpen] = useState(false)
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
-    const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
     const [isBulkWAOpen, setIsBulkWAOpen] = useState(false)
     // form
     const [selectedItem, setSelectedItem] = useState(null)
@@ -130,6 +139,13 @@ export default function TeachersPage() {
     const importFileRef = useRef(null)
     const headerMenuRef = useRef(null)
     const shortcutRef = useRef(null)
+    // Sticky portal refs & rects for header menu + shortcut dropdowns
+    const headerMenuBtnRef = useRef(null)
+    const shortcutBtnRef = useRef(null)
+    const [headerMenuRect, setHeaderMenuRect] = useState(null)
+    const [shortcutRect, setShortcutRect] = useState(null)
+    // Deferred unmount: keeps portal in DOM for 200ms after close so exit animation can play
+    const [headerMenuMounted, setHeaderMenuMounted] = useState(false)
     const { addToast } = useToast()
     const { profile } = useAuth()
 
@@ -155,10 +171,31 @@ export default function TeachersPage() {
     useEffect(() => { setPage(1) }, [debouncedSearch])
 
     // ── outside click ─────────────────────────────────────────────────────────
+    // Deferred unmount effect for header menu
+    useEffect(() => {
+        if (isHeaderMenuOpen) {
+            setHeaderMenuMounted(true)
+        } else {
+            const t = setTimeout(() => setHeaderMenuMounted(false), 200)
+            return () => clearTimeout(t)
+        }
+    }, [isHeaderMenuOpen])
+
+    // Sticky positioning - keep portaled dropdowns anchored on scroll/resize
+    useEffect(() => {
+        if (!isHeaderMenuOpen && !isShortcutOpen) return
+        const update = () => {
+            if (isHeaderMenuOpen && headerMenuBtnRef.current) setHeaderMenuRect(headerMenuBtnRef.current.getBoundingClientRect())
+            if (isShortcutOpen && shortcutBtnRef.current) setShortcutRect(shortcutBtnRef.current.getBoundingClientRect())
+        }
+        update()
+        window.addEventListener('scroll', update, true)
+        window.addEventListener('resize', update)
+        return () => { window.removeEventListener('scroll', update, true); window.removeEventListener('resize', update) }
+    }, [isHeaderMenuOpen, isShortcutOpen])
+
     useEffect(() => {
         const h = e => {
-            if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setIsHeaderMenuOpen(false)
-            if (shortcutRef.current && !shortcutRef.current.contains(e.target)) setIsShortcutOpen(false)
             if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setIsColMenuOpen(false)
             if (quickStatusRef.current && !quickStatusRef.current.contains(e.target)) setQuickStatusId(null)
         }
@@ -176,7 +213,7 @@ export default function TeachersPage() {
         const handler = e => {
             const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
             const ctrl = e.ctrlKey || e.metaKey
-            const anyModal = isModalOpen || isDeleteModalOpen || isArchiveModalOpen || isArchivedOpen || isProfileOpen || isImportModalOpen || isExportModalOpen || isBulkModalOpen || isBulkDeleteOpen || isBulkWAOpen
+            const anyModal = isModalOpen || isArchiveModalOpen || isArchivedOpen || isProfileOpen || isImportModalOpen || isExportModalOpen || isBulkModalOpen || isBulkWAOpen
             if (e.key === 'Escape') { if (isShortcutOpen) { setIsShortcutOpen(false); return } if (anyModal) return; if (searchQuery) { setSearchQuery(''); return } if (selectedIds.length) { setSelectedIds([]); return } if (hasActiveFilters) { resetAllFilters(); return } }
             if (ctrl && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus(); searchInputRef.current?.select(); return }
             if (ctrl && e.key === 'f' && !isTyping) { e.preventDefault(); setShowAdvFilter(v => !v); return }
@@ -191,7 +228,7 @@ export default function TeachersPage() {
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isModalOpen, isDeleteModalOpen, isArchiveModalOpen, isArchivedOpen, isProfileOpen, isImportModalOpen, isExportModalOpen, isBulkModalOpen, isBulkDeleteOpen, isBulkWAOpen, isShortcutOpen, searchQuery, selectedIds, hasActiveFilters])
+    }, [isModalOpen, isArchiveModalOpen, isArchivedOpen, isProfileOpen, isImportModalOpen, isExportModalOpen, isBulkModalOpen, isBulkWAOpen, isShortcutOpen, searchQuery, selectedIds, hasActiveFilters])
 
     // ── fetch ─────────────────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -312,11 +349,6 @@ export default function TeachersPage() {
         } catch (err) { return { error: true, code: err.code, message: 'Gagal menyimpan data.' } }
         finally { setSubmitting(false) }
     }
-    const handleDeleteConfirm = async () => {
-        if (!teacherToAction) return; setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').delete().eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" berhasil dihapus`, 'success'); await logAudit({ action: 'DELETE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacherToAction.id, oldData: teacherToAction }); setIsDeleteModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
-        catch { addToast('Gagal menghapus', 'error') } finally { setSubmitting(false) }
-    }
     const handleArchive = async () => {
         if (!teacherToAction) return; setSubmitting(true)
         try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacherToAction.id, oldData: teacherToAction, newData: { ...teacherToAction, deleted_at: new Date().toISOString() } }); setIsArchiveModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
@@ -386,6 +418,22 @@ export default function TeachersPage() {
         }
     }
 
+    const handlePhotoUpload = async (file) => {
+        if (!file) return null
+        setUploadingPhoto(true)
+        try {
+            const fileName = `teacher_${Date.now()}.${file.name.split('.').pop()}`
+            const { error } = await supabase.storage.from('teacher-photo').upload(fileName, file)
+            if (error) throw error
+            const { data } = supabase.storage.from('teacher-photo').getPublicUrl(fileName)
+            return data.publicUrl
+        } catch (err) {
+            console.error('Photo upload error:', err)
+            addToast('Gagal mengunggah foto', 'error')
+            return null
+        } finally { setUploadingPhoto(false) }
+    }
+
     // ── quick status ──────────────────────────────────────────────────────────
     const handleQuickStatus = async (teacher, newStatus) => {
         try { const { error } = await supabase.from('teachers').update({ status: newStatus }).eq('id', teacher.id); if (error) throw error; addToast(`Status ${teacher.name} → ${STATUS_CONFIG[newStatus].label}`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacher.id, oldData: teacher, newData: { ...teacher, status: newStatus } }); setQuickStatusId(null); fetchData(); fetchStats() }
@@ -415,11 +463,6 @@ export default function TeachersPage() {
         setSubmitting(true)
         try { const idsSnap = [...selectedIds]; const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).in('id', idsSnap); if (error) throw error; addToast(`${idsSnap.length} guru diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', newData: { bulk_archive: true, count: idsSnap.length, ids: idsSnap } }); setSelectedIds([]); setIsBulkModalOpen(false); fetchData(); fetchStats() }
         catch { addToast('Gagal arsip massal', 'error') } finally { setSubmitting(false) }
-    }
-    const handleBulkDelete = async () => {
-        setSubmitting(true)
-        try { const idsSnap2 = [...selectedIds]; const { error } = await supabase.from('teachers').delete().in('id', idsSnap2); if (error) throw error; addToast(`${idsSnap2.length} guru dihapus`, 'success'); await logAudit({ action: 'DELETE', source: 'OPERATIONAL', tableName: 'teachers', oldData: { bulk: true, count: idsSnap2.length, ids: idsSnap2 } }); setSelectedIds([]); setIsBulkDeleteOpen(false); fetchData(); fetchStats() }
-        catch { addToast('Gagal hapus massal', 'error') } finally { setSubmitting(false) }
     }
     const bulkWATeachers = useMemo(() => teachers.filter(t => selectedIds.includes(t.id) && t.phone), [teachers, selectedIds])
     const startBulkWA = () => { if (!bulkWATeachers.length) { addToast('Tidak ada guru terpilih dengan nomor WA', 'warning'); return }; setBulkWAIndex(0); setBulkWAResults({}); setIsBulkWAOpen(true) }
@@ -591,7 +634,6 @@ export default function TeachersPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                             <button onClick={startBulkWA} className="h-8 px-3 rounded-xl bg-green-500/10 text-green-600 text-[10px] font-black uppercase tracking-wide hover:bg-green-500 hover:text-white transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faWhatsapp} />WA Massal</button>
                             <button onClick={() => setIsBulkModalOpen(true)} className="h-8 px-3 rounded-xl bg-amber-500/10 text-amber-600 text-[10px] font-black uppercase tracking-wide hover:bg-amber-500 hover:text-white transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faBoxArchive} />Arsip</button>
-                            <button onClick={() => setIsBulkDeleteOpen(true)} className="h-8 px-3 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-wide hover:bg-red-500 hover:text-white transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faTrash} />Hapus</button>
                             <button onClick={() => setSelectedIds([])} className="h-8 px-3 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-wide transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faXmark} />Batal</button>
                         </div>
                     </div>
@@ -605,13 +647,31 @@ export default function TeachersPage() {
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} data {filterType === 'karyawan' ? 'karyawan' : filterType === 'guru' ? 'guru' : 'guru dan karyawan'} dalam sistem.</p>
                     </div>
                     <div className="flex gap-2 items-center">
-                        {/* Sliders dropdown */}
-                        <div className="relative" ref={headerMenuRef}>
-                            <button onClick={() => setIsHeaderMenuOpen(v => !v)}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                                title="Aksi lainnya"><FontAwesomeIcon icon={faSliders} /></button>
-                            {isHeaderMenuOpen && (
-                                <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-[calc(100%+8px)] -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[320px] sm:w-56 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
+                        {/* Header Menu Button */}
+                        <button
+                            ref={headerMenuBtnRef}
+                            onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                            title="Aksi lainnya"
+                        >
+                            <FontAwesomeIcon icon={faSliders} />
+                        </button>
+
+                        {/* Portaled Header Menu Dropdown */}
+                        {headerMenuMounted && headerMenuRect && createPortal(
+                            <>
+                                <div
+                                    className={`fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px] transition-opacity duration-200 ${isHeaderMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+                                    onClick={() => setIsHeaderMenuOpen(false)}
+                                />
+                                <div
+                                    className={`fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-all duration-200 ease-out origin-top-right
+                                        ${isHeaderMenuOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'}`}
+                                    style={{
+                                        top: headerMenuRect.bottom + 8,
+                                        left: Math.max(10, headerMenuRect.right - 224)
+                                    }}
+                                >
                                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
                                     <button onClick={() => { setIsHeaderMenuOpen(false); setImportTab('panduan'); setImportPreview([]); setImportFileName(''); setIsImportModalOpen(true) }}
                                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
@@ -620,7 +680,7 @@ export default function TeachersPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Import CSV / Excel</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Unggah data guru masal dari file Excel/CSV</p>
                                         </div>
                                     </button>
                                     <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
@@ -630,7 +690,7 @@ export default function TeachersPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Export Data</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Cadangkan seluruh database ke format Excel</p>
                                         </div>
                                     </button>
                                     <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
@@ -642,37 +702,75 @@ export default function TeachersPage() {
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Arsip Guru</p>
-                                            <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">arsip</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data guru tidak aktif</p>
                                         </div>
                                     </button>
                                 </div>
-                            )}
-                        </div>
+                            </>,
+                            getPortalContainer('portal-teacher-header-menu')
+                        )}
 
-                        {/* Keyboard shortcuts floating panel */}
-                        <div className="relative" ref={shortcutRef}>
-                            <button onClick={() => setIsShortcutOpen(!isShortcutOpen)}
-                                className={`hidden sm:flex h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
-                            {isShortcutOpen && (
-                                <div className="fixed sm:absolute left-1/2 sm:left-auto right-auto sm:right-0 top-[20vh] sm:top-11 -translate-x-1/2 sm:-translate-x-0 w-[90vw] max-w-[340px] sm:w-72 sm:max-w-none z-[100] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-top-2">
-                                    <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/50">
+                        {/* Keyboard Shortcuts Button - hidden on mobile */}
+                        <button
+                            ref={shortcutBtnRef}
+                            onClick={() => { if (!isShortcutOpen) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setIsShortcutOpen(v => !v) }}
+                            className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center transition-all active:scale-95
+                                ${isShortcutOpen
+                                    ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
+                                    : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                                }`}
+                            title="Keyboard Shortcuts (?)"
+                        >
+                            <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
+                        </button>
+
+                        {/* Portaled Keyboard Shortcuts Dropdown */}
+                        {isShortcutOpen && shortcutRect && createPortal(
+                            <>
+                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsShortcutOpen(false)} />
+                                <div
+                                    className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200"
+                                    style={{
+                                        top: shortcutRect.bottom + 8,
+                                        left: Math.max(10, shortcutRect.right - 288)
+                                    }}
+                                >
+                                    <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
                                         <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
                                         <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
                                     </div>
                                     <div className="p-3 space-y-0.5">
-                                        {[{ section: 'Navigasi' }, { keys: ['Ctrl', 'K'], label: 'Fokus ke search' }, { keys: ['Ctrl', 'F'], label: 'Toggle filter lanjutan' }, { keys: ['Esc'], label: 'Tutup / clear / deselect' }, { section: 'Aksi' }, { keys: ['N'], label: 'Tambah guru baru' }, { keys: ['Ctrl', 'A'], label: 'Pilih semua / deselect' }, { keys: ['Ctrl', 'E'], label: 'Buka export' }, { section: 'Tampilan' }, { keys: ['P'], label: 'Toggle privacy mode' }, { keys: ['R'], label: 'Refresh data' }, { keys: ['X'], label: 'Reset semua filter' }, { keys: ['?'], label: 'Tampilkan shortcut ini' }].map((item, i) => item.section ? (
+                                        {[
+                                            { section: 'Navigasi' },
+                                            { keys: ['Ctrl', 'K'], label: 'Fokus ke search' },
+                                            { keys: ['Ctrl', 'F'], label: 'Toggle filter lanjutan' },
+                                            { keys: ['Esc'], label: 'Tutup / clear / deselect' },
+                                            { section: 'Aksi' },
+                                            { keys: ['N'], label: 'Tambah guru baru' },
+                                            { keys: ['Ctrl', 'A'], label: 'Pilih semua / deselect' },
+                                            { keys: ['Ctrl', 'E'], label: 'Buka export' },
+                                            { section: 'Tampilan' },
+                                            { keys: ['P'], label: 'Toggle privacy mode' },
+                                            { keys: ['R'], label: 'Refresh data' },
+                                            { keys: ['X'], label: 'Reset semua filter' },
+                                            { keys: ['?'], label: 'Tampilkan shortcut ini' },
+                                        ].map((item, i) => item.section ? (
                                             <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
                                         ) : (
                                             <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
                                                 <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
-                                                <div className="flex items-center gap-1">{item.keys.map((k, ki) => <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>)}</div>
+                                                <div className="flex items-center gap-1">
+                                                    {item.keys.map((k, ki) => (
+                                                        <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            </>,
+                            getPortalContainer('portal-teacher-shortcut-menu')
+                        )}
 
                         {/* Privasi toggle */}
                         <button
@@ -687,9 +785,9 @@ export default function TeachersPage() {
                         </button>
 
                         {/* Add button */}
-                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100">
-                            <FontAwesomeIcon icon={faPlus} />
-                            <span className="hidden sm:inline">{canEdit ? 'Tambah' : 'Read-only'}</span>
+                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10">
+                            <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                            <span className="hidden sm:inline">{canEdit ? 'Tambah Guru' : 'Read-only'}</span>
                         </button>
                     </div>
                 </div>
@@ -991,7 +1089,6 @@ export default function TeachersPage() {
                                             handleQuickStatus={handleQuickStatus}
                                             setTeacherToAction={setTeacherToAction}
                                             setIsArchiveModalOpen={canEdit ? setIsArchiveModalOpen : null}
-                                            setIsDeleteModalOpen={canEdit ? setIsDeleteModalOpen : null}
                                             quickStatusId={quickStatusId}
                                             setQuickStatusId={setQuickStatusId}
                                             quickStatusRef={quickStatusRef}
@@ -1062,85 +1159,25 @@ export default function TeachersPage() {
                     subjectsList={subjectsList}
                     onSubmit={handleSubmit}
                     submitting={submitting}
+                    onPhotoUpload={handlePhotoUpload}
+                    uploadingPhoto={uploadingPhoto}
                 />
 
                 {/* ════ MODAL Profil ════ */}
-                {isProfileOpen && (
-                    <Modal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} title="Profil Guru" size="md">
-                        {profileTeacher && (
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-2xl font-black shrink-0">
-                                        {profileTeacher.avatar_url
-                                            ? <img src={profileTeacher.avatar_url} alt={profileTeacher.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
-                                            : profileTeacher.name.charAt(0)
-                                        }
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-base font-black text-[var(--color-text)] truncate">{profileTeacher.name}</h3>
-                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                            {profileTeacher.subject && <span className="px-2 py-0.5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-black uppercase">{profileTeacher.subject}</span>}
-                                            <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-black uppercase ${STATUS_CONFIG[profileTeacher.status]?.color}`}>{STATUS_CONFIG[profileTeacher.status]?.label}</span>
-                                        </div>
-                                    </div>
-                                    {canEdit && <button onClick={() => { setIsProfileOpen(false); handleEdit(profileTeacher) }} className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all shrink-0"><FontAwesomeIcon icon={faEdit} /></button>}
-                                </div>
-                                <div className="flex gap-0.5 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
-                                    {[['info', 'Info'], ['stats', 'Statistik'], ['laporan', 'Laporan'], ['audit', 'Audit']].map(([k, label]) => (
-                                        <button key={k} onClick={() => setProfileTab(k)} className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${profileTab === k ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>{label}</button>
-                                    ))}
-                                </div>
-                                {profileTab === 'info' && (
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {[{ icon: faChalkboardTeacher, label: 'NBM', val: profileTeacher.nbm }, { icon: faMars, label: 'Gender', val: profileTeacher.gender === 'L' ? 'Laki-laki' : profileTeacher.gender === 'P' ? 'Perempuan' : null }, { icon: faPhone, label: 'No. HP/WA', val: profileTeacher.phone }, { icon: faEnvelope, label: 'Email', val: profileTeacher.email }, { icon: faCalendar, label: 'Bergabung', val: profileTeacher.join_date ? new Date(profileTeacher.join_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : null }, { icon: faMapMarkerAlt, label: 'Alamat', val: profileTeacher.address, wide: true }, { icon: faNoteSticky, label: 'Catatan', val: profileTeacher.notes, wide: true }].filter(i => i.val).map((item, i) => (
-                                            <div key={i} className={`p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] ${item.wide ? 'col-span-2' : ''}`}>
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 flex items-center gap-1.5"><FontAwesomeIcon icon={item.icon} className="text-[var(--color-primary)]" />{item.label}</p>
-                                                <p className="text-xs font-bold text-[var(--color-text)] break-words">{disp(item.val)}</p>
-                                            </div>
-                                        ))}
-                                        {profileTeacher.phone && <a href={`https://wa.me/${profileTeacher.phone.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="col-span-2 flex items-center justify-center gap-2 h-10 rounded-xl bg-green-500 text-white text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all"><FontAwesomeIcon icon={faWhatsapp} />Hubungi via WhatsApp</a>}
-                                    </div>
-                                )}
-                                {profileTab === 'stats' && (
-                                    loadingProfile ? <div className="flex items-center gap-2 py-8 justify-center text-[var(--color-text-muted)] text-sm"><FontAwesomeIcon icon={faSpinner} className="fa-spin" />Memuat statistik...</div>
-                                        : profileStats ? (
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {[{ label: 'Total Laporan', val: profileStats.total, color: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20' }, { label: 'Bulan Ini', val: profileStats.monthly, color: 'bg-indigo-500/8 text-indigo-600 border-indigo-500/15' }, { label: 'Positif', val: profileStats.posCount, color: 'bg-emerald-500/8 text-emerald-600 border-emerald-500/15' }, { label: 'Negatif', val: profileStats.negCount, color: 'bg-red-500/8 text-red-500 border-red-500/15' }, { label: 'Total Poin', val: profileStats.totalPts >= 0 ? `+${profileStats.totalPts}` : profileStats.totalPts, color: profileStats.totalPts >= 0 ? 'bg-emerald-500/8 text-emerald-600 border-emerald-500/15' : 'bg-red-500/8 text-red-500 border-red-500/15' }].map((s, i) => (
-                                                    <div key={i} className={`border rounded-xl px-3 py-2.5 ${s.color}`}><p className="text-xl font-black leading-none">{s.val}</p><p className="text-[8px] font-bold opacity-70 mt-1 uppercase tracking-wide">{s.label}</p></div>
-                                                ))}
-                                            </div>
-                                        ) : <div className="py-10 text-center text-xs text-[var(--color-text-muted)]">Belum ada statistik tercatat</div>
-                                )}
-                                {profileTab === 'laporan' && (
-                                    loadingProfile ? <div className="flex items-center gap-2 py-8 justify-center text-[var(--color-text-muted)] text-sm"><FontAwesomeIcon icon={faSpinner} className="fa-spin" />Memuat laporan...</div>
-                                        : profileReports.length === 0 ? <div className="py-10 text-center text-xs text-[var(--color-text-muted)]">Belum ada laporan tercatat</div> : (
-                                            <div className="rounded-xl border border-[var(--color-border)] overflow-hidden max-h-64 overflow-y-auto">
-                                                {profileReports.map((r, i) => {
-                                                    const isPos = (r.points || 0) >= 0; return (
-                                                        <div key={i} className={`flex items-start gap-3 px-3 py-2 border-b border-[var(--color-border)] last:border-0 ${isPos ? 'border-l-2 border-l-emerald-500' : 'border-l-2 border-l-red-500'}`}>
-                                                            <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[8px] font-black ${isPos ? 'bg-emerald-500/15 text-emerald-600' : 'bg-red-500/15 text-red-600'}`}>{isPos ? `+${r.points}` : r.points}</span>
-                                                            <div className="flex-1 min-w-0"><p className="text-[10px] font-bold text-[var(--color-text)] leading-snug truncate">{r.description || 'Laporan'}</p><p className="text-[9px] text-[var(--color-text-muted)] mt-0.5">{new Date(r.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</p></div>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        )
-                                )}
-                                {profileTab === 'audit' && (
-                                    <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                                        <AuditTimeline
-                                            tableName="teachers"
-                                            recordId={profileTeacher.id}
-                                            icon={faShieldHalved}
-                                            title="Jejak Audit Forensik"
-                                            onRestored={fetchData}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </Modal>
-                )}
+                <TeacherProfileModal
+                    isOpen={isProfileOpen}
+                    onClose={() => setIsProfileOpen(false)}
+                    selectedTeacher={profileTeacher}
+                    loadingProfile={loadingProfile}
+                    profileStats={profileStats}
+                    profileReports={profileReports}
+                    profileTab={profileTab}
+                    setProfileTab={setProfileTab}
+                    canEdit={canEdit}
+                    handleEdit={handleEdit}
+                    addToast={addToast}
+                    fetchData={fetchData}
+                />
 
                 {/* ════ MODAL Import ════ */}
                 {isImportModalOpen && (
@@ -1274,71 +1311,82 @@ export default function TeachersPage() {
                 )}
 
                 {/* ════ MODAL Arsipkan ════ */}
-                <Modal isOpen={isArchiveModalOpen} onClose={() => setIsArchiveModalOpen(false)} title="Arsipkan Guru" size="sm">
-                    <div className="space-y-6">
-                        <div className="p-4 bg-amber-500/10 rounded-[1.5rem] flex items-center gap-4 text-amber-600 border border-amber-500/20">
-                            <div className="w-12 h-12 rounded-[1rem] bg-amber-500/20 flex items-center justify-center shrink-0 text-xl border border-amber-500/30"><FontAwesomeIcon icon={faBoxArchive} /></div>
-                            <div className="min-w-0"><h3 className="text-sm font-black uppercase tracking-wider">Arsipkan Guru?</h3><p className="text-[10px] font-bold opacity-80 mt-1 uppercase tracking-widest">Data dapat dipulihkan kapan saja.</p></div>
+                {isArchiveModalOpen && (
+                    <Modal 
+                        isOpen={isArchiveModalOpen} 
+                        onClose={() => setIsArchiveModalOpen(false)} 
+                        title="Konfirmasi Arsip"
+                        description="Guru akan dipindahkan ke folder Arsip"
+                        icon={faBoxArchive}
+                        iconBg="bg-amber-500/10"
+                        iconColor="text-amber-600"
+                        size="sm"
+                    >
+                        <div className="space-y-6">
+                            <div className="py-2">
+                                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                    Guru <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20">{teacherToAction?.name}</span> akan diarsipkan.
+                                </p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-medium italic">
+                                    Seluruh riwayat mengajar & data kepegawaian tetap tersimpan dengan aman.
+                                </p>
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setIsArchiveModalOpen(false)} className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all">
+                                    BATAL
+                                </button>
+                                <button 
+                                    onClick={handleArchive} 
+                                    disabled={submitting} 
+                                    className="flex-[2] h-11 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                                >
+                                    {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (
+                                        <><FontAwesomeIcon icon={faBoxArchive} className="text-xs" /> ARSIPKAN</>
+                                    )}
+                                </button>
+                            </div>
                         </div>
-                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">Guru <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20">{teacherToAction?.name}</span> akan dipindahkan ke arsip.</p>
-                        <div className="flex gap-3 pt-2">
-                            <button onClick={() => setIsArchiveModalOpen(false)} className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all">BATAL</button>
-                            <button onClick={handleArchive} disabled={submitting} className="btn bg-amber-500 hover:bg-amber-600 text-white border-0 shadow-lg shadow-amber-500/20 flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all hover:scale-[1.02] disabled:opacity-50">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'ARSIPKAN'}
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
+                    </Modal>
+                )}
 
-                {/* ════ MODAL Hapus ════ */}
-                <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Hapus Permanen" size="sm">
-                    <div className="space-y-6">
-                        <div className="p-4 bg-red-500/10 rounded-[1.5rem] flex items-center gap-4 text-red-500 border border-red-500/20">
-                            <div className="w-12 h-12 rounded-[1rem] bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30"><FontAwesomeIcon icon={faTrash} /></div>
-                            <div className="min-w-0"><h3 className="text-sm font-black uppercase tracking-wider">Hapus Guru?</h3><p className="text-[10px] font-bold opacity-80 mt-1 uppercase tracking-widest">Tindakan tidak dapat dibatalkan.</p></div>
-                        </div>
-                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">Hapus <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{teacherToAction?.name}</span> secara permanen dari sistem?</p>
-                        <div className="flex gap-3 pt-2">
-                            <button onClick={() => setIsDeleteModalOpen(false)} className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all">BATAL</button>
-                            <button onClick={handleDeleteConfirm} disabled={submitting} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-lg shadow-red-500/20 flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all hover:scale-[1.02] disabled:opacity-50">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'HAPUS PERMANEN'}
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
 
-                {/* ════ MODAL Bulk Arsip ════ */}
-                <Modal isOpen={isBulkModalOpen} onClose={() => setIsBulkModalOpen(false)} title={`Arsip Massal — ${selectedIds.length} Guru`} size="sm">
-                    <div className="space-y-6">
-                        <div className="p-4 bg-amber-500/10 rounded-[1.5rem] flex items-center gap-4 text-amber-600 border border-amber-500/20">
-                            <div className="w-12 h-12 rounded-[1rem] bg-amber-500/20 flex items-center justify-center shrink-0 text-xl border border-amber-500/30"><FontAwesomeIcon icon={faBoxArchive} /></div>
-                            <div className="min-w-0"><h3 className="text-sm font-black uppercase tracking-wider">Arsip {selectedIds.length} Guru?</h3><p className="text-[10px] font-bold opacity-80 mt-1 uppercase tracking-widest">Data dapat dipulihkan kapan saja.</p></div>
+                {isBulkModalOpen && (
+                    <Modal 
+                        isOpen={isBulkModalOpen} 
+                        onClose={() => setIsBulkModalOpen(false)} 
+                        title="Arsip Massal"
+                        description={`${selectedIds.length} guru akan diarsipkan`}
+                        icon={faBoxArchive}
+                        iconBg="bg-amber-500/10"
+                        iconColor="text-amber-600"
+                        size="sm"
+                    >
+                        <div className="space-y-6">
+                            <div className="py-2">
+                                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                    Anda akan mengarsipkan <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20">{selectedIds.length} guru</span>.
+                                </p>
+                                <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-medium italic">
+                                    Data ini dapat dipulihkan kapan saja melalui folder Arsip.
+                                </p>
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all">
+                                    BATAL
+                                </button>
+                                <button 
+                                    onClick={handleBulkArchive} 
+                                    disabled={submitting} 
+                                    className="flex-[2] h-11 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                                >
+                                    {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (
+                                        <><FontAwesomeIcon icon={faBoxArchive} className="text-xs" /> ARSIPKAN SEMUA</>
+                                    )}
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex gap-3 pt-2">
-                            <button onClick={() => setIsBulkModalOpen(false)} className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all">BATAL</button>
-                            <button onClick={handleBulkArchive} disabled={submitting} className="btn bg-amber-500 hover:bg-amber-600 text-white border-0 shadow-lg shadow-amber-500/20 flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all hover:scale-[1.02] disabled:opacity-50">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'ARSIPKAN SEMUA'}
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
-
-                {/* ════ MODAL Bulk Hapus ════ */}
-                <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title={`Hapus Massal — ${selectedIds.length} Guru`} size="sm">
-                    <div className="space-y-6">
-                        <div className="p-4 bg-red-500/10 rounded-[1.5rem] flex items-center gap-4 text-red-500 border border-red-500/20">
-                            <div className="w-12 h-12 rounded-[1rem] bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30"><FontAwesomeIcon icon={faTrash} /></div>
-                            <div className="min-w-0"><h3 className="text-sm font-black uppercase tracking-wider leading-tight">Hapus {selectedIds.length} Guru?</h3><p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mt-1">Tindakan ini tidak dapat dibatalkan.</p></div>
-                        </div>
-                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold px-1">Tindakan ini akan menghapus <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{selectedIds.length} guru</span> secara permanen dari sistem.</p>
-                        <div className="flex gap-3 pt-2">
-                            <button onClick={() => setIsBulkDeleteOpen(false)} className="btn bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all">BATAL</button>
-                            <button onClick={handleBulkDelete} disabled={submitting} className="btn bg-red-500 hover:bg-red-600 text-white border-0 shadow-lg shadow-red-500/20 flex-1 font-black text-[10px] h-11 uppercase tracking-widest rounded-[1rem] transition-all hover:scale-[1.02]">
-                                {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : 'HAPUS PERMANEN'}
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
+                    </Modal>
+                )}
 
                 {/* ════ MODAL WA Massal ════ */}
                 <Modal isOpen={isBulkWAOpen} onClose={() => setIsBulkWAOpen(false)} title="WA Massal Guru" size="sm">

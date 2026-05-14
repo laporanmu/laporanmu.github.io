@@ -378,7 +378,13 @@ function TeacherSearch({ teacherList, value, onChange, label }) {
   const filtered = useMemo(() => {
     if (!query.trim()) return teacherList
     const q = query.toLowerCase()
-    return teacherList.filter(t => t.name.toLowerCase().includes(q) || (t.nbm || '').toLowerCase().includes(q))
+    return teacherList.filter(t => 
+      t.name.toLowerCase().includes(q) || 
+      (t.nbm || '').toLowerCase().includes(q) ||
+      (t.nip || '').toLowerCase().includes(q) ||
+      (t.nik || '').toLowerCase().includes(q) ||
+      (t.nuptk || '').toLowerCase().includes(q)
+    )
   }, [teacherList, query])
 
   useEffect(() => {
@@ -1095,7 +1101,7 @@ export default function GatePage() {
   // ── Data fetching ──────────────────────────────────────────────────────────
 
   useEffect(() => {
-    supabase.from('teachers').select('id,name,nbm,status,type').is('deleted_at', null).order('name')
+    supabase.from('teachers').select('id,name,nbm,status,type,nip,nik,nuptk').is('deleted_at', null).order('name')
       .then(({ data, error }) => {
         if (error) console.error('[GatePage] Teachers fetch error:', error)
         setTeacherList(data || [])

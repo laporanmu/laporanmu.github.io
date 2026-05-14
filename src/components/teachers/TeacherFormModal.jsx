@@ -1,23 +1,36 @@
-import React, { useState, useEffect, memo } from 'react'
+import React, { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { 
-    faSpinner, faTriangleExclamation, faXmark, faUser, faIdCard, 
-    faBook, faPhone, faEnvelope, faCalendarAlt, faMapMarkerAlt, 
-    faInfoCircle, faIdBadge, faSchool, faDoorOpen, faGraduationCap,
-    faCheckCircle, faMars, faVenus, faTimes, faSave
+import {
+    faSpinner, faTriangleExclamation, faUser, faIdCard,
+    faBook, faPhone, faEnvelope, faCalendarAlt, faMapMarkerAlt,
+    faInfoCircle, faIdBadge, faGraduationCap, faCheckCircle,
+    faTimes, faSave, faPlus, faEdit, faCamera, faFingerprint,
+    faBriefcase
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import RichSelect from '../ui/RichSelect'
 
-const EMPTY_FORM = { name: '', nbm: '', subject: '', gender: 'L', phone: '', email: '', status: 'active', join_date: '', address: '', notes: '', class_id: '', type: 'guru' }
+const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+
+const EMPTY_FORM = {
+    name: '', nbm: '', subject: '', gender: 'L', phone: '', email: '',
+    status: 'active', join_date: '', address: '', notes: '', class_id: '', type: 'guru',
+    avatar_url: '', work_days: DAYS, fingerspot_name: '',
+    nik: '', nip: '', nuptk: '', birth_place: '', birth_date: '',
+    employment_status: 'GTY', teaching_hours: 0,
+    last_education: '', major: '', graduation_year: ''
+}
 
 const TeacherFormModal = memo(function TeacherFormModal({
     isOpen, onClose, selectedItem, classesList, subjectsList,
-    onSubmit, submitting,
+    onSubmit, submitting, onPhotoUpload, uploadingPhoto
 }) {
     const [form, setForm] = useState(EMPTY_FORM)
     const [formError, setFormError] = useState('')
     const [touched, setTouched] = useState({})
+    const [attemptedSubmit, setAttemptedSubmit] = useState(false)
+    const [avatarPreview, setAvatarPreview] = useState(null)
+    const fileInputRef = useRef(null)
 
     useEffect(() => {
         if (!isOpen) return
@@ -35,15 +48,91 @@ const TeacherFormModal = memo(function TeacherFormModal({
                 notes: selectedItem.notes || '',
                 class_id: selectedItem.class_id || '',
                 type: selectedItem.type || 'guru',
+                avatar_url: selectedItem.avatar_url || selectedItem.photo_url || '',
+                work_days: selectedItem.work_days || DAYS,
+                fingerspot_name: selectedItem.fingerspot_name || '',
+                nik: selectedItem.nik || '',
+                nip: selectedItem.nip || '',
+                nuptk: selectedItem.nuptk || '',
+                birth_place: selectedItem.birth_place || '',
+                birth_date: selectedItem.birth_date || '',
+                employment_status: selectedItem.employment_status || 'GTY',
+                teaching_hours: selectedItem.teaching_hours || 0,
+                last_education: selectedItem.last_education || '',
+                major: selectedItem.major || '',
+                graduation_year: selectedItem.graduation_year || '',
             })
+            setAvatarPreview(selectedItem.avatar_url || selectedItem.photo_url || null)
         } else {
             setForm(EMPTY_FORM)
+            setAvatarPreview(null)
         }
         setFormError('')
         setTouched({})
+        setAttemptedSubmit(false)
     }, [isOpen, selectedItem])
 
-    const handleSubmit = async () => {
+    const setField = useCallback((key, value) => {
+        setForm(prev => ({ ...prev, [key]: value }))
+    }, [])
+
+    const setFieldTouched = (field) => setTouched(prev => ({ ...prev, [field]: true }))
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        // Local preview
+        const reader = new FileReader()
+        reader.onloadend = () => setAvatarPreview(reader.result)
+        reader.readAsDataURL(file)
+
+        // Upload
+        if (onPhotoUpload) {
+            const url = await onPhotoUpload(file)
+            if (url) {
+                setField('avatar_url', url)
+            }
+        }
+    }
+
+    const toggleWorkDay = (day) => {
+        setForm(prev => {
+            const current = prev.work_days || []
+            const next = current.includes(day)
+                ? current.filter(d => d !== day)
+                : [...current, day]
+            return { ...prev, work_days: next }
+        })
+    }
+
+    // Validation status helper
+    const getStatus = (field, isRequired = false) => {
+        const value = form[field]
+        const isTouched = touched[field] || attemptedSubmit
+
+        if (field === 'phone' && value && (value.length < 10 || !value.startsWith('08'))) return 'warning'
+        if (field === 'email' && value && !value.includes('@')) return 'warning'
+
+        if (isRequired) {
+            if (isTouched && (!value || (typeof value === 'string' && !value.trim()))) return 'error'
+            if (value && (typeof value === 'string' ? value.trim() : true)) return 'success'
+        } else {
+            if (value && (typeof value === 'string' ? value.trim() : true)) return 'success'
+        }
+        return 'normal'
+    }
+
+    // Progress calculation
+    const overallProgress = (() => {
+        const fields = ['name', 'nbm', 'subject', 'gender', 'phone', 'email', 'status', 'join_date', 'address', 'class_id', 'type', 'nik', 'last_education']
+        const filled = fields.filter(f => form[f]).length
+        return Math.round((filled / fields.length) * 100)
+    })()
+
+    const handleSubmit = async (e) => {
+        e?.preventDefault()
+        setAttemptedSubmit(true)
         const name = (form.name || '').trim()
         if (!name) { setFormError('Nama lengkap wajib diisi.'); return }
         setFormError('')
@@ -60,6 +149,20 @@ const TeacherFormModal = memo(function TeacherFormModal({
             notes: (form.notes || '').trim() || null,
             class_id: form.class_id || null,
             type: form.type || 'guru',
+            avatar_url: form.avatar_url || null,
+            photo_url: form.avatar_url || null,
+            work_days: form.work_days || DAYS,
+            fingerspot_name: (form.fingerspot_name || '').trim() || null,
+            nik: (form.nik || '').trim() || null,
+            nip: (form.nip || '').trim() || null,
+            nuptk: (form.nuptk || '').trim() || null,
+            birth_place: (form.birth_place || '').trim() || null,
+            birth_date: form.birth_date || null,
+            employment_status: form.employment_status || 'GTY',
+            teaching_hours: Number(form.teaching_hours) || 0,
+            last_education: form.last_education || null,
+            major: (form.major || '').trim() || null,
+            graduation_year: Number(form.graduation_year) || null,
         }
         const result = await onSubmit(payload)
         if (result?.error) {
@@ -70,220 +173,323 @@ const TeacherFormModal = memo(function TeacherFormModal({
 
     if (!isOpen) return null
 
-    const setField = (field, value) => {
-        setForm(p => ({ ...p, [field]: value }))
+    const inputCls = (field, required = false) => {
+        const s = getStatus(field, required)
+        return `w-full px-4 h-11 rounded-xl border bg-[var(--color-surface)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 ${s === 'error' ? 'border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/5' :
+            s === 'warning' ? 'border-amber-500 bg-amber-50/10 focus:border-amber-500 focus:ring-1 focus:ring-amber-500' :
+                s === 'success' ? 'border-emerald-500/30 bg-emerald-50/5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500' :
+                    'border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
+            }`
     }
 
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={selectedItem ? `Update Data ${form.type === 'karyawan' ? 'Karyawan' : 'Guru'}` : `Tambah ${form.type === 'karyawan' ? 'Karyawan' : 'Guru'} Baru`}
-            subtitle={selectedItem ? 'Pembaruan data personal' : 'Input data baru'}
-            maxWidth="max-w-2xl"
+            title={selectedItem ? `Edit Data ${form.type === 'karyawan' ? 'Karyawan' : 'Guru'}` : `Tambah ${form.type === 'karyawan' ? 'Karyawan' : 'Guru'} Baru`}
+            description={
+                <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-24 bg-[var(--color-border)] rounded-full overflow-hidden shrink-0">
+                        <div
+                            className="h-full bg-emerald-500 transition-all duration-500"
+                            style={{ width: `${overallProgress}%` }}
+                        />
+                    </div>
+                    <span className="text-[10px] font-black text-emerald-600">{overallProgress}% Lengkap</span>
+                </div>
+            }
+            icon={selectedItem ? faEdit : faPlus}
+            iconBg={selectedItem ? 'bg-indigo-500/10' : 'bg-emerald-500/10'}
+            iconColor={selectedItem ? 'text-indigo-500' : 'text-emerald-600'}
+            size="lg"
+            mobileVariant="bottom-sheet"
             footer={
-                <div className="flex justify-between items-center w-full">
-                    <button onClick={onClose} className="h-11 px-4 sm:px-6 rounded-xl bg-transparent border border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] font-bold text-[11px] uppercase tracking-wider transition-all flex items-center gap-2">
-                        <FontAwesomeIcon icon={faTimes} />
-                        <span>Batal</span>
+                <div className="flex gap-2 sm:gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
+                    >
+                        <FontAwesomeIcon icon={faTimes} className="text-[10px] opacity-50" />
+                        Batal
                     </button>
-                    <button onClick={handleSubmit} disabled={submitting} className="h-11 px-6 sm:px-8 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-[11px] uppercase tracking-wider shadow-lg shadow-indigo-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                        {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faSave} /><span>{selectedItem ? 'Update' : 'Simpan'}</span></>}
+                    <button
+                        type="submit"
+                        form="teacher-form-modal"
+                        disabled={submitting || uploadingPhoto}
+                        className="flex-[2] h-11 px-2 sm:px-6 rounded-xl bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/25 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                    >
+                        {submitting ? (
+                            <>
+                                <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                                <span>Menyimpan...</span>
+                            </>
+                        ) : uploadingPhoto ? (
+                            <>
+                                <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                                <span>Mengunggah Foto...</span>
+                            </>
+                        ) : (
+                            <>
+                                <FontAwesomeIcon icon={faSave} className="text-xs opacity-80 shrink-0" />
+                                <span className="truncate">{selectedItem ? 'Simpan Perubahan' : 'Simpan Data'}</span>
+                            </>
+                        )}
                     </button>
                 </div>
             }
         >
-            <div className="space-y-6 py-2">
-                
-                {/* ── Jenis Toggle ── */}
-                <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Jenis</label>
-                    <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-12">
-                        {[
-                            { key: 'guru', label: 'Guru', activeCls: 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' },
-                            { key: 'karyawan', label: 'Karyawan', activeCls: 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' },
-                        ].map((opt) => (
-                            <button
-                                key={opt.key}
-                                type="button"
-                                onClick={() => setField('type', opt.key)}
-                                className={`flex-1 rounded-lg text-[11px] font-bold tracking-wider transition-all duration-200 ${form.type === opt.key ? opt.activeCls : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* ── Identitas & Akademik ── */}
+            <form id="teacher-form-modal" onSubmit={handleSubmit} className="space-y-6">
+                {/* ── Section: Identitas ── */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2.5 pt-2">
                         <div className="w-1 h-4 bg-indigo-500 rounded-full" />
                         <FontAwesomeIcon icon={faIdBadge} className="text-indigo-500 text-[10px] opacity-70" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Informasi Utama</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Identitas</span>
                         <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="sm:col-span-2 relative group">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Nama Lengkap <span className="text-rose-500">*</span></label>
-                            <div className="relative">
-                                <input
-                                    type="text" value={form.name} onChange={e => setField('name', e.target.value)}
-                                    placeholder="Nama lengkap dengan gelar..."
-                                    className="w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40"
-                                />
-                                <FontAwesomeIcon icon={faUser} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
+                    <div className="flex flex-col sm:flex-row gap-5">
+                        <div className="shrink-0 flex flex-col items-center gap-2 pt-1">
+                            <div className="relative group shrink-0 mx-auto sm:mx-0">
+                                <div
+                                    className={`w-[88px] h-[88px] rounded-2xl bg-[var(--color-surface-alt)] border flex items-center justify-center overflow-hidden transition-all cursor-pointer ${form.avatar_url || avatarPreview ? 'border-emerald-500/50' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'}`}
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    {(avatarPreview || form.avatar_url) ? (
+                                        <img src={avatarPreview || form.avatar_url} alt="Preview" className="w-full h-full object-cover animate-in fade-in zoom-in duration-300" />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center gap-1.5 opacity-40 group-hover:opacity-100 group-hover:text-[var(--color-primary)] transition-all">
+                                            <FontAwesomeIcon icon={faCamera} className="text-xl" />
+                                            <span className="text-[8px] font-bold uppercase tracking-wider">Foto</span>
+                                        </div>
+                                    )}
+                                    {uploadingPhoto && (
+                                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                                            <FontAwesomeIcon icon={faSpinner} className="fa-spin text-white" />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                         </div>
-                        <div className="relative group">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">NBM</label>
-                            <div className="relative">
-                                <input
-                                    type="text" value={form.nbm} onChange={e => setField('nbm', e.target.value)}
-                                    placeholder="Nomor Baku Muhammadiyah"
-                                    className="w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] font-mono text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40"
-                                />
-                                <FontAwesomeIcon icon={faIdCard} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
+
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-10 gap-x-4 gap-y-3">
+                            <div className="sm:col-span-10 relative group">
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Nama Lengkap <span className="text-rose-500">*</span></label>
+                                <div className="relative">
+                                    <input type="text" value={form.name} onChange={e => setField('name', e.target.value)} onBlur={() => setFieldTouched('name')} placeholder="Nama lengkap dengan gelar..." className={inputCls('name', true)} />
+                                </div>
                             </div>
-                        </div>
-                        <div className="relative group">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Aspek Penilaian</label>
-                            <div className="relative">
-                                <input
-                                    type="text" value={form.subject} onChange={e => setField('subject', e.target.value)} list="subj-suggest"
-                                    placeholder="e.g. Matematika"
-                                    className="w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40"
-                                />
-                                <datalist id="subj-suggest">{(subjectsList || []).map(s => <option key={s} value={s} />)}</datalist>
-                                <FontAwesomeIcon icon={faBook} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
+
+                            {/* Row: NIK - NIP - NUPTK (40% - 30% - 30%) */}
+                            <div className="sm:col-span-4 relative group">
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">NIK</label>
+                                <input type="text" value={form.nik} onChange={e => setField('nik', e.target.value)} placeholder="16 digit angka" className={inputCls('nik')} />
+                            </div>
+                            <div className="sm:col-span-3 relative group">
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">NIP</label>
+                                <input type="text" value={form.nip} onChange={e => setField('nip', e.target.value)} placeholder="NIP" className={inputCls('nip')} />
+                            </div>
+                            <div className="sm:col-span-3 relative group">
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">NUPTK</label>
+                                <input type="text" value={form.nuptk} onChange={e => setField('nuptk', e.target.value)} placeholder="NUPTK" className={inputCls('nuptk')} />
+                            </div>
+
+                            {/* Row: NBM - Tempat Lahir - Tgl Lahir (40% - 30% - 30%) */}
+                            <div className="sm:col-span-4 relative group">
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">NBM</label>
+                                <input type="text" value={form.nbm} onChange={e => setField('nbm', e.target.value)} placeholder="No. Baku Muhammadiyah" className={inputCls('nbm')} />
+                            </div>
+                            <div className="sm:col-span-3 relative group">
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tempat Lahir</label>
+                                <input type="text" value={form.birth_place} onChange={e => setField('birth_place', e.target.value)} placeholder="Kota Lahir" className={inputCls('birth_place')} />
+                            </div>
+                            <div className="sm:col-span-3 relative group">
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tgl Lahir</label>
+                                <input type="date" value={form.birth_date} onChange={e => setField('birth_date', e.target.value)} className={inputCls('birth_date')} />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ── Detail Personal ── */}
+                {/* ── Section: Kepegawaian ── */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2.5 pt-2">
                         <div className="w-1 h-4 bg-emerald-500 rounded-full" />
-                        <FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-[10px] opacity-70" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Detail Personal</span>
+                        <FontAwesomeIcon icon={faBriefcase} className="text-emerald-500 text-[10px] opacity-70" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Kepegawaian</span>
                         <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Jenis Kelamin</label>
-                            <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
-                                {[
-                                    { key: 'L', label: 'Laki-laki', activeCls: 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' },
-                                    { key: 'P', label: 'Perempuan', activeCls: 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' },
-                                ].map((opt) => (
-                                    <button
-                                        key={opt.key}
-                                        type="button"
-                                        onClick={() => setField('gender', opt.key)}
-                                        className={`flex-1 rounded-lg text-[10px] font-bold tracking-wider transition-all duration-200 ${form.gender === opt.key ? opt.activeCls : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Status Kepegawaian</label>
+                            <RichSelect
+                                value={form.employment_status}
+                                onChange={val => setField('employment_status', val)}
+                                options={[
+                                    { id: 'GTY', name: 'Tetap Yayasan (GTY/KTY)' },
+                                    { id: 'GTT', name: 'Tidak Tetap (GTT/KTT)' },
+                                    { id: 'Honorer', name: 'Honorer' },
+                                    { id: 'PNS', name: 'PNS DPK' },
+                                    { id: 'ASNP3K', name: 'ASN P3K' },
+                                ]}
+                                placeholder="Pilih status..."
+                            />
+                        </div>
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Mata Pelajaran Utama</label>
+                            <div className="relative">
+                                <input type="text" value={form.subject} onChange={e => setField('subject', e.target.value)} list="subj-suggest" placeholder="e.g. Matematika" className={inputCls('subject')} />
+                                <datalist id="subj-suggest">{(subjectsList || []).map(s => <option key={s} value={s} />)}</datalist>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="relative group">
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tgl Bergabung</label>
+                                <input type="date" value={form.join_date} onChange={e => setField('join_date', e.target.value)} className={inputCls('join_date')} />
+                            </div>
+                            <div className="relative group">
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Jam Mengajar</label>
+                                <input type="number" value={form.teaching_hours} onChange={e => setField('teaching_hours', e.target.value)} placeholder="0 Jam / Minggu" className={inputCls('teaching_hours')} />
                             </div>
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Status</label>
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Status Aktif</label>
                             <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
                                 {[
-                                    { key: 'active', label: 'Aktif', activeCls: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' },
-                                    { key: 'inactive', label: 'Nonaktif', activeCls: 'bg-slate-700 text-white shadow-lg shadow-slate-700/20' },
-                                    { key: 'cuti', label: 'Cuti', activeCls: 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' },
+                                    { key: 'active', label: 'Aktif', activeCls: 'bg-emerald-500 text-white' },
+                                    { key: 'inactive', label: 'Nonaktif', activeCls: 'bg-slate-700 text-white' },
                                 ].map((opt) => (
-                                    <button
-                                        key={opt.key}
-                                        type="button"
-                                        onClick={() => setField('status', opt.key)}
-                                        className={`flex-1 rounded-lg text-[10px] font-bold tracking-wider transition-all duration-200 ${form.status === opt.key ? opt.activeCls : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                    >
-                                        {opt.label}
-                                    </button>
+                                    <button key={opt.key} type="button" onClick={() => setField('status', opt.key)} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${form.status === opt.key ? opt.activeCls : 'text-[var(--color-text-muted)]'}`}>{opt.label}</button>
                                 ))}
                             </div>
                         </div>
+                    </div>
+                </div>
 
+                {/* ── Section: Pendidikan Terakhir ── */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2.5 pt-2">
+                        <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                        <FontAwesomeIcon icon={faGraduationCap} className="text-blue-500 text-[10px] opacity-70" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Pendidikan Terakhir</span>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Tingkat Pendidikan</label>
+                            <RichSelect
+                                value={form.last_education}
+                                onChange={val => setField('last_education', val)}
+                                options={[
+                                    { id: 'SMA', name: 'SMA/Sederajat' },
+                                    { id: 'D1', name: 'D1' },
+                                    { id: 'D2', name: 'D2' },
+                                    { id: 'D3', name: 'D3' },
+                                    { id: 'S1', name: 'S1' },
+                                    { id: 'S2', name: 'S2' },
+                                    { id: 'S3', name: 'S3' },
+                                ]}
+                                placeholder="Pilih tingkat..."
+                            />
+                        </div>
                         <div className="relative group">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">No. HP / WA</label>
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Jurusan / Program Studi</label>
+                            <input type="text" value={form.major} onChange={e => setField('major', e.target.value)} placeholder="e.g. Pendidikan Bahasa Inggris" className={inputCls('major')} />
+                        </div>
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tahun Lulus</label>
+                            <input type="number" value={form.graduation_year} onChange={e => setField('graduation_year', e.target.value)} placeholder="Tahun" className={inputCls('graduation_year')} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Jenis Kelamin</label>
+                            <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
+                                {[{ key: 'L', label: 'Laki-laki', c: 'bg-indigo-500' }, { key: 'P', label: 'Perempuan', c: 'bg-rose-500' }].map(o => (
+                                    <button key={o.key} type="button" onClick={() => setField('gender', o.key)} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${form.gender === o.key ? o.c + ' text-white' : 'text-[var(--color-text-muted)]'}`}>{o.label}</button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Section: Kontak & Lokasi ── */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2.5 pt-2">
+                        <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                        <FontAwesomeIcon icon={faEnvelope} className="text-amber-500 text-[10px] opacity-70" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Kontak & Lokasi</span>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">No. Handphone</label>
                             <div className="relative">
-                                <input
-                                    type="tel" value={form.phone} onChange={e => setField('phone', e.target.value)}
-                                    placeholder="Cth: 081234567890"
-                                    className="w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40"
-                                />
-                                <FontAwesomeIcon icon={faPhone} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
+                                <input type="tel" value={form.phone} onChange={e => setField('phone', e.target.value)} placeholder="08xxxxxxxxxx" className={inputCls('phone')} />
                             </div>
                         </div>
                         <div className="relative group">
                             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Email</label>
                             <div className="relative">
-                                <input
-                                    type="email" value={form.email} onChange={e => setField('email', e.target.value)}
-                                    placeholder="Cth: nama@email.com"
-                                    className="w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40"
-                                />
-                                <FontAwesomeIcon icon={faEnvelope} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
+                                <input type="email" value={form.email} onChange={e => setField('email', e.target.value)} placeholder="nama@guru.com" className={inputCls('email')} />
                             </div>
                         </div>
-
-                        <div className="relative group">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tanggal Bergabung</label>
-                            <div className="relative">
-                                <input
-                                    type="date" value={form.join_date} onChange={e => setField('join_date', e.target.value)}
-                                    className="w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)]"
-                                />
-                                <FontAwesomeIcon icon={faCalendarAlt} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
-                            </div>
-                        </div>
-                        {(classesList || []).length > 0 && <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Penugasan Kelas</label>
-                            <RichSelect
-                                value={form.class_id}
-                                onChange={val => setField('class_id', val)}
-                                options={classesList.map(c => ({ id: c.id, name: c.name }))}
-                                extraOption={{ id: '', name: 'Tidak ditugaskan' }}
-                                placeholder="Tidak ditugaskan"
-                                icon={faGraduationCap}
-                                searchable
-                            />
-                        </div>}
-
                         <div className="sm:col-span-2 relative group">
                             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Alamat Lengkap</label>
-                            <div className="relative">
-                                <input
-                                    type="text" value={form.address} onChange={e => setField('address', e.target.value)}
-                                    placeholder="Nama jalan, kecamatan, kota..."
-                                    className="w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40"
-                                />
-                                <FontAwesomeIcon icon={faMapMarkerAlt} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
-                            </div>
-                        </div>
-                        
-                        <div className="sm:col-span-2 relative group">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Catatan Internal</label>
-                            <div className="relative">
-                                <textarea
-                                    value={form.notes} onChange={e => setField('notes', e.target.value)}
-                                    placeholder="Catatan khusus, rekam jejak..." rows={2}
-                                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 resize-none min-h-[70px]"
-                                />
-                                <FontAwesomeIcon icon={faInfoCircle} className="absolute left-3.5 top-3.5 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
-                            </div>
+                            <textarea value={form.address} onChange={e => setField('address', e.target.value)} placeholder="Alamat domisili saat ini..." rows={2} className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] outline-none text-[13px] resize-none" />
                         </div>
                     </div>
                 </div>
 
-                {formError && <div className="flex items-center gap-3 p-3 mt-4 rounded-xl bg-red-500/10 border border-red-500/20 animate-in fade-in"><FontAwesomeIcon icon={faTriangleExclamation} className="text-red-500 shrink-0" /><p className="text-xs font-bold text-red-600">{formError}</p></div>}
-            </div>
+                {/* ── Section: Presensi & Lainnya ── */}
+                <div className="space-y-4 pb-4">
+                    <div className="flex items-center gap-2.5 pt-2">
+                        <div className="w-1 h-4 bg-slate-500 rounded-full" />
+                        <FontAwesomeIcon icon={faFingerprint} className="text-slate-500 text-[10px] opacity-70" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Presensi & Lainnya</span>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Nama di Fingerspot</label>
+                            <div className="relative">
+                                <input type="text" value={form.fingerspot_name} onChange={e => setField('fingerspot_name', e.target.value)} placeholder="Sesuai mesin absensi" className={inputCls('fingerspot_name')} />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Tipe Tugas</label>
+                            <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
+                                {[{ key: 'guru', label: 'Guru' }, { key: 'karyawan', label: 'Karyawan' }].map(o => (
+                                    <button key={o.key} type="button" onClick={() => setField('type', o.key)} className={`flex-1 rounded-lg text-[10px] font-bold transition-colors ${form.type === o.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}>{o.label}</button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="sm:col-span-2 space-y-2">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Hari Kerja Aktif</label>
+                            <div className="flex flex-wrap gap-2">
+                                {DAYS.map(day => (
+                                    <button key={day} type="button" onClick={() => toggleWorkDay(day)} className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-colors border ${form.work_days.includes(day) ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-500/30' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-border)]'}`}>{day}</button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="sm:col-span-2 relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Catatan Internal</label>
+                            <textarea value={form.notes} onChange={e => setField('notes', e.target.value)} placeholder="Informasi tambahan..." rows={2} className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] outline-none text-[13px] resize-none" />
+                        </div>
+                    </div>
+                </div>
+
+                {formError && (
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/20 animate-in fade-in">
+                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-red-500 shrink-0" />
+                        <p className="text-xs font-bold text-red-600">{formError}</p>
+                    </div>
+                )}
+            </form>
         </Modal>
     )
 })

@@ -2,11 +2,11 @@ import React, { memo, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faEdit, faTrash, faMars, faVenus, faBoxArchive,
-    faEye, faThumbtack, faShieldHalved
+    faUserTie, faThumbtack, faShieldHalved, faIdCard, faClockRotateLeft
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 
-const STATUS_CONFIG = {
+export const STATUS_CONFIG = {
     active: { label: 'Aktif', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', dot: 'bg-emerald-500' },
     inactive: { label: 'Nonaktif', color: 'bg-red-500/10 text-red-600 border-red-500/20', dot: 'bg-red-500' },
     cuti: { label: 'Cuti', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20', dot: 'bg-amber-500' },
@@ -104,12 +104,35 @@ const TeacherRow = memo(({
             {visibleCols.join && <td className="px-6 py-4 text-xs text-[var(--color-text-muted)]">{teacher.join_date ? new Date(teacher.join_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>}
             <td className="px-6 py-4">
                 <div className="flex items-center justify-end gap-1">
-                    <button onClick={() => handleTogglePin(teacher)} title={teacher.is_pinned ? 'Lepas Sematkan' : 'Sematkan'} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all text-xs ${teacher.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10'}`}><FontAwesomeIcon icon={faThumbtack} /></button>
-                    <button onClick={() => openProfile(teacher)} title="Profil" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-xs"><FontAwesomeIcon icon={faEye} /></button>
-                    {handleEdit && <button onClick={() => handleEdit(teacher)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-xs"><FontAwesomeIcon icon={faEdit} /></button>}
-                    <button onClick={() => openProfile(teacher, 'audit')} title="Forensic Audit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-xs"><FontAwesomeIcon icon={faShieldHalved} /></button>
-                    {setIsArchiveModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} title="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 transition-all text-xs"><FontAwesomeIcon icon={faBoxArchive} /></button>}
-                    {setIsDeleteModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsDeleteModalOpen(true) }} title="Hapus" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-xs"><FontAwesomeIcon icon={faTrash} /></button>}
+                    <button onClick={() => openProfile(teacher)} title="Lihat Profil" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-emerald-500/10 transition-all text-sm">
+                        <FontAwesomeIcon icon={faUserTie} />
+                    </button>
+                    {teacher.phone && (
+                        <a
+                            href={`https://wa.me/${teacher.phone.replace(/^0/, '62')}`}
+                            target="_blank" rel="noopener noreferrer"
+                            title="Hubungi via WhatsApp"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-600 hover:bg-emerald-500/10 transition-all text-sm"
+                        >
+                            <FontAwesomeIcon icon={faWhatsapp} />
+                        </a>
+                    )}
+                    {handleEdit && (
+                        <button onClick={() => handleEdit(teacher)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all text-sm">
+                            <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                    )}
+                    <button onClick={() => handleTogglePin(teacher)} title={teacher.is_pinned ? 'Lepas Sematkan' : 'Sematkan'} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all text-sm ${teacher.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10'}`}>
+                        <FontAwesomeIcon icon={faThumbtack} />
+                    </button>
+                    <button onClick={() => openProfile(teacher, 'audit')} title="Audit Trail" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-purple-500 hover:bg-purple-500/10 transition-all text-sm">
+                        <FontAwesomeIcon icon={faShieldHalved} />
+                    </button>
+                    {setIsArchiveModalOpen && (
+                        <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} title="Arsipkan" className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-all text-sm">
+                            <FontAwesomeIcon icon={faBoxArchive} />
+                        </button>
+                    )}
                 </div>
             </td>
         </tr>
@@ -151,18 +174,15 @@ const TeacherMobileCard = memo(({
                                 </span>
                             </div>
                         </div>
-                        <div className="flex gap-1 shrink-0">
-                            <button onClick={() => openProfile(teacher, 'audit')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 text-xs transition-all"><FontAwesomeIcon icon={faShieldHalved} /></button>
-                            <button onClick={() => handleTogglePin(teacher)} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all ${teacher.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)] hover:text-amber-500'}`}><FontAwesomeIcon icon={faThumbtack} /></button>
-                            {handleEdit && <button onClick={() => handleEdit(teacher)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 text-xs transition-all"><FontAwesomeIcon icon={faEdit} /></button>}
-                            {setIsArchiveModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 text-xs transition-all"><FontAwesomeIcon icon={faBoxArchive} /></button>}
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => handleTogglePin(teacher)} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${teacher.is_pinned ? 'text-amber-500 bg-amber-500/10' : 'text-[var(--color-text-muted)]'}`}><FontAwesomeIcon icon={faThumbtack} className="text-xs" /></button>
+                            <button onClick={() => openProfile(teacher)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)]"><FontAwesomeIcon icon={faUserTie} className="text-xs" /></button>
+                            {handleEdit && <button onClick={() => handleEdit(teacher)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)]"><FontAwesomeIcon icon={faEdit} className="text-xs" /></button>}
                         </div>
                     </div>
-                    <div className="mt-2 space-y-1 text-xs text-[var(--color-text-muted)]">
-                        {teacher.nbm && <p className="font-mono">NBM: {disp(teacher.nbm)}</p>}
-                        {teacher.phone && <a href={`https://wa.me/${teacher.phone.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-green-600 font-bold w-fit"><FontAwesomeIcon icon={faWhatsapp} />{disp(teacher.phone)}</a>}
-                        {teacher.email && <p className="italic truncate">{disp(teacher.email)}</p>}
-                        {teacher.join_date && <p>Bergabung: {new Date(teacher.join_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</p>}
+                    <div className="mt-3 flex items-center gap-2">
+                        {teacher.phone && <a href={`https://wa.me/${teacher.phone.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="flex-1 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest"><FontAwesomeIcon icon={faWhatsapp} className="text-xs" /> WhatsApp</a>}
+                        {setIsArchiveModalOpen && <button onClick={() => { setTeacherToAction(teacher); setIsArchiveModalOpen(true) }} className="flex-1 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest"><FontAwesomeIcon icon={faBoxArchive} className="text-xs" /> Arsipkan</button>}
                     </div>
                 </div>
             </div>
@@ -170,5 +190,4 @@ const TeacherMobileCard = memo(({
     )
 })
 
-export { TeacherRow, TeacherMobileCard, STATUS_CONFIG }
-export default TeacherRow
+export { TeacherRow, TeacherMobileCard }
