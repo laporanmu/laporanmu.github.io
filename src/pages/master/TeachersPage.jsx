@@ -27,6 +27,9 @@ import RichSelect from '../../components/ui/RichSelect'
 import { TeacherRow, TeacherMobileCard, STATUS_CONFIG } from '../../components/teachers/TeacherRow'
 import TeacherFormModal from '../../components/teachers/TeacherFormModal'
 import TeacherProfileModal from '../../components/teachers/TeacherProfileModal'
+import TeacherImportModal from '../../components/teachers/TeacherImportModal'
+import TeacherExportModal from '../../components/teachers/TeacherExportModal'
+import TeacherArchiveModal from '../../components/teachers/TeacherArchiveModal'
 import { ActionBadge, DiffViewer, AuditTimeline } from '../../pages/admin/LogsPage'
 import Pagination from '../../components/ui/Pagination'
 import Papa from 'papaparse'
@@ -40,6 +43,28 @@ import { useDebounce } from '../../hooks/useDebounce'
 const LS_FILTERS = 'teachers_filters'
 const LS_COLS = 'teachers_columns'
 const LS_PAGE_SIZE = 'teachers_page_size'
+
+const SYSTEM_COLS = [
+    { key: 'name', label: 'Nama Lengkap' },
+    { key: 'nbm', label: 'NBM' },
+    { key: 'subject', label: 'Mata Pelajaran' },
+    { key: 'gender', label: 'Jenis Kelamin' },
+    { key: 'phone', label: 'No. WhatsApp' },
+    { key: 'email', label: 'Email' },
+    { key: 'status', label: 'Status' },
+]
+
+const ALL_EXPORT_COLUMNS = [
+    { key: 'nama', label: 'Nama', fn: t => t.name || '' },
+    { key: 'nbm', label: 'NBM', fn: t => t.nbm || '' },
+    { key: 'subject', label: 'Mata Pelajaran', fn: t => t.subject || '' },
+    { key: 'gender', label: 'Gender', fn: t => t.gender === 'L' ? 'Laki-laki' : t.gender === 'P' ? 'Perempuan' : '-' },
+    { key: 'phone', label: 'No. HP/WA', fn: t => t.phone || '' },
+    { key: 'email', label: 'Email', fn: t => t.email || '' },
+    { key: 'status', label: 'Status', fn: t => STATUS_CONFIG[t.status]?.label || t.status || '' },
+    { key: 'join_date', label: 'Tgl Bergabung', fn: t => t.join_date || '' },
+    { key: 'address', label: 'Alamat', fn: t => t.address || '' },
+]
 
 const maskInfo = (str, vis = 4) => {
     if (!str) return '—'
@@ -121,18 +146,23 @@ export default function TeachersPage() {
     const [quickStatusId, setQuickStatusId] = useState(null)
     const quickStatusRef = useRef(null)
     // import
-    const [importTab, setImportTab] = useState('panduan')
+    const [importStep, setImportStep] = useState(1)
     const [importFileName, setImportFileName] = useState('')
+    const [importRawData, setImportRawData] = useState([])
+    const [importFileHeaders, setImportFileHeaders] = useState([])
+    const [importColumnMapping, setImportColumnMapping] = useState({})
     const [importPreview, setImportPreview] = useState([])
     const [importIssues, setImportIssues] = useState([])
-    const [importDupes, setImportDupes] = useState([])
-    const [importSkip, setImportSkip] = useState(true)
+    const [importLoading, setImportLoading] = useState(false)
+    const [importValidationOpen, setImportValidationOpen] = useState(true)
     const [importDrag, setImportDrag] = useState(false)
     const [importing, setImporting] = useState(false)
     const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
+    const [importEditCell, setImportEditCell] = useState(null)
+    const [importSkipDupes, setImportSkipDupes] = useState(true)
     // export
     const [exportScope, setExportScope] = useState('filtered')
-    const [exportColumns, setExportColumns] = useState({ nama: true, nbm: true, subject: true, gender: true, phone: true, email: true, status: true, join_date: true, address: false })
+    const [exportColumns, setExportColumns] = useState(['nama', 'nbm', 'subject', 'gender', 'phone', 'email', 'status', 'join_date'])
     const [exporting, setExporting] = useState(false)
 
     const searchInputRef = useRef(null)
@@ -490,52 +520,160 @@ export default function TeachersPage() {
         if (!file) return
         const ext = file.name.toLowerCase()
         if (!ext.endsWith('.csv') && !ext.endsWith('.xlsx')) { addToast('Format tidak didukung. Gunakan .csv atau .xlsx', 'error'); return }
-        setImportFileName(file.name); setImportPreview([]); setImportIssues([]); setImportDupes([]); setImportTab('preview')
+        setImportFileName(file.name)
+        setImportLoading(true)
         try {
             let rows = []
             if (ext.endsWith('.csv')) rows = await new Promise(res => Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => res(r.data) }))
             else rows = await new Promise(res => { const reader = new FileReader(); reader.onload = e => { const wb = XLSX.read(e.target.result, { type: 'array' }); res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })) }; reader.readAsArrayBuffer(file) })
+            
             if (!rows.length) { addToast('File kosong atau tidak terbaca', 'error'); return }
-            const issues = [], dupes = []
-            const preview = rows.map((row, i) => {
-                const name = (row['Nama'] || row['name'] || '').toString().trim()
-                const nbm = (row['NBM'] || row['nbm'] || '').toString().trim()
-                const subject = (row['Mata Pelajaran'] || row['subject'] || '').toString().trim()
-                const gender = (row['Gender'] || row['gender'] || '').toString().trim().toUpperCase()
-                const phone = (row['No. HP/WA'] || row['phone'] || '').toString().trim()
-                const email = (row['Email'] || row['email'] || '').toString().trim()
-                const status = (row['Status'] || row['status'] || 'active').toString().toLowerCase()
-                const rowIssues = []
-                if (!name) rowIssues.push({ level: 'error', msg: 'Nama tidak boleh kosong' })
-                if (gender && !['L', 'P', 'LAKI-LAKI', 'PEREMPUAN'].includes(gender)) rowIssues.push({ level: 'warn', msg: 'Gender tidak dikenali, default ke L' })
-                if (rowIssues.length) issues.push({ row: i + 2, level: rowIssues[0].level, messages: rowIssues.map(x => x.msg) })
-                const genderNorm = ['L', 'LAKI-LAKI'].includes(gender) ? 'L' : ['P', 'PEREMPUAN'].includes(gender) ? 'P' : ''
-                const statusNorm = ['active', 'inactive', 'cuti'].includes(status) ? status : 'active'
-                return { _row: i, name, nbm, subject, gender: genderNorm, phone, email, status: statusNorm, _hasError: rowIssues.some(x => x.level === 'error') }
+
+            const headers = Object.keys(rows[0])
+            setImportRawData(rows)
+            setImportFileHeaders(headers)
+
+            // Auto-mapping
+            const mapping = {}
+            SYSTEM_COLS.forEach(sys => {
+                const match = headers.find(h => {
+                    const lowH = h.toLowerCase().trim()
+                    const lowL = sys.label.toLowerCase()
+                    const lowK = sys.key.toLowerCase()
+                    return lowH === lowL || lowH === lowK || 
+                           (sys.key === 'name' && (lowH === 'nama' || lowH === 'nama lengkap')) ||
+                           (sys.key === 'phone' && (lowH === 'wa' || lowH === 'no. hp/wa')) ||
+                           (sys.key === 'subject' && (lowH === 'mapel' || lowH === 'mata pelajaran')) ||
+                           (sys.key === 'nbm' && (lowH === 'nbm')) ||
+                           (sys.key === 'gender' && (lowH === 'jk' || lowH === 'jenis kelamin'))
+                })
+                if (match) mapping[sys.key] = match
             })
-            preview.forEach((row, i) => { if (row.nbm && preview.slice(0, i).some(p => p.nbm === row.nbm)) { dupes.push(i); issues.push({ row: i + 2, level: 'dupe', messages: [`NBM "${row.nbm}" duplikat`] }) } })
-            setImportPreview(preview); setImportIssues(issues); setImportDupes(dupes)
+            setImportColumnMapping(mapping)
+            setImportStep(2)
         } catch { addToast('Gagal membaca file import', 'error') }
+        finally { setImportLoading(false) }
     }
 
+    const buildImportPreview = async (raw, mapping) => {
+        setImportLoading(true)
+        try {
+            const preview = raw.map((row, i) => {
+                const data = {}
+                SYSTEM_COLS.forEach(sys => {
+                    const fileCol = mapping[sys.key]
+                    data[sys.key] = fileCol ? (row[fileCol] || '').toString().trim() : ''
+                })
+
+                // Normalization
+                if (data.gender) {
+                    const g = data.gender.toUpperCase()
+                    data.gender = ['L', 'LAKI-LAKI', 'LAKI LAKI', 'MALE'].includes(g) ? 'L' : ['P', 'PEREMPUAN', 'FEMALE'].includes(g) ? 'P' : ''
+                }
+                if (data.status) {
+                    const s = data.status.toLowerCase()
+                    data.status = ['active', 'aktif'].includes(s) ? 'active' : ['inactive', 'nonaktif'].includes(s) ? 'inactive' : ['leave', 'cuti'].includes(s) ? 'cuti' : 'active'
+                }
+
+                return { ...data, _row: i }
+            })
+
+            // Validation
+            const issues = []
+            preview.forEach((row, i) => {
+                const rowIssues = []
+                if (!row.name) rowIssues.push('Nama tidak boleh kosong')
+                if (row.nbm && preview.slice(0, i).some(p => p.nbm === row.nbm)) rowIssues.push(`NBM "${row.nbm}" duplikat di file`)
+                
+                if (rowIssues.length) {
+                    issues.push({ row: i + 2, level: 'error', messages: rowIssues })
+                    row._hasError = true
+                }
+            })
+
+            setImportPreview(preview)
+            setImportIssues(issues)
+        } finally {
+            setImportLoading(false)
+        }
+    }
+
+    const handleImportCellEdit = (rowIdx, colKey, newValue) => {
+        setImportPreview(prev => {
+            const next = [...prev]
+            next[rowIdx] = { ...next[rowIdx], [colKey]: newValue }
+            
+            // Re-validate row
+            const rowIssues = []
+            if (!next[rowIdx].name) rowIssues.push('Nama tidak boleh kosong')
+            // (Minimal re-validation for speed)
+            
+            next[rowIdx]._hasError = rowIssues.length > 0
+            
+            // Re-build all issues (ideally only update for this row)
+            const newIssues = importIssues.filter(iss => iss.row !== rowIdx + 2)
+            if (rowIssues.length) {
+                newIssues.push({ row: rowIdx + 2, level: 'error', messages: rowIssues })
+            }
+            setImportIssues(newIssues.sort((a,b) => a.row - b.row))
+            
+            return next
+        })
+    }
+
+    const handleRemoveImportRow = idx => {
+        setImportPreview(prev => prev.filter((_, i) => i !== idx))
+        setImportIssues(prev => prev.filter(iss => iss.row !== idx + 2).map(iss => iss.row > idx + 2 ? { ...iss, row: iss.row - 1 } : iss))
+    }
+
+    const handleBulkFix = (colKey, value) => {
+        setImportPreview(prev => prev.map(r => ({ ...r, [colKey]: value, _hasError: colKey === 'name' ? !value : r._hasError })))
+        if (colKey === 'name' && value) setImportIssues(prev => prev.filter(iss => !iss.messages.includes('Nama tidak boleh kosong')))
+        addToast(`Berhasil merubah semua baris ke ${value}`, 'success')
+    }
+
+    const handleDownloadTemplate = () => {
+        const headers = ['Nama', 'NBM', 'Mata Pelajaran', 'Gender', 'No. HP/WA', 'Email', 'Status']
+        const data = [
+            ['Ahmad Fauzi, S.Pd', '12345678', 'Bahasa Indonesia', 'L', '081234567890', 'ahmad@sekolah.sch.id', 'active'],
+            ['Siti Aminah, M.Pd', '87654321', 'Matematika', 'P', '089876543210', 'siti@sekolah.sch.id', 'active']
+        ]
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...data])
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Template Import Guru')
+        XLSX.writeFile(wb, 'template-import-guru.xlsx')
+    }
+
+    const importReadyRows = importPreview.filter(r => !r._hasError)
     const hasImportBlockingErrors = importIssues.some(x => x.level === 'error')
+
     const handleCommitImport = async () => {
         if (!importPreview.length) { addToast('Tidak ada data untuk diimport', 'error'); return }
         if (hasImportBlockingErrors) { addToast('Masih ada ERROR. Perbaiki file dulu.', 'error'); return }
-        const dupeSet = new Set(importDupes), errRows = new Set(importIssues.filter(x => x.level === 'error').map(x => x.row - 2))
-        const validRows = importPreview.filter((_, i) => !errRows.has(i) && !(importSkip && dupeSet.has(i)))
+        
+        // Filter out dupes if skip is enabled (need to check against DB for real dupe check)
+        const validRows = importPreview.filter(r => !r._hasError)
+        
         if (!validRows.length) { addToast('Tidak ada baris valid', 'warning'); return }
         setImporting(true); setImportProgress({ done: 0, total: validRows.length })
         try {
             const CHUNK = 50
             for (let i = 0; i < validRows.length; i += CHUNK) {
-                const chunk = validRows.slice(i, i + CHUNK).map(r => ({ name: r.name, nbm: r.nbm || null, subject: r.subject || null, gender: r.gender || null, phone: r.phone || null, email: r.email || null, status: r.status }))
+                const chunk = validRows.slice(i, i + CHUNK).map(r => ({ 
+                    name: r.name, 
+                    nbm: r.nbm || null, 
+                    subject: r.subject || null, 
+                    gender: r.gender || null, 
+                    phone: r.phone || null, 
+                    email: r.email || null, 
+                    status: r.status || 'active'
+                }))
                 const { error } = await supabase.from('teachers').insert(chunk); if (error) throw error
                 setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
             }
             addToast(`Berhasil import ${validRows.length} guru`, 'success')
             await logAudit({ action: 'INSERT', source: 'OPERATIONAL', tableName: 'teachers', newData: { bulk_import: true, count: validRows.length, data: validRows } })
-            setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportDupes([]); setImportFileName(''); setImportTab('panduan')
+            setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportFileName(''); setImportStep(1)
             fetchData(); fetchStats()
         } catch { addToast('Gagal import (cek constraint DB / duplikat)', 'error') }
         finally { setImporting(false) }
@@ -543,21 +681,50 @@ export default function TeachersPage() {
 
     // ── export ────────────────────────────────────────────────────────────────
     const getExportData = async () => {
-        let q = supabase.from('teachers').select('name,nbm,subject,gender,phone,email,status,join_date,address').is('deleted_at', null).order('name')
-        if (exportScope === 'filtered') { if (filterStatus) q = q.eq('status', filterStatus); if (filterGender) q = q.eq('gender', filterGender); if (filterSubject) q = q.eq('subject', filterSubject); if (filterType) q = q.eq('type', filterType) }
-        const { data, error } = await q; if (error) throw error
-        const colMap = { nama: 'Nama', nbm: 'NBM', subject: 'Mata Pelajaran', gender: 'Gender', phone: 'No. HP/WA', email: 'Email', status: 'Status', join_date: 'Tgl Bergabung', address: 'Alamat' }
-        return (data || []).map(t => { const row = {}; Object.entries(exportColumns).forEach(([k, v]) => { if (v) row[colMap[k] || k] = k === 'gender' ? (t.gender === 'L' ? 'Laki-laki' : t.gender === 'P' ? 'Perempuan' : '-') : (k === 'status' ? STATUS_CONFIG[t[k]]?.label || t[k] : t[k] || '-') }); return row })
+        let q = supabase.from('teachers').select('name,nbm,subject,gender,phone,email,status,join_date,address').is('deleted_at', null)
+        
+        if (exportScope === 'selected' && selectedIds.length > 0) {
+            q = q.in('id', selectedIds)
+        } else if (exportScope === 'filtered') { 
+            if (filterStatus) q = q.eq('status', filterStatus)
+            if (filterGender) q = q.eq('gender', filterGender)
+            if (filterSubject) q = q.eq('subject', filterSubject)
+            if (filterType) q = q.eq('type', filterType) 
+        }
+        
+        q = q.order('name')
+        const { data, error } = await q
+        if (error) throw error
+
+        return (data || []).map(t => {
+            const row = {}
+            exportColumns.forEach(key => {
+                const col = ALL_EXPORT_COLUMNS.find(c => c.key === key)
+                if (col) row[col.label] = col.fn(t)
+            })
+            return row
+        })
     }
-    const handleExportCSV = async () => {
+
+    const handleExportCSV = async (filename, options = {}) => {
         setExporting(true)
         try {
             const rows = await getExportData()
             if (!rows.length) return addToast('Tidak ada data', 'warning')
-            const blob = new Blob([Papa.unparse(rows)], { type: 'text/csv;charset=utf-8;' })
+            
+            const headers = Object.keys(rows[0])
+            const csvContent = [
+                ...(options.includeHeader !== false ? [headers.join(',')] : []),
+                ...rows.map(r => headers.map(h => {
+                    const v = String(r[h] ?? '').replace(/"/g, '""')
+                    return `"${v}"`
+                }).join(','))
+            ].join('\n')
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
             const a = document.createElement('a')
             a.href = URL.createObjectURL(blob)
-            a.download = `data-guru-${new Date().toISOString().slice(0, 10)}.csv`
+            a.download = `${filename || 'export_guru'}.csv`
             a.click()
 
             await logAudit({
@@ -567,16 +734,18 @@ export default function TeachersPage() {
                 newData: {
                     format: 'csv',
                     scope: exportScope,
-                    columns: Object.keys(exportColumns).filter(k => exportColumns[k]),
+                    columns: exportColumns,
                     count: rows.length
                 }
             })
 
             addToast(`Export CSV berhasil (${rows.length} guru)`, 'success')
+            setIsExportModalOpen(false)
         } catch { addToast('Gagal export CSV', 'error') }
-        finally { setExporting(false); setIsExportModalOpen(false) }
+        finally { setExporting(false) }
     }
-    const handleExportExcel = async () => {
+
+    const handleExportExcel = async (filename) => {
         setExporting(true)
         try {
             const rows = await getExportData()
@@ -585,7 +754,7 @@ export default function TeachersPage() {
             ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 14) }))
             const wb = XLSX.utils.book_new()
             XLSX.utils.book_append_sheet(wb, ws, 'Data Guru')
-            XLSX.writeFile(wb, `data-guru-${new Date().toISOString().slice(0, 10)}.xlsx`)
+            XLSX.writeFile(wb, `${filename || 'export_guru'}.xlsx`)
 
             await logAudit({
                 action: 'EXPORT',
@@ -594,14 +763,67 @@ export default function TeachersPage() {
                 newData: {
                     format: 'xlsx',
                     scope: exportScope,
-                    columns: Object.keys(exportColumns).filter(k => exportColumns[k]),
+                    columns: exportColumns,
                     count: rows.length
                 }
             })
 
             addToast(`Export Excel berhasil (${rows.length} guru)`, 'success')
+            setIsExportModalOpen(false)
         } catch { addToast('Gagal export Excel', 'error') }
-        finally { setExporting(false); setIsExportModalOpen(false) }
+        finally { setExporting(false) }
+    }
+
+    const handleExportPDF = async (filename, options = {}) => {
+        setExporting(true)
+        try {
+            const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+                import('jspdf'),
+                import('jspdf-autotable'),
+            ])
+            const autoTable = autoTableMod.default || autoTableMod
+            const allRows = await getExportData()
+            if (!allRows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+
+            const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
+            doc.setFontSize(13)
+            doc.text('Laporan Data Guru', 14, 12)
+            doc.setFontSize(8)
+            doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}  |  Total: ${allRows.length} guru  |  Scope: ${exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'}`, 14, 18)
+
+            const headers = Object.keys(allRows[0])
+            const rows = allRows.map(r => headers.map(h => String(r[h] ?? '')))
+            
+            autoTable(doc, {
+                head: options.includeHeader !== false ? [headers] : [],
+                body: rows,
+                startY: 22,
+                styles: { fontSize: 7.5 },
+                headStyles: { fillColor: [79, 70, 229] },
+                alternateRowStyles: { fillColor: [245, 245, 255] },
+            })
+            
+            doc.save(`${filename || 'export_guru'}.pdf`)
+            addToast(`Export PDF berhasil (${allRows.length} guru)`, 'success')
+            
+            await logAudit({
+                action: 'EXPORT',
+                source: 'OPERATIONAL',
+                tableName: 'teachers',
+                newData: {
+                    format: 'pdf',
+                    scope: exportScope,
+                    columns: exportColumns,
+                    count: allRows.length
+                }
+            })
+            setIsExportModalOpen(false)
+        } catch (e) {
+            console.error(e)
+            addToast('Gagal export PDF', 'error')
+        } finally {
+            setExporting(false)
+        }
     }
 
     const disp = val => isPrivacyMode ? maskInfo(val) : (val || '—')
@@ -673,7 +895,7 @@ export default function TeachersPage() {
                                     }}
                                 >
                                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); setImportTab('panduan'); setImportPreview([]); setImportFileName(''); setIsImportModalOpen(true) }}
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); setImportStep(1); setImportPreview([]); setImportFileName(''); setIsImportModalOpen(true) }}
                                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
                                         <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <FontAwesomeIcon icon={faFileImport} className="text-xs" />
@@ -1180,135 +1402,62 @@ export default function TeachersPage() {
                 />
 
                 {/* ════ MODAL Import ════ */}
-                {isImportModalOpen && (
-                    <Modal isOpen={isImportModalOpen} onClose={() => { if (importing) return; setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportDupes([]); setImportFileName(''); setImportTab('panduan') }} title="Import Guru" size="md">
-                        {importPreview.length > 0 && (
-                            <div className="flex items-center gap-2 -mt-1 mb-3 flex-wrap">
-                                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[9px] font-black text-indigo-600 truncate max-w-[160px]"><FontAwesomeIcon icon={faFileLines} className="text-[8px] shrink-0" />{importFileName}</span>
-                                <span className="px-2 py-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)]">{importPreview.length} baris</span>
-                                {importIssues.filter(x => x.level === 'error').length > 0 && <span className="px-2 py-0.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[9px] font-black text-red-600">{importIssues.filter(x => x.level === 'error').length} error</span>}
-                                {importDupes.length > 0 && <span className="px-2 py-0.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-[9px] font-black text-violet-600">{importDupes.length} duplikat</span>}
-                                <button onClick={() => importFileRef.current?.click()} className="ml-auto h-6 px-2.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">Ganti File</button>
-                            </div>
-                        )}
-                        <div className="flex gap-0.5 p-1 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)] mb-3">
-                            {[{ key: 'panduan', label: 'Panduan', icon: faFileLines, badge: null }, { key: 'preview', label: 'Preview', icon: faTableList, badge: importPreview.length > 0 ? importPreview.length : null }, { key: 'validasi', label: 'Validasi', icon: faTriangleExclamation, badge: importIssues.length > 0 ? importIssues.length : null, badgeColor: hasImportBlockingErrors ? 'bg-red-500/15 text-red-600' : 'bg-amber-500/15 text-amber-600' }].map(tab => (
-                                <button key={tab.key} onClick={() => setImportTab(tab.key)} className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${importTab === tab.key ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                    <FontAwesomeIcon icon={tab.icon} className="text-[9px]" />{tab.label}
-                                    {tab.badge != null && <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black leading-none ${tab.badgeColor || 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'}`}>{tab.badge}</span>}
-                                </button>
-                            ))}
-                        </div>
-                        {importTab === 'panduan' && (
-                            <div className="space-y-2.5">
-                                <div onDragOver={e => { e.preventDefault(); setImportDrag(true) }} onDragLeave={() => setImportDrag(false)} onDrop={async e => { e.preventDefault(); setImportDrag(false); const f = e.dataTransfer.files?.[0]; if (f) await processImportFile(f) }} onClick={() => importFileRef.current?.click()}
-                                    className={`w-full h-16 rounded-xl border-2 border-dashed cursor-pointer flex items-center justify-center gap-3 transition-all ${importDrag ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 scale-[1.01]' : 'border-[var(--color-primary)]/30 hover:border-[var(--color-primary)]/60'}`}>
-                                    <FontAwesomeIcon icon={faUpload} className={`text-base ${importDrag ? 'text-[var(--color-primary)] scale-110' : 'text-[var(--color-primary)]/60'}`} />
-                                    <div className="text-left"><p className="text-[10px] font-black text-[var(--color-primary)] uppercase tracking-widest leading-none">{importDrag ? 'Lepaskan file di sini' : 'Drag & Drop atau Klik untuk Pilih File'}</p><p className="text-[8px] text-[var(--color-text-muted)] font-bold mt-0.5">Mendukung .csv dan .xlsx</p></div>
-                                </div>
-                                <div className="p-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Kolom yang didukung</p>
-                                    <div className="grid grid-cols-2 gap-1">{['Nama *', 'NBM', 'Mata Pelajaran', 'Gender (L/P)', 'No. HP/WA', 'Email', 'Status'].map(c => <span key={c} className="px-2 py-1 bg-[var(--color-surface)] rounded border border-[var(--color-border)] text-[9px] font-mono text-[var(--color-text-muted)]">{c}</span>)}</div>
-                                </div>
-                                <input ref={importFileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => { processImportFile(e.target.files?.[0]); if (e.target) e.target.value = '' }} />
-                            </div>
-                        )}
-                        {importTab === 'preview' && (
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between"><p className="text-xs font-bold">{importPreview.length} baris terdeteksi</p><label className="flex items-center gap-2 text-xs font-bold cursor-pointer"><input type="checkbox" checked={importSkip} onChange={e => setImportSkip(e.target.checked)} className="accent-[var(--color-primary)]" />Skip duplikat ({importDupes.length})</label></div>
-                                <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] max-h-[38vh]">
-                                    <table className="w-full text-xs">
-                                        <thead className="bg-[var(--color-surface-alt)] sticky top-0"><tr>{['#', 'Nama', 'NBM', 'Mapel', 'Gender', 'HP/WA', 'Status'].map(h => <th key={h} className="px-3 py-2 text-left text-[9px] font-black uppercase text-[var(--color-text-muted)]">{h}</th>)}</tr></thead>
-                                        <tbody className="divide-y divide-[var(--color-border)]">{importPreview.map((row, i) => (
-                                            <tr key={i} className={`${importDupes.includes(i) ? 'bg-violet-500/5 border-l-2 border-l-violet-500' : row._hasError ? 'bg-red-500/5 border-l-2 border-l-red-500' : ''}`}>
-                                                <td className="px-3 py-2 text-[var(--color-text-muted)]">{i + 2}</td>
-                                                <td className="px-3 py-2 font-bold">{row.name || <span className="text-red-500">kosong</span>}</td>
-                                                <td className="px-3 py-2 font-mono text-[var(--color-text-muted)]">{row.nbm || '—'}</td>
-                                                <td className="px-3 py-2">{row.subject || '—'}</td>
-                                                <td className="px-3 py-2">{row.gender || '—'}</td>
-                                                <td className="px-3 py-2">{row.phone || '—'}</td>
-                                                <td className="px-3 py-2">{STATUS_CONFIG[row.status]?.label || row.status}</td>
-                                            </tr>
-                                        ))}</tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-                        {importTab === 'validasi' && (
-                            <div className="space-y-3">
-                                {importIssues.length === 0 && importPreview.length === 0 ? (<div className="py-14 flex flex-col items-center justify-center opacity-30 gap-2"><FontAwesomeIcon icon={faTriangleExclamation} className="text-2xl" /><p className="text-[9px] font-black uppercase">Belum ada file yang dipilih</p></div>)
-                                    : importIssues.length === 0 ? (<div className="py-12 flex flex-col items-center justify-center gap-2"><div className="w-12 h-12 rounded-full bg-emerald-500/15 flex items-center justify-center"><FontAwesomeIcon icon={faCircleCheck} className="text-emerald-500 text-xl" /></div><p className="text-sm font-black text-emerald-600">Semua baris valid!</p><p className="text-[9px] text-[var(--color-text-muted)] font-bold">{importPreview.length} baris siap diimport</p></div>) : (
-                                        <>
-                                            <div className="grid grid-cols-3 gap-2">{[{ label: 'Error', count: importIssues.filter(x => x.level === 'error').length, color: 'text-red-600', bg: 'bg-red-500/8 border-red-500/20', desc: 'Blok import' }, { label: 'Duplikat', count: importIssues.filter(x => x.level === 'dupe').length, color: 'text-violet-600', bg: 'bg-violet-500/8 border-violet-500/20', desc: 'Terdeteksi double' }, { label: 'Warning', count: importIssues.filter(x => x.level === 'warn').length, color: 'text-amber-600', bg: 'bg-amber-500/8 border-amber-500/20', desc: 'Tidak blok' }].map(s => (
-                                                <div key={s.label} className={`p-3 rounded-xl border ${s.bg}`}><p className={`text-xl font-black leading-none ${s.color}`}>{s.count}</p><p className={`text-[8px] font-black uppercase tracking-widest mt-1 ${s.color}`}>{s.label}</p><p className="text-[7px] font-bold text-[var(--color-text-muted)] mt-0.5">{s.desc}</p></div>
-                                            ))}</div>
-                                            <div className="rounded-xl border border-[var(--color-border)] overflow-hidden max-h-[38vh] overflow-auto">{importIssues.map((issue, idx) => {
-                                                const ls = issue.level === 'error' ? { pill: 'bg-red-500/15 text-red-600', row: 'border-l-2 border-l-red-500 bg-red-500/3' } : issue.level === 'dupe' ? { pill: 'bg-violet-500/15 text-violet-600', row: 'border-l-2 border-l-violet-500 bg-violet-500/3' } : { pill: 'bg-amber-500/15 text-amber-600', row: 'border-l-2 border-l-amber-400 bg-amber-500/3' }; return (
-                                                    <div key={idx} className={`flex items-start gap-3 px-3 py-2 border-b border-[var(--color-border)] last:border-0 ${ls.row}`}>
-                                                        <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 rounded text-[8px] font-black ${ls.pill}`}>{issue.level === 'dupe' ? 'DUPLIKAT' : issue.level.toUpperCase()}</span>
-                                                        <div className="flex-1 min-w-0"><p className="text-[9px] font-black text-[var(--color-text-muted)] mb-0.5">Baris {issue.row}</p>{issue.messages.map((msg, mi) => <p key={mi} className="text-[10px] font-bold text-[var(--color-text)] leading-snug">{msg}</p>)}</div>
-                                                    </div>
-                                                )
-                                            })}</div>
-                                        </>
-                                    )}
-                            </div>
-                        )}
-                        <div className="flex items-center justify-between gap-3 pt-3 mt-2 border-t border-[var(--color-border)]">
-                            <button onClick={() => { setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportDupes([]); setImportFileName(''); setImportTab('panduan') }} disabled={importing} className="h-9 px-5 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest disabled:opacity-50 hover:bg-[var(--color-border)] transition-all">Tutup</button>
-                            <div className="flex items-center gap-3">
-                                {importing && <span className="text-[9px] font-bold text-[var(--color-text-muted)] flex items-center gap-1.5"><FontAwesomeIcon icon={faSpinner} className="fa-spin text-[var(--color-primary)]" />{importProgress.done}/{importProgress.total}...</span>}
-                                {!importing && importPreview.length > 0 && <span className="text-[9px] font-bold text-[var(--color-text-muted)]">{importPreview.length - importIssues.filter(x => x.level === 'error').length - (importSkip ? importDupes.length : 0)} baris akan diimport</span>}
-                                <button onClick={handleCommitImport} disabled={importing || hasImportBlockingErrors || importPreview.length === 0} className="h-9 px-5 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2">
-                                    {importing ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" />Mengimport...</> : <><FontAwesomeIcon icon={faUpload} />Import ke Database</>}
-                                </button>
-                            </div>
-                        </div>
-                    </Modal>
-                )}
+                <TeacherImportModal
+                    isOpen={isImportModalOpen}
+                    onClose={() => { if (importing) return; setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportFileName(''); setImportStep(1) }}
+                    importing={importing}
+                    importStep={importStep}
+                    setImportStep={setImportStep}
+                    importPreview={importPreview}
+                    importFileName={importFileName}
+                    importFileInputRef={importFileRef}
+                    importDragOver={importDrag}
+                    setImportDragOver={setImportDrag}
+                    processImportFile={processImportFile}
+                    subjectsList={subjectsList}
+                    handleDownloadTemplate={handleDownloadTemplate}
+                    importFileHeaders={importFileHeaders}
+                    SYSTEM_COLS={SYSTEM_COLS}
+                    importColumnMapping={importColumnMapping}
+                    setImportColumnMapping={setImportColumnMapping}
+                    importRawData={importRawData}
+                    importLoading={importLoading}
+                    setImportLoading={setImportLoading}
+                    buildImportPreview={buildImportPreview}
+                    importIssues={importIssues}
+                    importValidationOpen={importValidationOpen}
+                    setImportValidationOpen={setImportValidationOpen}
+                    importProgress={importProgress}
+                    handleCommitImport={handleCommitImport}
+                    handleImportClick={() => importFileRef.current?.click()}
+                    hasImportBlockingErrors={hasImportBlockingErrors}
+                    importReadyRows={importReadyRows}
+                    handleImportCellEdit={handleImportCellEdit}
+                    importEditCell={importEditCell}
+                    setImportEditCell={setImportEditCell}
+                    handleRemoveImportRow={handleRemoveImportRow}
+                    importSkipDupes={importSkipDupes}
+                    setImportSkipDupes={setImportSkipDupes}
+                    handleBulkFix={handleBulkFix}
+                    STATUS_CONFIG={STATUS_CONFIG}
+                />
 
                 {/* ════ MODAL Export ════ */}
-                {isExportModalOpen && (
-                    <Modal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} title="Export Data Guru" size="md">
-                        <div className="space-y-5">
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">1 — Pilih Cakupan Data</p>
-                                <div className="grid grid-cols-2 gap-2">{[{ k: 'filtered', label: 'Filter Aktif', desc: 'Sesuai filter saat ini' }, { k: 'all', label: 'Semua Guru', desc: 'Seluruh data guru aktif' }].map(({ k, label, desc }) => (
-                                    <button key={k} onClick={() => setExportScope(k)} className={`p-3 rounded-xl border text-left transition-all ${exportScope === k ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}>
-                                        <p className="text-[10px] font-black uppercase tracking-wide">{label}</p>
-                                        <p className={`text-[9px] mt-0.5 ${exportScope === k ? 'opacity-80' : 'text-[var(--color-text-muted)]'}`}>{desc}</p>
-                                    </button>
-                                ))}</div>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">2 — Pilih Kolom</p>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">{[{ k: 'nama', l: 'Nama' }, { k: 'nbm', l: 'NBM' }, { k: 'subject', l: 'Mata Pelajaran' }, { k: 'gender', l: 'Gender' }, { k: 'phone', l: 'No. HP/WA' }, { k: 'email', l: 'Email' }, { k: 'status', l: 'Status' }, { k: 'join_date', l: 'Tgl Bergabung' }, { k: 'address', l: 'Alamat' }].map(({ k, l }) => (
-                                    <button key={k} onClick={() => setExportColumns(prev => ({ ...prev, [k]: !prev[k] }))} className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all text-xs font-bold ${exportColumns[k] ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40'}`}>
-                                        <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-all ${exportColumns[k] ? 'bg-[var(--color-primary)] border-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>{exportColumns[k] && <svg width="8" height="8" viewBox="0 0 8 8" fill="white"><path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" /></svg>}</div>{l}
-                                    </button>
-                                ))}</div>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">3 — Pilih Format Export</p>
-                                <div className="grid grid-cols-2 gap-2">{[
-                                    { label: 'CSV', icon: faFileLines, desc: 'Universal', onClick: handleExportCSV, color: 'bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text)] border border-[var(--color-border)]', iconColor: 'text-[var(--color-text-muted)]' },
-                                    { label: 'Excel', icon: faTableList, desc: '.xlsx', onClick: handleExportExcel, color: 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20', iconColor: 'text-emerald-500' },
-                                ].map(({ label, icon, desc, onClick, color, iconColor }) => (
-                                    <button key={label} onClick={onClick} disabled={exporting || Object.values(exportColumns).every(v => !v)} className={`${color} h-20 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all disabled:opacity-40 font-black`}>
-                                        <FontAwesomeIcon icon={icon} className={`text-lg ${iconColor}`} /><span className="text-[10px] uppercase tracking-widest">{label}</span><span className="text-[9px] font-bold opacity-60">{desc}</span>
-                                    </button>
-                                ))}</div>
-                            </div>
-                            {Object.values(exportColumns).every(v => !v) && (
-                                <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} />
-                                    Pilih minimal satu kolom untuk export
-                                </div>
-                            )}
-                            {exporting && <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-bold"><FontAwesomeIcon icon={faSpinner} className="fa-spin" />Menyiapkan file export...</div>}
-                        </div>
-                    </Modal>
-                )}
+                <TeacherExportModal
+                    isOpen={isExportModalOpen}
+                    onClose={() => setIsExportModalOpen(false)}
+                    teachers={teachers}
+                    selectedTeacherIds={selectedIds}
+                    exportScope={exportScope}
+                    setExportScope={setExportScope}
+                    exportColumns={exportColumns}
+                    setExportColumns={setExportColumns}
+                    exporting={exporting}
+                    handleExportCSV={handleExportCSV}
+                    handleExportExcel={handleExportExcel}
+                    handleExportPDF={handleExportPDF}
+                    addToast={addToast}
+                />
 
                 {/* ════ MODAL Arsipkan ════ */}
                 {isArchiveModalOpen && (
@@ -1427,34 +1576,17 @@ export default function TeachersPage() {
                 </Modal>
 
                 {/* ════ MODAL Arsip List ════ */}
-                <Modal isOpen={isArchivedOpen} onClose={() => setIsArchivedOpen(false)} title="Arsip Guru" size="lg">
-                    <div className="space-y-4">
-                        <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 flex items-center gap-3">
-                            <FontAwesomeIcon icon={faBoxArchive} className="text-amber-600 text-lg shrink-0" />
-                            <div><p className="text-xs font-black text-amber-700">{archivedTeachers.length} guru di arsip</p><p className="text-[10px] text-[var(--color-text-muted)]">Pulihkan untuk mengembalikan ke daftar aktif.</p></div>
-                        </div>
-                        {loadingArchived ? (
-                            <div className="flex items-center justify-center py-12 gap-3 text-[var(--color-text-muted)]"><FontAwesomeIcon icon={faSpinner} className="fa-spin text-xl" /><span className="text-sm font-bold">Memuat arsip...</span></div>
-                        ) : archivedTeachers.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 gap-2 text-[var(--color-text-muted)]"><FontAwesomeIcon icon={faBoxArchive} className="text-3xl opacity-20" /><p className="text-sm font-bold">Belum ada yang diarsipkan</p></div>
-                        ) : (
-                            <div className="divide-y divide-[var(--color-border)]">
-                                {archivedTeachers.map(t => (
-                                    <div key={t.id} className="flex items-center gap-3 py-3">
-                                        <div className="w-9 h-9 rounded-xl overflow-hidden bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] text-sm font-black shrink-0">
-                                            {t.avatar_url
-                                                ? <img src={t.avatar_url} alt={t.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
-                                                : t.name.charAt(0)
-                                            }
-                                        </div>
-                                        <div className="flex-1 min-w-0"><p className="text-sm font-bold truncate">{t.name}</p><p className="text-[10px] text-[var(--color-text-muted)]">{t.subject || '—'} · {new Date(t.deleted_at).toLocaleDateString('id-ID')}</p></div>
-                                        <button onClick={() => handleRestore(t)} className="shrink-0 h-8 px-3 rounded-xl bg-emerald-500/10 text-emerald-600 text-[10px] font-black hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-1.5"><FontAwesomeIcon icon={faRotateLeft} />Pulihkan</button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </Modal>
+                <TeacherArchiveModal
+                    isOpen={isArchivedOpen}
+                    onClose={() => setIsArchivedOpen(false)}
+                    archivedTeachers={archivedTeachers}
+                    loadingArchived={loadingArchived}
+                    setArchivedTeachers={setArchivedTeachers}
+                    fetchArchivedTeachers={fetchArchived}
+                    fetchData={fetchData}
+                    fetchStats={fetchStats}
+                    addToast={addToast}
+                />
             </div>
         </DashboardLayout >
     )

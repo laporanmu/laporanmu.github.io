@@ -115,15 +115,7 @@ export default memo(function TeacherProfileModal({
                             </div>
 
                             {/* Work Days display */}
-                            {selectedTeacher.work_days && selectedTeacher.work_days.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-3">
-                                    {selectedTeacher.work_days.map(day => (
-                                        <span key={day} className="px-1.5 py-0.5 rounded-md bg-white/10 border border-white/10 text-[7px] font-black uppercase tracking-wider flex items-center gap-1">
-                                            <FontAwesomeIcon icon={faCalendarCheck} className="text-[6px] opacity-60" /> {day}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
+
                         </div>
 
                         {profileStats && (

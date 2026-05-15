@@ -24,6 +24,7 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
         semester: 'Ganjil',
         startDate: '',
         endDate: '',
+        curriculum: 'Merdeka',
         makeActive: false
     })
     const [formErrors, setFormErrors] = useState({})
@@ -38,6 +39,7 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
                     semester: selectedItem.semester || 'Ganjil',
                     startDate: selectedItem.start_date || '',
                     endDate: selectedItem.end_date || '',
+                    curriculum: selectedItem.curriculum || 'Merdeka',
                     makeActive: selectedItem.is_active || false
                 })
             } else {
@@ -46,6 +48,7 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
                     semester: 'Ganjil',
                     startDate: '',
                     endDate: '',
+                    curriculum: 'Merdeka',
                     makeActive: false
                 })
             }
@@ -301,6 +304,23 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
                         )}
                     </div>
                 )}
+                {/* ── Kurikulum ── */}
+                <div className="pt-2 border-t border-[var(--color-border)]">
+                    <label className="block text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-2 ml-1 opacity-60">Kurikulum Aktif</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {['Merdeka', 'K-13'].map(c => (
+                            <button key={c} type="button"
+                                onClick={() => handleChange('curriculum', c)}
+                                className={`h-10 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${formData.curriculum === c ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)] shadow-sm' : 'bg-[var(--color-surface-alt)]/30 border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center transition-colors ${formData.curriculum === c ? 'border-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>
+                                    {formData.curriculum === c && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />}
+                                </div>
+                                Kurikulum {c}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
 
                 {/* ── Status Aktif Toggle ── */}
                 <div

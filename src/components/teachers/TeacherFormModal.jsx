@@ -151,7 +151,9 @@ const TeacherFormModal = memo(function TeacherFormModal({
             type: form.type || 'guru',
             avatar_url: form.avatar_url || null,
             photo_url: form.avatar_url || null,
-            work_days: form.work_days || DAYS,
+            work_days: (form.work_days && form.work_days.length > 0)
+                ? [...new Set(form.work_days)].sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b))
+                : DAYS,
             fingerspot_name: (form.fingerspot_name || '').trim() || null,
             nik: (form.nik || '').trim() || null,
             nip: (form.nip || '').trim() || null,
@@ -299,14 +301,14 @@ const TeacherFormModal = memo(function TeacherFormModal({
                             {/* Row: NBM - Tempat Lahir - Tgl Lahir (40% - 30% - 30%) */}
                             <div className="sm:col-span-4 relative group">
                                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">NBM</label>
-                                <input type="text" value={form.nbm} onChange={e => setField('nbm', e.target.value)} placeholder="No. Baku Muhammadiyah" className={inputCls('nbm')} />
+                                <input type="text" value={form.nbm} onChange={e => setField('nbm', e.target.value)} placeholder="NBM" className={inputCls('nbm')} />
                             </div>
                             <div className="sm:col-span-3 relative group">
                                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tempat Lahir</label>
                                 <input type="text" value={form.birth_place} onChange={e => setField('birth_place', e.target.value)} placeholder="Kota Lahir" className={inputCls('birth_place')} />
                             </div>
                             <div className="sm:col-span-3 relative group">
-                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tgl Lahir</label>
+                                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tanggal Lahir</label>
                                 <input type="date" value={form.birth_date} onChange={e => setField('birth_date', e.target.value)} className={inputCls('birth_date')} />
                             </div>
                         </div>
@@ -472,7 +474,7 @@ const TeacherFormModal = memo(function TeacherFormModal({
                             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Hari Kerja Aktif</label>
                             <div className="flex flex-wrap gap-2">
                                 {DAYS.map(day => (
-                                    <button key={day} type="button" onClick={() => toggleWorkDay(day)} className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-colors border ${form.work_days.includes(day) ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-500/30' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-border)]'}`}>{day}</button>
+                                    <button key={day} type="button" onClick={() => toggleWorkDay(day)} className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-colors border ${form.work_days.includes(day) ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/20' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-border)]'}`}>{day}</button>
                                 ))}
                             </div>
                         </div>

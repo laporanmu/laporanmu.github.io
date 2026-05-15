@@ -24,6 +24,8 @@ import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
 import AcademicYearFormModal from '../../components/academic-years/AcademicYearFormModal'
 import { ArchiveModal, DeactivateModal } from '../../components/academic-years/AcademicYearActionModals'
 import { AuditTimeline } from '../admin/LogsPage'
+import StatsCarousel from '../../components/StatsCarousel'
+import { StatCard } from '../../components/ui/DataDisplay'
 
 
 const LS_COLS = 'academic_years_columns'
@@ -45,7 +47,7 @@ function getPortalContainer(id) {
     return _portalContainers[id]
 }
 
-function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDelete, canEdit }) {
+function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDelete, onToggleLock, canEdit }) {
     if (years.length === 0) {
         return (
             <div className="relative w-full overflow-hidden bg-[var(--color-surface-alt)]/10 flex flex-col items-center justify-center py-20 opacity-40 group/empty">
@@ -77,7 +79,7 @@ function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDe
                     {sorted.map((year, idx) => {
                         const isActive = year.is_active
                         const isGanjil = year.semester === 'Ganjil'
-                        
+
                         return (
                             <div key={year.id} className="relative flex flex-col items-center group/item shrink-0" style={{ width: '220px' }}>
                                 {/* ── Interactive Node Anchor ── */}
@@ -86,12 +88,12 @@ function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDe
                                     {isActive && (
                                         <div className="absolute inset-0 bg-[var(--color-primary)]/20 rounded-full animate-ping duration-[4000ms]" />
                                     )}
-                                    
+
                                     {/* Multi-layered Premium Node */}
                                     <div className={`relative flex items-center justify-center w-8 h-8 rounded-full border-[4px] border-[var(--color-surface)] transition-all duration-700 group-hover/item:scale-125 shadow-lg ${isActive ? 'bg-[var(--color-primary)] border-[var(--color-surface)] shadow-[0_0_20px_rgba(var(--color-primary-rgb),0.4)] scale-110' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] group-hover/item:border-[var(--color-primary)]'}`}>
                                         <div className={`w-2 h-2 rounded-full transition-all duration-500 ${isActive ? 'bg-white scale-110 shadow-[0_0_8px_white]' : 'bg-[var(--color-border)] group-hover/item:bg-[var(--color-primary)] shadow-none'}`} />
                                     </div>
-                                    
+
                                 </div>
 
                                 {/* ── Visual Stalk (Connection) ── */}
@@ -127,6 +129,20 @@ function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDe
                                             <h4 className="text-[15px] font-black font-heading tracking-tight text-[var(--color-text)] leading-none group-hover/card:text-[var(--color-primary)] transition-colors duration-500">
                                                 {year.name}
                                             </h4>
+
+                                            {/* Curriculum & Status Row */}
+                                            <div className="flex flex-wrap items-center gap-1.5 pt-1.5 pb-0.5">
+                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${year.curriculum === 'Merdeka' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' : 'bg-orange-500/10 text-orange-600 border-orange-500/20'}`}>
+                                                    Kurikulum {year.curriculum || 'Merdeka'}
+                                                </span>
+                                                {year.is_locked && (
+                                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1">
+                                                        <FontAwesomeIcon icon={faBoxArchive} className="text-[7px]" />
+                                                        Tutup Buku
+                                                    </span>
+                                                )}
+                                            </div>
+
                                             <div className="flex items-center gap-2 pt-1 text-[var(--color-text-muted)] text-[10px] font-bold">
                                                 <div className={`w-6 h-6 rounded-lg flex items-center justify-center bg-[var(--color-surface)] border border-[var(--color-border)] group-hover/card:border-[var(--color-primary)]/30 group-hover/card:text-[var(--color-primary)] transition-all`}>
                                                     <FontAwesomeIcon icon={faCalendarDay} className="text-[8px]" />
@@ -158,9 +174,14 @@ function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDe
                                                     <FontAwesomeIcon icon={faCopy} className="text-[9px]" />
                                                 </button>
                                             )}
-                                            {canEdit && !isActive && (
+                                            {canEdit && !isActive && !year.is_locked && (
                                                 <button onClick={() => onSetActive(year)} className="flex-1 h-7 rounded-lg bg-[var(--color-primary)] text-white text-[8px] font-black uppercase tracking-[0.1em] hover:shadow-[0_10px_20px_-5px_rgba(var(--color-primary-rgb),0.4)] hover:scale-[1.02] transition-all active:scale-95">
                                                     Aktifkan
+                                                </button>
+                                            )}
+                                            {canEdit && !isActive && (
+                                                <button onClick={() => onToggleLock(year)} title={year.is_locked ? "Buka Buku" : "Tutup Buku"} className={`w-7 h-7 rounded-lg transition-all flex items-center justify-center ${year.is_locked ? 'bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-rose-500 hover:border-rose-500'}`}>
+                                                    <FontAwesomeIcon icon={year.is_locked ? faRotateLeft : faBoxArchive} className="text-[9px]" />
                                                 </button>
                                             )}
                                             {canEdit && isActive && (
@@ -270,7 +291,7 @@ export default function AcademicYearsPage() {
         try {
             const { data, error } = await supabase
                 .from('academic_years')
-                .select('id,name,semester,start_date,end_date,is_active,deleted_at,created_at')
+                .select('id,name,semester,start_date,end_date,is_active,deleted_at,created_at,curriculum,is_locked')
                 .order('name', { ascending: false })
             if (error) throw error
             const active = (data || []).filter(y => y.deleted_at === undefined || y.deleted_at === null)
@@ -290,7 +311,7 @@ export default function AcademicYearsPage() {
         try {
             const { data } = await supabase
                 .from('academic_years')
-                .select('id,name,semester,start_date,end_date,is_active,deleted_at,created_at')
+                .select('id,name,semester,start_date,end_date,is_active,deleted_at,created_at,curriculum,is_locked')
                 .not('deleted_at', 'is', null)
                 .order('created_at', { ascending: false })
             setArchivedYears(data || [])
@@ -429,11 +450,12 @@ export default function AcademicYearsPage() {
                 return
             }
 
-            const payload = { 
-                name: formData.name.trim(), 
-                semester: formData.semester, 
-                start_date: formData.startDate, 
-                end_date: formData.endDate 
+            const payload = {
+                name: formData.name.trim(),
+                semester: formData.semester,
+                start_date: formData.startDate,
+                end_date: formData.endDate,
+                curriculum: formData.curriculum || 'Merdeka'
             }
 
             if (selectedItem?.id) {
@@ -500,6 +522,20 @@ export default function AcademicYearsPage() {
             await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_active: true } })
             fetchData()
         } catch (err) { addToast(err?.message || 'Gagal mengaktifkan', 'error') }
+        finally { setSubmitting(false) }
+    }
+
+    const handleToggleLock = async (item) => {
+        if (submitting) return
+        setSubmitting(true)
+        try {
+            const newStatus = !item.is_locked
+            const { error } = await supabase.from('academic_years').update({ is_locked: newStatus }).eq('id', item.id)
+            if (error) throw error
+            addToast(`Tahun pelajaran berhasil di${newStatus ? 'tutup' : 'buka'}`, 'success')
+            await logAudit({ action: 'UPDATE', source: 'MASTER', tableName: 'academic_years', recordId: item.id, oldData: item, newData: { ...item, is_locked: newStatus } })
+            fetchData()
+        } catch (err) { addToast(err?.message || 'Gagal mengubah status', 'error') }
         finally { setSubmitting(false) }
     }
 
@@ -689,56 +725,10 @@ export default function AcademicYearsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
                         <Breadcrumb badge="Master Data" items={['Academic Cycle']} className="mb-1" />
-                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)] leading-none">Tahun Pelajaran</h1>
-                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1.5 font-medium">Kelola {stats.total} periode akademik dalam ekosistem.</p>
-                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-bold opacity-60">
-                            Tahun pelajaran aktif menjadi acuan laporan, presensi, dan penilaian di seluruh sistem.
-                        </p>
+                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Tahun Pelajaran</h1>
+                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} periode akademik dalam ekosistem.</p>
                     </div>
                     <div className="flex gap-2 items-center">
-
-
-                        <button onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-                            className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                            title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
-                            <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
-                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isPrivacyMode ? 'Privasi On' : 'Privasi Off'}</span>
-                        </button>
-                        <div className="relative">
-                            <button onClick={() => setIsShortcutOpen(!isShortcutOpen)}
-                                ref={shortcutBtnRef}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
-                            {isShortcutOpen && shortcutRect && createPortal(
-                                <>
-                                    <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsShortcutOpen(false)} />
-                                    <div className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden animate-in fade-in zoom-in-95" style={{ top: shortcutRect.bottom + 8, left: Math.max(10, shortcutRect.right - 288) }}>
-                                        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/50">
-                                            <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Shortcuts</p>
-                                            <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
-                                        </div>
-                                        <div className="p-3 space-y-0.5">
-                                            {[{ section: 'Navigasi' }, { keys: ['Ctrl', 'K'], label: 'Fokus ke search' }, { section: 'Aksi' }, { keys: ['N'], label: 'Tambah periode baru' }, { keys: ['X'], label: 'Reset semua filter' }].map((item, i) => item.section ? (
-                                                <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
-                                            ) : (
-                                                <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
-                                                    <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
-                                                    <div className="flex items-center gap-1">{item.keys.map((k, ki) => <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>)}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </>,
-                                getPortalContainer('shortcut-portal')
-                            )}
-                        </div>
-                        {canEdit && (
-                            <button onClick={handleAdd} className="h-9 px-3 sm:px-5 rounded-lg btn-primary text-[10px] font-black uppercase tracking-widest shadow-md shadow-[var(--color-primary)]/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95">
-                                <FontAwesomeIcon icon={faPlus} />
-                                <span className="hidden sm:inline">Tambah</span>
-                            </button>
-                        )}
-
                         <div className="relative">
                             <button
                                 ref={headerMenuBtnRef}
@@ -776,62 +766,73 @@ export default function AcademicYearsPage() {
                                 getPortalContainer('header-menu-portal')
                             )}
                         </div>
+
+                        <div className="relative">
+                            <button onClick={() => setIsShortcutOpen(!isShortcutOpen)}
+                                ref={shortcutBtnRef}
+                                className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
+                            {isShortcutOpen && shortcutRect && createPortal(
+                                <>
+                                    <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsShortcutOpen(false)} />
+                                    <div className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden animate-in fade-in zoom-in-95" style={{ top: shortcutRect.bottom + 8, left: Math.max(10, shortcutRect.right - 288) }}>
+                                        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/50">
+                                            <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Shortcuts</p>
+                                            <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
+                                        </div>
+                                        <div className="p-3 space-y-0.5">
+                                            {[{ section: 'Navigasi' }, { keys: ['Ctrl', 'K'], label: 'Fokus ke search' }, { section: 'Aksi' }, { keys: ['N'], label: 'Tambah periode baru' }, { keys: ['X'], label: 'Reset semua filter' }].map((item, i) => item.section ? (
+                                                <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
+                                            ) : (
+                                                <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
+                                                    <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
+                                                    <div className="flex items-center gap-1">{item.keys.map((k, ki) => <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>)}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>,
+                                getPortalContainer('shortcut-portal')
+                            )}
+                        </div>
+
+                        <button onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                            className={`h-9 w-9 sm:w-auto sm:px-3 rounded-lg border flex items-center justify-center sm:justify-start gap-2 transition-all active:scale-95 ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
+                            title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
+                            <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Privasi</span>
+                        </button>
+
+                        {canEdit && (
+                            <button onClick={handleAdd} className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10">
+                                <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                                <span className="hidden sm:inline">Tambah Periode</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                {/* Stats Overview */}
-                <div className="relative mb-6 -mx-3 sm:mx-0 group/scroll">
-                    <div
-                        ref={statsScrollRef}
-                        onScroll={() => {
-                            const el = statsScrollRef.current
-                            if (!el) return
-                            const cardWidth = el.scrollWidth / STAT_CARD_COUNT
-                            const idx = Math.round(el.scrollLeft / cardWidth)
-                            setActiveStatIdx(Math.min(idx, STAT_CARD_COUNT - 1))
-                        }}
-                        className="flex overflow-x-auto scrollbar-hide gap-3 pb-2 snap-x snap-mandatory px-3 sm:px-0 sm:grid sm:grid-cols-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0 lg:snap-none"
-                    >
-                        {[
-                            { label: 'Total Periode', val: stats.total, icon: faLayerGroup, top: 'border-t-blue-500', ibg: 'bg-blue-500/10 text-blue-500', hover: 'hover:bg-blue-500/5' },
-                            { label: 'Status Aktif', val: stats.active, icon: faCircleCheck, top: 'border-t-emerald-500', ibg: 'bg-emerald-500/10 text-emerald-500', hover: 'hover:bg-emerald-500/5' },
-                            { label: 'Smt. Ganjil', val: stats.ganjil, icon: faGraduationCap, top: 'border-t-indigo-500', ibg: 'bg-indigo-500/10 text-indigo-500', hover: 'hover:bg-indigo-500/5' },
-                            { label: 'Smt. Genap', val: stats.genap, icon: faGraduationCap, top: 'border-t-purple-500', ibg: 'bg-purple-500/10 text-purple-500', hover: 'hover:bg-purple-500/5' },
-                        ].map((s, i) => (
-                            <div key={i} className={`w-[200px] xs:w-[220px] sm:w-auto shrink-0 snap-center glass rounded-[1.5rem] p-4 border-t-[3px] ${s.top} flex items-center gap-3 group ${s.hover} transition-all shadow-sm hover:shadow-md`}>
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform shrink-0 ${s.ibg}`}>
-                                    <FontAwesomeIcon icon={s.icon} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-0.5 whitespace-nowrap">{s.label}</p>
-                                    <h3 className="text-xl font-black font-heading leading-none text-[var(--color-text)] tracking-tight">{s.val}</h3>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                {/* ── Stats ── */}
+                <StatsCarousel count={STAT_CARD_COUNT} cols={4}>
+                    {[
+                        { icon: faLayerGroup, label: 'Total Periode', value: stats.total, borderColor: 'border-t-blue-500', iconBg: 'bg-blue-500/10 text-blue-500' },
+                        { icon: faCircleCheck, label: 'Status Aktif', value: stats.active, borderColor: 'border-t-emerald-500', iconBg: 'bg-emerald-500/10 text-emerald-500' },
+                        { icon: faGraduationCap, label: 'Smt. Ganjil', value: stats.ganjil, borderColor: 'border-t-indigo-500', iconBg: 'bg-indigo-500/10 text-indigo-500' },
+                        { icon: faGraduationCap, label: 'Smt. Genap', value: stats.genap, borderColor: 'border-t-purple-500', iconBg: 'bg-purple-500/10 text-purple-500' },
+                    ].map((s, i) => (
+                        <StatCard
+                            key={i}
+                            icon={s.icon}
+                            label={s.label}
+                            value={s.value}
+                            borderColor={s.borderColor}
+                            iconBg={s.iconBg}
+                        />
+                    ))}
+                </StatsCarousel>
 
-                    {/* Dot Indicators - Mobile Only */}
-                    <div className="flex justify-center gap-1.5 mt-2 sm:hidden">
-                        {Array.from({ length: STAT_CARD_COUNT }).map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => {
-                                    const el = statsScrollRef.current
-                                    if (!el) return
-                                    const cardWidth = el.scrollWidth / STAT_CARD_COUNT
-                                    el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
-                                }}
-                                className={`rounded-full transition-all duration-300 ${activeStatIdx === i
-                                    ? 'w-5 h-1.5 bg-[var(--color-primary)]'
-                                    : 'w-1.5 h-1.5 bg-[var(--color-text-muted)]/30 hover:bg-[var(--color-text-muted)]/50'
-                                    }`}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                {/* ── Search Hub (PoinPage Style) ── */}
-                <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-sm mb-6">
+                {/* ── Filter Bar ── */}
+                <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
                     <div className="flex flex-row items-center gap-2 p-3">
                         <div className="flex-1 relative">
                             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
@@ -843,16 +844,16 @@ export default function AcademicYearsPage() {
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                                 placeholder="Cari nama tahun pelajaran (contoh: 2024/2025)..."
-                                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl shadow-none"
+                                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                             />
                             {searchQuery && (
-                                <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-3 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
+                                <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
                                     <FontAwesomeIcon icon={faTimes} className="text-xs" />
                                 </button>
                             )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                            <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 p-1 shadow-sm">
+                            <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 p-1 shadow-none">
                                 <button onClick={() => setViewMode('table')} className={`h-8 px-3 rounded-lg flex items-center gap-2 text-[9px] font-black uppercase tracking-wider transition-all ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
                                     <FontAwesomeIcon icon={faTableList} className="text-[9px]" />
                                     <span className="hidden sm:inline">Tabel</span>
@@ -870,6 +871,7 @@ export default function AcademicYearsPage() {
                                 <span className="hidden xs:inline">Filter</span>
                                 {activeFilterCount > 0 && <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">{activeFilterCount}</span>}
                             </button>
+                            {activeFilterCount > 0 && <button onClick={resetAllFilters} className="h-9 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-red-500/10 flex items-center gap-1.5"><FontAwesomeIcon icon={faXmark} /><span className="hidden sm:inline">Reset</span></button>}
                         </div>
                     </div>
 
@@ -890,14 +892,14 @@ export default function AcademicYearsPage() {
                                 </button>
                             )}
                             {filterTimeStatus && (
-                                    <button type="button" onClick={() => setFilterTimeStatus('')}
-                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600">
-                                        Status: {filterTimeStatus}
-                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-amber-500/20 flex items-center justify-center text-amber-600 opacity-70 group-hover:opacity-100 transition-opacity">
-                                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
-                                        </span>
-                                    </button>
-                                )}
+                                <button type="button" onClick={() => setFilterTimeStatus('')}
+                                    className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600">
+                                    Status: {filterTimeStatus}
+                                    <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-amber-500/20 flex items-center justify-center text-amber-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                        <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                    </span>
+                                </button>
+                            )}
                             <button onClick={resetAllFilters} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black text-red-500 hover:bg-red-500/5 transition-all">
                                 <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
                                 Hapus Semua
@@ -906,7 +908,25 @@ export default function AcademicYearsPage() {
                     )}
 
                     {isFilterOpen && (
-                        <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 animate-in slide-in-from-top-2 duration-300">
+                        <div className="border-t border-[var(--color-border)] p-3.5 bg-[var(--color-surface-alt)]/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+                            {/* Header Panel with Standardized "Vertical Bar" Pattern */}
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-1 h-3.5 bg-indigo-500 rounded-full" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 flex items-center gap-2">
+                                        <FontAwesomeIcon icon={faSliders} className="text-[9px] opacity-60" />
+                                        Filter Lanjutan
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={resetAllFilters}
+                                    className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-100"
+                                >
+                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
+                                    Reset Semua
+                                </button>
+                            </div>
+
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1 font-heading">Semester</label>
@@ -937,7 +957,7 @@ export default function AcademicYearsPage() {
 
 
                 {/* ── Main Data View ── */}
-                <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden">
+                <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
                     {loading ? (
                         <div className="p-12 space-y-4">
                             <div className="flex gap-4">
@@ -953,6 +973,7 @@ export default function AcademicYearsPage() {
                                     onSetActive={handleSetActive}
                                     onDuplicate={handleDuplicate}
                                     onDelete={(y) => { setItemToDelete(y); setIsDeleteModalOpen(true) }}
+                                    onToggleLock={handleToggleLock}
                                     onHistory={handleOpenHistory}
                                     canEdit={canEdit}
                                     submitting={submitting}
@@ -961,8 +982,8 @@ export default function AcademicYearsPage() {
                                 <>
                                     <div className="overflow-x-auto hidden md:block">
                                         <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                                            <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
+                                                <tr className="border-b border-[var(--color-border)]">
                                                     <th className="px-6 py-4 w-12"><input type="checkbox" checked={selectedIds.length === paged.length && paged.length > 0} onChange={toggleSelectAll} className="rounded border-[var(--color-border)]" /></th>
                                                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun Pelajaran</th>
                                                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Periode & Semester</th>
