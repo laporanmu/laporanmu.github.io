@@ -729,6 +729,7 @@ export default function StudentsPage() {
                                         left: Math.max(10, headerMenuRect.right - 224)
                                     }}
                                 >
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
                                     {canImportCSV && (
                                         <button onClick={() => { setIsHeaderMenuOpen(false); handleImportClick() }}
                                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">

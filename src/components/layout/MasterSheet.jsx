@@ -7,7 +7,8 @@ import {
     faExclamationTriangle, faCalendarAlt,
     faClipboardList, faCalendarWeek, faShieldHalved,
     faPersonWalkingArrowRight, faClockRotateLeft, faUserGear,
-    faScrewdriverWrench, faDatabase, faBoxArchive, faServer, faPalette, faNewspaper, faRobot, faCube
+    faScrewdriverWrench, faDatabase, faBoxArchive, faServer, faPalette, faNewspaper, faRobot, faCube,
+    faCalendarDays, faQrcode, faFileInvoice, faMoneyBillWave, faWallet, faBook, faUserPlus
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "../../context/AuthContext"
 import { useFeatureFlags } from "../../context/FeatureFlagsContext"
@@ -31,6 +32,17 @@ function getPortalContainer(id) {
 }
 
 // ─── Items ────────────────────────────────────────────────────────────────────
+const ACADEMIC_ITEMS = [
+    { to: "/academic/attendance", label: "Presensi Siswa", icon: faQrcode, desc: "Absensi real-time via scan QR kartu siswa", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/academic/schedule", label: "Jadwal Pelajaran", icon: faCalendarDays, desc: "Atur plotting jadwal KBM dan guru pengajar", color: "bg-purple-500/10 text-purple-600" },
+    { to: "/academic/raport", label: "E-Rapor & Nilai", icon: faFileInvoice, desc: "Input nilai harian, ujian, dan cetak raport", color: "bg-emerald-500/10 text-emerald-600" },
+]
+
+const FINANCE_ITEMS = [
+    { to: "/finance/invoices", label: "Tagihan SPP", icon: faMoneyBillWave, desc: "Kelola tagihan bulanan dan iuran sekolah", color: "bg-amber-500/10 text-amber-600" },
+    { to: "/finance/payments", label: "Riwayat Bayar", icon: faWallet, desc: "Rekapitulasi pembayaran dan tunggakan wali", color: "bg-emerald-500/10 text-emerald-600" },
+]
+
 const REPORTS_ITEMS = [
     { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen izin keluar masuk area santri", color: "bg-red-500/10 text-red-500" },
     { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Laporan perkembangan poin & prestasi bulanan", color: "bg-indigo-500/10 text-indigo-600" },
@@ -42,8 +54,10 @@ const MASTER_ITEMS = [
     { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Pusat database seluruh santri aktif dalam sistem", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Data akun pengajar, musyrif, dan staf sekolah", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Pengaturan struktur kelas dan pembagian asrama", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/master/subjects", label: "Mata Pelajaran", icon: faBook, desc: "Daftar kurikulum mata pelajaran sekolah", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/master/poin", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Konfigurasi kategori poin prestasi & pelanggaran", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Manajemen semester dan periode kalender akademik", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/master/enrollment", label: "PSB / Enrollment", icon: faUserPlus, desc: "Manajemen pendaftaran dan penerimaan siswa baru", color: "bg-emerald-500/10 text-emerald-600" },
 ]
 
 const ADMIN_ITEMS = [
@@ -61,6 +75,8 @@ const ADMIN_ITEMS = [
 
 // ─── Section titles per key ───────────────────────────────────────────────────
 const SECTION_TITLE = {
+    academic: "Mesin Akademik",
+    finance: "Manajemen Keuangan",
     reports: "Laporan & Rekap",
     master: "Master Data",
     admin: "Admin Panel",
@@ -137,6 +153,8 @@ export default function MasterSheet({ isOpen, onClose, section }) {
     // Tentukan section mana yang perlu ditampilkan
     // section prop = spesifik 1 section; null = tampil semua (fallback full-menu)
     const show = {
+        academic: (!section || section === 'academic') && !isSatpam,
+        finance: (!section || section === 'finance') && !isSatpam,
         reports: !section || section === 'reports',
         master: (!section || section === 'master') && visibleMaster.length > 0,
         admin: (!section || section === 'admin') && isAdminUp,
@@ -170,38 +188,64 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                             <div className="h-1 w-10 rounded-full bg-gray-300/80 dark:bg-gray-700/80" />
                         </div>
 
-                        {/* ── Reports ── */}
-                        {show.reports && (
-                            <Section
-                                title={SECTION_TITLE.reports}
-                                items={visibleReports}
-                                onNavigate={handleNav}
-                            />
-                        )}
-
-                        {/* ── Master Data ── */}
-                        {show.master && (
-                            <>
-                                {show.reports && <Divider />}
+                        <div className="max-h-[75vh] overflow-y-auto no-scrollbar pb-2">
+                            {/* ── Academic ── */}
+                            {show.academic && (
                                 <Section
-                                    title={SECTION_TITLE.master}
-                                    items={visibleMaster}
+                                    title={SECTION_TITLE.academic}
+                                    items={ACADEMIC_ITEMS}
                                     onNavigate={handleNav}
                                 />
-                            </>
-                        )}
+                            )}
 
-                        {/* ── Admin Panel ── */}
-                        {show.admin && (
-                            <div className="mt-2">
-                                {(show.reports || show.master) && <Divider />}
-                                <Section
-                                    title="Infrastructure & Control"
-                                    items={ADMIN_ITEMS}
-                                    onNavigate={handleNav}
-                                />
-                            </div>
-                        )}
+                            {/* ── Finance ── */}
+                            {show.finance && (
+                                <>
+                                    {show.academic && <Divider />}
+                                    <Section
+                                        title={SECTION_TITLE.finance}
+                                        items={FINANCE_ITEMS}
+                                        onNavigate={handleNav}
+                                    />
+                                </>
+                            )}
+
+                            {/* ── Reports ── */}
+                            {show.reports && (
+                                <>
+                                    {(show.academic || show.finance) && <Divider />}
+                                    <Section
+                                        title={SECTION_TITLE.reports}
+                                        items={visibleReports}
+                                        onNavigate={handleNav}
+                                    />
+                                </>
+                            )}
+
+                            {/* ── Master Data ── */}
+                            {show.master && (
+                                <>
+                                    {(show.academic || show.finance || show.reports) && <Divider />}
+                                    <Section
+                                        title={SECTION_TITLE.master}
+                                        items={visibleMaster}
+                                        onNavigate={handleNav}
+                                    />
+                                </>
+                            )}
+
+                            {/* ── Admin Panel ── */}
+                            {show.admin && (
+                                <div className="mt-2">
+                                    {(show.academic || show.finance || show.reports || show.master) && <Divider />}
+                                    <Section
+                                        title="Infrastructure & Control"
+                                        items={ADMIN_ITEMS}
+                                        onNavigate={handleNav}
+                                    />
+                                </div>
+                            )}
+                        </div>
 
                         <div className="mt-2 px-5 py-3 rounded-2xl bg-black/5 dark:bg-white/5 mx-3 flex items-center justify-between mb-2">
                             <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">LaporanMu System</span>

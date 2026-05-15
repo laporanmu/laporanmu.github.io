@@ -307,15 +307,15 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
                 {/* ── Kurikulum ── */}
                 <div className="pt-2 border-t border-[var(--color-border)]">
                     <label className="block text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-2 ml-1 opacity-60">Kurikulum Aktif</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-2.5">
                         {['Merdeka', 'K-13'].map(c => (
                             <button key={c} type="button"
                                 onClick={() => handleChange('curriculum', c)}
-                                className={`h-10 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${formData.curriculum === c ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)] shadow-sm' : 'bg-[var(--color-surface-alt)]/30 border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
-                                <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center transition-colors ${formData.curriculum === c ? 'border-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>
-                                    {formData.curriculum === c && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />}
+                                className={`h-10 px-3.5 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-start gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/50 ${formData.curriculum === c ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/40 text-[var(--color-primary)] shadow-sm' : 'bg-[var(--color-surface-alt)]/40 border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]'}`}>
+                                <div className={`w-3.5 h-3.5 rounded-full border-[1.5px] flex items-center justify-center transition-all shrink-0 ${formData.curriculum === c ? 'border-[var(--color-primary)] bg-[var(--color-surface)]' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] transition-transform duration-300 ${formData.curriculum === c ? 'scale-100' : 'scale-0'}`} />
                                 </div>
-                                Kurikulum {c}
+                                <span className="truncate mt-px text-left">{c}</span>
                             </button>
                         ))}
                     </div>
@@ -323,9 +323,10 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
 
 
                 {/* ── Status Aktif Toggle ── */}
-                <div
+                <button
+                    type="button"
                     onClick={() => handleChange('makeActive', !formData.makeActive)}
-                    className={`group flex items-center justify-between px-3.5 py-2.5 rounded-2xl border transition-all cursor-pointer select-none ${formData.makeActive ? 'bg-emerald-500/8 border-emerald-500/30' : 'bg-[var(--color-surface-alt)]/40 border-[var(--color-border)] hover:border-[var(--color-primary)]/30'}`}
+                    className={`w-full text-left group flex items-center justify-between px-3.5 py-2.5 rounded-2xl border transition-all cursor-pointer select-none focus:outline-none focus:ring-4 focus:ring-[var(--color-primary)]/10 ${formData.makeActive ? 'bg-emerald-500/8 border-emerald-500/30' : 'bg-[var(--color-surface-alt)]/40 border-[var(--color-border)] hover:border-[var(--color-primary)]/30'}`}
                 >
                     <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${formData.makeActive ? 'bg-emerald-500/20 text-emerald-600' : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
@@ -339,7 +340,7 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
                     <div className={`relative w-8 h-4.5 rounded-full transition-all shrink-0 ${formData.makeActive ? 'bg-emerald-500' : 'bg-[var(--color-border)]'}`}>
                         <div className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all duration-200 ${formData.makeActive ? 'left-[16px]' : 'left-0.5'}`} />
                     </div>
-                </div>
+                </button>
             </div>
         </Modal>
     )

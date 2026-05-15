@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { NavLink } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
-    faHouse, faClipboardList, faLayerGroup, faUserGear, faCog,
+    faHouse, faClipboardList, faLayerGroup, faUserGear, faCog, faCalendarAlt, faMoneyBillWave
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "../../context/AuthContext"
 import { useFeatureFlags } from "../../context/FeatureFlagsContext"
@@ -18,7 +18,7 @@ function NavItem({ to, icon, label, activeColor = ACTIVE }) {
         <NavLink
             to={to}
             className={({ isActive }) =>
-                `py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors relative
+                `py-3 flex flex-col items-center justify-center gap-1 text-[8.5px] sm:text-[10px] font-bold transition-colors relative
                  ${isActive ? activeColor : INACTIVE}`
             }
         >
@@ -27,8 +27,8 @@ function NavItem({ to, icon, label, activeColor = ACTIVE }) {
                     {isActive && (
                         <span className="absolute top-1.5 w-1 h-1 rounded-full bg-indigo-600" />
                     )}
-                    <FontAwesomeIcon icon={icon} className="text-[17px]" />
-                    <span className="tracking-tight leading-none">{label}</span>
+                    <FontAwesomeIcon icon={icon} className="text-[16px] sm:text-[17px]" />
+                    <span className="tracking-tight leading-none truncate px-0.5">{label}</span>
                 </>
             )}
         </NavLink>
@@ -42,11 +42,11 @@ function MenuButton({ icon, label, onClick, active = false }) {
             onClick={onClick}
             type="button"
             aria-label={`Buka menu ${label}`}
-            className={`py-3 flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors relative ${active ? ACTIVE : INACTIVE}`}
+            className={`py-3 flex flex-col items-center justify-center gap-1 text-[8.5px] sm:text-[10px] font-bold transition-colors relative ${active ? ACTIVE : INACTIVE}`}
         >
             {active && <span className="absolute top-1.5 w-1 h-1 rounded-full bg-indigo-600" />}
-            <FontAwesomeIcon icon={icon} className="text-[17px]" />
-            <span className="tracking-tight leading-none">{label}</span>
+            <FontAwesomeIcon icon={icon} className="text-[16px] sm:text-[17px]" />
+            <span className="tracking-tight leading-none truncate px-0.5">{label}</span>
         </button>
     )
 }
@@ -103,32 +103,35 @@ export default function BottomNav() {
                 <div className="mx-auto max-w-7xl px-3 pb-3">
                     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
 
-                        {/* ── Admin / Developer: Home | Reports | Master | Admin ── */}
+                        {/* ── Admin / Developer: Dashboard | Akademik | Keuangan | Laporan | Master | Admin ── */}
                         {isAdminUp && (
-                            <div className="grid grid-cols-4">
+                            <div className="grid grid-cols-6">
                                 <NavItem to="/dashboard" icon={faHouse} label="Home" />
-                                <MenuButton icon={faClipboardList} label="Reports" onClick={() => open('reports')} active={openSheet === 'reports'} />
+                                <MenuButton icon={faCalendarAlt} label="Akademik" onClick={() => open('academic')} active={openSheet === 'academic'} />
+                                <MenuButton icon={faMoneyBillWave} label="Keuangan" onClick={() => open('finance')} active={openSheet === 'finance'} />
+                                <MenuButton icon={faClipboardList} label="Laporan" onClick={() => open('reports')} active={openSheet === 'reports'} />
                                 <MenuButton icon={faLayerGroup} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
                                 <MenuButton icon={faUserGear} label="Admin" onClick={() => open('admin')} active={openSheet === 'admin'} />
                             </div>
                         )}
 
-                        {/* ── Satpam: Home | Reports | Settings (3 col) ── */}
+                        {/* ── Satpam: Home | Laporan | Setting (3 col) ── */}
                         {isSatpam && (
                             <div className="grid grid-cols-3">
                                 <NavItem to="/dashboard" icon={faHouse} label="Home" />
-                                <MenuButton icon={faClipboardList} label="Reports" onClick={() => open('reports')} active={openSheet === 'reports'} />
+                                <MenuButton icon={faClipboardList} label="Laporan" onClick={() => open('reports')} active={openSheet === 'reports'} />
                                 <NavItem to="/settings" icon={faCog} label="Setting" />
                             </div>
                         )}
 
-                        {/* ── Staff biasa: Home | Reports | Master | Settings ── */}
+                        {/* ── Staff biasa: Home | Akademik | Keuangan | Laporan | Master (5 col) ── */}
                         {!isAdminUp && !isSatpam && (
-                            <div className="grid grid-cols-4">
+                            <div className="grid grid-cols-5">
                                 <NavItem to="/dashboard" icon={faHouse} label="Home" />
-                                <MenuButton icon={faClipboardList} label="Reports" onClick={() => open('reports')} active={openSheet === 'reports'} />
+                                <MenuButton icon={faCalendarAlt} label="Akademik" onClick={() => open('academic')} active={openSheet === 'academic'} />
+                                <MenuButton icon={faMoneyBillWave} label="Keuangan" onClick={() => open('finance')} active={openSheet === 'finance'} />
+                                <MenuButton icon={faClipboardList} label="Laporan" onClick={() => open('reports')} active={openSheet === 'reports'} />
                                 <MenuButton icon={faLayerGroup} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
-                                <NavItem to="/settings" icon={faCog} label="Setting" />
                             </div>
                         )}
 

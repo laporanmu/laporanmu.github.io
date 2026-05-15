@@ -224,6 +224,9 @@ export default function AcademicYearsPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const debouncedSearch = useDebounce(searchQuery, 350)
     const [filterSemester, setFilterSemester] = useState('')
+    const [filterStatus, setFilterStatus] = useState('')
+    const [filterCurriculum, setFilterCurriculum] = useState('')
+    const [filterLock, setFilterLock] = useState('')
     const [filterTimeStatus, setFilterTimeStatus] = useState('') // 'Akan Datang' | 'Sedang Berjalan' | 'Sudah Selesai'
     const [sortBy, setSortBy] = useState('name_desc')
     const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -256,10 +259,14 @@ export default function AcademicYearsPage() {
     }) // 'card' | 'list'
     const [isShortcutOpen, setIsShortcutOpen] = useState(false)
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
+    const headerMenuRef = useRef(null)
+    const shortcutRef = useRef(null)
     const headerMenuBtnRef = useRef(null)
     const shortcutBtnRef = useRef(null)
     const [headerMenuRect, setHeaderMenuRect] = useState(null)
     const [shortcutRect, setShortcutRect] = useState(null)
+    // Deferred unmount: keeps portal in DOM for 200ms after close so exit animation can play
+    const [headerMenuMounted, setHeaderMenuMounted] = useState(false)
     const searchInputRef = useRef(null)
 
     const [viewMode, setViewMode] = useState(() => {
@@ -331,6 +338,17 @@ export default function AcademicYearsPage() {
         return () => document.removeEventListener('mousedown', handler)
     }, [isColMenuOpen])
 
+    // Deferred unmount effect for header menu
+    useEffect(() => {
+        if (isHeaderMenuOpen) {
+            setHeaderMenuMounted(true)
+        } else {
+            const t = setTimeout(() => setHeaderMenuMounted(false), 200)
+            return () => clearTimeout(t)
+        }
+    }, [isHeaderMenuOpen])
+
+    // Sticky positioning - keep portaled dropdowns anchored on scroll/resize
     useEffect(() => {
         if (!isHeaderMenuOpen && !isShortcutOpen) return
         const update = () => {
@@ -649,6 +667,9 @@ export default function AcademicYearsPage() {
     const resetAllFilters = () => {
         setSearchQuery('')
         setFilterSemester('')
+        setFilterStatus('')
+        setFilterCurriculum('')
+        setFilterLock('')
         setFilterTimeStatus('')
         setPage(1)
         setSelectedIds([])
@@ -659,18 +680,21 @@ export default function AcademicYearsPage() {
         return years.filter(y => {
             const matchesSearch = !debouncedSearch || y.name.toLowerCase().includes(debouncedSearch.toLowerCase())
             const matchesSemester = !filterSemester || y.semester === filterSemester
+            const matchesStatus = !filterStatus || (filterStatus === 'active' ? y.is_active : !y.is_active)
+            const matchesCurriculum = !filterCurriculum || y.curriculum === filterCurriculum
+            const matchesLock = !filterLock || (filterLock === 'locked' ? y.is_locked : !y.is_locked)
             if (filterTimeStatus) {
                 const ts = getTimeStatus(y.start_date, y.end_date)
                 if (ts?.label !== filterTimeStatus) return false
             }
-            return matchesSearch && matchesSemester
+            return matchesSearch && matchesSemester && matchesStatus && matchesCurriculum && matchesLock
         }).sort((a, b) => {
             if (sortBy === 'name_asc') return a.name.localeCompare(b.name)
             if (sortBy === 'name_desc') return b.name.localeCompare(a.name)
             if (sortBy === 'start_asc') return new Date(a.start_date) - new Date(b.start_date)
             return new Date(b.start_date) - new Date(a.start_date)
         })
-    }, [years, debouncedSearch, filterSemester, filterTimeStatus, sortBy])
+    }, [years, debouncedSearch, filterSemester, filterStatus, filterCurriculum, filterLock, filterTimeStatus, sortBy])
 
     const totalRows = filtered.length
     const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
@@ -729,73 +753,96 @@ export default function AcademicYearsPage() {
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} periode akademik dalam ekosistem.</p>
                     </div>
                     <div className="flex gap-2 items-center">
-                        <div className="relative">
-                            <button
-                                ref={headerMenuBtnRef}
-                                onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                                title="Aksi lainnya"
-                            >
-                                <FontAwesomeIcon icon={faSliders} />
-                            </button>
-                            {isHeaderMenuOpen && headerMenuRect && createPortal(
-                                <>
-                                    <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsHeaderMenuOpen(false)} />
-                                    <div className="fixed z-[9991] w-60 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-200" style={{ top: headerMenuRect.bottom + 8, left: Math.max(10, headerMenuRect.right - 240) }}>
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Manajemen</p>
-                                        <button onClick={() => { setIsHeaderMenuOpen(false); fetchArchived(); setIsArchivedOpen(true) }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
-                                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="text-[11px] font-black leading-tight">Arsip Periode</p>
-                                                <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data</p>
-                                            </div>
-                                        </button>
-                                        <button onClick={() => { setIsHeaderMenuOpen(false); handleExportCSV() }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
-                                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                <FontAwesomeIcon icon={faDownload} className="text-xs" />
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="text-[11px] font-black leading-tight">Export CSV</p>
-                                                <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">{totalRows} data terpilih</p>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </>,
-                                getPortalContainer('header-menu-portal')
-                            )}
-                        </div>
+                        {/* Header Menu Button */}
+                        <button
+                            ref={headerMenuBtnRef}
+                            onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                            title="Aksi lainnya"
+                        >
+                            <FontAwesomeIcon icon={faSliders} />
+                        </button>
 
-                        <div className="relative">
-                            <button onClick={() => setIsShortcutOpen(!isShortcutOpen)}
-                                ref={shortcutBtnRef}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                title="Keyboard Shortcuts (?)"><FontAwesomeIcon icon={faKeyboard} className="text-sm" /></button>
-                            {isShortcutOpen && shortcutRect && createPortal(
-                                <>
-                                    <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsShortcutOpen(false)} />
-                                    <div className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden animate-in fade-in zoom-in-95" style={{ top: shortcutRect.bottom + 8, left: Math.max(10, shortcutRect.right - 288) }}>
-                                        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/50">
-                                            <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Shortcuts</p>
-                                            <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
+                        {/* Portaled Header Menu Dropdown */}
+                        {headerMenuMounted && headerMenuRect && createPortal(
+                            <>
+                                <div
+                                    className={`fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px] transition-opacity duration-200 ${isHeaderMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+                                    onClick={() => setIsHeaderMenuOpen(false)}
+                                />
+                                <div
+                                    className={`fixed z-[9991] w-60 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-all duration-200 ease-out origin-top-right
+                                        ${isHeaderMenuOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'}`}
+                                    style={{
+                                        top: headerMenuRect.bottom + 8,
+                                        left: Math.max(10, headerMenuRect.right - 240)
+                                    }}
+                                >
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Manajemen</p>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); fetchArchived(); setIsArchivedOpen(true) }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
                                         </div>
-                                        <div className="p-3 space-y-0.5">
-                                            {[{ section: 'Navigasi' }, { keys: ['Ctrl', 'K'], label: 'Fokus ke search' }, { section: 'Aksi' }, { keys: ['N'], label: 'Tambah periode baru' }, { keys: ['X'], label: 'Reset semua filter' }].map((item, i) => item.section ? (
-                                                <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
-                                            ) : (
-                                                <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
-                                                    <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
-                                                    <div className="flex items-center gap-1">{item.keys.map((k, ki) => <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>)}</div>
-                                                </div>
-                                            ))}
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Arsip Periode</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data</p>
                                         </div>
-                                    </div>
-                                </>,
-                                getPortalContainer('shortcut-portal')
-                            )}
-                        </div>
+                                    </button>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); handleExportCSV() }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faDownload} className="text-xs" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Export CSV</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">{totalRows} data terpilih</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </>,
+                            getPortalContainer('portal-academic-header-menu')
+                        )}
 
+                        {/* Keyboard Shortcuts Button - hidden on mobile */}
+                        <button onClick={() => { if (!isShortcutOpen) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setIsShortcutOpen(v => !v) }}
+                            ref={shortcutBtnRef}
+                            className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center transition-all active:scale-95
+                                ${isShortcutOpen
+                                    ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
+                                    : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                                }`}
+                            title="Keyboard Shortcuts (?)">
+                            <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
+                        </button>
+
+                        {/* Portaled Keyboard Shortcuts Dropdown */}
+                        {isShortcutOpen && shortcutRect && createPortal(
+                            <>
+                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsShortcutOpen(false)} />
+                                <div className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200"
+                                    style={{
+                                        top: shortcutRect.bottom + 8,
+                                        left: Math.max(10, shortcutRect.right - 288)
+                                    }}>
+                                    <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-alt)]/50">
+                                        <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
+                                        <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
+                                    </div>
+                                    <div className="p-3 space-y-0.5">
+                                        {[{ section: 'Navigasi' }, { keys: ['Ctrl', 'K'], label: 'Fokus ke search' }, { section: 'Aksi' }, { keys: ['N'], label: 'Tambah periode baru' }, { keys: ['X'], label: 'Reset semua filter' }, { keys: ['?'], label: 'Tampilkan shortcut ini' }].map((item, i) => item.section ? (
+                                            <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
+                                        ) : (
+                                            <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
+                                                <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
+                                                <div className="flex items-center gap-1">{item.keys.map((k, ki) => <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>)}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>,
+                            getPortalContainer('portal-academic-shortcut-menu')
+                        )}
+
+                        {/* Privasi toggle */}
                         <button onClick={() => setIsPrivacyMode(!isPrivacyMode)}
                             className={`h-9 w-9 sm:w-auto sm:px-3 rounded-lg border flex items-center justify-center sm:justify-start gap-2 transition-all active:scale-95 ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
                             title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
@@ -803,10 +850,11 @@ export default function AcademicYearsPage() {
                             <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Privasi</span>
                         </button>
 
+                        {/* Add button */}
                         {canEdit && (
                             <button onClick={handleAdd} className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10">
                                 <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                                <span className="hidden sm:inline">Tambah Periode</span>
+                                <span>Tambah Periode</span>
                             </button>
                         )}
                     </div>
@@ -843,7 +891,7 @@ export default function AcademicYearsPage() {
                                 type="text"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="Cari nama tahun pelajaran (contoh: 2024/2025)..."
+                                placeholder="Cari nama tahun pelajaran (contoh: 2024/2025)... (Ctrl+K)"
                                 className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
                             />
                             {searchQuery && (
@@ -852,15 +900,15 @@ export default function AcademicYearsPage() {
                                 </button>
                             )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <div className="flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 p-1 shadow-none">
-                                <button onClick={() => setViewMode('table')} className={`h-8 px-3 rounded-lg flex items-center gap-2 text-[9px] font-black uppercase tracking-wider transition-all ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="hidden md:flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 p-1 shadow-none">
+                                <button onClick={() => setViewMode('table')} className={`h-7 px-3 rounded-lg flex items-center gap-2 text-[9px] font-black uppercase tracking-wider transition-all ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
                                     <FontAwesomeIcon icon={faTableList} className="text-[9px]" />
-                                    <span className="hidden sm:inline">Tabel</span>
+                                    <span>Tabel</span>
                                 </button>
-                                <button onClick={() => setViewMode('timeline')} className={`h-8 px-3 rounded-lg flex items-center gap-2 text-[9px] font-black uppercase tracking-wider transition-all ${viewMode === 'timeline' ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                <button onClick={() => setViewMode('timeline')} className={`h-7 px-3 rounded-lg flex items-center gap-2 text-[9px] font-black uppercase tracking-wider transition-all ${viewMode === 'timeline' ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
                                     <FontAwesomeIcon icon={faTimeline} className="text-[9px]" />
-                                    <span className="hidden sm:inline">Linimasa</span>
+                                    <span>Linimasa</span>
                                 </button>
                             </div>
                             <button
@@ -927,27 +975,60 @@ export default function AcademicYearsPage() {
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1 font-heading">Semester</label>
-                                    <select value={filterSemester} onChange={e => setFilterSemester(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
-                                        <option value="">Semua Semester</option>
-                                        <option value="Ganjil">Ganjil</option>
-                                        <option value="Genap">Genap</option>
-                                    </select>
+                            <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-4">
+                                {/* Primary Grid: Selects */}
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Semester</label>
+                                        <select value={filterSemester} onChange={e => setFilterSemester(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
+                                            <option value="">Semua Semester</option>
+                                            <option value="Ganjil">Ganjil</option>
+                                            <option value="Genap">Genap</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Status</label>
+                                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
+                                            <option value="">Semua Status</option>
+                                            <option value="active">Aktif</option>
+                                            <option value="inactive">Tidak Aktif</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Kurikulum</label>
+                                        <select value={filterCurriculum} onChange={e => setFilterCurriculum(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
+                                            <option value="">Semua Kurikulum</option>
+                                            <option value="Merdeka">Kurikulum Merdeka</option>
+                                            <option value="K13">Kurikulum 2013</option>
+                                            <option value="KTSP">KTSP</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Kunci Data</label>
+                                        <select value={filterLock} onChange={e => setFilterLock(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
+                                            <option value="">Semua</option>
+                                            <option value="open">Bisa Diedit</option>
+                                            <option value="locked">Terkunci (Read-only)</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Urutan</label>
+                                        <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
+                                            <option value="name_desc">Terupate</option>
+                                            <option value="name_asc">Terlama</option>
+                                            <option value="start_asc">Terdekat</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1 font-heading">Urutan</label>
-                                    <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
-                                        <option value="name_desc">Terupate</option>
-                                        <option value="name_asc">Terlama</option>
-                                        <option value="start_asc">Terdekat</option>
-                                    </select>
-                                </div>
-                                <div className="flex items-end">
-                                    <button onClick={resetAllFilters} className="w-full h-9 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10 transition-all flex items-center justify-center gap-2">
-                                        <FontAwesomeIcon icon={faRotateLeft} /> Atur Ulang
-                                    </button>
+                                
+                                {/* Secondary Grid: Actions */}
+                                <div className="space-y-1.5 flex flex-col">
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5 opacity-0 hidden xl:block">Aksi</label>
+                                    <div className="flex items-center gap-2 mt-auto h-9">
+                                        <button onClick={toggleSelectAll} className="h-full px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all">
+                                            {selectedIds.length === paged.length && paged.length > 0 ? 'Batal Pilih' : 'Pilih Semua'}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -980,65 +1061,106 @@ export default function AcademicYearsPage() {
                                 />
                             ) : (
                                 <>
-                                    <div className="overflow-x-auto hidden md:block">
-                                        <table className="w-full text-left border-collapse">
+                                    <div className="hidden md:block overflow-x-auto">
+                                        <table className="w-full text-sm">
                                             <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
-                                                <tr className="border-b border-[var(--color-border)]">
-                                                    <th className="px-6 py-4 w-12"><input type="checkbox" checked={selectedIds.length === paged.length && paged.length > 0} onChange={toggleSelectAll} className="rounded border-[var(--color-border)]" /></th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun Pelajaran</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Periode & Semester</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Status</th>
-                                                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Aksi</th>
+                                                <tr className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                                    <th className="px-6 py-4 text-center w-12">
+                                                        <input type="checkbox" checked={selectedIds.length === paged.length && paged.length > 0} onChange={toggleSelectAll} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+                                                    </th>
+                                                    {visibleCols.period && <th className="px-6 py-4 text-left">Tahun Pelajaran</th>}
+                                                    {visibleCols.semester && <th className="px-6 py-4 text-left">Periode & Semester</th>}
+                                                    {visibleCols.status && <th className="px-6 py-4 text-left">Status</th>}
+                                                    <th className="px-6 py-4 text-center pr-6 w-32 relative">
+                                                        <div className="flex items-center justify-center">
+                                                            <span>Aksi</span>
+                                                        </div>
+                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                            <button ref={colMenuRef} onClick={(e) => {
+                                                                const rect = e.currentTarget.getBoundingClientRect()
+                                                                const menuHeight = 220
+                                                                const spaceBelow = window.innerHeight - rect.bottom
+                                                                const showUp = spaceBelow < menuHeight && rect.top > menuHeight
+                                                                setColMenuPos({
+                                                                    top: showUp ? (rect.top + window.scrollY - menuHeight - 8) : (rect.bottom + window.scrollY + 8),
+                                                                    right: window.innerWidth - rect.right - window.scrollX,
+                                                                    showUp
+                                                                })
+                                                                setIsColMenuOpen(p => !p)
+                                                            }} title="Atur tampilan kolom"
+                                                                className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}>
+                                                                <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
+                                                            </button>
+                                                            {isColMenuOpen && createPortal(
+                                                                <div ref={colMenuPortalRef} className={`absolute z-[9999] w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${colMenuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
+                                                                    style={{ top: colMenuPos.top, right: colMenuPos.right }}>
+                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Atur Kolom</p>
+                                                                    {[{ key: 'period', label: 'Tahun Pelajaran' }, { key: 'semester', label: 'Periode & Semester' }, { key: 'status', label: 'Status' }].map(({ key, label }) => (
+                                                                        <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
+                                                                            <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
+                                                                            <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                                                                <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${visibleCols[key] ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+                                                                            </div>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>,
+                                                                document.body
+                                                            )}
+                                                        </div>
+                                                    </th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-[var(--color-border)]">
+                                            <tbody>
                                                 {isEmpty ? (
                                                     <tr><td colSpan="5" className="py-24 text-center opacity-40"><FontAwesomeIcon icon={faSearch} className="text-4xl mb-4" /><p className="text-xs font-black uppercase tracking-widest">Tidak ada data ditemukan</p></td></tr>
                                                 ) : paged.map(year => {
+                                                    const isSelected = selectedIds.includes(year.id);
                                                     const ts = getTimeStatus(year.start_date, year.end_date)
                                                     return (
-                                                        <tr key={year.id} className={`group hover:bg-[var(--color-surface-alt)]/40 transition-all ${year.is_active ? 'bg-emerald-500/[0.02]' : ''}`}>
-                                                            <td className="px-6 py-4"><input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded border-[var(--color-border)]" /></td>
-                                                            <td className="px-6 py-4">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black ${year.is_active ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                                                                        {year.name?.slice(2, 4) || '??'}
+                                                        <tr key={year.id} className={`border-t border-[var(--color-border)] transition-colors group/row ${isSelected ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-alt)]/40'}`}>
+                                                            <td className="px-6 py-4"><input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" /></td>
+                                                            {visibleCols.period && (
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black shadow-sm relative transition-transform hover:scale-110 shrink-0 ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
+                                                                            <span className="relative z-10">{year.name?.slice(2, 4) || '??'}</span>
+                                                                        </div>
+                                                                        <div className="flex flex-col min-w-0 flex-1">
+                                                                            <span className="font-extrabold text-sm text-[var(--color-text)] leading-snug truncate">
+                                                                                {year.name}
+                                                                            </span>
+                                                                            <p className="text-[10px] text-[var(--color-text-muted)] font-mono opacity-60 uppercase tracking-wider mt-1">ID: {year.id.slice(0, 8)}</p>
+                                                                        </div>
                                                                     </div>
-                                                                    <div>
-                                                                        <h4 className="text-[13px] font-bold text-[var(--color-text)] leading-none">{year.name}</h4>
-                                                                        <p className="text-[9px] font-medium text-[var(--color-text-muted)] mt-1.5 opacity-60">ID: {year.id.slice(0, 8)}</p>
+                                                                </td>
+                                                            )}
+                                                            {visibleCols.semester && (
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-widest border ${year.semester === 'Ganjil' ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' : 'bg-purple-500/10 text-purple-600 border-purple-500/20'}`}>
+                                                                            {year.semester}
+                                                                        </span>
+                                                                        <span className="text-xs text-[var(--color-text-muted)]">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
                                                                     </div>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${year.semester === 'Ganjil' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/10' : 'bg-purple-500/10 text-purple-500 border-purple-500/10'}`}>{year.semester}</span>
-                                                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-60">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <div className="flex items-center gap-3">
+                                                                </td>
+                                                            )}
+                                                            {visibleCols.status && (
+                                                                <td className="px-6 py-4 text-left">
                                                                     {year.is_active ? (
-                                                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-sm shadow-emerald-500/5">
-                                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Aktif</span>
-                                                                        </div>
+                                                                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500">Aktif</span>
                                                                     ) : (
-                                                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
-                                                                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] opacity-30" />
-                                                                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">Tidak Aktif</span>
-                                                                        </div>
+                                                                        <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)] opacity-60">Tidak Aktif</span>
                                                                     )}
-                                                                </div>
-                                                            </td>
+                                                                </td>
+                                                            )}
                                                             <td className="px-6 py-4">
-                                                                <div className="flex items-center justify-end gap-1">
+                                                                <div className="flex items-center justify-center gap-1">
                                                                     {canEdit && (
-                                                                        <button onClick={() => handleEdit(year)} title="Edit" className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)]/50 hover:shadow-md text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all flex items-center justify-center shrink-0"><FontAwesomeIcon icon={faEdit} className="text-[10px]" /></button>
+                                                                        <button onClick={() => handleEdit(year)} title="Edit" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all text-sm"><FontAwesomeIcon icon={faEdit} /></button>
                                                                     )}
-                                                                    <button onClick={() => handleOpenHistory(year)} title="Riwayat" className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-indigo-500/50 hover:shadow-md text-[var(--color-text-muted)] hover:text-indigo-500 transition-all flex items-center justify-center shrink-0"><FontAwesomeIcon icon={faHistory} className="text-[10px]" /></button>
+                                                                    <button onClick={() => handleOpenHistory(year)} title="Riwayat" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-purple-500 hover:bg-purple-500/10 transition-all text-sm"><FontAwesomeIcon icon={faHistory} /></button>
                                                                     {canEdit && (
-                                                                        <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} title="Hapus" className="w-8 h-8 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-red-500/50 hover:shadow-md text-[var(--color-text-muted)] hover:text-red-500 transition-all flex items-center justify-center shrink-0"><FontAwesomeIcon icon={faTrash} className="text-[10px]" /></button>
+                                                                        <button onClick={() => { setItemToDelete(year); setIsDeleteModalOpen(true) }} title="Hapus" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"><FontAwesomeIcon icon={faTrash} /></button>
                                                                     )}
                                                                 </div>
                                                             </td>
@@ -1049,42 +1171,50 @@ export default function AcademicYearsPage() {
                                         </table>
                                     </div>
                                     <div className="md:hidden divide-y divide-[var(--color-border)]">
-                                        {paged.map(year => (
-                                            <div key={year.id} className="p-4 bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/30 active:scale-[0.98] transition-all cursor-pointer group/mob" onClick={() => handleOpenReadOnlyDetail(year)}>
-                                                <div className="flex items-start justify-between gap-3 mb-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${year.is_active ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                                                            {year.name?.slice(2, 4) || '??'}
+                                        {paged.map(year => {
+                                            const isSelected = selectedIds.includes(year.id);
+                                            return (
+                                                <div key={year.id} className={`p-4 transition-colors group/mob ${isSelected ? 'bg-[var(--color-primary)]/5' : ''}`}>
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="flex flex-col items-center gap-3 pt-1">
+                                                            <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="accent-[var(--color-primary)] w-4 h-4 cursor-pointer shrink-0" />
                                                         </div>
-                                                        <div>
-                                                            <h4 className="text-sm font-black text-[var(--color-text)]">{year.name}</h4>
-                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border ${year.semester === 'Ganjil' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/10' : 'bg-purple-500/10 text-purple-500 border-purple-500/10'}`}>{year.semester}</span>
-                                                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-60">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
+                                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-black shadow-sm relative transition-transform shrink-0 ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
+                                                            <span className="relative z-10">{year.name?.slice(2, 4) || '??'}</span>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <div className="min-w-0 flex-1" onClick={() => handleOpenReadOnlyDetail(year)}>
+                                                                    <button className="font-extrabold text-sm text-[var(--color-text)] hover:text-[var(--color-primary)] text-left truncate block w-full">{year.name}</button>
+                                                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-widest border ${year.semester === 'Ganjil' ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' : 'bg-purple-500/10 text-purple-600 border-purple-500/20'}`}>{year.semester}</span>
+                                                                        <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
+                                                                    </div>
+                                                                    <p className="text-[10px] text-[var(--color-text-muted)] font-mono mt-1 opacity-60 uppercase tracking-widest">ID: {year.id.slice(0, 8)}</p>
+                                                                </div>
+                                                                <div className="flex items-center gap-1">
+                                                                    {canEdit && <button onClick={() => handleEdit(year)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]"><FontAwesomeIcon icon={faEdit} className="text-xs" /></button>}
+                                                                </div>
+                                                            </div>
+                                                            <div className="mt-3 flex items-center gap-2">
+                                                                {year.is_active ? (
+                                                                    <div className="flex-1 h-9 rounded-xl flex items-center justify-center text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">Aktif</div>
+                                                                ) : (
+                                                                    <div className="flex-1 h-9 rounded-xl flex items-center justify-center text-[10px] font-black uppercase tracking-widest bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]">Tidak Aktif</div>
+                                                                )}
+                                                                <button onClick={() => handleOpenHistory(year)} className="flex-1 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"><FontAwesomeIcon icon={faHistory} className="text-xs" /> Riwayat</button>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    {year.is_active && (
-                                                        <div className="flex items-center gap-1 bg-emerald-500 text-white px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/30">
-                                                            <div className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                                                            Aktif
-                                                        </div>
-                                                    )}
                                                 </div>
-                                                <div className="flex items-center gap-2 mt-2 pt-4 border-t border-[var(--color-border)] border-dashed">
-                                                    {canEdit && <button onClick={(e) => { e.stopPropagation(); handleEdit(year) }} className="flex-1 h-9 rounded-xl bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest hover:bg-blue-500/20 transition-all">Edit</button>}
-                                                    <button onClick={(e) => { e.stopPropagation(); handleOpenHistory(year) }} className="flex-1 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all">Riwayat</button>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </>
                             )}
                         </>
                     )}
-                    <div className="px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                        <Pagination totalRows={totalRows} page={page} pageSize={pageSize} setPage={setPage} setPageSize={setPageSize} label="data" jumpPage={jumpPage} setJumpPage={setJumpPage} />
-                    </div>
+                    <Pagination totalRows={totalRows} page={page} pageSize={pageSize} setPage={setPage} setPageSize={setPageSize} label="data" jumpPage={jumpPage} setJumpPage={setJumpPage} />
                 </div>
 
                 {/* ── Modals ── */}

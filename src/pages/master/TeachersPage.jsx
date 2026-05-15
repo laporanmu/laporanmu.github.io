@@ -1009,7 +1009,7 @@ export default function TeachersPage() {
                         {/* Add button */}
                         <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10">
                             <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                            <span className="hidden sm:inline">{canEdit ? 'Tambah Guru' : 'Read-only'}</span>
+                            <span>{canEdit ? 'Tambah Guru' : 'Read-only'}</span>
                         </button>
                     </div>
                 </div>
