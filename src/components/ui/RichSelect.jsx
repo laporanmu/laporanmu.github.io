@@ -117,7 +117,9 @@ const RichSelect = ({
                     className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
                     onMouseDown={(e) => e.stopPropagation()}
                     style={{
-                        width: coords.width,
+                        width: 'max-content',
+                        minWidth: coords.width,
+                        maxWidth: Math.max(300, coords.width),
                         left: coords.left,
                         top: coords.placement === 'top' ? 'auto' : coords.bottom + 8,
                         bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
@@ -156,7 +158,7 @@ const RichSelect = ({
                             <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onChange(extraOption.id); setIsOpen(false); }}
-                                className={`w-full text-left px-4 py-2 text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group ${value === extraOption.id ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-amber-600'}`}
+                                className={`w-full text-left px-4 py-2 text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group whitespace-nowrap ${value === extraOption.id ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-amber-600'}`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={`w-1.5 h-1.5 rounded-full ${value === extraOption.id ? 'bg-[var(--color-primary)]' : 'bg-amber-600'}`} />
@@ -175,7 +177,7 @@ const RichSelect = ({
                                 key={opt.id}
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onChange(opt.id); setIsOpen(false); }}
-                                className={`w-full text-left px-4 py-2 text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group ${String(value) === String(opt.id) ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-[var(--color-text)]'}`}
+                                className={`w-full text-left px-4 py-2 text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group whitespace-nowrap ${String(value) === String(opt.id) ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-[var(--color-text)]'}`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={`w-1.5 h-1.5 rounded-full transition-all ${String(value) === String(opt.id) ? 'bg-[var(--color-primary)] scale-125 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.4)]' : 'bg-[var(--color-border)] group-hover:bg-[var(--color-text-muted)]'}`} />

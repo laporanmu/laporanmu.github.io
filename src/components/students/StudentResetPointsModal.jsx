@@ -43,28 +43,29 @@ export default function StudentResetPointsModal({
             icon={faRotateLeft}
             iconBg="bg-orange-500/10"
             iconColor="text-orange-500"
-            size="md"
+            size="lg"
             mobileVariant="bottom-sheet"
             footer={
-                <div className="flex gap-3">
+                <div className="flex items-center w-full gap-3">
                     <button
                         type="button"
                         onClick={handleClose}
-                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all"
+                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                     >
                         Batal
                     </button>
+                    <div className="flex-1" />
                     <button
                         type="button"
                         onClick={handleBatchResetPoints}
                         disabled={resettingPoints}
-                        className="flex-[2] h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="h-10 px-6 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
                     >
                         {resettingPoints ? (
                             <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
                         ) : (
                             <>
-                                <FontAwesomeIcon icon={faRotateLeft} className="text-xs" />
+                                <FontAwesomeIcon icon={faRotateLeft} className="text-[11px]" />
                                 Reset Sekarang
                             </>
                         )}
@@ -103,13 +104,13 @@ export default function StudentResetPointsModal({
                         </div>
 
                         {/* Class List */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 py-1">
                             {/* Option: Semua Kelas (hidden when searching) */}
                             {!resetPointsSearch && (
                                 <button
                                     type="button"
                                     onClick={() => setResetPointsClassId('')}
-                                    className={`col-span-full p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group mb-1 ${resetPointsClassId === ''
+                                    className={`col-span-full p-2 rounded-xl border text-left flex items-center gap-2 transition-all hover:scale-[1.01] active:scale-95 group mb-1 ${resetPointsClassId === ''
                                             ? 'bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-500/20'
                                             : 'border-amber-500/30 bg-amber-500/5 text-amber-600 hover:bg-amber-500/10'
                                         }`}
@@ -131,7 +132,7 @@ export default function StudentResetPointsModal({
                                     key={c.id}
                                     type="button"
                                     onClick={() => setResetPointsClassId(c.id)}
-                                    className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all hover:scale-[1.01] active:scale-95 group ${resetPointsClassId === c.id
+                                    className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all hover:scale-[1.01] active:scale-95 group ${resetPointsClassId === c.id
                                             ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
                                             : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'
                                         }`}

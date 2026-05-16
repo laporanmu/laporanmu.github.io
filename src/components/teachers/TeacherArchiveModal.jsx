@@ -10,6 +10,7 @@ import {
     faTriangleExclamation
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
+import { EmptyState } from '../ui/DataDisplay'
 import { supabase } from '../../lib/supabase'
 
 export default function TeacherArchiveModal({
@@ -54,7 +55,7 @@ export default function TeacherArchiveModal({
         try {
             // Nullify homeroom_teacher_id in classes
             await supabase.from('classes').update({ homeroom_teacher_id: null }).eq('homeroom_teacher_id', deleteTarget.id)
-            
+
             // Delete logs
             await supabase.from('teacher_attendance').delete().eq('teacher_id', deleteTarget.id)
             await supabase.from('gate_logs').delete().eq('teacher_id', deleteTarget.id)
@@ -102,6 +103,17 @@ export default function TeacherArchiveModal({
             iconColor="text-amber-600"
             size="lg"
             mobileVariant="bottom-sheet"
+            footer={
+                <div className="flex items-center w-full">
+                    <button
+                        onClick={onClose}
+                        className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
+                    >
+                        Tutup
+                    </button>
+                    <div className="flex-1" />
+                </div>
+            }
         >
             <div className="space-y-3 relative">
 
@@ -151,10 +163,13 @@ export default function TeacherArchiveModal({
                         <p className="text-xs font-bold">Memuat arsip...</p>
                     </div>
                 ) : archivedTeachers.length === 0 ? (
-                    <div className="text-center py-12 text-[var(--color-text-muted)]">
-                        <FontAwesomeIcon icon={faBoxArchive} className="text-4xl opacity-20 mb-3 block mx-auto" />
-                        <p className="text-sm font-bold">Arsip kosong</p>
-                    </div>
+                    <EmptyState
+                        icon={faBoxArchive}
+                        title="Arsip Kosong"
+                        description="Tidak ada data guru yang telah dihapus sementara saat ini."
+                        variant="dashed"
+                        color="amber"
+                    />
                 ) : (
                     <div className="space-y-3">
                         <div className="border border-[var(--color-border)] rounded-xl overflow-hidden bg-[var(--color-surface)] shadow-sm">

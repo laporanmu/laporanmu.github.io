@@ -63,17 +63,18 @@ export default memo(function TeacherProfileModal({
             mobileVariant="bottom-sheet"
             contentClassName="!pb-4"
             footer={
-                <div className="flex gap-2.5 w-full">
-                    <button onClick={onClose} className="w-24 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
+                <div className="flex items-center w-full gap-3">
+                    <button onClick={onClose} className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
                         Tutup
                     </button>
+                    <div className="flex-1" />
                     {canEdit && (
                         <button
                             onClick={() => {
                                 onClose();
                                 handleEdit(selectedTeacher);
                             }}
-                            className="flex-1 h-10 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                            className="h-10 px-8 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:brightness-110 transition-all flex items-center justify-center gap-2 border border-white/10"
                         >
                             <FontAwesomeIcon icon={faEdit} className="opacity-70" /> Edit Data Guru
                         </button>

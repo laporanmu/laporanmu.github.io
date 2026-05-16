@@ -326,7 +326,7 @@ export const StudentRow = memo(({
         `}>
 
             {/* Checkbox + Pin */}
-            <td className="px-6 py-4">
+            <td className="px-4 py-4">
                 <div className="flex items-center gap-2">
                     <input
                         type="checkbox"
@@ -351,7 +351,7 @@ export const StudentRow = memo(({
             </td>
 
             {/* ── Siswa (Nama) ─────────────────────────────────────────── */}
-            <td className="px-6 py-4">
+            <td className="px-4 py-4">
                 <div className="flex items-start gap-3">
                     {/* Avatar + rank badge overlay */}
                     <div className="relative shrink-0">
@@ -546,7 +546,7 @@ export const StudentRow = memo(({
 
             {/* ── Gender ───────────────────────────────────────────────── */}
             {vc.gender && (
-                <td className="px-6 py-4 text-left">
+                <td className="px-4 py-4 text-center whitespace-nowrap">
                     {editingField === 'gender' ? (
                         <InlineEditGender
                             value={student.gender}
@@ -575,7 +575,7 @@ export const StudentRow = memo(({
 
             {/* ── Kelas ────────────────────────────────────────────────── */}
             {vc.kelas && (
-                <td className="px-6 py-4 text-left">
+                <td className="px-4 py-4 text-center whitespace-nowrap">
                     {editingField === 'kelas' ? (
                         <InlineEditKelas
                             value={student.class_id}
@@ -607,7 +607,7 @@ export const StudentRow = memo(({
 
             {/* ── Status ────────────────────────────────────────────────── */}
             {vc.status && (
-                <td className="px-6 py-4 text-left">
+                <td className="px-4 py-4 text-center whitespace-nowrap">
                     <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider
                         ${student.status === 'aktif' ? 'bg-emerald-500/10 text-emerald-600' :
                             student.status === 'lulus' ? 'bg-blue-500/10 text-blue-600' :
@@ -618,7 +618,7 @@ export const StudentRow = memo(({
             )}
 
             {vc.poin && (
-                <td className="px-6 py-4 text-left">
+                <td className="px-4 py-4 text-center whitespace-nowrap">
                     {editingField === 'poin' ? (
                         <InlineEditPoin
                             value={p}
@@ -710,7 +710,7 @@ export const StudentRow = memo(({
 
             {/* ── Laporan Terakhir ────────────────────────────────────────── */}
             {vc.last_report && (
-                <td className="px-6 py-4 text-left">
+                <td className="px-4 py-4 text-center whitespace-nowrap">
                     <div className="flex flex-col gap-0.5">
                         <p className="text-[11px] font-black text-[var(--color-text)] whitespace-nowrap">
                             {lastReportMap?.[student.id] ? formatRelativeDate(lastReportMap[student.id]) : '---'}
@@ -724,7 +724,7 @@ export const StudentRow = memo(({
 
             {/* ── Kelengkapan Profil ──────────────────────────────────────── */}
             {vc.profil && (
-                <td className="px-6 py-4 text-left">
+                <td className="px-4 py-4 text-center whitespace-nowrap">
                     <div className="flex items-center gap-2">
                         {(() => {
                             const score = calculateCompleteness(student);
@@ -748,7 +748,7 @@ export const StudentRow = memo(({
 
             {/* ── Label/Tags ─────────────────────────────────────────────── */}
             {vc.tags && (
-                <td className="px-6 py-4 text-left">
+                <td className="px-4 py-4 text-center whitespace-nowrap">
                     <div className="flex flex-wrap items-center gap-1 max-w-[120px]">
                         {(student.tags || []).length > 0 ? (
                             student.tags.map(tag => (
@@ -765,7 +765,7 @@ export const StudentRow = memo(({
 
             {/* ── Aksi ─────────────────────────────────────────────────── */}
             {vc.aksi && (
-                <td className="px-6 py-4 min-w-[280px]">
+                <td className="px-4 py-3 text-center w-[280px] whitespace-nowrap">
                     <div className="flex items-center justify-center gap-1">
                         <button onClick={() => onViewProfile(student)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-emerald-500/10 transition-all text-sm" title="Lihat Profil">
                             <FontAwesomeIcon icon={faUserTie} />

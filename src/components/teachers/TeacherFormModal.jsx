@@ -4,7 +4,7 @@ import {
     faSpinner, faTriangleExclamation, faUser, faIdCard,
     faBook, faPhone, faEnvelope, faCalendarAlt, faMapMarkerAlt,
     faInfoCircle, faIdBadge, faGraduationCap, faCheckCircle,
-    faTimes, faSave, faPlus, faEdit, faCamera, faFingerprint,
+    faSave, faPlus, faEdit, faCamera, faFingerprint,
     faBriefcase
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
@@ -206,20 +206,20 @@ const TeacherFormModal = memo(function TeacherFormModal({
             size="lg"
             mobileVariant="bottom-sheet"
             footer={
-                <div className="flex gap-2 sm:gap-3">
+                <div className="flex items-center w-full gap-3">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
+                        className="h-11 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 shadow-sm flex items-center justify-center gap-2"
                     >
-                        <FontAwesomeIcon icon={faTimes} className="text-[10px] opacity-50" />
                         Batal
                     </button>
+                    <div className="flex-1" />
                     <button
                         type="submit"
                         form="teacher-form-modal"
                         disabled={submitting || uploadingPhoto}
-                        className="flex-[2] h-11 px-2 sm:px-6 rounded-xl bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/25 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                        className="h-11 px-8 rounded-xl bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/25 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
                     >
                         {submitting ? (
                             <>

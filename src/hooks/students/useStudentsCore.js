@@ -118,7 +118,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
 
     // ---- STATE: OTHERS ----
     const [isInlineAddOpen, setIsInlineAddOpen] = useState(false)
-    const [inlineForm, setInlineForm] = useState({ name: '', gender: 'L', class_id: '', phone: '' })
+    const [inlineForm, setInlineForm] = useState({ name: '', gender: 'L', class_id: '', phone: '', nisn: '', nis: '', kamar: '' })
     const [submittingInline, setSubmittingInline] = useState(false)
     const [uploadingPhoto, setUploadingPhoto] = useState(false)
     const [classBreakdownData, setClassBreakdownData] = useState(null)
@@ -1162,6 +1162,9 @@ Laporanmu System`
                 gender: payload.gender || 'L',
                 class_id: payload.class_id,
                 phone: payload.phone || null,
+                nisn: payload.nisn || null,
+                nis: payload.nis || null,
+                kamar: payload.kamar || null,
                 status: 'aktif',
                 tags: [],
                 registration_code: generateCode(),
@@ -1170,8 +1173,8 @@ Laporanmu System`
             }])
             if (error) throw error
             addToast('Berhasil menambahkan siswa', 'success')
-            await logAudit({ action: 'INSERT', tableName: 'students', newData: { name: payload.name, class_id: payload.class_id, gender: payload.gender, via: 'inline' } })
-            if (!payloadOverride) setInlineForm({ name: '', gender: 'L', class_id: inlineForm.class_id, phone: '' })
+            await logAudit({ action: 'INSERT', tableName: 'students', newData: { name: payload.name, class_id: payload.class_id, gender: payload.gender, nisn: payload.nisn, nis: payload.nis, kamar: payload.kamar, via: 'inline' } })
+            if (!payloadOverride) setInlineForm({ name: '', gender: 'L', class_id: inlineForm.class_id, phone: '', nisn: '', nis: '', kamar: '' })
             fetchData(); fetchStats()
         } catch (err) {
             console.error('Inline Add Error:', err)

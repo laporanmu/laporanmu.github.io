@@ -430,9 +430,8 @@ const StudentFormModal = memo(function StudentFormModal({
                                 key="btn-close"
                                 type="button"
                                 onClick={handleSafeClose}
-                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm shrink-0"
+                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0 flex items-center justify-center"
                             >
-                                <FontAwesomeIcon icon={faTimes} className="text-[10px] opacity-50" />
                                 Batal
                             </button>
                         )}
@@ -756,7 +755,6 @@ const StudentFormModal = memo(function StudentFormModal({
                                     options={['Islam', 'Kristen', 'Katolik', 'Hindu', 'Budha', 'Khonghucu'].map(r => ({ id: r, name: r }))}
                                     placeholder="Pilih Agama"
                                     icon={faPrayingHands}
-                                    small
                                 />
                             </div>
                         </div>
@@ -901,7 +899,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                                 onChange={(val) => setField('father_education', val)}
                                                 options={EDUCATION_LEVELS.map(o => ({ id: o, name: o }))}
                                                 placeholder="Pilih Pendidikan"
-                                                icon={faUniversity} small
+                                                icon={faUniversity}
                                             />
                                         </div>
                                         <div className="relative group">
@@ -911,7 +909,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                                 onChange={(val) => setField('father_occupation', val)}
                                                 options={OCCUPATION_LIST.map(o => ({ id: o, name: o }))}
                                                 placeholder="Pilih Pekerjaan"
-                                                icon={faSuitcase} small
+                                                icon={faSuitcase}
                                             />
                                         </div>
                                         <div className="relative group">
@@ -921,7 +919,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                                 onChange={(val) => setField('father_income', val)}
                                                 options={INCOME_RANGES.map(o => ({ id: o, name: o }))}
                                                 placeholder="Pilih Rentang"
-                                                icon={faCoins} small
+                                                icon={faCoins}
                                             />
                                         </div>
                                         <div className="relative group">
@@ -981,7 +979,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                                 onChange={(val) => setField('mother_education', val)}
                                                 options={EDUCATION_LEVELS.map(o => ({ id: o, name: o }))}
                                                 placeholder="Pilih Pendidikan"
-                                                icon={faUniversity} small
+                                                icon={faUniversity}
                                             />
                                         </div>
                                         <div className="relative group">
@@ -991,7 +989,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                                 onChange={(val) => setField('mother_occupation', val)}
                                                 options={OCCUPATION_LIST.map(o => ({ id: o, name: o }))}
                                                 placeholder="Pilih Pekerjaan"
-                                                icon={faSuitcase} small
+                                                icon={faSuitcase}
                                             />
                                         </div>
                                         <div className="relative group">
@@ -1001,7 +999,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                                 onChange={(val) => setField('mother_income', val)}
                                                 options={INCOME_RANGES.map(o => ({ id: o, name: o }))}
                                                 placeholder="Pilih Rentang"
-                                                icon={faCoins} small
+                                                icon={faCoins}
                                             />
                                         </div>
                                         <div className="relative group">
@@ -1077,7 +1075,6 @@ const StudentFormModal = memo(function StudentFormModal({
                                                 ]}
                                                 placeholder="Pilih Hubungan"
                                                 icon={faUsers}
-                                                small
                                             />
                                         </div>
                                     </div>
@@ -1195,7 +1192,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                             onChange={(val) => setField('living_with', val)}
                                             options={LIVING_WITH.map(o => ({ id: o, name: o }))}
                                             placeholder="Pilih Status Tinggal"
-                                            icon={faHome} small
+                                            icon={faHome}
                                         />
                                     </div>
                                 </div>
@@ -1225,7 +1222,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                         onChange={(val) => setField('special_needs', val)}
                                         options={SPECIAL_NEEDS.map(o => ({ id: o, name: o }))}
                                         placeholder="Pilih Kebutuhan"
-                                        icon={faWalking} small
+                                        icon={faWalking}
                                     />
                                 </div>
                                 <div className="relative group">
@@ -1253,7 +1250,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                         onChange={(val) => setField('transport', val)}
                                         options={TRANSPORT_MODES.map(o => ({ id: o, name: o }))}
                                         placeholder="Pilih Transportasi"
-                                        icon={faWalking} small
+                                        icon={faWalking}
                                     />
                                 </div>
                             </div>

@@ -1524,10 +1524,10 @@ export default function StudentsPage() {
                         <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
                             {/* Desktop View */}
                             <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-sm table-fixed">
                                     <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
                                         <tr className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                            <th className="px-6 py-4 text-center w-12">
+                                            <th className="px-4 py-4 text-center w-12">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedStudentIds.length === students.length && students.length > 0}
@@ -1535,32 +1535,32 @@ export default function StudentsPage() {
                                                     className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                                                 />
                                             </th>
-                                            <th className="px-6 py-4 text-left">Siswa</th>
+                                            <th className="px-4 py-4 text-left min-w-[250px]">Siswa</th>
 
                                             {visibleColumns.gender && (
-                                                <th className="px-6 py-4 text-left">Gender</th>
+                                                <th className="px-4 py-4 text-center w-20">Gender</th>
                                             )}
                                             {visibleColumns.kelas && (
-                                                <th className="px-6 py-4 text-left">Kelas</th>
+                                                <th className="px-4 py-4 text-center w-44">Kelas</th>
                                             )}
                                             {visibleColumns.status && (
-                                                <th className="px-6 py-4 text-left">Status</th>
+                                                <th className="px-4 py-4 text-center w-32">Status</th>
                                             )}
                                             {visibleColumns.poin && (
-                                                <th className="px-6 py-4 text-left">Poin</th>
+                                                <th className="px-4 py-4 text-center w-28">Poin</th>
                                             )}
                                             {visibleColumns.last_report && (
-                                                <th className="px-6 py-4 text-left whitespace-nowrap">Lap. Terakhir</th>
+                                                <th className="px-4 py-4 text-center w-32 whitespace-nowrap">Lap. Terakhir</th>
                                             )}
                                             {visibleColumns.profil && (
-                                                <th className="px-6 py-4 text-left">Profil</th>
+                                                <th className="px-4 py-4 text-center w-32">Profil</th>
                                             )}
                                             {visibleColumns.tags && (
-                                                <th className="px-6 py-4 text-left">Label</th>
+                                                <th className="px-4 py-4 text-center w-28">Label</th>
                                             )}
 
                                             {/* COLUMN TOGGLE BUTTON —” di dalam header Aksi */}
-                                            <th className="px-6 py-4 text-center pr-6 relative min-w-[280px]">
+                                            <th className="px-4 py-4 text-center pr-4 relative w-[280px]">
                                                 <div className="flex items-center justify-center">
                                                     {visibleColumns.aksi && <span>Aksi</span>}
                                                 </div>
@@ -1710,6 +1710,7 @@ export default function StudentsPage() {
                                                 classesList={classesList}
                                                 submitting={submittingInline}
                                                 canEdit={canEdit}
+                                                visibleColumns={visibleColumns}
                                                 initialClassId={inlineForm.class_id}
                                                 onSubmit={handleInlineSubmit}
                                                 onCancel={() => setIsInlineAddOpen(false)}
@@ -2597,18 +2598,19 @@ export default function StudentsPage() {
                             size="sm"
                             mobileVariant="bottom-sheet"
                             footer={
-                                <div className="flex gap-2.5">
+                                <div className="flex items-center w-full gap-3">
                                     <button
                                         type="button"
                                         onClick={() => closeModal()}
-                                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all"
+                                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                                     >
                                         Batal
                                     </button>
+                                    <div className="flex-1" />
                                     <button
                                         type="button"
                                         onClick={executeDelete}
-                                        className="flex-[2] h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
+                                        className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 shrink-0"
                                     >
                                         <FontAwesomeIcon icon={faBoxArchive} className="text-[11px] opacity-70" />
                                         Arsipkan
@@ -2639,19 +2641,20 @@ export default function StudentsPage() {
                             size="sm"
                             mobileVariant="bottom-sheet"
                             footer={
-                                <div className="flex gap-2.5">
+                                <div className="flex items-center w-full gap-3">
                                     <button
                                         type="button"
                                         onClick={() => closeModal()}
-                                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all"
+                                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                                     >
                                         Batal
                                     </button>
+                                    <div className="flex-1" />
                                     <button
                                         type="button"
                                         onClick={handleBulkDelete}
                                         disabled={submitting}
-                                        className="flex-[2] h-11 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2"
+                                        className="h-10 px-6 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
                                     >
                                         {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (
                                             <>

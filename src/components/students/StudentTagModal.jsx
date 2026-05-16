@@ -81,9 +81,7 @@ const StudentTagModal = ({
                         >
                             Tutup
                         </button>
-
                         <div className="flex-1" />
-
                         <button
                             onClick={onClose}
                             className="h-10 px-8 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-white/10 shrink-0"
@@ -295,9 +293,7 @@ const StudentTagModal = ({
                         >
                             Batal
                         </button>
-
                         <div className="flex-1" />
-
                         <button
                             onClick={async () => {
                                 const tag = confirmDeleteTag;

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faXmark, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { LIST_KAMAR } from '../../pages/reports/utils/raportConstants'
+import RichSelect from '../ui/RichSelect'
 
 export default function StudentInlineAddRow({
     classesList,
@@ -8,18 +10,33 @@ export default function StudentInlineAddRow({
     onCancel,
     submitting,
     initialClassId,
-    canEdit
+    canEdit,
+    visibleColumns = {}
 }) {
+    const vc = {
+        gender: true,
+        kelas: true,
+        status: true,
+        poin: true,
+        last_report: true,
+        profil: true,
+        tags: true,
+        aksi: true,
+        ...visibleColumns
+    }
+
     const nameInputRef = useRef(null)
     const [localForm, setLocalForm] = useState({
         name: '',
         gender: 'L',
         class_id: initialClassId || '',
-        phone: ''
+        phone: '',
+        nisn: '',
+        nis: '',
+        kamar: ''
     })
 
     useEffect(() => {
-        // Only focus once when mounted
         if (nameInputRef.current) {
             nameInputRef.current.focus()
         }
@@ -38,19 +55,18 @@ export default function StudentInlineAddRow({
     const handleSubmit = async () => {
         if (!localForm.name || !localForm.class_id || !canEdit) return
         await onSubmit(localForm)
-        // Reset name & phone, but keep class & gender for next quick add
         setLocalForm(prev => ({ ...prev, name: '', phone: '' }))
     }
 
     return (
         <tr className="border-t-2 border-[var(--color-primary)]/30 bg-[var(--color-primary)]/[0.01] transition-all duration-300">
-            {/* Column 1: Selection (Empty for add) */}
-            <td className="px-6 py-3 text-center">
+            {/* Column 1: Selection (Empty) */}
+            <td className="px-4 py-3">
                 <div className="w-4 h-4 rounded border border-[var(--color-border)] opacity-20 mx-auto" />
             </td>
 
-            {/* Column 2: Name */}
-            <td className="px-6 py-3">
+            {/* Column 2: Name / Siswa */}
+            <td className="px-4 py-3">
                 <input
                     ref={nameInputRef}
                     type="text"
@@ -58,59 +74,111 @@ export default function StudentInlineAddRow({
                     onChange={e => setLocalForm(p => ({ ...p, name: e.target.value }))}
                     onKeyDown={handleKeyDown}
                     placeholder="Nama siswa baru..."
-                    className="input-field text-sm h-9 px-3 rounded-xl border-[var(--color-border)] focus:border-[var(--color-primary)] bg-[var(--color-surface)] w-full max-w-[240px] font-bold"
+                    className="input-field text-sm h-9 px-3 rounded-xl border-[var(--color-border)] focus:border-[var(--color-primary)] bg-[var(--color-surface)] w-full font-bold"
                 />
             </td>
 
             {/* Column 3: Gender */}
-            <td className="px-6 py-3 text-center">
-                <div className="flex gap-1 justify-center">
-                    {['L', 'P'].map(g => (
-                        <button key={g} type="button" onClick={() => setLocalForm(p => ({ ...p, gender: g }))}
-                            className={`w-8 h-8 rounded-lg text-[10px] font-black border transition-all ${localForm.gender === g ? (g === 'L' ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-pink-500 text-white border-pink-500 shadow-lg shadow-pink-500/20') : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
-                        >{g}</button>
-                    ))}
-                </div>
-            </td>
+            {vc.gender && (
+                <td className="px-4 py-3 text-center">
+                    <div className="flex gap-1 justify-center">
+                        {['L', 'P'].map(g => (
+                            <button key={g} type="button" onClick={() => setLocalForm(p => ({ ...p, gender: g }))}
+                                className={`w-8 h-8 rounded-lg text-[10px] font-black border transition-all ${localForm.gender === g ? (g === 'L' ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-pink-500 text-white border-pink-500 shadow-lg shadow-pink-500/20') : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
+                            >{g}</button>
+                        ))}
+                    </div>
+                </td>
+            )}
 
             {/* Column 4: Class */}
-            <td className="px-6 py-3 text-center">
-                <select
-                    value={localForm.class_id}
-                    onChange={e => setLocalForm(p => ({ ...p, class_id: e.target.value }))}
-                    onKeyDown={handleKeyDown}
-                    className="select-field text-xs h-9 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] font-bold min-w-[140px] outline-none focus:border-[var(--color-primary)]"
-                >
-                    <option value="">Pilih kelas</option>
-                    {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-            </td>
+            {vc.kelas && (
+                <td className="px-4 py-3 text-center">
+                    <RichSelect
+                        small
+                        value={localForm.class_id}
+                        onChange={val => setLocalForm(p => ({ ...p, class_id: val }))}
+                        options={classesList}
+                        placeholder="Pilih Kelas"
+                        className="w-full"
+                    />
+                </td>
+            )}
 
-            {/* Column 5: Phone */}
-            <td className="px-6 py-3 text-center">
-                <input
-                    type="text"
-                    value={localForm.phone}
-                    onChange={e => setLocalForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))}
-                    onKeyDown={handleKeyDown}
-                    placeholder="08xxx (WA)"
-                    className="input-field text-xs h-9 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] w-28 text-center font-bold"
-                />
-            </td>
+            {/* Column 5: WhatsApp (fills Status column) */}
+            {vc.status && (
+                <td className="px-4 py-3 text-center">
+                    <input
+                        type="text"
+                        value={localForm.phone}
+                        onChange={e => setLocalForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))}
+                        onKeyDown={handleKeyDown}
+                        placeholder="No. WhatsApp"
+                        className="input-field text-[10px] h-9 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] w-full text-center font-bold"
+                    />
+                </td>
+            )}
 
-            {/* Column 6: Actions */}
-            <td className="px-6 py-3 text-right pr-6">
-                <div className="flex items-center justify-end gap-1.5">
-                    <button onClick={handleSubmit} disabled={submitting || !canEdit || !localForm.name || !localForm.class_id}
-                        className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center gap-2">
-                        {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faCheck} /> Simpan</>}
-                    </button>
-                    <button onClick={onCancel}
-                        className="h-9 w-9 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center">
-                        <FontAwesomeIcon icon={faXmark} />
-                    </button>
-                </div>
-            </td>
+            {/* Column 6: NISN (fills Poin column) */}
+            {vc.poin && (
+                <td className="px-4 py-3 text-center">
+                    <input
+                        type="text"
+                        value={localForm.nisn}
+                        onChange={e => setLocalForm(p => ({ ...p, nisn: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                        onKeyDown={handleKeyDown}
+                        placeholder="NISN"
+                        className="input-field text-[10px] h-9 px-2 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] w-full text-center font-bold"
+                    />
+                </td>
+            )}
+
+            {/* Column 7: NIS (fills Lap. Terakhir column) */}
+            {vc.last_report && (
+                <td className="px-4 py-3 text-center">
+                    <input
+                        type="text"
+                        value={localForm.nis}
+                        onChange={e => setLocalForm(p => ({ ...p, nis: e.target.value }))}
+                        onKeyDown={handleKeyDown}
+                        placeholder="NIS"
+                        className="input-field text-[10px] h-9 px-2 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] w-full text-center font-bold"
+                    />
+                </td>
+            )}
+
+            {/* Column 8: Kamar (fills Profil column) */}
+            {vc.profil && (
+                <td className="px-4 py-3 text-center">
+                    <RichSelect
+                        small
+                        value={localForm.kamar}
+                        onChange={val => setLocalForm(p => ({ ...p, kamar: val }))}
+                        options={LIST_KAMAR?.map(k => ({ id: k.id, name: k.id })) || []}
+                        placeholder="Pilih Kamar"
+                        className="w-full"
+                    />
+                </td>
+            )}
+
+            {/* Column 9: Tags (Empty) */}
+            {vc.tags && <td className="px-4 py-3" />}
+
+            {/* Column 10: Actions (Save/Cancel) */}
+            {vc.aksi && (
+                <td className="px-4 py-3 text-center w-[280px]">
+                    <div className="flex items-center justify-center gap-1.5">
+                        <button onClick={handleSubmit} disabled={submitting || !canEdit || !localForm.name || !localForm.class_id}
+                            className="h-9 px-3 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center gap-1.5">
+                            {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faCheck} /> Simpan</>}
+                        </button>
+                        <button onClick={onCancel}
+                            className="h-9 w-9 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center">
+                            <FontAwesomeIcon icon={faXmark} />
+                        </button>
+                    </div>
+                </td>
+            )}
         </tr>
     )
 }

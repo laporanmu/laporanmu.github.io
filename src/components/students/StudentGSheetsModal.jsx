@@ -47,19 +47,19 @@ export default function StudentGSheetsModal({
                         <span className="hidden sm:inline">Template</span>
                     </button>
 
-                    <div className="flex-1" />
-
                     <button
                         onClick={onClose}
-                        className="h-10 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
+                        className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
                     >
                         Batal
                     </button>
+
+                    <div className="flex-1" />
                     
                     <button
                         onClick={handleFetchGSheets}
                         disabled={fetchingGSheets || urlStatus !== 'valid'}
-                        className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-white/10 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="h-10 px-8 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-white/10 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {fetchingGSheets ? (
                             <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> <span className="hidden sm:inline">Sinkron...</span></>

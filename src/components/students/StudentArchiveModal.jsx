@@ -10,6 +10,7 @@ import {
     faTriangleExclamation
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
+import { EmptyState } from '../ui/DataDisplay'
 import { supabase } from '../../lib/supabase'
 
 export default function StudentArchiveModal({
@@ -94,20 +95,21 @@ export default function StudentArchiveModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Arsip Siswa"
-            description="Daftar siswa yang telah dihapus sementara. Anda dapat memulihkan data atau menghapusnya secara permanen."
+            description="Kelola dan pulihkan data siswa yang telah dihapus sementara."
             icon={faBoxArchive}
             iconBg="bg-amber-500/10"
             iconColor="text-amber-600"
             size="lg"
             mobileVariant="bottom-sheet"
             footer={
-                <div className="flex items-center justify-end w-full">
+                <div className="flex items-center w-full">
                     <button
                         onClick={onClose}
-                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
+                        className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
                     >
                         Tutup
                     </button>
+                    <div className="flex-1" />
                 </div>
             }
         >
@@ -126,18 +128,19 @@ export default function StudentArchiveModal({
                             Data siswa <b className="text-red-500">{deleteTarget?.name}</b> beserta semua relasi (poin, absen, histori) akan dihapus secara permanen. Tindakan ini <b>tidak dapat dibatalkan</b>.
                         </p>
                     </div>
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-center w-full max-w-xs gap-3 mt-2">
                         <button
                             onClick={() => setDeleteTarget(null)}
                             disabled={deleting}
-                            className="h-10 px-5 rounded-xl bg-[var(--color-surface-alt)] font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] transition-colors border border-[var(--color-border)] disabled:opacity-50"
+                            className="h-10 px-5 rounded-xl bg-[var(--color-surface-alt)] font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] transition-colors border border-[var(--color-border)] disabled:opacity-50 shrink-0"
                         >
                             Batal
                         </button>
+                        <div className="flex-1" />
                         <button
                             onClick={confirmPermanentDelete}
                             disabled={deleting}
-                            className="h-10 px-5 rounded-xl bg-red-500 hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 flex items-center gap-2"
+                            className="h-10 px-5 rounded-xl bg-red-500 hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
                         >
                             {deleting ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Menghapus...</> : <><FontAwesomeIcon icon={faTrash} /> Hapus Permanen</>}
                         </button>
@@ -159,10 +162,13 @@ export default function StudentArchiveModal({
                         <p className="text-xs font-bold">Memuat arsip...</p>
                     </div>
                 ) : archivedStudents.length === 0 ? (
-                    <div className="text-center py-12 text-[var(--color-text-muted)]">
-                        <FontAwesomeIcon icon={faBoxArchive} className="text-4xl opacity-20 mb-3 block mx-auto" />
-                        <p className="text-sm font-bold">Arsip kosong</p>
-                    </div>
+                    <EmptyState
+                        icon={faBoxArchive}
+                        title="Arsip Kosong"
+                        description="Tidak ada data siswa yang telah dihapus sementara saat ini."
+                        variant="dashed"
+                        color="amber"
+                    />
                 ) : (
                     <div className="space-y-3">
                         <div className="border border-[var(--color-border)] rounded-xl overflow-hidden bg-[var(--color-surface)] shadow-sm">

@@ -40,30 +40,29 @@ export default function StudentBulkPhotoModal({
             mobileVariant="bottom-sheet"
             footer={
                 <div className="flex items-center w-full gap-3">
-                    {bulkPhotoMatches.length > 0 && (
-                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] flex-1 hidden sm:block">
-                            Ditemukan <span className="text-emerald-600 font-black px-1.5 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">{bulkPhotoMatches.filter(m => m.status === 'matched').length}</span> foto cocok siap disimpan.
-                        </p>
-                    )}
-                    <div className="flex-1 sm:hidden" />
-                    {!bulkPhotoMatches.length && <div className="flex-1 hidden sm:block" />}
-                    
                     <button 
                         onClick={() => { if (!uploadingBulkPhotos) onClose() }} 
                         disabled={uploadingBulkPhotos}
-                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
+                        className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
                     >
                         {bulkPhotoMatches.length > 0 ? 'Batal' : 'Tutup'}
                     </button>
-                    
+
+                    <div className="flex-1" />
+
                     {bulkPhotoMatches.length > 0 && (
-                        <button
-                            onClick={handleBulkPhotoUpload}
-                            disabled={uploadingBulkPhotos || bulkPhotoMatches.filter(m => m.status === 'matched').length === 0}
-                            className="h-10 px-6 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
-                        >
-                            {uploadingBulkPhotos ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengupload...</> : <><FontAwesomeIcon icon={faCheck} /> Simpan Foto</>}
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <p className="hidden md:block text-[10px] font-bold text-[var(--color-text-muted)] animate-in fade-in duration-500">
+                                Siap simpan: <span className="text-emerald-600 font-black px-1.5 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">{bulkPhotoMatches.filter(m => m.status === 'matched').length}</span>
+                            </p>
+                            <button
+                                onClick={handleBulkPhotoUpload}
+                                disabled={uploadingBulkPhotos || bulkPhotoMatches.filter(m => m.status === 'matched').length === 0}
+                                className="h-10 px-8 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                            >
+                                {uploadingBulkPhotos ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengupload...</> : <><FontAwesomeIcon icon={faCheck} /> Simpan Foto</>}
+                            </button>
+                        </div>
                     )}
                 </div>
             }

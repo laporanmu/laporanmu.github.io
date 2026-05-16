@@ -105,14 +105,15 @@ export default memo(function StudentProfileModal({
             mobileVariant="bottom-sheet"
             footer={
                 <div className="flex items-center w-full gap-3">
-                    <button onClick={onClose} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0">
-                        Tutup
-                    </button>
                     <button onClick={onOpenTagModal} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center gap-2 shrink-0">
                         <FontAwesomeIcon icon={faTags} className="opacity-70" /> Label
                     </button>
                     
                     <div className="flex-1" />
+                    
+                    <button onClick={onClose} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0">
+                        Tutup
+                    </button>
                     
                     {canEdit && !isPrivacyMode && (
                         <button

@@ -330,15 +330,15 @@ export default function StudentAccessCardModal({
                         </div>
                     ) : (
                         /* Bulk Mode Sticky Actions */
-                        <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center justify-end w-full gap-3">
                             <button
                                 onClick={() => generateStudentPDF?.(studentsToShow)}
                                 disabled={generatingPdf}
-                                className="flex-1 h-12 rounded-2xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-[0.1em] hover:brightness-110 shadow-xl shadow-[var(--color-primary)]/30 transition-all flex items-center justify-center gap-3 disabled:opacity-60"
+                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60 shrink-0"
                             >
                                 {generatingPdf
-                                    ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Menyiapkan Berkas PDF...</>
-                                    : <><FontAwesomeIcon icon={faPrint} className="text-base" /> Cetak Semua ({studentsToShow.length})</>
+                                    ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Proses...</>
+                                    : <><FontAwesomeIcon icon={faPrint} className="text-[11px]" /> Cetak Semua ({studentsToShow.length})</>
                                 }
                             </button>
                         </div>

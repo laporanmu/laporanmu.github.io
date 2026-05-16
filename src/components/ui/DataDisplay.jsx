@@ -148,6 +148,7 @@ export function EmptyState({ icon, title, description, action, variant = 'glass'
     const colorMap = {
         indigo: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20 shadow-indigo-500/10',
         emerald: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-emerald-500/10',
+        amber: 'bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-amber-500/10',
         slate: 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] shadow-black/5',
     }[color] || 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] shadow-black/5'
  

@@ -18,6 +18,7 @@ export const SYSTEM_COLS = [
     { key: 'father_name', label: 'Nama Ayah', synonyms: ['nama ayah', 'father_name', 'father name', 'nama bapak'] },
     { key: 'mother_name', label: 'Nama Ibu', synonyms: ['nama ibu', 'mother_name', 'mother name', 'nama mama'] },
     { key: 'guardian_name', label: 'Nama Wali', synonyms: ['guardian_name', 'nama_wali', 'wali', 'parent name', 'nama orang tua', 'nama wali', 'wali murid', 'nama ayah/ibu'] },
+    { key: 'guardian_relation', label: 'Hubungan Wali', synonyms: ['hubungan wali', 'guardian_relation', 'relasi wali', 'status wali', 'hubungan'] },
 ]
 
 export function useStudentsImportExport({
@@ -283,12 +284,50 @@ export function useStudentsImportExport({
 
     const handleDownloadTemplate = async () => {
         const templateData = [
-            { 'Nama': 'Ahmad Rizki', 'Jenis Kelamin': 'L', 'No. WhatsApp': '081234567890', 'Kelas': 'XII IPA 1', 'NISN': '1234567890', 'Nama Wali': 'Budi Rizki' },
-            { 'Nama': 'Siti Aminah', 'Jenis Kelamin': 'P', 'No. WhatsApp': '081234567891', 'Kelas': 'XI IPS 2', 'NISN': '0987654321', 'Nama Wali': 'Aminah' },
+            {
+                'Nama': 'Ahmad Rizki',
+                'Jenis Kelamin': 'L',
+                'No. WhatsApp': '081234567890',
+                'Kelas': 'XII IPA 1',
+                'NIS': '2024001',
+                'NISN': '1234567890',
+                'NIK': '320101XXXXXXXXXX',
+                'Tempat Lahir': 'Jakarta',
+                'Tanggal Lahir': '2008-05-15',
+                'Agama': 'Islam',
+                'Alamat': 'Jl. Merdeka No. 123',
+                'Nama Ayah': 'Budi Rizki',
+                'Nama Ibu': 'Siti Maryam',
+                'Nama Wali': 'Budi Rizki',
+                'Hubungan Wali': 'Ayah'
+            },
+            {
+                'Nama': 'Siti Aminah',
+                'Jenis Kelamin': 'P',
+                'No. WhatsApp': '081234567891',
+                'Kelas': 'XI IPS 2',
+                'NIS': '2024002',
+                'NISN': '0987654321',
+                'NIK': '320101XXXXXXXXXY',
+                'Tempat Lahir': 'Bandung',
+                'Tanggal Lahir': '2009-02-20',
+                'Agama': 'Islam',
+                'Alamat': 'Jl. Kenanga No. 45',
+                'Nama Ayah': 'Mulyono',
+                'Nama Ibu': 'Aminah',
+                'Nama Wali': 'Aminah',
+                'Hubungan Wali': 'Ibu'
+            },
         ]
         const XLSX = await import('xlsx')
         const ws = XLSX.utils.json_to_sheet(templateData)
-        ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 }]
+        // Auto column width (approximate)
+        ws['!cols'] = [
+            { wch: 25 }, { wch: 12 }, { wch: 18 }, { wch: 15 },
+            { wch: 12 }, { wch: 15 }, { wch: 20 }, { wch: 15 },
+            { wch: 15 }, { wch: 12 }, { wch: 30 }, { wch: 20 },
+            { wch: 20 }, { wch: 20 }, { wch: 15 }
+        ]
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, 'Template Import')
         const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
@@ -318,6 +357,20 @@ export function useStudentsImportExport({
         return /^(\+?62|08)\d{8,11}$/.test(phone)
     }
 
+    const normalizeDate = (raw) => {
+        if (!raw) return null
+        // If it's already a JS Date (from XLSX cellDates: true)
+        if (raw instanceof Date) {
+            return raw.toISOString().split('T')[0]
+        }
+        // If it's a string, try to parse
+        const d = new Date(raw)
+        if (!isNaN(d.getTime())) {
+            return d.toISOString().split('T')[0]
+        }
+        return raw // fallback
+    }
+
 
     const pick = (obj, keys) => {
         // Now 'keys' can be a specific header from user mapping
@@ -343,7 +396,7 @@ export function useStudentsImportExport({
     const parseExcelFile = async (file) => {
         const XLSX = await import('xlsx')
         const buf = await file.arrayBuffer()
-        const wb = XLSX.read(buf, { type: 'array' })
+        const wb = XLSX.read(buf, { type: 'array', cellDates: true })
         const firstSheet = wb.SheetNames[0]
         const ws = wb.Sheets[firstSheet]
         const json = XLSX.utils.sheet_to_json(ws, { defval: '' })
@@ -367,12 +420,13 @@ export function useStudentsImportExport({
             const nik = getVal(r, 'nik')
             const phone = normalizePhone(getVal(r, 'phone'))
             const birthPlace = getVal(r, 'birth_place')
-            const birthDate = getVal(r, 'birth_date')
+            const birthDate = normalizeDate(mapping && mapping['birth_date'] ? r[mapping['birth_date']] : pick(r, SYSTEM_COLS.find(c => c.key === 'birth_date')?.synonyms || ['birth_date']))
             const religion = getVal(r, 'religion')
             const address = getVal(r, 'address')
             const fatherName = getVal(r, 'father_name')
             const motherName = getVal(r, 'mother_name')
             const guardianName = getVal(r, 'guardian_name')
+            const guardianRelation = getVal(r, 'guardian_relation')
 
             let gender = genderRaw
             if (genderRaw) {
@@ -399,6 +453,7 @@ export function useStudentsImportExport({
                 address: address || null,
                 class_id: classObj?.id || '',
                 guardian_name: guardianName || null,
+                guardian_relation: guardianRelation || 'Ayah',
                 photo_url: null,
                 metadata: {
                     father: { name: fatherName || '' },

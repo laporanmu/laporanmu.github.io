@@ -136,6 +136,17 @@ export default function TeacherExportModal({
             iconColor="text-amber-600"
             size="lg"
             mobileVariant="bottom-sheet"
+            footer={
+                <div className="flex items-center w-full">
+                    <button
+                        onClick={onClose}
+                        className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
+                    >
+                        Tutup
+                    </button>
+                    <div className="flex-1" />
+                </div>
+            }
         >
             <div className="relative">
                 {/* Overlay Loading Premium */}

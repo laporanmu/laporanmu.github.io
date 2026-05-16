@@ -270,8 +270,8 @@ export default function TeacherImportModal(props) {
             size="lg"
             mobileVariant="bottom-sheet"
             footer={
-                <div className="flex items-center justify-between gap-3">
-                    {importStep > 1 && (
+                <div className="flex items-center w-full gap-3">
+                    {importStep > 1 ? (
                         <button
                             onClick={() => setImportStep(v => v - 1)}
                             disabled={importing}
@@ -280,11 +280,20 @@ export default function TeacherImportModal(props) {
                             <FontAwesomeIcon icon={faArrowLeft} />
                             Kembali
                         </button>
+                    ) : (
+                        <button
+                            onClick={onClose}
+                            className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
+                        >
+                            Batal
+                        </button>
                     )}
 
-                    <div className="flex items-center gap-3 ml-auto">
+                    <div className="flex-1" />
+
+                    <div className="flex items-center gap-3">
                         {importing && (
-                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] flex items-center gap-2 mr-2">
                                 <FontAwesomeIcon icon={faSpinner} className="fa-spin text-[var(--color-primary)]" />
                                 {importProgress.done}/{importProgress.total}
                             </span>
@@ -293,7 +302,7 @@ export default function TeacherImportModal(props) {
                         {importStep === 1 ? (
                             <button
                                 onClick={() => (importRawData.length > 0 && importFileName) ? setImportStep(2) : importFileInputRef.current?.click()}
-                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
+                                className="h-10 px-8 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 border border-white/10"
                             >
                                 {(importRawData.length > 0 && importFileName) ? (
                                     <>Lanjutkan <FontAwesomeIcon icon={faArrowRight} /></>
@@ -310,7 +319,7 @@ export default function TeacherImportModal(props) {
                                     setImportLoading(false)
                                 }}
                                 disabled={!importColumnMapping.name}
-                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
+                                className="h-10 px-8 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 border border-white/10"
                             >
                                 Review Data <FontAwesomeIcon icon={faArrowRight} />
                             </button>
@@ -318,7 +327,7 @@ export default function TeacherImportModal(props) {
                             <button
                                 onClick={handleCommitImport}
                                 disabled={importing || hasImportBlockingErrors || importReadyRows.length === 0}
-                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
+                                className="h-10 px-8 rounded-xl bg-emerald-600 hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 border border-white/10"
                             >
                                 {importing
                                     ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengimport...</>
