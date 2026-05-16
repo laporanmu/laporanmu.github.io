@@ -38,19 +38,22 @@ export default function StudentClassHistoryModal({
             size="md"
             mobileVariant="bottom-sheet"
             footer={
-                <div className="flex gap-3 w-full">
+                <div className="flex items-center w-full gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 border border-white/10"
-                    >
-                        <FontAwesomeIcon icon={faCheckCircle} className="text-sm opacity-70" />
-                        Selesai & Simpan
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="w-28 h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
+                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
                     >
                         Tutup
+                    </button>
+                    
+                    <div className="flex-1" />
+
+                    <button
+                        onClick={onClose}
+                        className="h-10 px-8 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-white/10 shrink-0"
+                    >
+                        <FontAwesomeIcon icon={faCheckCircle} className="text-xs opacity-80" />
+                        Selesai & Simpan
                     </button>
                 </div>
             }

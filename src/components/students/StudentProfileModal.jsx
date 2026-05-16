@@ -104,20 +104,23 @@ export default memo(function StudentProfileModal({
             size="lg"
             mobileVariant="bottom-sheet"
             footer={
-                <div className="flex gap-2.5 w-full">
-                    <button onClick={onClose} className="w-24 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center">
+                <div className="flex items-center w-full gap-3">
+                    <button onClick={onClose} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0">
                         Tutup
                     </button>
-                    <button onClick={onOpenTagModal} className="h-10 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center gap-2">
+                    <button onClick={onOpenTagModal} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center gap-2 shrink-0">
                         <FontAwesomeIcon icon={faTags} className="opacity-70" /> Label
                     </button>
+                    
+                    <div className="flex-1" />
+                    
                     {canEdit && !isPrivacyMode && (
                         <button
                             onClick={() => {
                                 onClose();
                                 handleEdit(selectedStudent);
                             }}
-                            className="flex-1 h-10 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                            className="h-10 px-8 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 hover:brightness-110 transition-all flex items-center justify-center gap-2 shrink-0"
                         >
                             <FontAwesomeIcon icon={faEdit} className="opacity-70" /> Edit Data
                         </button>

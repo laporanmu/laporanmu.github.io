@@ -70,125 +70,142 @@ function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDe
                 <div className="absolute bottom-0 right-1/4 w-[200px] h-[200px] bg-indigo-500/10 blur-[80px] rounded-full" />
             </div>
 
-            <div className="relative overflow-x-auto pb-6 pt-10 no-scrollbar select-none" style={{ minHeight: '380px' }}>
-                <div className="inline-flex items-start px-24 min-w-full relative">
-                    {/* ── Premium Gradient Timeline Path ── */}
-                    <div className="absolute top-[64px] left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent opacity-40" />
-                    <div className="absolute top-[64px] left-24 right-24 h-[2px] bg-gradient-to-r from-[var(--color-primary)]/40 via-indigo-500/40 to-emerald-500/40 shadow-[0_0_10px_rgba(var(--color-primary-rgb),0.2)]" />
+            <div className="relative overflow-x-auto pb-8 pt-12 no-scrollbar select-none flex justify-start lg:justify-center" style={{ minHeight: '400px' }}>
+                
+                {/* ── Premium Ambient Background ── */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.05] dark:opacity-[0.08]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, var(--color-text) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10rem] md:text-[16rem] font-black font-heading tracking-widest text-[var(--color-text)] opacity-5 dark:opacity-10 pointer-events-none whitespace-nowrap select-none flex items-center justify-center">
+                    TIMELINE
+                </div>
+
+                <div className="flex items-start px-8 md:px-32 relative mx-auto z-10" style={{ minWidth: 'max-content' }}>
+                    {/* ── Global Timeline Path (Infinite) ── */}
+                    <div className="absolute top-[72px] left-[-2000px] right-[-2000px] h-[3px] bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent opacity-60 pointer-events-none" />
+
+                    {/* Active Gradient Path (Card Width) */}
+                    <div className="absolute top-[72px] left-16 right-16 md:left-32 md:right-32 h-[3px] bg-gradient-to-r from-transparent via-[var(--color-primary)]/80 to-transparent shadow-[0_0_15px_rgba(var(--color-primary-rgb),0.5)] pointer-events-none" />
 
                     {sorted.map((year, idx) => {
                         const isActive = year.is_active
                         const isGanjil = year.semester === 'Ganjil'
 
                         return (
-                            <div key={year.id} className="relative flex flex-col items-center group/item shrink-0" style={{ width: '220px' }}>
+                            <div key={year.id} className="relative flex flex-col items-center group/item shrink-0" style={{ width: '260px' }}>
                                 {/* ── Interactive Node Anchor ── */}
-                                <div className="relative z-10 flex items-center justify-center w-12 h-12 mb-6">
+                                <div className="relative z-10 flex items-center justify-center w-14 h-14 mb-8">
                                     {/* Pulse Aura for Active */}
                                     {isActive && (
-                                        <div className="absolute inset-0 bg-[var(--color-primary)]/20 rounded-full animate-ping duration-[4000ms]" />
+                                        <>
+                                            <div className="absolute inset-0 bg-[var(--color-primary)]/20 rounded-full animate-ping duration-[3000ms]" />
+                                            <div className="absolute inset-2 bg-[var(--color-primary)]/30 rounded-full animate-pulse duration-[2000ms]" />
+                                        </>
                                     )}
 
                                     {/* Multi-layered Premium Node */}
-                                    <div className={`relative flex items-center justify-center w-8 h-8 rounded-full border-[4px] border-[var(--color-surface)] transition-all duration-700 group-hover/item:scale-125 shadow-lg ${isActive ? 'bg-[var(--color-primary)] border-[var(--color-surface)] shadow-[0_0_20px_rgba(var(--color-primary-rgb),0.4)] scale-110' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] group-hover/item:border-[var(--color-primary)]'}`}>
-                                        <div className={`w-2 h-2 rounded-full transition-all duration-500 ${isActive ? 'bg-white scale-110 shadow-[0_0_8px_white]' : 'bg-[var(--color-border)] group-hover/item:bg-[var(--color-primary)] shadow-none'}`} />
+                                    <div className={`relative flex items-center justify-center w-10 h-10 rounded-full border-[4px] border-[var(--color-surface)] transition-all duration-700 group-hover/item:scale-125 shadow-xl ${isActive ? 'bg-[var(--color-primary)] border-[var(--color-surface)] shadow-[0_0_25px_rgba(var(--color-primary-rgb),0.5)] scale-110' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] group-hover/item:border-[var(--color-primary)]'}`}>
+                                        <div className={`w-3 h-3 rounded-full transition-all duration-500 ${isActive ? 'bg-white scale-110 shadow-[0_0_10px_white]' : 'bg-[var(--color-border)] group-hover/item:bg-[var(--color-primary)] shadow-none'}`} />
                                     </div>
-
                                 </div>
 
                                 {/* ── Visual Stalk (Connection) ── */}
-                                <div className="relative w-[2px] h-10 -mt-6 mb-3 overflow-hidden rounded-full">
-                                    <div className={`absolute inset-0 bg-gradient-to-b from-[var(--color-primary)]/60 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-700`} />
-                                    <div className="absolute inset-0 bg-gradient-to-b from-[var(--color-border)] to-transparent opacity-40 group-hover/item:opacity-0 transition-opacity duration-700" />
+                                <div className="relative w-[3px] h-12 -mt-8 mb-4 overflow-hidden rounded-full">
+                                    <div className={`absolute inset-0 bg-gradient-to-b from-[var(--color-primary)]/80 to-transparent transition-opacity duration-700 ${isActive ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`} />
+                                    <div className={`absolute inset-0 bg-gradient-to-b from-[var(--color-border)] to-transparent transition-opacity duration-700 ${isActive ? 'opacity-0' : 'opacity-100 group-hover/item:opacity-0'}`} />
                                     {/* Micro-node anchor on path */}
-                                    <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full shadow-sm ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`} />
+                                    <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-sm ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`} />
                                 </div>
 
-                                {/* ── Premium Card ── */}
-                                <div className="px-4 w-full">
-                                    <div className={`relative group/card glass rounded-[1.5rem] p-4 border-2 transition-all duration-700 hover:-translate-y-2 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] ${isActive ? 'border-[var(--color-primary)]/50 shadow-lg shadow-[var(--color-primary)]/10 ring-2 ring-[var(--color-primary)]/10' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40 shadow-md shadow-black-[1%]'}`}>
+                                {/* ── Premium Card (Centered Layout) ── */}
+                                <div className={`px-4 w-full transition-all duration-700 ${isActive ? 'opacity-100' : 'opacity-70 grayscale-[30%] group-hover/item:opacity-100 group-hover/item:grayscale-0'}`}>
+                                    <div className={`relative group/card glass rounded-[1.5rem] p-5 border-2 transition-all duration-700 hover:-translate-y-2 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] flex flex-col items-center text-center ${isActive ? 'border-[var(--color-primary)]/50 shadow-xl shadow-[var(--color-primary)]/10 ring-4 ring-[var(--color-primary)]/5' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40 shadow-lg shadow-black/[0.02]'}`}>
                                         {/* Dynamic Glow Layer */}
                                         <div className={`absolute -inset-3 rounded-[2.5rem] opacity-0 group-hover/card:opacity-10 dark:group-hover/card:opacity-20 transition-opacity duration-1000 pointer-events-none blur-xl ${isActive ? 'bg-[var(--color-primary)]' : 'bg-indigo-500'}`} />
 
-                                        {/* Card Header & Badges */}
-                                        <div className="flex items-center justify-between mb-4">
+                                        {/* Card Header & Badges (Centered) */}
+                                        <div className="flex items-center justify-center gap-1.5 mb-3 flex-wrap">
                                             <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest shrink-0 ${isGanjil ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/10' : 'bg-purple-500/10 text-purple-600 border border-purple-500/10'}`}>
                                                 {year.semester}
                                             </div>
                                             {isActive && (
                                                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[9px] font-black shadow-sm border border-emerald-500/20">
-                                                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
                                                     AKTIF
                                                 </div>
                                             )}
+                                            {year.is_locked && (
+                                                <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1">
+                                                    <FontAwesomeIcon icon={faBoxArchive} className="text-[7px]" />
+                                                    TUTUP
+                                                </span>
+                                            )}
                                         </div>
 
-                                        {/* Content Block */}
-                                        <div className="relative space-y-1">
-                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-40 leading-none">Periode</p>
-                                            <h4 className="text-[15px] font-black font-heading tracking-tight text-[var(--color-text)] leading-none group-hover/card:text-[var(--color-primary)] transition-colors duration-500">
+                                        {/* Content Block (Centered) */}
+                                        <div className="relative space-y-1.5 w-full">
+                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50 leading-none">Periode Akademik</p>
+                                            <h4 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)] leading-none group-hover/card:text-[var(--color-primary)] transition-colors duration-500">
                                                 {year.name}
                                             </h4>
 
-                                            {/* Curriculum & Status Row */}
-                                            <div className="flex flex-wrap items-center gap-1.5 pt-1.5 pb-0.5">
-                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${year.curriculum === 'Merdeka' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' : 'bg-orange-500/10 text-orange-600 border-orange-500/20'}`}>
+                                            {/* Curriculum */}
+                                            <div className="flex justify-center pt-1.5 pb-0.5">
+                                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${year.curriculum === 'Merdeka' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' : 'bg-orange-500/10 text-orange-600 border-orange-500/20'}`}>
                                                     Kurikulum {year.curriculum || 'Merdeka'}
                                                 </span>
-                                                {year.is_locked && (
-                                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1">
-                                                        <FontAwesomeIcon icon={faBoxArchive} className="text-[7px]" />
-                                                        Tutup Buku
-                                                    </span>
-                                                )}
                                             </div>
 
-                                            <div className="flex items-center gap-2 pt-1 text-[var(--color-text-muted)] text-[10px] font-bold">
-                                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center bg-[var(--color-surface)] border border-[var(--color-border)] group-hover/card:border-[var(--color-primary)]/30 group-hover/card:text-[var(--color-primary)] transition-all`}>
-                                                    <FontAwesomeIcon icon={faCalendarDay} className="text-[8px]" />
+                                            {/* Duration */}
+                                            <div className="flex items-center justify-center gap-2 pt-3 mt-3 border-t border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-bold">
+                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-[var(--color-surface)] border border-[var(--color-border)] group-hover/card:border-[var(--color-primary)]/30 group-hover/card:text-[var(--color-primary)] transition-all`}>
+                                                    <FontAwesomeIcon icon={faCalendarDay} className="text-[9px]" />
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[7px] font-black uppercase tracking-widest opacity-40 leading-none mb-0.5">Durasi</span>
-                                                    <span className="leading-tight text-[9px]">{new Date(year.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} — {new Date(year.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                                <div className="flex flex-col text-left">
+                                                    <span className="text-[7px] font-black uppercase tracking-widest opacity-50 leading-none mb-0.5">Masa Berlaku</span>
+                                                    <span className="leading-tight text-[9px] text-[var(--color-text)]">{new Date(year.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} — {new Date(year.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Abstract Decorative SVG (Watermark) */}
-                                        <div className="absolute right-4 bottom-4 opacity-[0.03] pointer-events-none group-hover/card:scale-150 group-hover/card:opacity-10 transition-all duration-1000 grayscale">
+                                        <div className="absolute right-4 bottom-4 opacity-[0.03] pointer-events-none group-hover/card:scale-150 group-hover/card:opacity-10 transition-all duration-1000 grayscale flex items-center justify-center">
                                             <FontAwesomeIcon icon={faTimeline} className="text-6xl" />
                                         </div>
 
                                         {/* Premium Action Layer */}
-                                        <div className="mt-4 pt-3 border-t border-[var(--color-border)] flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 translate-y-3 group-hover/card:translate-y-0 transition-all duration-500">
-                                            {canEdit && (
-                                                <button onClick={() => onEdit(year)} className="w-7 h-7 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all flex items-center justify-center">
-                                                    <FontAwesomeIcon icon={faEdit} className="text-[9px]" />
-                                                </button>
-                                            )}
-                                            <button onClick={() => onHistory(year)} className="w-7 h-7 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-indigo-500 hover:border-indigo-500 transition-all flex items-center justify-center">
-                                                <FontAwesomeIcon icon={faHistory} className="text-[9px]" />
-                                            </button>
-                                            {canEdit && (
-                                                <button onClick={() => onDuplicate(year)} title="Duplikat" className="w-7 h-7 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-500 hover:border-emerald-500 transition-all flex items-center justify-center">
-                                                    <FontAwesomeIcon icon={faCopy} className="text-[9px]" />
-                                                </button>
-                                            )}
+                                        <div className="mt-4 pt-3 border-t border-[var(--color-border)] flex flex-col gap-2.5 opacity-0 group-hover/card:opacity-100 translate-y-3 group-hover/card:translate-y-0 transition-all duration-500 w-full">
+                                            {/* Primary Action (Full Width) */}
                                             {canEdit && !isActive && !year.is_locked && (
-                                                <button onClick={() => onSetActive(year)} className="flex-1 h-7 rounded-lg bg-[var(--color-primary)] text-white text-[8px] font-black uppercase tracking-[0.1em] hover:shadow-[0_10px_20px_-5px_rgba(var(--color-primary-rgb),0.4)] hover:scale-[1.02] transition-all active:scale-95">
-                                                    Aktifkan
+                                                <button onClick={() => onSetActive(year)} className="w-full h-8 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-[0.1em] hover:shadow-[0_10px_20px_-5px_rgba(var(--color-primary-rgb),0.4)] hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2">
+                                                    Aktifkan Periode
                                                 </button>
                                             )}
-                                            {canEdit && !isActive && (
-                                                <button onClick={() => onToggleLock(year)} title={year.is_locked ? "Buka Buku" : "Tutup Buku"} className={`w-7 h-7 rounded-lg transition-all flex items-center justify-center ${year.is_locked ? 'bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-rose-500 hover:border-rose-500'}`}>
-                                                    <FontAwesomeIcon icon={year.is_locked ? faRotateLeft : faBoxArchive} className="text-[9px]" />
+                                            
+                                            {/* Secondary Actions (Icon Row) */}
+                                            <div className="flex items-center justify-center gap-2 w-full">
+                                                {canEdit && (
+                                                    <button onClick={() => onEdit(year)} className="w-8 h-8 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all flex items-center justify-center">
+                                                        <FontAwesomeIcon icon={faEdit} className="text-[10px]" />
+                                                    </button>
+                                                )}
+                                                <button onClick={() => onHistory(year)} className="w-8 h-8 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-indigo-500 hover:border-indigo-500 transition-all flex items-center justify-center">
+                                                    <FontAwesomeIcon icon={faHistory} className="text-[10px]" />
                                                 </button>
-                                            )}
-                                            {canEdit && isActive && (
-                                                <button onClick={() => onDelete(year)} className="w-7 h-7 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
-                                                    <FontAwesomeIcon icon={faBoxArchive} className="text-[9px]" />
-                                                </button>
-                                            )}
+                                                {canEdit && (
+                                                    <button onClick={() => onDuplicate(year)} title="Duplikat" className="w-8 h-8 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-500 hover:border-emerald-500 transition-all flex items-center justify-center">
+                                                        <FontAwesomeIcon icon={faCopy} className="text-[10px]" />
+                                                    </button>
+                                                )}
+                                                {canEdit && !isActive && (
+                                                    <button onClick={() => onToggleLock(year)} title={year.is_locked ? "Buka Buku" : "Tutup Buku"} className={`w-8 h-8 rounded-xl transition-all flex items-center justify-center ${year.is_locked ? 'bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-rose-500 hover:border-rose-500'}`}>
+                                                        <FontAwesomeIcon icon={year.is_locked ? faRotateLeft : faBoxArchive} className="text-[10px]" />
+                                                    </button>
+                                                )}
+                                                {canEdit && isActive && (
+                                                    <button onClick={() => onDelete(year)} className="w-8 h-8 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
+                                                        <FontAwesomeIcon icon={faBoxArchive} className="text-[10px]" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -242,7 +259,7 @@ export default function AcademicYearsPage() {
     const [selectedIds, setSelectedIds] = useState([])
 
     // Columns
-    const defaultCols = { semester: true, period: true, status: true, duration: true }
+    const defaultCols = { period: true, semester: true, curriculum: true, duration: true, status: true }
     const [visibleCols, setVisibleCols] = useState(() => {
         try { return JSON.parse(localStorage.getItem(LS_COLS)) || defaultCols }
         catch { return defaultCols }
@@ -689,6 +706,10 @@ export default function AcademicYearsPage() {
             }
             return matchesSearch && matchesSemester && matchesStatus && matchesCurriculum && matchesLock
         }).sort((a, b) => {
+            // Selalu letakkan yang aktif di paling atas (Pinned)
+            if (a.is_active && !b.is_active) return -1
+            if (!a.is_active && b.is_active) return 1
+
             if (sortBy === 'name_asc') return a.name.localeCompare(b.name)
             if (sortBy === 'name_desc') return b.name.localeCompare(a.name)
             if (sortBy === 'start_asc') return new Date(a.start_date) - new Date(b.start_date)
@@ -1069,7 +1090,9 @@ export default function AcademicYearsPage() {
                                                         <input type="checkbox" checked={selectedIds.length === paged.length && paged.length > 0} onChange={toggleSelectAll} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
                                                     </th>
                                                     {visibleCols.period && <th className="px-6 py-4 text-left">Tahun Pelajaran</th>}
-                                                    {visibleCols.semester && <th className="px-6 py-4 text-left">Periode & Semester</th>}
+                                                    {visibleCols.semester && <th className="px-6 py-4 text-left">Semester</th>}
+                                                    {visibleCols.curriculum && <th className="px-6 py-4 text-left">Kurikulum</th>}
+                                                    {visibleCols.duration && <th className="px-6 py-4 text-left">Pelaksanaan</th>}
                                                     {visibleCols.status && <th className="px-6 py-4 text-left">Status</th>}
                                                     <th className="px-6 py-4 text-center pr-6 w-32 relative">
                                                         <div className="flex items-center justify-center">
@@ -1095,7 +1118,7 @@ export default function AcademicYearsPage() {
                                                                 <div ref={colMenuPortalRef} className={`absolute z-[9999] w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${colMenuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
                                                                     style={{ top: colMenuPos.top, right: colMenuPos.right }}>
                                                                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Atur Kolom</p>
-                                                                    {[{ key: 'period', label: 'Tahun Pelajaran' }, { key: 'semester', label: 'Periode & Semester' }, { key: 'status', label: 'Status' }].map(({ key, label }) => (
+                                                                    {[{ key: 'period', label: 'Tahun Pelajaran' }, { key: 'semester', label: 'Semester' }, { key: 'curriculum', label: 'Kurikulum' }, { key: 'duration', label: 'Pelaksanaan' }, { key: 'status', label: 'Status' }].map(({ key, label }) => (
                                                                         <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
                                                                             <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
                                                                             <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
@@ -1136,21 +1159,40 @@ export default function AcademicYearsPage() {
                                                             )}
                                                             {visibleCols.semester && (
                                                                 <td className="px-6 py-4">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-widest border ${year.semester === 'Ganjil' ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' : 'bg-purple-500/10 text-purple-600 border-purple-500/20'}`}>
-                                                                            {year.semester}
-                                                                        </span>
-                                                                        <span className="text-xs text-[var(--color-text-muted)]">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
+                                                                    <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border ${year.semester === 'Ganjil' ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' : 'bg-purple-500/10 text-purple-600 border-purple-500/20'}`}>
+                                                                        {year.semester}
+                                                                    </span>
+                                                                </td>
+                                                            )}
+                                                            {visibleCols.curriculum && (
+                                                                <td className="px-6 py-4">
+                                                                    <span className="text-[11px] font-bold text-[var(--color-text-muted)]">
+                                                                        {year.curriculum || 'Merdeka'}
+                                                                    </span>
+                                                                </td>
+                                                            )}
+                                                            {visibleCols.duration && (
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[11px] font-bold text-[var(--color-text)] whitespace-nowrap">{formatDate(year.start_date)} — {formatDate(year.end_date)}</span>
+                                                                        <span className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{getDuration(year.start_date, year.end_date)}</span>
                                                                     </div>
                                                                 </td>
                                                             )}
                                                             {visibleCols.status && (
                                                                 <td className="px-6 py-4 text-left">
-                                                                    {year.is_active ? (
-                                                                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500">Aktif</span>
-                                                                    ) : (
-                                                                        <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)] opacity-60">Tidak Aktif</span>
-                                                                    )}
+                                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                                        {year.is_active ? (
+                                                                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-lg">Aktif</span>
+                                                                        ) : (
+                                                                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)] rounded-lg">Tidak Aktif</span>
+                                                                        )}
+                                                                        {year.is_locked && (
+                                                                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-lg flex items-center gap-1">
+                                                                                <FontAwesomeIcon icon={faBoxArchive} className="text-[8px]"/> Tutup
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </td>
                                                             )}
                                                             <td className="px-6 py-4">

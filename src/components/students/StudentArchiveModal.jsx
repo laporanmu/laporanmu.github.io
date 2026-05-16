@@ -100,6 +100,16 @@ export default function StudentArchiveModal({
             iconColor="text-amber-600"
             size="lg"
             mobileVariant="bottom-sheet"
+            footer={
+                <div className="flex items-center justify-end w-full">
+                    <button
+                        onClick={onClose}
+                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
+                    >
+                        Tutup
+                    </button>
+                </div>
+            }
         >
             <div className="space-y-3 relative">
 
@@ -120,14 +130,14 @@ export default function StudentArchiveModal({
                         <button
                             onClick={() => setDeleteTarget(null)}
                             disabled={deleting}
-                            className="h-9 px-5 rounded-xl bg-[var(--color-surface-alt)] font-bold text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] transition-colors border border-[var(--color-border)] disabled:opacity-50"
+                            className="h-10 px-5 rounded-xl bg-[var(--color-surface-alt)] font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] transition-colors border border-[var(--color-border)] disabled:opacity-50"
                         >
                             Batal
                         </button>
                         <button
                             onClick={confirmPermanentDelete}
                             disabled={deleting}
-                            className="h-9 px-5 rounded-xl bg-red-500 hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 flex items-center gap-2"
+                            className="h-10 px-5 rounded-xl bg-red-500 hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 flex items-center gap-2"
                         >
                             {deleting ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Menghapus...</> : <><FontAwesomeIcon icon={faTrash} /> Hapus Permanen</>}
                         </button>

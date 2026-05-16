@@ -410,7 +410,7 @@ const StudentFormModal = memo(function StudentFormModal({
             footer={
                 <div className="flex flex-col w-full gap-3">
                     {/* Stepper Navigation */}
-                    <div className="flex gap-2 sm:gap-3">
+                    <div className="flex items-center w-full gap-3">
                         {currentStep > 1 && !isQuickMode ? (
                             <button
                                 key="btn-back"
@@ -420,7 +420,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                     e.stopPropagation()
                                     setCurrentStep(prev => prev - 1)
                                 }}
-                                className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
+                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm shrink-0"
                             >
                                 <FontAwesomeIcon icon={faArrowLeft} className="text-[10px] opacity-50" />
                                 Kembali
@@ -430,10 +430,26 @@ const StudentFormModal = memo(function StudentFormModal({
                                 key="btn-close"
                                 type="button"
                                 onClick={handleSafeClose}
-                                className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
+                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm shrink-0"
                             >
                                 <FontAwesomeIcon icon={faTimes} className="text-[10px] opacity-50" />
                                 Batal
+                            </button>
+                        )}
+
+                        <div className="flex-1" />
+
+                        {/* Quick Mode & Direct Submit (Step 1 only) */}
+                        {currentStep === 1 && !isQuickMode && form.name && form.class_id && (
+                            <button
+                                type="submit"
+                                form="student-form-modal"
+                                disabled={submitting}
+                                title="Lewati Step 2 & 3 dan langsung simpan"
+                                className="h-10 px-4 sm:px-5 rounded-xl bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20 flex items-center justify-center gap-2 shrink-0 group"
+                            >
+                                <FontAwesomeIcon icon={faBolt} className="opacity-70 group-hover:animate-pulse" />
+                                <span className="hidden sm:inline">Daftar Cepat</span>
                             </button>
                         )}
 
@@ -450,9 +466,10 @@ const StudentFormModal = memo(function StudentFormModal({
                                     }
                                     setCurrentStep(prev => prev + 1)
                                 }}
-                                className="flex-[2] h-11 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/25 border border-white/10"
+                                className="h-10 px-6 sm:px-8 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-primary)]/20 border border-white/10 shrink-0"
                             >
-                                Selanjutnya
+                                <span className="hidden sm:inline">Selanjutnya</span>
+                                <span className="sm:hidden">Lanjut</span>
                                 <FontAwesomeIcon icon={faArrowRight} className="text-[10px] opacity-80" />
                             </button>
                         ) : (
@@ -461,7 +478,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                 type="submit"
                                 form="student-form-modal"
                                 disabled={submitting}
-                                className="flex-[2] h-11 px-2 sm:px-6 rounded-xl bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/25 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                                className="h-10 px-6 sm:px-8 rounded-xl bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 shrink-0"
                             >
                                 {submitting ? (
                                     <>
@@ -471,24 +488,13 @@ const StudentFormModal = memo(function StudentFormModal({
                                 ) : (
                                     <>
                                         <FontAwesomeIcon icon={faSave} className="text-xs opacity-80 shrink-0" />
-                                        <span className="truncate">{selectedStudent ? 'Simpan Perubahan' : 'Daftarkan Siswa'}</span>
+                                        <span className="truncate hidden sm:inline">{selectedStudent ? 'Simpan Perubahan' : 'Daftarkan Siswa'}</span>
+                                        <span className="truncate sm:hidden">Simpan</span>
                                     </>
                                 )}
                             </button>
                         )}
                     </div>
-
-                    {/* Quick Mode & Direct Submit (Step 1 only) */}
-                    {currentStep === 1 && !isQuickMode && form.name && form.class_id && (
-                        <button
-                            type="submit"
-                            form="student-form-modal"
-                            disabled={submitting}
-                            className="w-full h-8 rounded-lg bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20"
-                        >
-                            Daftarkan Sekarang (Lewati Step 2 & 3)
-                        </button>
-                    )}
                 </div>
             }
         >

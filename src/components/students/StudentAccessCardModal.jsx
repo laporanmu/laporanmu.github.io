@@ -42,7 +42,7 @@ export default function StudentAccessCardModal({
     generateStudentPDF
 }) {
     const [showExportMenu, setShowExportMenu] = useState(false)
-    
+
     // Resolve which students to show
     const studentsToShow = useMemo(() => {
         if (propsSelectedStudent) return [propsSelectedStudent]
@@ -83,7 +83,7 @@ export default function StudentAccessCardModal({
                                     <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">{student.name}</span>
                                 </div>
                             )}
-                            
+
                             <div
                                 id={`card-capture-${student.id}`}
                                 className="flex flex-col sm:flex-row gap-2.5 justify-center items-center"
@@ -93,10 +93,10 @@ export default function StudentAccessCardModal({
                                 <div className={`w-[300px] h-[188px] rounded-xl text-white relative shadow-xl overflow-hidden shrink-0 scale-95 sm:scale-100 origin-center transition-all duration-500 hover:scale-[1.02] ring-1 ring-white/20 ${student.gender === 'P' ? 'bg-gradient-to-br from-rose-500 to-rose-700 shadow-rose-500/20' : 'bg-gradient-to-br from-indigo-600 to-indigo-800 shadow-indigo-500/20'}`}>
                                     {/* Security Pattern Overlay */}
                                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")` }} />
-                                    
+
                                     <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full blur-2xl" />
                                     <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-black/10 rounded-full blur-xl" />
-                                    
+
                                     <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
                                         <div className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10 shadow-sm">
                                             <span className="font-black text-[9px]">L</span>
@@ -168,10 +168,10 @@ export default function StudentAccessCardModal({
                                         <span className="text-[5px] font-black uppercase tracking-[0.25em]">MBS TANGGUL</span>
                                     </div>
                                 </div>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
 
                 {/* Actions Section */}
                 <div className={`no-print ${isBulk ? 'sticky bottom-0 z-20 backdrop-blur-xl bg-[var(--color-surface-alt)]/80 border border-[var(--color-border)] rounded-2xl p-4 shadow-2xl shadow-black/10' : ''}`}>
@@ -199,15 +199,15 @@ export default function StudentAccessCardModal({
                                 {/* Main Interaction Hub: High Density Grid */}
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                                     <div className="lg:col-span-5 group relative">
-                                        <div className="relative h-12 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm group-hover:border-indigo-500/40 transition-all flex items-center overflow-hidden">
+                                        <div className="relative h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm group-hover:border-indigo-500/40 transition-all flex items-center overflow-hidden">
                                             <div className="px-3 h-full bg-[var(--color-surface-alt)]/50 border-r border-[var(--color-border)] flex items-center shrink-0">
                                                 <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-70">ID</label>
                                             </div>
                                             <div className="flex-1 px-3 flex items-center justify-between gap-2">
-                                                <span className="text-[13px] font-black text-indigo-600 font-mono tracking-wider whitespace-nowrap">
+                                                <span className="text-[12px] font-black text-indigo-600 font-mono tracking-wider whitespace-nowrap">
                                                     {isPrivacyMode ? maskInfo(studentsToShow[0].code || studentsToShow[0].registration_code, 2) : (studentsToShow[0].code || studentsToShow[0].registration_code)}
                                                 </span>
-                                                <button 
+                                                <button
                                                     onClick={() => {
                                                         if (isPrivacyMode) return addToast?.('Nonaktifkan Mode Privasi untuk menyalin', 'warning');
                                                         navigator.clipboard.writeText(studentsToShow[0].code || studentsToShow[0].registration_code);
@@ -224,15 +224,15 @@ export default function StudentAccessCardModal({
 
                                     {/* PIN Box - Col Span 3 */}
                                     <div className="lg:col-span-3 group relative">
-                                        <div className="relative h-12 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm group-hover:border-emerald-500/40 transition-all flex items-center overflow-hidden">
+                                        <div className="relative h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm group-hover:border-emerald-500/40 transition-all flex items-center overflow-hidden">
                                             <div className="px-2.5 h-full bg-emerald-500/5 border-r border-emerald-500/10 flex items-center shrink-0">
                                                 <label className="text-[8px] font-black uppercase tracking-widest text-emerald-600 opacity-70">PIN</label>
                                             </div>
                                             <div className="flex-1 px-2.5 flex items-center justify-between gap-2">
-                                                <span className="text-[13px] font-black text-emerald-600 font-mono tracking-[0.15em]">
+                                                <span className="text-[12px] font-black text-emerald-600 font-mono tracking-[0.15em]">
                                                     {isPrivacyMode ? '••••' : studentsToShow[0].pin}
                                                 </span>
-                                                <button 
+                                                <button
                                                     onClick={() => {
                                                         if (isPrivacyMode) return addToast?.('Mode Privasi aktif', 'warning');
                                                         navigator.clipboard.writeText(studentsToShow[0].pin);
@@ -249,9 +249,9 @@ export default function StudentAccessCardModal({
 
                                     <button
                                         onClick={() => openWAForStudent?.(studentsToShow[0], buildWAMessage?.(studentsToShow[0], waTemplate))}
-                                        className="lg:col-span-4 h-12 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[11px] font-black uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 px-4 group whitespace-nowrap"
+                                        className="lg:col-span-4 h-10 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 px-4 group whitespace-nowrap"
                                     >
-                                        <FontAwesomeIcon icon={faWhatsapp} className="text-lg transition-transform group-hover:rotate-12 shrink-0" />
+                                        <FontAwesomeIcon icon={faWhatsapp} className="text-[13px] transition-transform group-hover:rotate-12 shrink-0" />
                                         <span>Bagikan ke Wali</span>
                                     </button>
                                 </div>
@@ -259,7 +259,6 @@ export default function StudentAccessCardModal({
                                 {/* Section Header: System Management */}
                                 <div className="flex items-center gap-2.5 pt-2">
                                     <div className="w-1 h-3.5 bg-slate-500 rounded-full" />
-                                    <FontAwesomeIcon icon={faRotateLeft} className="text-slate-500 text-[10px] opacity-70" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Manajemen Sistem</span>
                                     <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                 </div>
@@ -273,7 +272,7 @@ export default function StudentAccessCardModal({
                                                 handleResetPin?.(studentsToShow[0]);
                                             }}
                                             disabled={resettingPin}
-                                            className="h-9 px-4 rounded-lg border border-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 group active:scale-95 whitespace-nowrap"
+                                            className="h-10 px-4 rounded-xl border border-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 group active:scale-95 whitespace-nowrap"
                                         >
                                             <FontAwesomeIcon icon={resettingPin ? faSpinner : faRotateLeft} className={`${resettingPin ? 'fa-spin' : 'group-hover:-rotate-180 transition-transform duration-300'}`} />
                                             Reset PIN
@@ -285,7 +284,7 @@ export default function StudentAccessCardModal({
                                         <button
                                             onClick={() => setShowExportMenu(v => !v)}
                                             disabled={generatingPdf}
-                                            className="h-9 px-4 rounded-lg bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 active:scale-95 whitespace-nowrap"
+                                            className="h-10 px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 active:scale-95 whitespace-nowrap"
                                         >
                                             {generatingPdf
                                                 ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Proses...</>
@@ -337,7 +336,7 @@ export default function StudentAccessCardModal({
                                 disabled={generatingPdf}
                                 className="flex-1 h-12 rounded-2xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-[0.1em] hover:brightness-110 shadow-xl shadow-[var(--color-primary)]/30 transition-all flex items-center justify-center gap-3 disabled:opacity-60"
                             >
-                                {generatingPdf 
+                                {generatingPdf
                                     ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Menyiapkan Berkas PDF...</>
                                     : <><FontAwesomeIcon icon={faPrint} className="text-base" /> Cetak Semua ({studentsToShow.length})</>
                                 }

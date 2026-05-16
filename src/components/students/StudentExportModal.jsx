@@ -98,21 +98,21 @@ export default function StudentExportModal({
             <button
                 key={key}
                 onClick={toggleColumn}
-                className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-xl border text-left transition-all
+                className={`group relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl border text-left transition-all
                     ${isSelected
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)] shadow-sm'
                         : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'}
                 `}
             >
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all 
-                    ${isSelected ? 'bg-[var(--color-primary)] text-white shadow-md' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'}`}>
-                    <FontAwesomeIcon icon={icon} className="text-[10px]" />
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all 
+                    ${isSelected ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'}`}>
+                    <FontAwesomeIcon icon={icon} className="text-[9px]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className={`text-[10px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>{label}</div>
+                    <div className={`text-[9px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>{label}</div>
                 </div>
                 {isSelected && (
-                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center shadow-lg border border-white dark:border-[var(--color-surface)] animate-in zoom-in duration-200">
+                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center shadow-md border border-white dark:border-[var(--color-surface)] animate-in zoom-in duration-200">
                         {orderIdx}
                     </div>
                 )}
@@ -136,6 +136,16 @@ export default function StudentExportModal({
             iconColor="text-amber-600"
             size="lg"
             mobileVariant="bottom-sheet"
+            footer={
+                <div className="flex items-center justify-end w-full">
+                    <button
+                        onClick={onClose}
+                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
+                    >
+                        Tutup
+                    </button>
+                </div>
+            }
         >
             <div className="relative">
                 {/* Overlay Loading Premium */}
@@ -154,59 +164,50 @@ export default function StudentExportModal({
                     </div>
                 )}
 
-                <div className={`space-y-6 pb-2 transition-all duration-500 ${exporting ? 'blur-sm grayscale-[0.5] opacity-50 pointer-events-none' : ''}`}>
+                <div className={`space-y-4 pb-2 transition-all duration-500 ${exporting ? 'blur-sm grayscale-[0.5] opacity-50 pointer-events-none' : ''}`}>
                     {/* Section 1: Scope */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">1 — Jangkauan Data</p>
-                        <div className="grid grid-cols-3 gap-2.5">
+                        <div className="flex p-1 bg-[var(--color-surface-alt)]/50 rounded-xl border border-[var(--color-border)]">
                             {[
-                                { val: 'filtered', label: 'Filter Aktif', desc: `${students.length} siswa`, icon: faSliders },
-                                { val: 'selected', label: 'Dipilih', desc: `${selectedStudentIds.length} siswa`, icon: faCheckCircle, disabled: selectedStudentIds.length === 0 },
-                                { val: 'all', label: 'Semua', desc: 'Tanpa filter', icon: faUsers },
-                            ].map(({ val, label, desc, icon, disabled }) => (
+                                { val: 'filtered', label: 'Filter Aktif', desc: `${students.length} Siswa` },
+                                { val: 'selected', label: 'Dipilih', desc: `${selectedStudentIds.length} Siswa`, disabled: selectedStudentIds.length === 0 },
+                                { val: 'all', label: 'Semua', desc: 'Tanpa Filter' },
+                            ].map(({ val, label, desc, disabled }) => (
                                 <button
                                     key={val}
                                     onClick={() => !disabled && setExportScope(val)}
                                     disabled={disabled}
-                                    className={`group p-3 rounded-2xl border-2 text-left transition-all
-                                    ${exportScope === val
-                                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
-                                            : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'}
-                                    ${disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
+                                    className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2
+                                    ${exportScope === val ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]'}
+                                    ${disabled ? 'opacity-30 cursor-not-allowed' : 'active:scale-95'}
                                     `}
                                 >
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 transition-all 
-                                        ${exportScope === val ? 'bg-[var(--color-primary)] text-white shadow-lg' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:bg-[var(--color-primary)]/10'}`}>
-                                        <FontAwesomeIcon icon={icon} className="text-xs" />
-                                    </div>
-                                    <div className="text-xs font-black text-[var(--color-text)] mb-0.5">{label}</div>
-                                    <div className="text-[9px] font-bold text-[var(--color-text-muted)] leading-tight">{desc}</div>
+                                    <span className="truncate">{label}</span>
+                                    <span className={`px-2 py-0.5 rounded-md text-[8px] tracking-normal ${exportScope === val ? 'bg-white/20' : 'bg-[var(--color-border)]'}`}>{desc}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     {/* Section 2: Columns */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">2 — Kolom & Presets</p>
-                            <div className="flex gap-2">
-                                <button onClick={() => handlePresetClick(COLUMN_DEFS.map(c => c.key))} className="text-[9px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest bg-[var(--color-primary)]/5 px-2 py-1 rounded-lg transition-colors">Semua</button>
-                                <button onClick={() => handlePresetClick(['nama', 'kelas'])} className="text-[9px] font-black text-[var(--color-text-muted)] hover:underline uppercase tracking-widest bg-[var(--color-surface-alt)] px-2 py-1 rounded-lg transition-colors">Reset</button>
+                            <div className="flex items-center gap-2 hidden sm:flex">
+                                {PRESETS.map(preset => (
+                                    <button
+                                        key={preset.id}
+                                        onClick={() => handlePresetClick(preset.cols)}
+                                        className="text-[9px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:underline uppercase tracking-wider transition-colors"
+                                    >
+                                        {preset.label}
+                                    </button>
+                                ))}
+                                <div className="w-[1px] h-3 bg-[var(--color-border)] mx-1"></div>
+                                <button onClick={() => handlePresetClick(COLUMN_DEFS.map(c => c.key))} className="text-[9px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest transition-colors">Semua</button>
+                                <button onClick={() => handlePresetClick(['nama', 'kelas'])} className="text-[9px] font-black text-rose-500 hover:underline uppercase tracking-widest transition-colors">Reset</button>
                             </div>
-                        </div>
-
-                        {/* Presets Row */}
-                        <div className="flex flex-wrap gap-2 mb-1">
-                            {PRESETS.map(preset => (
-                                <button
-                                    key={preset.id}
-                                    onClick={() => handlePresetClick(preset.cols)}
-                                    className="px-3 py-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all active:scale-95"
-                                >
-                                    {preset.label}
-                                </button>
-                            ))}
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -215,25 +216,25 @@ export default function StudentExportModal({
                     </div>
 
                     {/* Section 3: Filename & Advanced */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">3 — Konfigurasi File</p>
-                        <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex flex-col sm:flex-row gap-2.5">
                             <div className="flex-1 relative">
                                 <input
                                     type="text"
                                     value={fileName}
                                     onChange={(e) => setFileName(e.target.value)}
                                     placeholder="Nama file export..."
-                                    className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-xs font-bold focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all placeholder:opacity-50 pr-20"
+                                    className="w-full h-10 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl px-4 text-[11px] font-bold focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all placeholder:opacity-50 pr-20 outline-none"
                                 />
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-[var(--color-border)] text-[8px] font-black uppercase text-[var(--color-text-muted)]">
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg bg-[var(--color-border)] text-[8px] font-black uppercase text-[var(--color-text-muted)]">
                                     .xlsx / .pdf
                                 </div>
                             </div>
                             <button
                                 onClick={() => setAdvancedOpen(!advancedOpen)}
-                                className={`px-4 py-3 rounded-xl border transition-all flex items-center gap-2 text-xs font-black
-                                    ${advancedOpen ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40'}`}
+                                className={`h-10 px-4 rounded-xl border transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shrink-0
+                                    ${advancedOpen ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-md' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]'}`}
                             >
                                 <FontAwesomeIcon icon={faGear} className={advancedOpen ? 'animate-spin-slow' : ''} />
                                 Opsi
@@ -252,7 +253,7 @@ export default function StudentExportModal({
                                             <button
                                                 key={String(opt.v)}
                                                 onClick={() => setIncludeHeader(opt.v)}
-                                                className={`flex-1 py-1 rounded-md text-[9px] font-black uppercase transition-all ${includeHeader === opt.v ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                                                className={`flex-1 py-1.5 rounded-md text-[9px] font-black uppercase transition-all ${includeHeader === opt.v ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
                                             >
                                                 {opt.l}
                                             </button>
@@ -272,7 +273,7 @@ export default function StudentExportModal({
                                             <button
                                                 key={opt.v}
                                                 onClick={() => setPdfOrientation(opt.v)}
-                                                className={`flex-1 py-1 rounded-md text-[9px] font-black uppercase transition-all flex items-center justify-center gap-1.5 ${pdfOrientation === opt.v ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                                                className={`flex-1 py-1.5 rounded-md text-[9px] font-black uppercase transition-all flex items-center justify-center gap-1.5 ${pdfOrientation === opt.v ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
                                             >
                                                 <FontAwesomeIcon icon={opt.icon} className="text-[8px]" />
                                                 {opt.l}
@@ -285,15 +286,15 @@ export default function StudentExportModal({
                     </div>
 
                     {/* Section 4: Format Grid */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">4 — Mulai Ekspor</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                             {[
-                                { label: 'CSV', icon: faFileCsv, desc: 'Universal', onClick: () => handleExportCSV(fileName, exportOptions), color: 'hover:border-slate-400 hover:bg-slate-50', iconColor: 'text-slate-500' },
-                                { label: 'Excel', icon: faFileExcel, desc: '.xlsx', onClick: () => handleExportExcel(fileName), color: 'hover:border-emerald-400 hover:bg-emerald-50 text-emerald-700', iconColor: 'text-emerald-500' },
-                                { label: 'PDF', icon: faFilePdf, desc: 'Tabel', onClick: () => handleExportPDF(fileName, exportOptions), color: 'hover:border-rose-400 hover:bg-rose-50 text-rose-700', iconColor: 'text-rose-500' },
+                                { label: 'CSV', icon: faFileCsv, onClick: () => handleExportCSV(fileName, exportOptions), color: 'hover:border-slate-400 hover:bg-slate-50', iconColor: 'text-slate-500' },
+                                { label: 'Excel', icon: faFileExcel, onClick: () => handleExportExcel(fileName), color: 'hover:border-emerald-400 hover:bg-emerald-50 text-emerald-700', iconColor: 'text-emerald-500' },
+                                { label: 'PDF Tabel', icon: faFilePdf, onClick: () => handleExportPDF(fileName, exportOptions), color: 'hover:border-rose-400 hover:bg-rose-50 text-rose-700', iconColor: 'text-rose-500' },
                                 {
-                                    label: 'PDF Kartu', icon: faIdCard, desc: 'Foto',
+                                    label: 'PDF Kartu', icon: faIdCard,
                                     onClick: async () => {
                                         let targets = []
                                         if (exportScope === 'selected' && selectedStudentIds.length > 0) {
@@ -308,18 +309,15 @@ export default function StudentExportModal({
                                     },
                                     color: 'hover:border-orange-400 hover:bg-orange-50 text-orange-700', iconColor: 'text-orange-500'
                                 },
-                            ].map(({ label, icon, desc, onClick, color, iconColor }) => (
+                            ].map(({ label, icon, onClick, color, iconColor }) => (
                                 <button
                                     key={label}
                                     onClick={onClick}
                                     disabled={exporting || exportColumns.length === 0}
-                                    className={`relative group h-24 rounded-2xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col items-center justify-center gap-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 ${color}`}
+                                    className={`relative group h-14 rounded-2xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col items-center justify-center gap-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 ${color}`}
                                 >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 transition-transform group-hover:scale-110 ${iconColor} bg-[var(--color-surface-alt)]`}>
-                                        <FontAwesomeIcon icon={icon} className="text-xl" />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
-                                    <span className="text-[8px] font-bold opacity-60 uppercase">{desc}</span>
+                                    <FontAwesomeIcon icon={icon} className={`text-base ${iconColor} group-hover:scale-110 transition-transform`} />
+                                    <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
                                 </button>
                             ))}
                         </div>

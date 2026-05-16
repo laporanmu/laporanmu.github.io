@@ -37,33 +37,36 @@ export default function StudentGSheetsModal({
             size="md"
             mobileVariant="bottom-sheet"
             footer={
-                <div className="flex items-center justify-between w-full gap-4">
+                <div className="flex items-center w-full gap-2.5">
                     <button
                         onClick={onDownloadTemplate}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:bg-emerald-500/5 transition-all whitespace-nowrap shrink-0"
+                        title="Download Format Excel/CSV"
+                        className="h-10 px-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2 shrink-0 group"
                     >
-                        <FontAwesomeIcon icon={faDownload} />
-                        Download Template
+                        <FontAwesomeIcon icon={faDownload} className="opacity-80 group-hover:animate-bounce" />
+                        <span className="hidden sm:inline">Template</span>
                     </button>
-                    <div className="flex items-center gap-2 shrink-0">
-                        <button
-                            onClick={onClose}
-                            className="h-10 px-4 rounded-xl bg-[var(--color-surface-alt)] font-black text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)] transition-colors border border-[var(--color-border)] whitespace-nowrap"
-                        >
-                            Batal
-                        </button>
-                        <button
-                            onClick={handleFetchGSheets}
-                            disabled={fetchingGSheets || urlStatus !== 'valid'}
-                            className="h-10 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 hover:brightness-110 text-white text-[11px] uppercase tracking-widest font-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20 active:scale-95 whitespace-nowrap"
-                        >
-                            {fetchingGSheets ? (
-                                <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Sinkronisasi...</>
-                            ) : (
-                                <><FontAwesomeIcon icon={faLink} /> Hubungkan Data</>
-                            )}
-                        </button>
-                    </div>
+
+                    <div className="flex-1" />
+
+                    <button
+                        onClick={onClose}
+                        className="h-10 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
+                    >
+                        Batal
+                    </button>
+                    
+                    <button
+                        onClick={handleFetchGSheets}
+                        disabled={fetchingGSheets || urlStatus !== 'valid'}
+                        className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-white/10 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {fetchingGSheets ? (
+                            <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> <span className="hidden sm:inline">Sinkron...</span></>
+                        ) : (
+                            <><FontAwesomeIcon icon={faLink} className="opacity-80" /> <span className="hidden sm:inline">Hubungkan</span></>
+                        )}
+                    </button>
                 </div>
             }
         >
