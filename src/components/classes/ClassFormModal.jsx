@@ -176,7 +176,8 @@ const ClassFormModal = memo(function ClassFormModal({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="sm:col-span-2 relative group">
+                        {/* Nama Kelas */}
+                        <div className="relative group">
                             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Nama Kelas <span className="text-rose-500">*</span></label>
                             <input
                                 type="text"
@@ -189,12 +190,32 @@ const ClassFormModal = memo(function ClassFormModal({
                                 autoFocus
                             />
                             <p className="mt-1 ml-1 text-[10px] font-bold text-[var(--color-text-muted)] opacity-60">
-                                Gunakan format singkat dan konsisten (contoh: 7A, 10 MIPA 1).
+                                Gunakan format singkat (e.g. 7A, 10 MIPA 1).
                             </p>
                         </div>
 
+                        {/* Gender Segment */}
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Segmen Gender</label>
+                            <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
+                                {GENDERS.map(g => (
+                                    <button
+                                        key={g}
+                                        type="button"
+                                        onClick={() => setField('gender_type', g)}
+                                        className={`flex-1 rounded-lg text-[10px] font-bold tracking-wider transition-all duration-200 flex items-center justify-center gap-2 ${form.gender_type === g
+                                            ? (g === 'Putra' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20')
+                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                    >
+                                        <FontAwesomeIcon icon={g === 'Putra' ? faMars : faVenus} className="text-[10px]" />
+                                        {g}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Tingkat & Program */}
-                        <div>
+                        <div className="relative group">
                             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tingkat / Grade</label>
                             <RichSelect
                                 value={form.level}
@@ -206,7 +227,7 @@ const ClassFormModal = memo(function ClassFormModal({
                             />
                         </div>
 
-                        <div>
+                        <div className="relative group">
                             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Program</label>
                             <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
                                 {PROGRAMS.map(p => (
@@ -214,32 +235,12 @@ const ClassFormModal = memo(function ClassFormModal({
                                         key={p}
                                         type="button"
                                         onClick={() => setField('program', p)}
-                                        className={`flex-1 rounded-lg text-[10px] font-bold transition-all inline-flex items-center justify-center gap-2 ${form.program === p
+                                        className={`flex-1 rounded-lg text-[10px] font-bold transition-all duration-200 inline-flex items-center justify-center gap-2 ${form.program === p
                                             ? 'bg-white dark:bg-[var(--color-surface)] shadow text-[var(--color-primary)]'
                                             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                                     >
                                         <FontAwesomeIcon icon={p === 'Boarding' ? faBed : faBuilding} className="text-[10px] opacity-70" />
                                         {p}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Gender Segment */}
-                        <div className="sm:col-span-2">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Segmen Gender</label>
-                            <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
-                                {GENDERS.map(g => (
-                                    <button
-                                        key={g}
-                                        type="button"
-                                        onClick={() => setField('gender_type', g)}
-                                        className={`flex-1 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-2 ${form.gender_type === g
-                                            ? (g === 'Putra' ? 'bg-blue-500 text-white shadow' : 'bg-pink-500 text-white shadow')
-                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                    >
-                                        <FontAwesomeIcon icon={g === 'Putra' ? faMars : faVenus} className="text-[10px]" />
-                                        {g}
                                     </button>
                                 ))}
                             </div>
