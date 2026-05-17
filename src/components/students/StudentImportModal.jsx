@@ -27,6 +27,7 @@ import {
     faChevronUp
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
+import RichSelect from '../ui/RichSelect'
 
 export default function StudentImportModal(props) {
     const [showClassesDropdown, setShowClassesDropdown] = useState(false)
@@ -546,13 +547,13 @@ export default function StudentImportModal(props) {
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[45vh] overflow-y-auto pr-1 custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[35vh] overflow-y-auto pr-1 custom-scrollbar">
                         {SYSTEM_COLS.map(sys => {
                             const mapped = importColumnMapping[sys.key]
                             return (
                                 <div key={sys.key} className={`p-2.5 rounded-xl border transition-all ${mapped ? 'bg-emerald-500/4 border-emerald-500/20' : 'bg-[var(--color-surface-alt)]/50 border-[var(--color-border)]'}`}>
                                     <div className="flex items-center justify-between gap-3">
-                                        <div className="flex flex-col min-w-[70px] shrink-0">
+                                        <div className="flex flex-col w-[130px] shrink-0">
                                             <span className="text-[10px] font-black text-[var(--color-text)] flex items-center gap-1">
                                                 {sys.label}
                                                 {['name', 'class_name'].includes(sys.key) && <span className="text-red-500 text-[9px]">*</span>}
@@ -565,22 +566,16 @@ export default function StudentImportModal(props) {
                                         </div>
 
                                         <div className="flex-1 min-w-0 relative">
-                                            <select
+                                            <RichSelect
+                                                small
                                                 value={mapped || ''}
-                                                onChange={(e) => setImportColumnMapping(v => ({ ...v, [sys.key]: e.target.value }))}
-                                                className={`w-full h-8 px-2.5 pr-6 rounded-lg text-[10px] font-bold border transition-all outline-none appearance-none cursor-pointer
-                                                ${mapped
-                                                        ? 'border-emerald-500/40 bg-[var(--color-surface)] text-emerald-600'
-                                                        : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/50'}`}
-                                            >
-                                                <option value="">-- Lewati Kolom --</option>
-                                                {importFileHeaders.map(h => (
-                                                    <option key={h} value={h}>{h}</option>
-                                                ))}
-                                            </select>
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-30">
-                                                <FontAwesomeIcon icon={faChevronDown} className="text-[7px]" />
-                                            </div>
+                                                onChange={(val) => setImportColumnMapping(v => ({ ...v, [sys.key]: val }))}
+                                                options={importFileHeaders.map(h => ({ id: h, name: h }))}
+                                                placeholder="-- Lewati Kolom --"
+                                                extraOption={{ id: '', name: '-- Lewati Kolom --' }}
+                                                status={mapped ? 'success' : 'normal'}
+                                                searchable={importFileHeaders.length > 5}
+                                            />
                                         </div>
                                     </div>
                                 </div>

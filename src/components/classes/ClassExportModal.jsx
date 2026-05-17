@@ -1,64 +1,31 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faCheckCircle,
-    faFileLines,
-    faSliders,
-    faSpinner,
-    faTableList,
-    faTriangleExclamation,
-    faUsers,
-    faIdCard,
-    faFileExport,
-    faHashtag,
-    faBarcode,
-    faIdCardClip,
-    faUser,
-    faVenusMars,
-    faSchool,
-    faStar,
-    faCircleQuestion,
-    faTags,
-    faChartPie,
-    faArrowDownAZ,
-    faFileExcel,
-    faFileCsv,
-    faFilePdf,
-    faChevronDown,
-    faGear,
-    faHeading,
-    faArrowsLeftRight,
-    faArrowsUpDown
+    faCheckCircle, faSliders, faSpinner, faUsers, faFileExport, faSchool, faGraduationCap, faBuilding, faUserTie, faCalendarAlt, faFileExcel, faFileCsv, faFilePdf, faGear, faHeading, faArrowsLeftRight, faArrowsUpDown, faTriangleExclamation
 } from '@fortawesome/free-solid-svg-icons'
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import Modal from '../ui/Modal'
 
 const COLUMN_DEFS = [
-    { key: 'id', label: 'ID', icon: faHashtag },
-    { key: 'kode', label: 'Kode Registrasi', icon: faBarcode },
-    { key: 'nisn', label: 'NISN', icon: faIdCard },
-    { key: 'nama', label: 'Nama', icon: faUser },
-    { key: 'gender', label: 'Gender', icon: faVenusMars },
-    { key: 'kelas', label: 'Kelas', icon: faSchool },
-    { key: 'poin', label: 'Poin', icon: faStar },
-    { key: 'phone', label: 'Whatsapp', icon: faWhatsapp },
-    { key: 'status', label: 'Status', icon: faCircleQuestion },
-    { key: 'tags', label: 'Label/Tag', icon: faTags },
-    { key: 'kelengkapan', label: 'Data', icon: faChartPie },
+    { key: 'nama_kelas', label: 'Nama Kelas', icon: faSchool },
+    { key: 'tingkat', label: 'Tingkat / Grade', icon: faGraduationCap },
+    { key: 'program', label: 'Program / Major', icon: faBuilding },
+    { key: 'wali_kelas', label: 'Wali Kelas', icon: faUserTie },
+    { key: 'tahun_ajaran', label: 'Tahun Ajaran', icon: faCalendarAlt },
+    { key: 'jumlah_siswa', label: 'Jumlah Siswa', icon: faUsers },
 ]
 
 const PRESETS = [
-    { id: 'all', label: 'Data Lengkap', cols: ['kode', 'nisn', 'nama', 'gender', 'kelas', 'poin', 'phone', 'status', 'tags', 'kelengkapan'] },
-    { id: 'contact', label: 'Kontak Wali', cols: ['nama', 'kelas', 'phone'] },
-    { id: 'academic', label: 'Akademik', cols: ['nama', 'kelas', 'nisn', 'poin'] },
-    { id: 'minimal', label: 'Presensi', cols: ['nama', 'kelas'] },
+    { id: 'all', label: 'Semua Kolom', cols: COLUMN_DEFS.map(c => c.key) },
+    { id: 'basic', label: 'Data Dasar', cols: ['nama_kelas', 'tingkat', 'program'] },
+    { id: 'academic', label: 'Akademik & Wali', cols: ['nama_kelas', 'wali_kelas', 'tahun_ajaran'] },
+    { id: 'summary', label: 'Rekap Siswa', cols: ['nama_kelas', 'tingkat', 'jumlah_siswa'] },
 ]
 
-export default function StudentExportModal({
+export default function ClassExportModal({
     isOpen,
     onClose,
-    students,
-    selectedStudentIds,
+    classes,
+    selectedClassIds,
     exportScope,
     setExportScope,
     exportColumns,
@@ -67,12 +34,10 @@ export default function StudentExportModal({
     handleExportCSV,
     handleExportExcel,
     handleExportPDF,
-    generateStudentPDF,
-    addToast,
 }) {
-    const [fileName, setFileName] = useState(`Data Siswa ${new Date().toISOString().slice(0, 10)}`)
+    const [fileName, setFileName] = useState(`Data Kelas ${new Date().toISOString().slice(0, 10)}`)
     const [advancedOpen, setAdvancedOpen] = useState(false)
-    const [pdfOrientation, setPdfOrientation] = useState('landscape') // 'landscape' | 'portrait'
+    const [pdfOrientation, setPdfOrientation] = useState('landscape')
     const [includeHeader, setIncludeHeader] = useState(true)
 
     if (!isOpen) return null
@@ -97,18 +62,18 @@ export default function StudentExportModal({
             <button
                 key={key}
                 onClick={toggleColumn}
-                className={`group relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl border text-left transition-all
+                className={`group relative flex items-center gap-2.5 px-2.5 py-2 rounded-xl border text-left transition-all
                     ${isSelected
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)] shadow-sm'
                         : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'}
                 `}
             >
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all 
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all 
                     ${isSelected ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'}`}>
-                    <FontAwesomeIcon icon={icon} className="text-[9px]" />
+                    <FontAwesomeIcon icon={icon} className="text-[10px]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className={`text-[9px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>{label}</div>
+                    <div className={`text-[10px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>{label}</div>
                 </div>
                 {isSelected && (
                     <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center shadow-md border border-white dark:border-[var(--color-surface)] animate-in zoom-in duration-200">
@@ -128,8 +93,8 @@ export default function StudentExportModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Export Data Siswa"
-            description="Cadangkan atau pindahkan data siswa ke format CSV, Excel, atau PDF dengan opsi enterprise."
+            title="Export Data Kelas"
+            description="Cadangkan atau pindahkan data kelas ke format CSV, Excel, atau PDF dengan opsi enterprise."
             icon={faFileExport}
             iconBg="bg-amber-500/10"
             iconColor="text-amber-600"
@@ -148,7 +113,6 @@ export default function StudentExportModal({
             }
         >
             <div className="relative">
-                {/* Overlay Loading Premium */}
                 {exporting && (
                     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[var(--color-surface)]/40 backdrop-blur-md rounded-2xl animate-in fade-in duration-300">
                         <div className="bg-[var(--color-surface)] shadow-2xl border border-[var(--color-border)] rounded-3xl p-8 flex flex-col items-center gap-4 scale-110 animate-in zoom-in-95 duration-300">
@@ -170,8 +134,8 @@ export default function StudentExportModal({
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">1 — Jangkauan Data</p>
                         <div className="grid grid-cols-3 gap-2.5">
                             {[
-                                { val: 'filtered', label: 'Filter Aktif', desc: `${students.length} siswa`, icon: faSliders },
-                                { val: 'selected', label: 'Dipilih', desc: `${selectedStudentIds.length} siswa`, icon: faCheckCircle, disabled: selectedStudentIds.length === 0 },
+                                { val: 'filtered', label: 'Filter Aktif', desc: `${classes.length} kelas`, icon: faSliders },
+                                { val: 'selected', label: 'Dipilih', desc: `${selectedClassIds.length} kelas`, icon: faCheckCircle, disabled: selectedClassIds.length === 0 },
                                 { val: 'all', label: 'Semua', desc: 'Tanpa filter', icon: faUsers },
                             ].map(({ val, label, desc, icon, disabled }) => (
                                 <button
@@ -202,7 +166,7 @@ export default function StudentExportModal({
                             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">2 — Kolom & Presets</p>
                             <div className="flex gap-2">
                                 <button onClick={() => handlePresetClick(COLUMN_DEFS.map(c => c.key))} className="text-[9px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest bg-[var(--color-primary)]/5 px-2 py-1 rounded-lg transition-colors">Semua</button>
-                                <button onClick={() => handlePresetClick(['nama', 'kelas'])} className="text-[9px] font-black text-rose-500 hover:underline uppercase tracking-widest bg-rose-500/5 px-2 py-1 rounded-lg transition-colors">Reset</button>
+                                <button onClick={() => handlePresetClick(['nama_kelas', 'wali_kelas'])} className="text-[9px] font-black text-rose-500 hover:underline uppercase tracking-widest bg-rose-500/5 px-2 py-1 rounded-lg transition-colors">Reset</button>
                             </div>
                         </div>
 
@@ -219,7 +183,7 @@ export default function StudentExportModal({
                             ))}
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {columnButtons}
                         </div>
                     </div>
@@ -234,7 +198,7 @@ export default function StudentExportModal({
                                     value={fileName}
                                     onChange={(e) => setFileName(e.target.value)}
                                     placeholder="Nama file export..."
-                                    className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-xs font-bold focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all placeholder:opacity-50 pr-20"
+                                    className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-xs font-bold focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all placeholder:opacity-50 pr-20 text-[var(--color-text)]"
                                 />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-[var(--color-border)] text-[8px] font-black uppercase text-[var(--color-text-muted)]">
                                     .xlsx / .pdf
@@ -297,27 +261,11 @@ export default function StudentExportModal({
                     {/* Section 4: Format Grid */}
                     <div className="space-y-3">
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">4 — Mulai Ekspor</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                             {[
                                 { label: 'CSV', icon: faFileCsv, desc: 'Universal', onClick: () => handleExportCSV(fileName, exportOptions), color: 'hover:border-slate-400 hover:bg-slate-50', iconColor: 'text-slate-500' },
                                 { label: 'Excel', icon: faFileExcel, desc: '.xlsx', onClick: () => handleExportExcel(fileName), color: 'hover:border-emerald-400 hover:bg-emerald-50 text-emerald-700', iconColor: 'text-emerald-500' },
                                 { label: 'PDF Tabel', icon: faFilePdf, desc: 'Tabel', onClick: () => handleExportPDF(fileName, exportOptions), color: 'hover:border-rose-400 hover:bg-rose-50 text-rose-700', iconColor: 'text-rose-500' },
-                                {
-                                    label: 'PDF Kartu', icon: faIdCard, desc: 'Cetak Kartu',
-                                    onClick: async () => {
-                                        let targets = []
-                                        if (exportScope === 'selected' && selectedStudentIds.length > 0) {
-                                            targets = students.filter(s => selectedStudentIds.includes(s.id))
-                                        } else if (exportScope === 'all') {
-                                            targets = students
-                                        } else {
-                                            targets = students
-                                        }
-                                        if (!targets.length) return addToast?.('Tidak ada siswa untuk dicetak', 'warning')
-                                        generateStudentPDF?.(targets)
-                                    },
-                                    color: 'hover:border-orange-400 hover:bg-orange-50 text-orange-700', iconColor: 'text-orange-500'
-                                },
                             ].map(({ label, icon, desc, onClick, color, iconColor }) => (
                                 <button
                                     key={label}

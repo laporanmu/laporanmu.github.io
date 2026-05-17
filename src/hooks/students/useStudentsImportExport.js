@@ -571,13 +571,22 @@ export function useStudentsImportExport({
 
             // Auto-mapping
             const mapping = {}
+            const norm = (str) => (str || '').toLowerCase().replace(/[\s\xA0\n\r]+/g, ' ').trim()
             SYSTEM_COLS.forEach(sys => {
-                // Find matching header by synonym
-                const found = headers.find(h => {
-                    const l = h.toLowerCase().trim()
-                    return sys.synonyms.includes(l) || l === sys.key
+                const match = headers.find(h => {
+                    const normH = norm(h)
+                    const cleanH = norm(h.split(/[\(\[\{（\n\r]/)[0])
+                    const normL = norm(sys.label)
+                    const normK = norm(sys.key)
+                    
+                    if (normH === normL || normH === normK || cleanH === normL || cleanH === normK) return true
+                    if (sys.synonyms && sys.synonyms.some(syn => {
+                        const s = norm(syn)
+                        return normH === s || cleanH === s || cleanH.replace(/[^a-z0-9]/g,'') === s.replace(/[^a-z0-9]/g,'')
+                    })) return true
+                    return false
                 })
-                if (found) mapping[sys.key] = found
+                if (match) mapping[sys.key] = match
             })
             setImportColumnMapping(mapping)
 

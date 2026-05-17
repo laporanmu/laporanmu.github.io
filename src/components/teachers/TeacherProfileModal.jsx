@@ -14,9 +14,9 @@ import { AuditTimeline } from '../../pages/admin/LogsPage'
 import { StatCard, EmptyState } from '../ui/DataDisplay'
 
 const STATUS_CONFIG = {
-    active: { label: 'Aktif', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-    inactive: { label: 'Nonaktif', color: 'bg-rose-500/10 text-rose-600 border-rose-500/20' },
-    leave: { label: 'Cuti', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' }
+    active: { label: 'Aktif', color: 'bg-emerald-500 text-white border-white/20' },
+    inactive: { label: 'Nonaktif', color: 'bg-rose-500 text-white border-white/20' },
+    leave: { label: 'Cuti', color: 'bg-amber-500 text-white border-white/20' }
 }
 
 export default memo(function TeacherProfileModal({
@@ -84,14 +84,14 @@ export default memo(function TeacherProfileModal({
         >
             <div className="space-y-4">
                 {/* ── Header Profile Card ── */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 text-white shadow-xl">
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-900 p-5 text-white shadow-xl">
                     <div className="relative flex items-center gap-5">
                         <div className="relative shrink-0">
                             <div className="w-20 h-20 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-1 flex items-center justify-center text-2xl font-black overflow-hidden shadow-lg">
                                 {selectedTeacher.avatar_url || selectedTeacher.photo_url ? (
                                     <img src={selectedTeacher.avatar_url || selectedTeacher.photo_url} className="w-full h-full object-cover rounded-lg" alt="" />
                                 ) : (
-                                    <span className="opacity-50">{selectedTeacher.name?.charAt(0) || '?'}</span>
+                                    <span>{selectedTeacher.name?.charAt(0) || '?'}</span>
                                 )}
                             </div>
                             <div className={`absolute -bottom-2 -right-2 px-2 py-0.5 rounded-md text-[8px] font-black shadow-lg border border-white/20 ${STATUS_CONFIG[selectedTeacher.status]?.color || 'bg-slate-500 text-white'}`}>
@@ -120,8 +120,8 @@ export default memo(function TeacherProfileModal({
                         </div>
 
                         {profileStats && (
-                            <div className="shrink-0 text-center px-4 py-2 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 hidden sm:block">
-                                <p className="text-[8px] font-black text-white/50 uppercase tracking-widest mb-1">Total Poin</p>
+                            <div className="shrink-0 text-center px-4 py-2 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10">
+                                <p className="text-[8px] font-black text-white/50 uppercase tracking-widest mb-1">Poin</p>
                                 <p className={`text-2xl font-black ${profileStats.totalPts >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                     {profileStats.totalPts > 0 ? '+' : ''}{profileStats.totalPts || 0}
                                 </p>

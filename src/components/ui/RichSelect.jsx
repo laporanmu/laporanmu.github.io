@@ -16,7 +16,9 @@ const RichSelect = ({
     small, 
     status = 'normal',
     searchable = false,
-    className = ""
+    className = "",
+    disabled = false,
+    allowCustom = false
 }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [search, setSearch] = useState('')
@@ -94,14 +96,15 @@ const RichSelect = ({
         return options.filter(o => o.name?.toLowerCase().includes(s) || o.id?.toString().toLowerCase().includes(s))
     }, [options, search])
 
-    const selectedOption = options.find(o => String(o.id) === String(value)) || (extraOption?.id === value ? extraOption : null)
+    const selectedOption = options.find(o => String(o.id) === String(value)) || (extraOption?.id === value ? extraOption : (allowCustom && value ? { id: value, name: value } : null))
 
     return (
         <div className={`relative ${className}`} ref={ref}>
             <button
                 type="button"
-                onClick={toggle}
-                className={`w-full flex items-center justify-between gap-2 ${small ? 'px-3 h-8 sm:h-9' : 'pl-9 pr-3 h-11'} rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm`}
+                onClick={disabled ? undefined : toggle}
+                disabled={disabled}
+                className={`w-full flex items-center justify-between gap-2 ${small ? 'px-3 h-8 sm:h-9' : 'pl-9 pr-3 h-11'} rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
                 <div className="flex items-center gap-2 truncate">
                     {icon && !small && <FontAwesomeIcon icon={icon} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors ${iconStatusClasses[status]}`} />}
@@ -119,7 +122,7 @@ const RichSelect = ({
                     style={{
                         width: 'max-content',
                         minWidth: coords.width,
-                        maxWidth: Math.max(300, coords.width),
+                        maxWidth: small ? coords.width : Math.max(300, coords.width),
                         left: coords.left,
                         top: coords.placement === 'top' ? 'auto' : coords.bottom + 8,
                         bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
@@ -168,9 +171,23 @@ const RichSelect = ({
                             </button>
                         )}
                         
+                        {allowCustom && search && !options.some(o => o.name?.toLowerCase() === search.toLowerCase()) && (
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onChange(search); setIsOpen(false); }}
+                                className="w-full text-left px-4 py-2 text-[11px] font-bold text-[var(--color-primary)] bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 transition-all flex items-center justify-between group whitespace-nowrap border-b border-[var(--color-border)]"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                                    <span>Gunakan "{search}"</span>
+                                </div>
+                                <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                            </button>
+                        )}
+                        
                         {filteredOptions.length === 0 ? (
                             <div className="px-4 py-6 text-center">
-                                <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-40">Tidak ditemukan</p>
+                                <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-40">{allowCustom ? 'Ketik untuk menambahkan' : 'Tidak ditemukan'}</p>
                             </div>
                         ) : filteredOptions.map((opt) => (
                             <button

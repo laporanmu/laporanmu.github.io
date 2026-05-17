@@ -327,8 +327,8 @@ const TeacherFormModal = memo(function TeacherFormModal({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Status Kepegawaian</label>
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Status Kepegawaian</label>
                             <RichSelect
                                 value={form.employment_status}
                                 onChange={val => setField('employment_status', val)}
@@ -340,14 +340,20 @@ const TeacherFormModal = memo(function TeacherFormModal({
                                     { id: 'ASNP3K', name: 'ASN P3K' },
                                 ]}
                                 placeholder="Pilih status..."
+                                icon={faIdBadge}
                             />
                         </div>
                         <div className="relative group">
                             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Mata Pelajaran Utama</label>
-                            <div className="relative">
-                                <input type="text" value={form.subject} onChange={e => setField('subject', e.target.value)} list="subj-suggest" placeholder="e.g. Matematika" className={inputCls('subject')} />
-                                <datalist id="subj-suggest">{(subjectsList || []).map(s => <option key={s} value={s} />)}</datalist>
-                            </div>
+                            <RichSelect
+                                value={form.subject}
+                                onChange={val => setField('subject', val)}
+                                options={(subjectsList || []).map(s => ({ id: s, name: s }))}
+                                placeholder="e.g. Matematika"
+                                icon={faBook}
+                                searchable
+                                allowCustom
+                            />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <div className="relative group">
@@ -359,14 +365,14 @@ const TeacherFormModal = memo(function TeacherFormModal({
                                 <input type="number" value={form.teaching_hours} onChange={e => setField('teaching_hours', e.target.value)} placeholder="0 Jam / Minggu" className={inputCls('teaching_hours')} />
                             </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Status Aktif</label>
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Status Aktif</label>
                             <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
                                 {[
-                                    { key: 'active', label: 'Aktif', activeCls: 'bg-emerald-500 text-white' },
-                                    { key: 'inactive', label: 'Nonaktif', activeCls: 'bg-slate-700 text-white' },
+                                    { key: 'active', label: 'Aktif', activeCls: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' },
+                                    { key: 'inactive', label: 'Nonaktif', activeCls: 'bg-slate-700 text-white shadow-lg shadow-slate-700/20' },
                                 ].map((opt) => (
-                                    <button key={opt.key} type="button" onClick={() => setField('status', opt.key)} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${form.status === opt.key ? opt.activeCls : 'text-[var(--color-text-muted)]'}`}>{opt.label}</button>
+                                    <button key={opt.key} type="button" onClick={() => setField('status', opt.key)} className={`flex-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${form.status === opt.key ? opt.activeCls : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>{opt.label}</button>
                                 ))}
                             </div>
                         </div>
@@ -383,8 +389,8 @@ const TeacherFormModal = memo(function TeacherFormModal({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Tingkat Pendidikan</label>
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tingkat Pendidikan</label>
                             <RichSelect
                                 value={form.last_education}
                                 onChange={val => setField('last_education', val)}
@@ -398,6 +404,7 @@ const TeacherFormModal = memo(function TeacherFormModal({
                                     { id: 'S3', name: 'S3' },
                                 ]}
                                 placeholder="Pilih tingkat..."
+                                icon={faGraduationCap}
                             />
                         </div>
                         <div className="relative group">
@@ -408,11 +415,14 @@ const TeacherFormModal = memo(function TeacherFormModal({
                             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tahun Lulus</label>
                             <input type="number" value={form.graduation_year} onChange={e => setField('graduation_year', e.target.value)} placeholder="Tahun" className={inputCls('graduation_year')} />
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Jenis Kelamin</label>
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Jenis Kelamin</label>
                             <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
-                                {[{ key: 'L', label: 'Laki-laki', c: 'bg-indigo-500' }, { key: 'P', label: 'Perempuan', c: 'bg-rose-500' }].map(o => (
-                                    <button key={o.key} type="button" onClick={() => setField('gender', o.key)} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${form.gender === o.key ? o.c + ' text-white' : 'text-[var(--color-text-muted)]'}`}>{o.label}</button>
+                                {[
+                                    { key: 'L', label: 'Laki-laki', activeCls: 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' },
+                                    { key: 'P', label: 'Perempuan', activeCls: 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' }
+                                ].map(o => (
+                                    <button key={o.key} type="button" onClick={() => setField('gender', o.key)} className={`flex-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${form.gender === o.key ? o.activeCls : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>{o.label}</button>
                                 ))}
                             </div>
                         </div>
@@ -464,19 +474,22 @@ const TeacherFormModal = memo(function TeacherFormModal({
                                 <input type="text" value={form.fingerspot_name} onChange={e => setField('fingerspot_name', e.target.value)} placeholder="Sesuai mesin absensi" className={inputCls('fingerspot_name')} />
                             </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Tipe Tugas</label>
+                        <div className="relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tipe Tugas</label>
                             <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
-                                {[{ key: 'guru', label: 'Guru' }, { key: 'karyawan', label: 'Karyawan' }].map(o => (
-                                    <button key={o.key} type="button" onClick={() => setField('type', o.key)} className={`flex-1 rounded-lg text-[10px] font-bold transition-colors ${form.type === o.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}>{o.label}</button>
+                                {[
+                                    { key: 'guru', label: 'Guru', activeCls: 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' },
+                                    { key: 'karyawan', label: 'Karyawan', activeCls: 'bg-slate-700 text-white shadow-lg shadow-slate-700/20' }
+                                ].map(o => (
+                                    <button key={o.key} type="button" onClick={() => setField('type', o.key)} className={`flex-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${form.type === o.key ? o.activeCls : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>{o.label}</button>
                                 ))}
                             </div>
                         </div>
-                        <div className="sm:col-span-2 space-y-2">
-                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Hari Kerja Aktif</label>
+                        <div className="sm:col-span-2 relative group">
+                            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Hari Kerja Aktif</label>
                             <div className="flex flex-wrap gap-2">
                                 {DAYS.map(day => (
-                                    <button key={day} type="button" onClick={() => toggleWorkDay(day)} className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-colors border ${form.work_days.includes(day) ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/20' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-border)]'}`}>{day}</button>
+                                    <button key={day} type="button" onClick={() => toggleWorkDay(day)} className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-all duration-200 border ${form.work_days.includes(day) ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-lg shadow-[var(--color-primary)]/20' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]'}`}>{day}</button>
                                 ))}
                             </div>
                         </div>

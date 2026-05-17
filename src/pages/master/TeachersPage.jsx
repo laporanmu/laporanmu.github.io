@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import { createPortal } from 'react-dom'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -12,7 +12,8 @@ import {
     faCircleCheck, faUsers, faFileLines, faAnglesLeft, faAnglesRight,
     faChevronLeft, faChevronRight,
     faBullhorn, faIdCard, faBriefcase,
-    faFileImport, faFileExport, faShieldHalved, faFingerprint
+    faFileImport, faFileExport, faShieldHalved, faFingerprint,
+    faCheckDouble, faSquareCheck, faSortAlphaDown, faArrowUp91
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -39,13 +40,55 @@ import { StatCard } from '../../components/ui/DataDisplay'
 import * as XLSX from 'xlsx'
 import { useDebounce } from '../../hooks/useDebounce'
 
-import { useTeachersCore } from '../../hooks/teachers/useTeachersCore'
-import { useTeachersImportExport } from '../../hooks/teachers/useTeachersImportExport'
-
 // STATUS_CONFIG imported from TeacherRow component
 const LS_FILTERS = 'teachers_filters'
 const LS_COLS = 'teachers_columns'
 const LS_PAGE_SIZE = 'teachers_page_size'
+
+const SYSTEM_COLS = [
+    { key: 'name', label: 'Nama Lengkap', synonyms: ['nama', 'name', 'nama lengkap', 'nama guru', 'guru'] },
+    { key: 'nbm', label: 'NBM', synonyms: ['nbm', 'nomor baku muhammadiyah', 'no. btm', 'btm'] },
+    { key: 'subject', label: 'Mata Pelajaran', synonyms: ['mapel', 'mata pelajaran', 'subject', 'bidang studi'] },
+    { key: 'gender', label: 'Jenis Kelamin', synonyms: ['gender', 'jk', 'jenis kelamin', 'kelamin', 'sex', 'l/p'] },
+    { key: 'phone', label: 'No. WhatsApp', synonyms: ['wa', 'no. hp/wa', 'phone', 'whatsapp', 'no hp', 'no telp'] },
+    { key: 'email', label: 'Email', synonyms: ['email', 'surel', 'e-mail'] },
+    { key: 'status', label: 'Status', synonyms: ['status', 'aktif', 'status aktif'] },
+    { key: 'type', label: 'Jenis Pegawai', synonyms: ['jenis', 'type', 'jenis pegawai', 'tipe', 'peran'] },
+    { key: 'nik', label: 'NIK', synonyms: ['nik', 'nomor induk kependudukan', 'no ktp', 'ktp'] },
+    { key: 'nip', label: 'NIP', synonyms: ['nip', 'nomor induk pegawai'] },
+    { key: 'nuptk', label: 'NUPTK', synonyms: ['nuptk'] },
+    { key: 'birth_place', label: 'Tempat Lahir', synonyms: ['tempat lahir', 'birth_place', 'birthplace', 'tmp lahir'] },
+    { key: 'birth_date', label: 'Tanggal Lahir', synonyms: ['tanggal lahir', 'birth_date', 'tgl lahir', 'tanggal_lahir'] },
+    { key: 'address', label: 'Alamat', synonyms: ['alamat', 'address', 'alamat tinggal'] },
+    { key: 'employment_status', label: 'Status Kepegawaian', synonyms: ['status kepegawaian', 'status pegawai', 'kepegawaian', 'status kerja'] },
+    { key: 'teaching_hours', label: 'Jam Mengajar', synonyms: ['jam mengajar', 'teaching_hours', 'jam', 'teaching hours'] },
+    { key: 'last_education', label: 'Pendidikan Terakhir', synonyms: ['pendidikan terakhir', 'pendidikan', 'last_education', 'last education', 'pendidikan_terakhir'] },
+    { key: 'major', label: 'Jurusan', synonyms: ['jurusan', 'major', 'program studi', 'prodi'] },
+    { key: 'graduation_year', label: 'Tahun Lulus', synonyms: ['tahun lulus', 'graduation_year', 'tahun_lulus', 'lulus tahun'] },
+]
+
+const ALL_EXPORT_COLUMNS = [
+    { key: 'nama', label: 'Nama', fn: t => t.name || '' },
+    { key: 'nbm', label: 'NBM', fn: t => t.nbm || '' },
+    { key: 'subject', label: 'Mata Pelajaran', fn: t => t.subject || '' },
+    { key: 'gender', label: 'Gender', fn: t => t.gender === 'L' ? 'Laki-laki' : t.gender === 'P' ? 'Perempuan' : '-' },
+    { key: 'phone', label: 'No. HP/WA', fn: t => t.phone || '' },
+    { key: 'email', label: 'Email', fn: t => t.email || '' },
+    { key: 'status', label: 'Status', fn: t => STATUS_CONFIG[t.status]?.label || t.status || '' },
+    { key: 'join_date', label: 'Tgl Bergabung', fn: t => t.join_date || '' },
+    { key: 'address', label: 'Alamat', fn: t => t.address || '' },
+    { key: 'type', label: 'Jenis Pegawai', fn: t => t.type === 'karyawan' ? 'Karyawan' : 'Guru' },
+    { key: 'nik', label: 'NIK', fn: t => t.nik || '' },
+    { key: 'nip', label: 'NIP', fn: t => t.nip || '' },
+    { key: 'nuptk', label: 'NUPTK', fn: t => t.nuptk || '' },
+    { key: 'birth_place', label: 'Tempat Lahir', fn: t => t.birth_place || '' },
+    { key: 'birth_date', label: 'Tanggal Lahir', fn: t => t.birth_date || '' },
+    { key: 'employment_status', label: 'Status Kepegawaian', fn: t => t.employment_status || '' },
+    { key: 'teaching_hours', label: 'Jam Mengajar', fn: t => t.teaching_hours || 0 },
+    { key: 'last_education', label: 'Pendidikan Terakhir', fn: t => t.last_education || '' },
+    { key: 'major', label: 'Jurusan', fn: t => t.major || '' },
+    { key: 'graduation_year', label: 'Tahun Lulus', fn: t => t.graduation_year || '' }
+]
 
 const maskInfo = (str, vis = 4) => {
     if (!str) return '—'
@@ -63,73 +106,296 @@ function getPortalContainer(id) {
     return el;
 }
 
+// ── Isolated Search Input ────────────────────────────────────────────────────
+const DebouncedSearchInput = memo(({ searchQuery, onSearch, inputRef, isLoading }) => {
+    const [value, setValue] = useState(searchQuery)
+
+    // Debounce: propagate ke parent setelah 350ms berhenti mengetik
+    useEffect(() => {
+        const t = setTimeout(() => onSearch(value), 350)
+        return () => clearTimeout(t)
+    }, [value])
+
+    // Sync saat di-clear dari luar (resetAllFilters, klik chip ×)
+    useEffect(() => {
+        if (searchQuery === '' && value !== '') setValue('')
+    }, [searchQuery])
+
+    return (
+        <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm group-focus-within:text-[var(--color-primary)] transition-colors">
+                {isLoading ? (
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xs text-[var(--color-primary)]" />
+                ) : (
+                    <FontAwesomeIcon icon={faSearch} />
+                )}
+            </div>
+            <input
+                ref={inputRef}
+                type="text"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="Cari nama, NBM, mapel, email... (Ctrl+K)"
+                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-[var(--color-surface-alt)]/50 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all rounded-xl font-bold placeholder:font-normal placeholder:opacity-40"
+            />
+        </div>
+    )
+})
+DebouncedSearchInput.displayName = 'DebouncedSearchInput'
+
 export default function TeachersPage() {
-    const { addToast } = useToast()
-    const { profile } = useAuth()
-
-    const core = useTeachersCore({ addToast, profile })
-    const {
-        teachers, setTeachers, loading, setLoading, submitting, setSubmitting, totalRows, setTotalRows,
-        subjectsList, setSubjectsList, classesList, setClassesList, stats, setStats, uploadingPhoto, setUploadingPhoto,
-        searchQuery, setSearchQuery, debouncedSearch, filterSubject, setFilterSubject, filterGender, setFilterGender,
-        filterStatus, setFilterStatus, filterType, setFilterType, filterMissing, setFilterMissing, sortBy, setSortBy,
-        page, setPage, jumpPage, setJumpPage, showAdvFilter, setShowAdvFilter, pageSize, setPageSize,
-        visibleCols, setVisibleCols, isColMenuOpen, setIsColMenuOpen, menuPos, setMenuPos, colMenuRef,
-        isPrivacyMode, setIsPrivacyMode, isShortcutOpen, setIsShortcutOpen, isHeaderMenuOpen, setIsHeaderMenuOpen,
-        isModalOpen, setIsModalOpen, isArchiveModalOpen, setIsArchiveModalOpen, isArchivedOpen, setIsArchivedOpen,
-        isProfileOpen, setIsProfileOpen, isImportModalOpen, setIsImportModalOpen, isExportModalOpen, setIsExportModalOpen,
-        isBulkModalOpen, setIsBulkModalOpen, isBulkWAOpen, setIsBulkWAOpen, selectedItem, setSelectedItem,
-        teacherToAction, setTeacherToAction, profileTeacher, setProfileTeacher, profileStats, setProfileStats,
-        profileReports, setProfileReports, loadingProfile, setLoadingProfile, profileTab, setProfileTab,
-        archivedTeachers, setArchivedTeachers, loadingArchived, setLoadingArchived, selectedIds, setSelectedIds,
-        bulkWAIndex, setBulkWAIndex, bulkWAResults, setBulkWAResults, waTemplate, setWaTemplate,
-        quickStatusId, setQuickStatusId, quickStatusRef, headerMenuBtnRef, shortcutBtnRef, headerMenuRect,
-        setHeaderMenuRect, shortcutRect, setShortcutRect, headerMenuMounted, setHeaderMenuMounted,
-        statsScrollRef, activeStatIdx, setActiveStatIdx,
-        activeFilterCount, hasActiveFilters, resetAllFilters, fetchData, fetchStats,
-        handleAdd, handleEdit, handleSubmit, handleArchive, handleRestore, fetchArchived,
-        handleTogglePin, handlePhotoUpload, handleQuickStatus, openProfile,
-        allPageIds, allSelected, someSelected, toggleSelectAll, toggleSelect, handleBulkArchive,
-        bulkWATeachers, startBulkWA, sendNextWA
-    } = core
-
-    const importExport = useTeachersImportExport({
-        teachers,
-        selectedIds,
-        filterStatus,
-        filterGender,
-        filterSubject,
-        filterType,
-        fetchData,
-        fetchStats,
-        addToast,
-        setIsImportModalOpen,
-        setIsExportModalOpen
+    // core
+    const [teachers, setTeachers] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [submitting, setSubmitting] = useState(false)
+    const [totalRows, setTotalRows] = useState(0)
+    const [subjectsList, setSubjectsList] = useState([])
+    const [classesList, setClassesList] = useState([])
+    const [stats, setStats] = useState({ total: 0, active: 0, male: 0, female: 0, guru: 0, karyawan: 0 })
+    const [uploadingPhoto, setUploadingPhoto] = useState(false)
+    // filters
+    const [searchQuery, setSearchQuery] = useState('')
+    const debouncedSearch = useDebounce(searchQuery, 350)
+    const [filterSubject, setFilterSubject] = useState('')
+    const [filterGender, setFilterGender] = useState('')
+    const [filterStatus, setFilterStatus] = useState('active')
+    const [filterType, setFilterType] = useState('') // '' | 'guru' | 'karyawan'
+    const [filterMissing, setFilterMissing] = useState('')
+    const [sortBy, setSortBy] = useState('name_asc')
+    const [page, setPage] = useState(1)
+    const [jumpPage, setJumpPage] = useState('')
+    const [showAdvFilter, setShowAdvFilter] = useState(false)
+    const [pageSize, setPageSize] = useState(() => {
+        try { return Number(localStorage.getItem(LS_PAGE_SIZE)) || 10 } catch { return 10 }
     })
-
-    const {
-        importStep, setImportStep, importFileName, setImportFileName, importRawData, setImportRawData,
-        importFileHeaders, setImportFileHeaders, importColumnMapping, setImportColumnMapping,
-        importPreview, setImportPreview, importIssues, setImportIssues, importLoading, setImportLoading,
-        importValidationOpen, setImportValidationOpen, importDrag, setImportDrag, importing, setImporting,
-        importProgress, setImportProgress, importEditCell, setImportEditCell, importSkipDupes, setImportSkipDupes,
-        exportScope, setExportScope, exportColumns, setExportColumns, exporting, setExporting,
-        importReadyRows, hasImportBlockingErrors, SYSTEM_COLS, ALL_EXPORT_COLUMNS,
-        processImportFile, buildImportPreview, handleImportCellEdit, handleRemoveImportRow,
-        handleBulkFix, handleDownloadTemplate, handleCommitImport, getExportData,
-        handleExportCSV, handleExportExcel, handleExportPDF
-    } = importExport
-
-    const STAT_CARD_COUNT = 4
+    // columns
+    const [visibleCols, setVisibleCols] = useState({ nbm: true, subject: true, gender: true, contact: true, status: true, join: true })
+    const [isColMenuOpen, setIsColMenuOpen] = useState(false)
+    const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
+    const colMenuRef = useRef(null)
+    // ui
+    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
+    const [isShortcutOpen, setIsShortcutOpen] = useState(false)
+    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
+    // modals
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
+    const [isArchivedOpen, setIsArchivedOpen] = useState(false)
+    const [isProfileOpen, setIsProfileOpen] = useState(false)
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
+    const [isBulkWAOpen, setIsBulkWAOpen] = useState(false)
+    // form
+    const [selectedItem, setSelectedItem] = useState(null)
+    const [teacherToAction, setTeacherToAction] = useState(null)
+    // profile
+    const [profileTeacher, setProfileTeacher] = useState(null)
+    const [profileStats, setProfileStats] = useState(null)
+    const [profileReports, setProfileReports] = useState([])
+    const [loadingProfile, setLoadingProfile] = useState(false)
+    const [profileTab, setProfileTab] = useState('info')
+    // archived
+    const [archivedTeachers, setArchivedTeachers] = useState([])
+    const [loadingArchived, setLoadingArchived] = useState(false)
+    // bulk
+    const [selectedIds, setSelectedIds] = useState([])
+    const [bulkWAIndex, setBulkWAIndex] = useState(-1)
+    const [bulkWAResults, setBulkWAResults] = useState({})
+    const [waTemplate, setWaTemplate] = useState('info')
+    // quick status
+    const [quickStatusId, setQuickStatusId] = useState(null)
+    const quickStatusRef = useRef(null)
+    // import
+    const [importStep, setImportStep] = useState(1)
+    const [importFileName, setImportFileName] = useState('')
+    const [importRawData, setImportRawData] = useState([])
+    const [importFileHeaders, setImportFileHeaders] = useState([])
+    const [importColumnMapping, setImportColumnMapping] = useState({})
+    const [importPreview, setImportPreview] = useState([])
+    const [importIssues, setImportIssues] = useState([])
+    const [importLoading, setImportLoading] = useState(false)
+    const [importValidationOpen, setImportValidationOpen] = useState(true)
+    const [importDrag, setImportDrag] = useState(false)
+    const [importing, setImporting] = useState(false)
+    const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
+    const [importEditCell, setImportEditCell] = useState(null)
+    const [importSkipDupes, setImportSkipDupes] = useState(true)
+    // export
+    const [exportScope, setExportScope] = useState('filtered')
+    const [exportColumns, setExportColumns] = useState(['nama', 'nbm', 'subject', 'gender', 'phone', 'email', 'status', 'join_date'])
+    const [exporting, setExporting] = useState(false)
 
     const searchInputRef = useRef(null)
     const importFileRef = useRef(null)
     const headerMenuRef = useRef(null)
     const shortcutRef = useRef(null)
+    // Sticky portal refs & rects for header menu + shortcut dropdowns
+    const headerMenuBtnRef = useRef(null)
+    const shortcutBtnRef = useRef(null)
+    const [headerMenuRect, setHeaderMenuRect] = useState(null)
+    const [shortcutRect, setShortcutRect] = useState(null)
+    // Deferred unmount: keeps portal in DOM for 200ms after close so exit animation can play
+    const [headerMenuMounted, setHeaderMenuMounted] = useState(false)
+    const { addToast } = useToast()
+    const { profile } = useAuth()
+
+    // --- Stats Carousel Dot Indicator ---
+    const statsScrollRef = useRef(null)
+    const [activeStatIdx, setActiveStatIdx] = useState(0)
+    const STAT_CARD_COUNT = 4
 
     // access.teacher_teachers — kalau off, guru hanya bisa lihat (read-only)
     const { enabled: teacherTeachersEnabled } = useFlag('access.teacher_teachers')
     const canEdit = teacherTeachersEnabled
+
+    // ── persist ──────────────────────────────────────────────────────────────
+    useEffect(() => {
+        try { const f = JSON.parse(localStorage.getItem(LS_FILTERS) || '{}'); if (f.filterGender) setFilterGender(f.filterGender); if (f.filterStatus !== undefined) setFilterStatus(f.filterStatus); if (f.filterSubject) setFilterSubject(f.filterSubject); if (f.filterType) setFilterType(f.filterType); if (f.sortBy) setSortBy(f.sortBy) } catch { }
+        try { const c = JSON.parse(localStorage.getItem(LS_COLS) || '{}'); if (Object.keys(c).length) setVisibleCols(c) } catch { }
+    }, [])
+    useEffect(() => { try { localStorage.setItem(LS_FILTERS, JSON.stringify({ filterGender, filterStatus, filterSubject, filterType, sortBy })) } catch { } }, [filterGender, filterStatus, filterSubject, filterType, sortBy])
+    useEffect(() => { try { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) } catch { } }, [visibleCols])
+    useEffect(() => { try { localStorage.setItem(LS_PAGE_SIZE, pageSize) } catch { } }, [pageSize])
+
+    // debounce handled by useDebounce hook — reset page on search change
+    useEffect(() => { setPage(1) }, [debouncedSearch])
+
+    // ── outside click ─────────────────────────────────────────────────────────
+    // Deferred unmount effect for header menu
+    useEffect(() => {
+        if (isHeaderMenuOpen) {
+            setHeaderMenuMounted(true)
+        } else {
+            const t = setTimeout(() => setHeaderMenuMounted(false), 200)
+            return () => clearTimeout(t)
+        }
+    }, [isHeaderMenuOpen])
+
+    // Sticky positioning - keep portaled dropdowns anchored on scroll/resize
+    useEffect(() => {
+        if (!isHeaderMenuOpen && !isShortcutOpen) return
+        const update = () => {
+            if (isHeaderMenuOpen && headerMenuBtnRef.current) setHeaderMenuRect(headerMenuBtnRef.current.getBoundingClientRect())
+            if (isShortcutOpen && shortcutBtnRef.current) setShortcutRect(shortcutBtnRef.current.getBoundingClientRect())
+        }
+        update()
+        window.addEventListener('scroll', update, true)
+        window.addEventListener('resize', update)
+        return () => { window.removeEventListener('scroll', update, true); window.removeEventListener('resize', update) }
+    }, [isHeaderMenuOpen, isShortcutOpen])
+
+    useEffect(() => {
+        const h = e => {
+            if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setIsColMenuOpen(false)
+            if (quickStatusRef.current && !quickStatusRef.current.contains(e.target)) setQuickStatusId(null)
+        }
+        document.addEventListener('mousedown', h)
+        return () => document.removeEventListener('mousedown', h)
+    }, [])
+
+    // ── computed ──────────────────────────────────────────────────────────────
+    const activeFilterCount = [filterGender, filterSubject, filterMissing, filterType, filterStatus !== 'active' ? filterStatus : ''].filter(Boolean).length
+    const hasActiveFilters = !!(searchQuery || activeFilterCount)
+    const resetAllFilters = () => { setSearchQuery(''); setFilterSubject(''); setFilterGender(''); setFilterMissing(''); setFilterStatus('active'); setFilterType(''); setPage(1) }
+
+    // ── keyboard shortcuts ────────────────────────────────────────────────────
+    useEffect(() => {
+        const handler = e => {
+            const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
+            const ctrl = e.ctrlKey || e.metaKey
+            const anyModal = isModalOpen || isArchiveModalOpen || isArchivedOpen || isProfileOpen || isImportModalOpen || isExportModalOpen || isBulkModalOpen || isBulkWAOpen
+            if (e.key === 'Escape') { if (isShortcutOpen) { setIsShortcutOpen(false); return } if (anyModal) return; if (searchQuery) { setSearchQuery(''); return } if (selectedIds.length) { setSelectedIds([]); return } if (hasActiveFilters) { resetAllFilters(); return } }
+            if (ctrl && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus(); searchInputRef.current?.select(); return }
+            if (ctrl && e.key === 'f' && !isTyping) { e.preventDefault(); setShowAdvFilter(v => !v); return }
+            if (ctrl && e.key === 'a' && !isTyping) { e.preventDefault(); toggleSelectAll(); return }
+            if (ctrl && e.key === 'e' && !isTyping) { e.preventDefault(); setIsExportModalOpen(true); return }
+            if (e.key === 'n' && !isTyping) { e.preventDefault(); handleAdd(); return }
+            if (e.key === 'p' && !isTyping) { e.preventDefault(); setIsPrivacyMode(v => !v); return }
+            if (e.key === 'r' && !isTyping) { e.preventDefault(); fetchData(); return }
+            if (e.key === 'x' && !isTyping) { e.preventDefault(); resetAllFilters(); return }
+            if (e.key === '?' && !isTyping) { setIsShortcutOpen(v => !v); return }
+        }
+        window.addEventListener('keydown', handler)
+        return () => window.removeEventListener('keydown', handler)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isModalOpen, isArchiveModalOpen, isArchivedOpen, isProfileOpen, isImportModalOpen, isExportModalOpen, isBulkModalOpen, isBulkWAOpen, isShortcutOpen, searchQuery, selectedIds, hasActiveFilters])
+
+    // ── fetch ─────────────────────────────────────────────────────────────────
+    const fetchData = useCallback(async () => {
+        setLoading(true)
+        try {
+            const from = (page - 1) * pageSize, to = from + pageSize - 1
+            const sortMap = { name_asc: { col: 'name', asc: true }, name_desc: { col: 'name', asc: false }, subject_asc: { col: 'subject', asc: true }, join_asc: { col: 'join_date', asc: true }, join_desc: { col: 'join_date', asc: false } }
+            const { col, asc } = sortMap[sortBy] || sortMap.name_asc
+            let q = supabase.from('teachers').select('*', { count: 'exact' }).is('deleted_at', null).order(col, { ascending: asc }).range(from, to)
+            if (filterStatus) q = q.eq('status', filterStatus)
+            if (filterGender) q = q.eq('gender', filterGender)
+            if (filterSubject) q = q.eq('subject', filterSubject)
+            if (filterType) q = q.eq('type', filterType)
+            if (filterMissing === 'wa') q = q.or('phone.is.null,phone.eq.""')
+            if (debouncedSearch) { const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_'); q = q.or(`name.ilike.%${s}%,nbm.ilike.%${s}%,email.ilike.%${s}%,subject.ilike.%${s}%`) }
+            const { data, error, count } = await q
+            if (error) throw error
+
+            // ── Inject avatar_url dari profiles via email ────────────────────
+            // Butuh view `profiles_with_email` di Supabase (lihat komentar di bawah).
+            // Jika view belum ada, bagian ini di-skip secara graceful.
+            let teachersWithAvatar = data || []
+            const emails = teachersWithAvatar.map(t => t.email).filter(Boolean)
+            if (emails.length > 0) {
+                try {
+                    const { data: profilesData } = await supabase
+                        .from('profiles_with_email')   // view: SELECT p.*, u.email FROM profiles p JOIN auth.users u ON u.id = p.id
+                        .select('avatar_url, email')
+                        .not('avatar_url', 'is', null)
+                        .in('email', emails)
+
+                    if (profilesData?.length) {
+                        const avatarByEmail = Object.fromEntries(
+                            profilesData.map(p => [p.email, p.avatar_url])
+                        )
+                        teachersWithAvatar = teachersWithAvatar.map(t =>
+                            t.email && avatarByEmail[t.email]
+                                ? { ...t, avatar_url: avatarByEmail[t.email] }
+                                : t
+                        )
+                    }
+                } catch {
+                    // View belum dibuat — skip, avatar tidak tampil tapi app tetap jalan
+                }
+            }
+
+            setTeachers([...teachersWithAvatar].sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)))
+            setTotalRows(count ?? 0)
+            const { data: allSubj } = await supabase.from('teachers').select('subject').is('deleted_at', null).not('subject', 'is', null)
+            if (allSubj) setSubjectsList([...new Set(allSubj.map(r => r.subject).filter(Boolean))].sort())
+            const { data: cls } = await supabase.from('classes').select('id,name').order('name')
+            if (cls) setClassesList(cls)
+        } catch { addToast('Gagal memuat data guru', 'error') }
+        finally { setLoading(false) }
+    }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, debouncedSearch, addToast])
+
+    const fetchStats = useCallback(async () => {
+        try {
+            const { data } = await supabase.from('teachers').select('id,gender,status,type').is('deleted_at', null)
+            if (data) setStats({ total: data.length, active: data.filter(t => t.status === 'active').length, male: data.filter(t => t.gender === 'L').length, female: data.filter(t => t.gender === 'P').length, guru: data.filter(t => !t.type || t.type === 'guru').length, karyawan: data.filter(t => t.type === 'karyawan').length })
+        } catch { }
+    }, [])
+
+    const fetchDataRef = useRef(fetchData); const fetchStatsRef = useRef(fetchStats)
+    useEffect(() => { fetchDataRef.current = fetchData }, [fetchData])
+    useEffect(() => { fetchStatsRef.current = fetchStats }, [fetchStats])
+
+    useEffect(() => {
+        const ch = supabase.channel('teachers-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => { fetchDataRef.current(); fetchStatsRef.current() }).subscribe()
+        return () => supabase.removeChannel(ch)
+    }, [])
+
+    useEffect(() => { fetchStats() }, [])
+    useEffect(() => { fetchData() }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, debouncedSearch])
+
+
 
     // Insights Row
     const insights = useMemo(() => {
@@ -140,8 +406,15 @@ export default function TeachersPage() {
             label: `${noWARecords} Guru Tanpa WA`,
             desc: 'Kontak WhatsApp belum tersedia',
             icon: faWhatsapp,
-            color: 'text-amber-600',
-            bg: 'bg-amber-600/10',
+            color: 'text-amber-600 dark:text-amber-400',
+            borderColor: 'border-amber-500/20',
+            activeBorderColor: 'border-amber-500',
+            activeBgColor: 'bg-amber-500/5',
+            activeRingColor: 'ring-amber-500',
+            bg: 'bg-amber-500/[0.08] hover:bg-amber-500/[0.15]',
+            iconBg: 'bg-amber-500/15',
+            iconColor: 'text-amber-500',
+            activeIconBg: 'bg-amber-500 text-white',
             active: filterMissing === 'wa',
             onClick: () => { setFilterMissing(filterMissing === 'wa' ? '' : 'wa'); setPage(1); setShowAdvFilter(true) }
         })
@@ -152,17 +425,596 @@ export default function TeachersPage() {
             label: `${inactiveCount} Guru Nonaktif`,
             desc: 'Status saat ini sedang dideaktifkan',
             icon: faBoxArchive,
-            color: 'text-gray-500',
-            bg: 'bg-gray-500/10',
+            color: 'text-gray-600 dark:text-gray-400',
+            borderColor: 'border-gray-500/20',
+            activeBorderColor: 'border-gray-500',
+            activeBgColor: 'bg-gray-500/5',
+            activeRingColor: 'ring-gray-500',
+            bg: 'bg-gray-500/[0.08] hover:bg-gray-500/[0.15]',
+            iconBg: 'bg-gray-500/15',
+            iconColor: 'text-gray-500',
+            activeIconBg: 'bg-gray-500 text-white',
             active: filterStatus === 'inactive',
             onClick: () => { setFilterStatus(filterStatus === 'inactive' ? 'active' : 'inactive'); setPage(1); setShowAdvFilter(true) }
         })
 
         return res
-    }, [teachers, filterMissing, filterStatus, setFilterMissing, setPage, setShowAdvFilter, setFilterStatus])
+    }, [teachers, filterMissing, filterStatus])
+
+    // ── crud ──────────────────────────────────────────────────────────────────
+    const handleAdd = () => { setSelectedItem(null); setIsModalOpen(true) }
+    const handleEdit = item => { setSelectedItem(item); setIsModalOpen(true) }
+    const handleSubmit = async (payload) => {
+        setSubmitting(true)
+        try {
+            if (selectedItem) { const { error } = await supabase.from('teachers').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data guru berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } }) }
+            else { const { data: insData, error } = await supabase.from('teachers').insert([payload]).select().single(); if (error) throw error; addToast('Guru baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', source: 'OPERATIONAL', tableName: 'teachers', recordId: insData?.id, newData: payload }) }
+            setIsModalOpen(false); fetchData(); fetchStats()
+            return null
+        } catch (err) { return { error: true, code: err.code, message: 'Gagal menyimpan data.' } }
+        finally { setSubmitting(false) }
+    }
+    const handleArchive = async () => {
+        if (!teacherToAction) return; setSubmitting(true)
+        try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacherToAction.id, oldData: teacherToAction, newData: { ...teacherToAction, deleted_at: new Date().toISOString() } }); setIsArchiveModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
+        catch { addToast('Gagal mengarsipkan', 'error') } finally { setSubmitting(false) }
+    }
+    const handleRestore = async teacher => {
+        try { const { error } = await supabase.from('teachers').update({ deleted_at: null }).eq('id', teacher.id); if (error) throw error; addToast(`"${teacher.name}" dipulihkan`, 'success'); await logAudit({ action: 'RESTORE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacher.id, oldData: teacher, newData: { ...teacher, deleted_at: null } }); setArchivedTeachers(prev => prev.filter(t => t.id !== teacher.id)); fetchData(); fetchStats() }
+        catch { addToast('Gagal memulihkan', 'error') }
+    }
+    const fetchArchived = async () => {
+        setLoadingArchived(true)
+        try { const { data, error } = await supabase.from('teachers').select('*').not('deleted_at', 'is', null).order('deleted_at', { ascending: false }); if (error) throw error; setArchivedTeachers(data || []) }
+        catch { addToast('Gagal memuat arsip', 'error') } finally { setLoadingArchived(false) }
+    }
+
+    // ── pin ───────────────────────────────────────────────────────────────────
+    const handleTogglePin = async teacher => {
+        const newPinned = !teacher.is_pinned
+
+        // Optimistic UI Update
+        setTeachers(prev => {
+            const updated = prev.map(t =>
+                t.id === teacher.id ? { ...t, is_pinned: newPinned } : t
+            )
+            // Re-sort to put pinned at top
+            return updated.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+        })
+
+        try {
+            const { error } = await supabase
+                .from('teachers')
+                .update({ is_pinned: newPinned })
+                .eq('id', teacher.id)
+
+            if (error) throw error
+
+            await logAudit({
+                action: 'UPDATE',
+                source: 'OPERATIONAL',
+                tableName: 'teachers',
+                recordId: teacher.id,
+                oldData: { is_pinned: teacher.is_pinned },
+                newData: { is_pinned: newPinned }
+            })
+
+            addToast(
+                newPinned ? (
+                    <span className="flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faThumbtack} className="text-amber-400 rotate-[-45deg] text-[10px]" />
+                        "{teacher.name}" disematkan ke atas
+                    </span>
+                ) : (
+                    `Sematkan "${teacher.name}" dilepas`
+                ),
+                'success'
+            )
+        } catch (err) {
+            console.error('Pin error:', err)
+            // Rollback on failure
+            setTeachers(prev => {
+                const rolledBack = prev.map(t =>
+                    t.id === teacher.id ? { ...t, is_pinned: teacher.is_pinned } : t
+                )
+                return rolledBack.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+            })
+            addToast('Gagal menyematkan data', 'error')
+        }
+    }
+
+    const handlePhotoUpload = async (file) => {
+        if (!file) return null
+        setUploadingPhoto(true)
+        try {
+            const fileName = `teacher_${Date.now()}.${file.name.split('.').pop()}`
+            const { error } = await supabase.storage.from('teacher-photo').upload(fileName, file)
+            if (error) throw error
+            const { data } = supabase.storage.from('teacher-photo').getPublicUrl(fileName)
+            return data.publicUrl
+        } catch (err) {
+            console.error('Photo upload error:', err)
+            addToast('Gagal mengunggah foto', 'error')
+            return null
+        } finally { setUploadingPhoto(false) }
+    }
+
+    // ── quick status ──────────────────────────────────────────────────────────
+    const handleQuickStatus = async (teacher, newStatus) => {
+        try { const { error } = await supabase.from('teachers').update({ status: newStatus }).eq('id', teacher.id); if (error) throw error; addToast(`Status ${teacher.name} → ${STATUS_CONFIG[newStatus].label}`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacher.id, oldData: teacher, newData: { ...teacher, status: newStatus } }); setQuickStatusId(null); fetchData(); fetchStats() }
+        catch { addToast('Gagal update status', 'error') }
+    }
+
+    // ── profile ───────────────────────────────────────────────────────────────
+    const openProfile = async (teacher, tab = 'info') => {
+        setProfileTeacher(teacher); setProfileStats(null); setProfileReports([]); setProfileTab(tab); setLoadingProfile(true); setIsProfileOpen(true)
+        try {
+            const { data: reports } = await supabase.from('reports').select('id,created_at,points,description').eq('teacher_name', teacher.name).order('created_at', { ascending: false })
+            if (reports) {
+                const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0, 0, 0, 0)
+                setProfileReports(reports)
+                setProfileStats({ total: reports.length, monthly: reports.filter(r => new Date(r.created_at) >= thisMonth).length, totalPts: reports.reduce((a, r) => a + (r.points || 0), 0), posCount: reports.filter(r => (r.points || 0) > 0).length, negCount: reports.filter(r => (r.points || 0) < 0).length })
+            }
+        } catch { } finally { setLoadingProfile(false) }
+    }
+
+    // ── bulk ──────────────────────────────────────────────────────────────────
+    const allPageIds = teachers.map(t => t.id)
+    const allSelected = allPageIds.length > 0 && allPageIds.every(id => selectedIds.includes(id))
+    const someSelected = selectedIds.length > 0 && !allSelected
+    const toggleSelectAll = () => allSelected ? setSelectedIds(prev => prev.filter(id => !allPageIds.includes(id))) : setSelectedIds(prev => [...new Set([...prev, ...allPageIds])])
+    const toggleSelect = id => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+    const handleBulkArchive = async () => {
+        setSubmitting(true)
+        try { const idsSnap = [...selectedIds]; const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).in('id', idsSnap); if (error) throw error; addToast(`${idsSnap.length} guru diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', newData: { bulk_archive: true, count: idsSnap.length, ids: idsSnap } }); setSelectedIds([]); setIsBulkModalOpen(false); fetchData(); fetchStats() }
+        catch { addToast('Gagal arsip massal', 'error') } finally { setSubmitting(false) }
+    }
+    const bulkWATeachers = useMemo(() => teachers.filter(t => selectedIds.includes(t.id) && t.phone), [teachers, selectedIds])
+    const startBulkWA = () => { if (!bulkWATeachers.length) { addToast('Tidak ada guru terpilih dengan nomor WA', 'warning'); return }; setBulkWAIndex(0); setBulkWAResults({}); setIsBulkWAOpen(true) }
+    const sendNextWA = () => {
+        const t = bulkWATeachers[bulkWAIndex]
+        if (!t) return
+        const msg = {
+            info: `Assalamu'alaikum, *${t.name}*.\nBerikut informasi akun Anda di sistem.`,
+            notif: `Assalamu'alaikum, *${t.name}*.\nAda notifikasi baru untuk Anda di sistem.`
+        }
+        window.open(`https://wa.me/${t.phone.replace(/^0/, '62')}?text=${encodeURIComponent(msg[waTemplate] || msg.info)}`, '_blank')
+        setBulkWAResults(prev => ({ ...prev, [t.id]: 'sent' }))
+        setBulkWAIndex(bulkWAIndex + 1 < bulkWATeachers.length ? bulkWAIndex + 1 : -1)
+
+        logAudit({
+            action: 'SEND',
+            source: 'OPERATIONAL',
+            tableName: 'teachers',
+            recordId: t.id,
+            newData: { channel: 'whatsapp', template: waTemplate, recipient: t.name }
+        })
+    }
+    // ── import ────────────────────────────────────────────────────────────────
+    const processImportFile = async file => {
+        if (!file) return
+        const ext = file.name.toLowerCase()
+        if (!ext.endsWith('.csv') && !ext.endsWith('.xlsx')) { addToast('Format tidak didukung. Gunakan .csv atau .xlsx', 'error'); return }
+        setImportFileName(file.name)
+        setImportLoading(true)
+        try {
+            let rows = []
+            if (ext.endsWith('.csv')) rows = await new Promise(res => Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => res(r.data) }))
+            else rows = await new Promise(res => { const reader = new FileReader(); reader.onload = e => { const wb = XLSX.read(e.target.result, { type: 'array' }); res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })) }; reader.readAsArrayBuffer(file) })
+
+            if (!rows.length) { addToast('File kosong atau tidak terbaca', 'error'); return }
+
+            const headers = Object.keys(rows[0])
+            setImportRawData(rows)
+            setImportFileHeaders(headers)
+
+            // Auto-mapping
+            const mapping = {}
+            const norm = (str) => (str || '').toLowerCase().replace(/[\s\xA0\n\r]+/g, ' ').trim()
+            SYSTEM_COLS.forEach(sys => {
+                const match = headers.find(h => {
+                    const normH = norm(h)
+                    const cleanH = norm(h.split(/[\(\[\{（\n\r]/)[0])
+                    const normL = norm(sys.label)
+                    const normK = norm(sys.key)
+
+                    if (normH === normL || normH === normK || cleanH === normL || cleanH === normK) return true
+                    if (sys.synonyms && sys.synonyms.some(syn => {
+                        const s = norm(syn)
+                        return normH === s || cleanH === s || cleanH.replace(/[^a-z0-9]/g, '') === s.replace(/[^a-z0-9]/g, '')
+                    })) return true
+                    return false
+                })
+                if (match) mapping[sys.key] = match
+            })
+            setImportColumnMapping(mapping)
+            setImportStep(2)
+        } catch { addToast('Gagal membaca file import', 'error') }
+        finally { setImportLoading(false) }
+    }
+
+    const buildImportPreview = async (raw, mapping) => {
+        setImportLoading(true)
+        try {
+            const preview = raw.map((row, i) => {
+                const data = {}
+                SYSTEM_COLS.forEach(sys => {
+                    const fileCol = mapping[sys.key]
+                    data[sys.key] = fileCol ? (row[fileCol] || '').toString().trim() : ''
+                })
+
+                // Normalization
+                if (data.gender) {
+                    const g = data.gender.toUpperCase().trim()
+                    data.gender = ['L', 'LAKI-LAKI', 'LAKI LAKI', 'MALE', 'PUTRA'].includes(g) ? 'L' : ['P', 'PEREMPUAN', 'FEMALE', 'PUTRI'].includes(g) ? 'P' : ''
+                }
+                if (data.status) {
+                    const s = data.status.toLowerCase().trim()
+                    data.status = ['active', 'aktif'].includes(s) ? 'active' : ['inactive', 'nonaktif'].includes(s) ? 'inactive' : ['leave', 'cuti'].includes(s) ? 'cuti' : 'active'
+                }
+                if (data.type) {
+                    const t = data.type.toLowerCase().trim()
+                    data.type = ['karyawan', 'staf', 'staff', 'non-guru', 'kary'].includes(t) ? 'karyawan' : 'guru'
+                }
+                if (data.teaching_hours) {
+                    data.teaching_hours = Number(data.teaching_hours) || 0
+                }
+                if (data.graduation_year) {
+                    data.graduation_year = Number(data.graduation_year) || null
+                }
+                if (data.phone) {
+                    data.phone = data.phone.toString().replace(/[\s-]/g, '')
+                    if (data.phone.startsWith('62')) data.phone = '0' + data.phone.slice(2)
+                }
+
+                return { ...data, _row: i }
+            })
+
+            // Validation
+            const issues = []
+            preview.forEach((row, i) => {
+                const rowIssues = []
+                if (!row.name) rowIssues.push('Nama tidak boleh kosong')
+                if (row.nbm && preview.slice(0, i).some(p => p.nbm === row.nbm)) rowIssues.push(`NBM "${row.nbm}" duplikat di file`)
+
+                if (rowIssues.length) {
+                    issues.push({ row: i + 2, level: 'error', messages: rowIssues })
+                    row._hasError = true
+                }
+            })
+
+            setImportPreview(preview)
+            setImportIssues(issues)
+        } finally {
+            setImportLoading(false)
+        }
+    }
+
+    const handleImportCellEdit = (rowIdx, colKey, newValue) => {
+        setImportPreview(prev => {
+            const next = [...prev]
+            next[rowIdx] = { ...next[rowIdx], [colKey]: newValue }
+
+            // Re-validate row
+            const rowIssues = []
+            if (!next[rowIdx].name) rowIssues.push('Nama tidak boleh kosong')
+            // (Minimal re-validation for speed)
+
+            next[rowIdx]._hasError = rowIssues.length > 0
+
+            // Re-build all issues (ideally only update for this row)
+            const newIssues = importIssues.filter(iss => iss.row !== rowIdx + 2)
+            if (rowIssues.length) {
+                newIssues.push({ row: rowIdx + 2, level: 'error', messages: rowIssues })
+            }
+            setImportIssues(newIssues.sort((a, b) => a.row - b.row))
+
+            return next
+        })
+    }
+
+    const handleRemoveImportRow = idx => {
+        setImportPreview(prev => prev.filter((_, i) => i !== idx))
+        setImportIssues(prev => prev.filter(iss => iss.row !== idx + 2).map(iss => iss.row > idx + 2 ? { ...iss, row: iss.row - 1 } : iss))
+    }
+
+    const handleBulkFix = (colKey, value) => {
+        setImportPreview(prev => prev.map(r => ({ ...r, [colKey]: value, _hasError: colKey === 'name' ? !value : r._hasError })))
+        if (colKey === 'name' && value) setImportIssues(prev => prev.filter(iss => !iss.messages.includes('Nama tidak boleh kosong')))
+        addToast(`Berhasil merubah semua baris ke ${value}`, 'success')
+    }
+
+    const handleDownloadTemplate = () => {
+        const headers = [
+            'Nama Lengkap',
+            'NBM',
+            'Mata Pelajaran',
+            'Jenis Kelamin (L/P)',
+            'No. WhatsApp',
+            'Email',
+            'Status (active/inactive/cuti)',
+            'Jenis Pegawai (guru/karyawan)',
+            'NIK',
+            'NIP',
+            'NUPTK',
+            'Tempat Lahir',
+            'Tanggal Lahir (YYYY-MM-DD)',
+            'Alamat',
+            'Status Kepegawaian (GTY/PTY/GTT/PTT)',
+            'Jam Mengajar',
+            'Pendidikan Terakhir',
+            'Jurusan',
+            'Tahun Lulus'
+        ]
+        const data = [
+            [
+                'Ahmad Fauzi, S.Pd',
+                '12345678',
+                'Bahasa Indonesia',
+                'L',
+                '081234567890',
+                'ahmad@sekolah.sch.id',
+                'active',
+                'guru',
+                '3328123456789001',
+                '198501012010011002',
+                '9876543210987654',
+                'Sleman',
+                '1985-01-01',
+                'Jl. Kaliurang KM 10, Sleman',
+                'GTY',
+                '24',
+                'S1',
+                'Pendidikan Bahasa Indonesia',
+                '2008'
+            ],
+            [
+                'Siti Aminah, M.Pd',
+                '87654321',
+                'Matematika',
+                'P',
+                '089876543210',
+                'siti@sekolah.sch.id',
+                'active',
+                'guru',
+                '3328876543210002',
+                '',
+                '',
+                'Yogyakarta',
+                '1988-05-12',
+                'Jl. Godean KM 5, Yogyakarta',
+                'PTY',
+                '20',
+                'S2',
+                'Pendidikan Matematika',
+                '2012'
+            ]
+        ]
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...data])
+
+        // Perfect column width styling
+        ws['!cols'] = [
+            { wch: 25 }, // Nama Lengkap
+            { wch: 12 }, // NBM
+            { wch: 20 }, // Mata Pelajaran
+            { wch: 18 }, // Jenis Kelamin
+            { wch: 15 }, // No. WhatsApp
+            { wch: 25 }, // Email
+            { wch: 28 }, // Status
+            { wch: 28 }, // Jenis Pegawai
+            { wch: 20 }, // NIK
+            { wch: 20 }, // NIP
+            { wch: 20 }, // NUPTK
+            { wch: 15 }, // Tempat Lahir
+            { wch: 25 }, // Tanggal Lahir
+            { wch: 30 }, // Alamat
+            { wch: 35 }, // Status Kepegawaian
+            { wch: 15 }, // Jam Mengajar
+            { wch: 20 }, // Pendidikan Terakhir
+            { wch: 25 }, // Jurusan
+            { wch: 12 }  // Tahun Lulus
+        ]
+
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Template Import Guru')
+        XLSX.writeFile(wb, 'Template Import Guru.xlsx')
+    }
+
+    const importReadyRows = importPreview.filter(r => !r._hasError)
+    const hasImportBlockingErrors = importIssues.some(x => x.level === 'error')
+
+    const handleCommitImport = async () => {
+        if (!importPreview.length) { addToast('Tidak ada data untuk diimport', 'error'); return }
+        if (hasImportBlockingErrors) { addToast('Masih ada ERROR. Perbaiki file dulu.', 'error'); return }
+
+        // Filter out dupes if skip is enabled (need to check against DB for real dupe check)
+        const validRows = importPreview.filter(r => !r._hasError)
+
+        if (!validRows.length) { addToast('Tidak ada baris valid', 'warning'); return }
+        setImporting(true); setImportProgress({ done: 0, total: validRows.length })
+        try {
+            const CHUNK = 50
+            for (let i = 0; i < validRows.length; i += CHUNK) {
+                const chunk = validRows.slice(i, i + CHUNK).map(r => ({
+                    name: r.name,
+                    nbm: r.nbm || null,
+                    subject: r.subject || null,
+                    gender: r.gender || null,
+                    phone: r.phone || null,
+                    email: r.email || null,
+                    status: r.status || 'active',
+                    type: r.type || 'guru',
+                    nik: r.nik || null,
+                    nip: r.nip || null,
+                    nuptk: r.nuptk || null,
+                    birth_place: r.birth_place || null,
+                    birth_date: r.birth_date || null,
+                    address: r.address || null,
+                    employment_status: r.employment_status || 'GTY',
+                    teaching_hours: Number(r.teaching_hours) || 0,
+                    last_education: r.last_education || null,
+                    major: r.major || null,
+                    graduation_year: r.graduation_year ? Number(r.graduation_year) : null
+                }))
+                const { error } = await supabase.from('teachers').insert(chunk); if (error) throw error
+                setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
+            }
+            addToast(`Berhasil import ${validRows.length} guru`, 'success')
+            await logAudit({ action: 'INSERT', source: 'OPERATIONAL', tableName: 'teachers', newData: { bulk_import: true, count: validRows.length, data: validRows } })
+            setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportFileName(''); setImportStep(1)
+            fetchData(); fetchStats()
+        } catch { addToast('Gagal import (cek constraint DB / duplikat)', 'error') }
+        finally { setImporting(false) }
+    }
+
+    // ── export ────────────────────────────────────────────────────────────────
+    const getExportData = async () => {
+        let q = supabase.from('teachers').select('name,nbm,subject,gender,phone,email,status,join_date,address').is('deleted_at', null)
+
+        if (exportScope === 'selected' && selectedIds.length > 0) {
+            q = q.in('id', selectedIds)
+        } else if (exportScope === 'filtered') {
+            if (filterStatus) q = q.eq('status', filterStatus)
+            if (filterGender) q = q.eq('gender', filterGender)
+            if (filterSubject) q = q.eq('subject', filterSubject)
+            if (filterType) q = q.eq('type', filterType)
+        }
+
+        q = q.order('name')
+        const { data, error } = await q
+        if (error) throw error
+
+        return (data || []).map(t => {
+            const row = {}
+            exportColumns.forEach(key => {
+                const col = ALL_EXPORT_COLUMNS.find(c => c.key === key)
+                if (col) row[col.label] = col.fn(t)
+            })
+            return row
+        })
+    }
+
+    const handleExportCSV = async (filename, options = {}) => {
+        setExporting(true)
+        try {
+            const rows = await getExportData()
+            if (!rows.length) return addToast('Tidak ada data', 'warning')
+
+            const headers = Object.keys(rows[0])
+            const csvContent = [
+                ...(options.includeHeader !== false ? [headers.join(',')] : []),
+                ...rows.map(r => headers.map(h => {
+                    const v = String(r[h] ?? '').replace(/"/g, '""')
+                    return `"${v}"`
+                }).join(','))
+            ].join('\n')
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(blob)
+            a.download = `${filename || 'export_guru'}.csv`
+            a.click()
+
+            await logAudit({
+                action: 'EXPORT',
+                source: 'OPERATIONAL',
+                tableName: 'teachers',
+                newData: {
+                    format: 'csv',
+                    scope: exportScope,
+                    columns: exportColumns,
+                    count: rows.length
+                }
+            })
+
+            addToast(`Export CSV berhasil (${rows.length} guru)`, 'success')
+            setIsExportModalOpen(false)
+        } catch { addToast('Gagal export CSV', 'error') }
+        finally { setExporting(false) }
+    }
+
+    const handleExportExcel = async (filename) => {
+        setExporting(true)
+        try {
+            const rows = await getExportData()
+            if (!rows.length) return addToast('Tidak ada data', 'warning')
+            const ws = XLSX.utils.json_to_sheet(rows)
+            ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 14) }))
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'Data Guru')
+            XLSX.writeFile(wb, `${filename || 'export_guru'}.xlsx`)
+
+            await logAudit({
+                action: 'EXPORT',
+                source: 'OPERATIONAL',
+                tableName: 'teachers',
+                newData: {
+                    format: 'xlsx',
+                    scope: exportScope,
+                    columns: exportColumns,
+                    count: rows.length
+                }
+            })
+
+            addToast(`Export Excel berhasil (${rows.length} guru)`, 'success')
+            setIsExportModalOpen(false)
+        } catch { addToast('Gagal export Excel', 'error') }
+        finally { setExporting(false) }
+    }
+
+    const handleExportPDF = async (filename, options = {}) => {
+        setExporting(true)
+        try {
+            const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+                import('jspdf'),
+                import('jspdf-autotable'),
+            ])
+            const autoTable = autoTableMod.default || autoTableMod
+            const allRows = await getExportData()
+            if (!allRows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+
+            const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
+            doc.setFontSize(13)
+            doc.text('Laporan Data Guru', 14, 12)
+            doc.setFontSize(8)
+            doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}  |  Total: ${allRows.length} guru  |  Scope: ${exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'}`, 14, 18)
+
+            const headers = Object.keys(allRows[0])
+            const rows = allRows.map(r => headers.map(h => String(r[h] ?? '')))
+
+            autoTable(doc, {
+                head: options.includeHeader !== false ? [headers] : [],
+                body: rows,
+                startY: 22,
+                styles: { fontSize: 7.5 },
+                headStyles: { fillColor: [79, 70, 229] },
+                alternateRowStyles: { fillColor: [245, 245, 255] },
+            })
+
+            doc.save(`${filename || 'export_guru'}.pdf`)
+            addToast(`Export PDF berhasil (${allRows.length} guru)`, 'success')
+
+            await logAudit({
+                action: 'EXPORT',
+                source: 'OPERATIONAL',
+                tableName: 'teachers',
+                newData: {
+                    format: 'pdf',
+                    scope: exportScope,
+                    columns: exportColumns,
+                    count: allRows.length
+                }
+            })
+            setIsExportModalOpen(false)
+        } catch (e) {
+            console.error(e)
+            addToast('Gagal export PDF', 'error')
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const disp = val => isPrivacyMode ? maskInfo(val) : (val || '—')
-
 
     // ══════════════════════════════════════════════════════════════════════════
     return (
@@ -330,6 +1182,18 @@ export default function TeachersPage() {
                             getPortalContainer('portal-teacher-shortcut-menu')
                         )}
 
+                        <input
+                            type="file"
+                            ref={importFileRef}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) processImportFile(file);
+                                e.target.value = '';
+                            }}
+                            className="hidden"
+                            accept=".csv,.xlsx"
+                        />
+
                         {/* Privasi toggle */}
                         <button
                             onClick={() => setIsPrivacyMode(!isPrivacyMode)}
@@ -372,18 +1236,27 @@ export default function TeachersPage() {
 
                 {/* Insights Hub */}
                 {insights.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-6 animate-in fade-in slide-in-from-top-1 duration-500">
+                    <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-6 animate-in fade-in slide-in-from-top-1 duration-500 pb-1">
                         {insights.map((ins) => (
                             <button
                                 key={ins.id}
                                 onClick={ins.onClick}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all hover:scale-[1.02] active:scale-95 ${ins.active ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 ring-1 ring-[var(--color-primary)]' : `border-current opacity-80 ${ins.bg} ${ins.color}`}`}
+                                className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all hover:scale-[1.02] active:scale-95 shrink-0
+                                    ${ins.active
+                                        ? `${ins.activeBorderColor} ${ins.activeBgColor} ring-1 ${ins.activeRingColor}`
+                                        : `${ins.bg} ${ins.borderColor}`
+                                    }`}
                             >
-                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${ins.active ? 'bg-[var(--color-primary)] text-white' : 'bg-white/20'}`}>
-                                    <FontAwesomeIcon icon={ins.icon} className="text-[10px]" />
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0
+                                    ${ins.active
+                                        ? ins.activeIconBg
+                                        : ins.iconBg
+                                    }`}
+                                >
+                                    <FontAwesomeIcon icon={ins.icon} className={`text-[10px] ${ins.active ? 'text-white' : ins.iconColor}`} />
                                 </div>
-                                <div className="text-left">
-                                    <p className={`text-[10px] font-black leading-none ${ins.active ? 'text-[var(--color-primary)]' : ''}`}>{ins.label}</p>
+                                <div className="text-left whitespace-nowrap">
+                                    <p className={`text-[10px] font-black leading-none ${ins.color}`}>{ins.label}</p>
                                     <p className="text-[9px] text-[var(--color-text-muted)] font-bold mt-0.5">{ins.desc}</p>
                                 </div>
                             </button>
@@ -393,23 +1266,194 @@ export default function TeachersPage() {
 
                 {/* ── Filter Bar ── */}
                 <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
-                    <div className="flex flex-row items-center gap-2 p-3">
-                        <div className="flex-1 relative">
-                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm"><FontAwesomeIcon icon={faSearch} /></div>
-                            <input ref={searchInputRef} type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari nama, NBM, mapel, email... (Ctrl+K)"
-                                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl" />
-                            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><FontAwesomeIcon icon={faTimes} className="text-xs" /></button>}
+                    {/* Row 1: Search + Quick Filters + Action Buttons */}
+                    <div className="flex items-center gap-2 p-2.5 lg:p-3">
+                        {/* Search Bar - Dynamic & Responsive */}
+                        <div className="flex-initial w-full lg:w-[232px] xl:w-[352px] min-w-[120px] transition-all duration-300">
+                            <DebouncedSearchInput
+                                searchQuery={searchQuery}
+                                onSearch={setSearchQuery}
+                                inputRef={searchInputRef}
+                                isLoading={loading}
+                            />
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <button onClick={() => setShowAdvFilter(!showAdvFilter)}
-                                className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${showAdvFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+
+                        {/* Quick Filter Chips - Desktop Only */}
+                        <div className="hidden lg:flex flex-1 items-center gap-2 overflow-x-auto scrollbar-hide py-0.5 min-w-0 pr-8 h-full [mask-image:linear-gradient(to_right,black_calc(100%-32px),transparent)]">
+                            <div className="h-4 w-px bg-[var(--color-border)] mx-1 hidden lg:block" />
+
+                            {/* Group 1: Status */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                {[
+                                    { id: '', label: 'Semua', icon: faUsers },
+                                    { id: 'active', label: 'Aktif', icon: faCheckCircle },
+                                    { id: 'inactive', label: 'Nonaktif', icon: faUserTie },
+                                ].map((s) => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => { setFilterStatus(s.id); setPage(1) }}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${filterStatus === s.id
+                                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
+                                            : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]'
+                                            }`}
+                                    >
+                                        <FontAwesomeIcon icon={s.icon} className={`text-[10px] ${filterStatus === s.id ? 'opacity-100' : 'opacity-30'}`} />
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Separator */}
+                            <div className="h-4 w-px bg-[var(--color-border)] mx-1 shrink-0" />
+
+                            {/* Group 2: Gender */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                {[
+                                    { id: 'L', label: 'Putra', icon: faMars, activeCls: 'bg-blue-500 border-blue-500' },
+                                    { id: 'P', label: 'Putri', icon: faVenus, activeCls: 'bg-pink-500 border-pink-500' },
+                                ].map((g) => (
+                                    <button
+                                        key={g.id}
+                                        onClick={() => { setFilterGender(filterGender === g.id ? '' : g.id); setPage(1) }}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${filterGender === g.id
+                                            ? `${g.activeCls} text-white`
+                                            : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]'
+                                            }`}
+                                    >
+                                        <FontAwesomeIcon icon={g.icon} className={`text-[10px] ${filterGender === g.id ? 'opacity-100' : 'opacity-30'}`} />
+                                        {g.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Separator */}
+                            <div className="h-4 w-px bg-[var(--color-border)] mx-1 shrink-0" />
+
+                            {/* Group 3: Quick Sort */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                    onClick={() => { setSortBy(sortBy === 'name_asc' ? 'name_desc' : 'name_asc'); setPage(1) }}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${sortBy.includes('name')
+                                        ? 'bg-amber-500 border-amber-500 text-white'
+                                        : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-amber-500/30 hover:bg-amber-500/5 hover:text-amber-600'
+                                        }`}
+                                >
+                                    <FontAwesomeIcon icon={faSortAlphaDown} className={`text-[10px] ${sortBy.includes('name') ? 'opacity-100' : 'opacity-30'}`} />
+                                    Nama {sortBy === 'name_asc' ? 'A-Z' : 'Z-A'}
+                                </button>
+                                <button
+                                    onClick={() => { setSortBy(sortBy === 'subject_asc' ? 'name_asc' : 'subject_asc'); setPage(1) }}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${sortBy === 'subject_asc'
+                                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                                        : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-600'
+                                        }`}
+                                >
+                                    <FontAwesomeIcon icon={faArrowUp91} className={`text-[10px] ${sortBy === 'subject_asc' ? 'opacity-100' : 'opacity-30'}`} />
+                                    Mapel A-Z
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Dedicated Divider for Enterprise Look */}
+                        <div className="hidden lg:block w-px h-4 bg-[var(--color-border)] mx-2 shrink-0" />
+
+                        {/* Action Buttons: Always visible, grouped nicely on mobile */}
+                        <div className="flex items-center justify-end gap-2 shrink-0 lg:ml-auto">
+                            <button
+                                onClick={toggleSelectAll}
+                                className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
+                                title="Pilih Semua / Batal"
+                            >
+                                <FontAwesomeIcon icon={selectedIds.length > 0 ? faCheckDouble : faSquareCheck} />
+                                <span className="hidden xs:inline">{selectedIds.length > 0 ? 'Terpilih' : 'Pilih'}</span>
+                                {selectedIds.length > 0 && (
+                                    <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">
+                                        {selectedIds.length}
+                                    </span>
+                                )}
+                            </button>
+
+                            <button
+                                onClick={() => setShowAdvFilter(!showAdvFilter)}
+                                className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${showAdvFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                            >
                                 <FontAwesomeIcon icon={faSliders} />
                                 <span className="hidden xs:inline">Filter</span>
                                 {activeFilterCount > 0 && <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">{activeFilterCount}</span>}
                             </button>
-                            {activeFilterCount > 0 && <button onClick={resetAllFilters} className="h-9 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-red-500/10 flex items-center gap-1.5"><FontAwesomeIcon icon={faXmark} /><span className="hidden sm:inline">Reset</span></button>}
                         </div>
                     </div>
+
+                    {/* Active Filter Chips */}
+                    {(searchQuery || filterSubject || filterGender || (filterStatus && filterStatus !== 'active') || filterType || filterMissing) && (
+                        <div className="px-3 pb-3 -mt-1">
+                            <div className="flex flex-wrap gap-2">
+                                {searchQuery && (
+                                    <button type="button" onClick={() => setSearchQuery('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus pencarian">
+                                        <FontAwesomeIcon icon={faSearch} className="text-[10px] opacity-60" />
+                                        <span className="max-w-[180px] truncate">"{searchQuery}"</span>
+                                        <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
+                                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterSubject && (
+                                    <button type="button" onClick={() => setFilterSubject('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[10px] font-black text-[var(--color-primary)]" title="Hapus filter mapel">
+                                        <FontAwesomeIcon icon={faChalkboardTeacher} className="text-[10px] opacity-70" />
+                                        {filterSubject}
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterGender && (
+                                    <button type="button" onClick={() => setFilterGender('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus filter gender">
+                                        <FontAwesomeIcon icon={filterGender === 'L' ? faMars : faVenus} className="text-[10px] opacity-70" />
+                                        Gender: {filterGender === 'L' ? 'Putra' : 'Putri'}
+                                        <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
+                                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterStatus && filterStatus !== 'active' && (
+                                    <button type="button" onClick={() => setFilterStatus('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600" title="Hapus filter status">
+                                        Status: {(filterStatus?.charAt(0).toUpperCase() || '') + (filterStatus?.slice(1) || '')}
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-amber-500/20 flex items-center justify-center text-amber-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterType && (
+                                    <button type="button" onClick={() => setFilterType('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-[10px] font-black text-indigo-600" title="Hapus filter jenis">
+                                        <FontAwesomeIcon icon={faUserTie} className="text-[10px] opacity-70" />
+                                        Jenis: {filterType === 'guru' ? 'Guru' : 'Karyawan'}
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-indigo-500/20 flex items-center justify-center text-indigo-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                {filterMissing && (
+                                    <button type="button" onClick={() => setFilterMissing('')}
+                                        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-orange-500/20 bg-orange-500/10 text-[10px] font-black text-orange-600" title="Hapus filter data hilang">
+                                        {filterMissing === 'wa' ? 'Tanpa WA' : filterMissing}
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-orange-500/20 flex items-center justify-center text-orange-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                        </span>
+                                    </button>
+                                )}
+                                <button type="button" onClick={resetAllFilters}
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title="Reset semua filter">
+                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
+                                    Reset semua
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {showAdvFilter && (
                         <div className="border-t border-[var(--color-border)] p-3.5 bg-[var(--color-surface-alt)]/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
@@ -552,7 +1596,7 @@ export default function TeachersPage() {
                         </table>
                     </div>
                 ) : (
-                    <div className="glass rounded-[1.5rem] border border-[var(--color-border)]">
+                    <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
                         {/* Desktop */}
                         <div className="hidden md:block overflow-x-auto">
                             <table className="w-full text-sm">
@@ -806,30 +1850,33 @@ export default function TeachersPage() {
                         iconBg="bg-amber-500/10"
                         iconColor="text-amber-600"
                         size="sm"
-                    >
-                        <div className="space-y-6">
-                            <div className="py-2">
-                                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed font-bold">
-                                    Guru <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20">{teacherToAction?.name}</span> akan diarsipkan.
-                                </p>
-                                <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-medium italic">
-                                    Seluruh riwayat mengajar & data kepegawaian tetap tersimpan dengan aman.
-                                </p>
-                            </div>
-                            <div className="flex gap-3">
-                                <button onClick={() => setIsArchiveModalOpen(false)} className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all">
-                                    BATAL
-                                </button>
+                        mobileVariant="bottom-sheet"
+                        footer={
+                            <div className="flex items-center w-full gap-3">
                                 <button
+                                    type="button"
+                                    onClick={() => setIsArchiveModalOpen(false)}
+                                    className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
+                                >
+                                    Batal
+                                </button>
+                                <div className="flex-1" />
+                                <button
+                                    type="button"
                                     onClick={handleArchive}
                                     disabled={submitting}
-                                    className="flex-[2] h-11 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                                    className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50"
                                 >
-                                    {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (
-                                        <><FontAwesomeIcon icon={faBoxArchive} className="text-xs" /> ARSIPKAN</>
-                                    )}
+                                    {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin text-[11px]" /> : <FontAwesomeIcon icon={faBoxArchive} className="text-[11px] opacity-70" />}
+                                    Arsipkan
                                 </button>
                             </div>
+                        }
+                    >
+                        <div className="px-1">
+                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                Guru <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20">{teacherToAction?.name}</span> akan diarsipkan. Riwayat mengajar & data tetap tersimpan dengan aman.
+                            </p>
                         </div>
                     </Modal>
                 )}

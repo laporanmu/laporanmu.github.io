@@ -7,19 +7,20 @@ import {
     faRotateLeft,
     faSpinner,
     faTrash,
-    faTriangleExclamation
+    faTriangleExclamation,
+    faSchool
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { EmptyState } from '../ui/DataDisplay'
 import { supabase } from '../../lib/supabase'
 
-export default function TeacherArchiveModal({
+export default function ClassArchiveModal({
     isOpen,
     onClose,
-    archivedTeachers,
+    archivedClasses,
     loadingArchived,
-    setArchivedTeachers,
-    fetchArchivedTeachers,
+    setArchivedClasses,
+    fetchArchivedClasses,
     fetchData,
     fetchStats,
     addToast
@@ -33,17 +34,17 @@ export default function TeacherArchiveModal({
 
     if (!isOpen) return null
 
-    const handleRestoreTeacher = async (teacher) => {
+    const handleRestoreClass = async (cls) => {
         setRestoring(true)
         try {
-            const { error } = await supabase.from('teachers').update({ deleted_at: null }).eq('id', teacher.id)
+            const { error } = await supabase.from('classes').update({ deleted_at: null }).eq('id', cls.id)
             if (error) throw error
-            addToast(`${teacher.name} berhasil dipulihkan`, 'success')
-            setArchivedTeachers(prev => prev.filter(t => t.id !== teacher.id))
+            addToast(`${cls.name} berhasil dipulihkan`, 'success')
+            setArchivedClasses(prev => prev.filter(c => c.id !== cls.id))
             fetchData?.()
             fetchStats?.()
         } catch {
-            addToast('Gagal memulihkan', 'error')
+            addToast('Gagal memulihkan kelas', 'error')
         } finally {
             setRestoring(false)
         }
@@ -53,22 +54,12 @@ export default function TeacherArchiveModal({
         if (!deleteTarget) return
         setDeleting(true)
         try {
-            // Nullify homeroom_teacher_id in classes
-            await supabase.from('classes').update({ homeroom_teacher_id: null }).eq('homeroom_teacher_id', deleteTarget.id)
-
-            // Delete logs
-            await supabase.from('teacher_attendance').delete().eq('teacher_id', deleteTarget.id)
-            await supabase.from('gate_logs').delete().eq('teacher_id', deleteTarget.id)
-
-            const { data, error } = await supabase.from('teachers').delete().eq('id', deleteTarget.id).select()
+            const { error } = await supabase.from('classes').delete().eq('id', deleteTarget.id)
 
             if (error) throw error
-            if (!data || data.length === 0) {
-                throw new Error("Penghapusan ditolak oleh database.")
-            }
 
             addToast(`${deleteTarget.name} dihapus permanen`, 'success')
-            setArchivedTeachers(prev => prev.filter(t => t.id !== deleteTarget.id))
+            setArchivedClasses(prev => prev.filter(c => c.id !== deleteTarget.id))
             setDeleteTarget(null)
             fetchData?.()
             fetchStats?.()
@@ -96,8 +87,8 @@ export default function TeacherArchiveModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Arsip Guru"
-            description="Kelola dan pulihkan data guru yang telah dihapus sementara."
+            title="Arsip Kelas"
+            description="Kelola dan pulihkan data kelas yang telah dihapus sementara."
             icon={faBoxArchive}
             iconBg="bg-amber-500/10"
             iconColor="text-amber-600"
@@ -117,7 +108,7 @@ export default function TeacherArchiveModal({
         >
             <div className="space-y-3 relative">
 
-                {/* ====== DELETE CONFIRMATION OVERLAY (slides in smoothly) ====== */}
+                {/* ====== DELETE CONFIRMATION OVERLAY ====== */}
                 <div
                     className={`absolute inset-0 z-20 bg-[var(--color-surface)] flex flex-col items-center justify-center gap-4 p-6 rounded-xl transition-all duration-300 ease-out ${deleteTarget ? 'opacity-100 visible scale-100' : 'opacity-0 invisible scale-95 pointer-events-none'}`}
                 >
@@ -127,7 +118,7 @@ export default function TeacherArchiveModal({
                     <div className="text-center max-w-xs">
                         <p className="text-sm font-black text-[var(--color-text)] mb-1">Hapus Permanen?</p>
                         <p className="text-[11px] font-medium text-[var(--color-text-muted)] leading-relaxed">
-                            Data guru <b className="text-red-500">{deleteTarget?.name}</b> beserta semua relasi (absen, log gerbang) akan dihapus secara permanen. Tindakan ini <b>tidak dapat dibatalkan</b>.
+                            Data kelas <b className="text-red-500">{deleteTarget?.name}</b> akan dihapus secara permanen. Tindakan ini <b>tidak dapat dibatalkan</b>.
                         </p>
                     </div>
                     <div className="flex items-center gap-3 mt-2">
@@ -141,7 +132,7 @@ export default function TeacherArchiveModal({
                         <button
                             onClick={confirmPermanentDelete}
                             disabled={deleting}
-                            className="h-9 px-5 rounded-xl bg-red-500 hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 flex items-center gap-2"
+                            className="h-9 px-5 rounded-xl bg-red-50 hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 flex items-center gap-2"
                         >
                             {deleting ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Menghapus...</> : <><FontAwesomeIcon icon={faTrash} /> Hapus Permanen</>}
                         </button>
@@ -152,7 +143,7 @@ export default function TeacherArchiveModal({
                 <div className="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20 flex items-center gap-3">
                     <FontAwesomeIcon icon={faBoxArchive} className="text-amber-600 text-base shrink-0" />
                     <div>
-                        <p className="text-[11px] font-black text-amber-700 dark:text-amber-400">{archivedTeachers.length} guru di arsip</p>
+                        <p className="text-[11px] font-black text-amber-700 dark:text-amber-400">{archivedClasses.length} kelas di arsip</p>
                         <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Pulihkan untuk mengembalikan ke daftar aktif, atau hapus permanen.</p>
                     </div>
                 </div>
@@ -162,11 +153,11 @@ export default function TeacherArchiveModal({
                         <FontAwesomeIcon icon={faSpinner} className="fa-spin mb-3 text-xl" />
                         <p className="text-xs font-bold">Memuat arsip...</p>
                     </div>
-                ) : archivedTeachers.length === 0 ? (
+                ) : archivedClasses.length === 0 ? (
                     <EmptyState
                         icon={faBoxArchive}
                         title="Arsip Kosong"
-                        description="Tidak ada data guru yang telah dihapus sementara saat ini."
+                        description="Tidak ada data kelas yang telah dihapus sementara saat ini."
                         variant="dashed"
                         color="amber"
                     />
@@ -176,38 +167,38 @@ export default function TeacherArchiveModal({
                             <table className="w-full text-xs">
                                 <thead className="bg-[var(--color-surface-alt)] sticky top-0">
                                     <tr className="text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-                                        <th className="px-3 py-2.5">Guru</th>
-                                        <th className="px-3 py-2.5 text-center whitespace-nowrap">Mata Pelajaran</th>
+                                        <th className="px-3 py-2.5">Kelas</th>
+                                        <th className="px-3 py-2.5 text-center whitespace-nowrap">Program / Major</th>
                                         <th className="px-3 py-2.5 text-center whitespace-nowrap">Diarsipkan</th>
                                         <th className="px-3 py-2.5 text-right">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {archivedTeachers.slice((archivePage - 1) * archivePageSize, archivePage * archivePageSize).map(t => (
-                                        <tr key={t.id} className="border-b last:border-0 border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors">
+                                    {archivedClasses.slice((archivePage - 1) * archivePageSize, archivePage * archivePageSize).map(c => (
+                                        <tr key={c.id} className="border-b last:border-0 border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors">
                                             <td className="px-3 py-2.5">
-                                                <p className="font-bold text-[var(--color-text)] text-xs leading-snug whitespace-nowrap">{t.name}</p>
-                                                <p className="text-[9px] font-mono text-[var(--color-text-muted)]">{t.nbm || 'Tanpa NBM'}</p>
+                                                <p className="font-bold text-[var(--color-text)] text-xs leading-snug whitespace-nowrap">{c.name}</p>
+                                                <p className="text-[9px] font-mono text-[var(--color-text-muted)]">Grade {c.grade || '-'}</p>
                                             </td>
                                             <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                                                <span className="text-[9px] font-black bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-1.5 py-0.5 rounded-md border border-[var(--color-primary)]/20">{t.subject || '—'}</span>
+                                                <span className="text-[9px] font-black bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-1.5 py-0.5 rounded-md border border-[var(--color-primary)]/20">{c.major || '—'}</span>
                                             </td>
                                             <td className="px-3 py-2.5 text-center text-[10px] font-medium text-[var(--color-text-muted)] whitespace-nowrap">
-                                                {formatRelativeDate(t.deleted_at)}
+                                                {formatRelativeDate(c.deleted_at)}
                                             </td>
                                             <td className="px-3 py-2.5 text-right">
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <button
-                                                        onClick={() => handleRestoreTeacher(t)}
+                                                        onClick={() => handleRestoreClass(c)}
                                                         disabled={restoring}
-                                                        className="h-7 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 disabled:opacity-50"
+                                                        className="h-7 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                                                     >
                                                         <FontAwesomeIcon icon={faRotateLeft} className="text-[8px]" />
                                                         Pulihkan
                                                     </button>
                                                     <button
-                                                        onClick={() => setDeleteTarget(t)}
-                                                        className="h-7 px-2.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1"
+                                                        onClick={() => setDeleteTarget(c)}
+                                                        className="h-7 px-2.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 cursor-pointer"
                                                     >
                                                         <FontAwesomeIcon icon={faTrash} className="text-[8px]" />
                                                         Hapus
@@ -221,23 +212,23 @@ export default function TeacherArchiveModal({
                         </div>
 
                         {/* Pagination Arsip */}
-                        {archivedTeachers.length > archivePageSize && (
+                        {archivedClasses.length > archivePageSize && (
                             <div className="flex items-center justify-between px-1">
                                 <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
-                                    Halaman {archivePage} dari {Math.ceil(archivedTeachers.length / archivePageSize)}
+                                    Halaman {archivePage} dari {Math.ceil(archivedClasses.length / archivePageSize)}
                                 </p>
                                 <div className="flex gap-1.5">
                                     <button
                                         disabled={archivePage === 1}
                                         onClick={() => setArchivePage(p => p - 1)}
-                                        className="w-7 h-7 rounded-lg border border-[var(--color-border)] flex items-center justify-center disabled:opacity-30 hover:bg-[var(--color-surface-alt)] shadow-sm transition-colors"
+                                        className="w-7 h-7 rounded-lg border border-[var(--color-border)] flex items-center justify-center disabled:opacity-30 hover:bg-[var(--color-surface-alt)] shadow-sm transition-colors cursor-pointer"
                                     >
                                         <FontAwesomeIcon icon={faChevronLeft} className="text-[9px]" />
                                     </button>
                                     <button
-                                        disabled={archivePage >= Math.ceil(archivedTeachers.length / archivePageSize)}
+                                        disabled={archivePage >= Math.ceil(archivedClasses.length / archivePageSize)}
                                         onClick={() => setArchivePage(p => p + 1)}
-                                        className="w-7 h-7 rounded-lg border border-[var(--color-border)] flex items-center justify-center disabled:opacity-30 hover:bg-[var(--color-surface-alt)] shadow-sm transition-colors"
+                                        className="w-7 h-7 rounded-lg border border-[var(--color-border)] flex items-center justify-center disabled:opacity-30 hover:bg-[var(--color-surface-alt)] shadow-sm transition-colors cursor-pointer"
                                     >
                                         <FontAwesomeIcon icon={faChevronRight} className="text-[9px]" />
                                     </button>

@@ -27,6 +27,7 @@ import {
     faTableList
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
+import RichSelect from '../ui/RichSelect'
 
 export default function TeacherImportModal(props) {
     const {
@@ -510,12 +511,13 @@ export default function TeacherImportModal(props) {
                                         <tr className="bg-[var(--color-surface)]">
                                             <th className="w-8 border-r border-b border-[var(--color-border)]"></th>
                                             {[
-                                                { l: 'A', k: 'NAME', n: 'Nama Lengkap', w: 'w-[21%]' },
-                                                { l: 'B', k: 'NBM', n: 'NBM', w: 'w-[13%]' },
-                                                { l: 'C', k: 'SUBJECT', n: 'Mata Pelajaran', w: 'w-[18%]' },
-                                                { l: 'D', k: 'GENDER', n: 'L/P', w: 'w-[13%]' },
-                                                { l: 'E', k: 'WA', n: 'WhatsApp', w: 'w-[14%]' },
-                                                { l: 'F', k: 'EMAIL', n: 'Email', w: 'w-[21%]' }
+                                                { l: 'A', k: 'NAME', n: 'Nama Lengkap', w: 'w-[20%]' },
+                                                { l: 'B', k: 'NBM', n: 'NBM', w: 'w-[11%]' },
+                                                { l: 'C', k: 'SUBJECT', n: 'Mata Pelajaran', w: 'w-[17%]' },
+                                                { l: 'D', k: 'GENDER', n: 'L/P', w: 'w-[10%]' },
+                                                { l: 'E', k: 'WA', n: 'WhatsApp', w: 'w-[13%]' },
+                                                { l: 'F', k: 'EMAIL', n: 'Email', w: 'w-[17%]' },
+                                                { l: 'G', k: 'STATUS', n: 'Status', w: 'w-[12%]' }
                                             ].map((col, i) => (
                                                 <th key={i} className={`px-2 py-1.5 border-r border-b border-[var(--color-border)] text-left ${col.w} min-w-0 overflow-hidden`}>
                                                     <div className="flex flex-col min-w-0">
@@ -531,8 +533,8 @@ export default function TeacherImportModal(props) {
                                     </thead>
                                     <tbody>
                                         {[
-                                            ['Ahmad S.Pd', '123456789', 'Matematika', 'L', '08123...', 'ahmad@school.com'],
-                                            ['Siti Aminah M.Pd', '987654321', 'Bahasa Inggris', 'P', '08567...', 'siti@school.com']
+                                            ['Ahmad Fauzi, S.Pd', '12345678', 'Bahasa Indonesia', 'L', '08123...', 'ahmad@school.com', 'active'],
+                                            ['Siti Aminah, M.Pd', '87654321', 'Matematika', 'P', '08567...', 'siti@school.com', 'active']
                                         ].map((row, rIdx) => (
                                             <tr key={rIdx}>
                                                 <td className="bg-[var(--color-surface-alt)] border-r border-b border-[var(--color-border)] text-[8px] font-bold text-[var(--color-text-muted)] text-center py-1">
@@ -572,13 +574,13 @@ export default function TeacherImportModal(props) {
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[45vh] overflow-y-auto pr-1 custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[35vh] overflow-y-auto pr-1 custom-scrollbar">
                         {SYSTEM_COLS.map(sys => {
                             const mapped = importColumnMapping[sys.key]
                             return (
                                 <div key={sys.key} className={`p-2.5 rounded-xl border transition-all ${mapped ? 'bg-emerald-500/4 border-emerald-500/20' : 'bg-[var(--color-surface-alt)]/50 border-[var(--color-border)]'}`}>
                                     <div className="flex items-center justify-between gap-3">
-                                        <div className="flex flex-col min-w-[70px] shrink-0">
+                                        <div className="flex flex-col w-[130px] shrink-0">
                                             <span className="text-[10px] font-black text-[var(--color-text)] flex items-center gap-1">
                                                 {sys.label}
                                                 {['name'].includes(sys.key) && <span className="text-red-500 text-[9px]">*</span>}
@@ -591,22 +593,16 @@ export default function TeacherImportModal(props) {
                                         </div>
 
                                         <div className="flex-1 min-w-0 relative">
-                                            <select
+                                            <RichSelect
+                                                small
                                                 value={mapped || ''}
-                                                onChange={(e) => setImportColumnMapping(v => ({ ...v, [sys.key]: e.target.value }))}
-                                                className={`w-full h-8 px-2.5 pr-6 rounded-lg text-[10px] font-bold border transition-all outline-none appearance-none cursor-pointer
-                                                ${mapped
-                                                        ? 'border-emerald-500/40 bg-[var(--color-surface)] text-emerald-600'
-                                                        : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/50'}`}
-                                            >
-                                                <option value="">-- Lewati Kolom --</option>
-                                                {importFileHeaders.map(h => (
-                                                    <option key={h} value={h}>{h}</option>
-                                                ))}
-                                            </select>
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-30">
-                                                <FontAwesomeIcon icon={faChevronDown} className="text-[7px]" />
-                                            </div>
+                                                onChange={(val) => setImportColumnMapping(v => ({ ...v, [sys.key]: val }))}
+                                                options={importFileHeaders.map(h => ({ id: h, name: h }))}
+                                                placeholder="-- Lewati Kolom --"
+                                                extraOption={{ id: '', name: '-- Lewati Kolom --' }}
+                                                status={mapped ? 'success' : 'normal'}
+                                                searchable={importFileHeaders.length > 5}
+                                            />
                                         </div>
                                     </div>
                                 </div>

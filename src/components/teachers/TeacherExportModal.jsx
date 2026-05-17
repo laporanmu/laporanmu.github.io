@@ -1,58 +1,46 @@
 import React, { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faCheckCircle,
-    faFileLines,
-    faSliders,
-    faSpinner,
-    faTableList,
-    faTriangleExclamation,
-    faUsers,
-    faIdCard,
-    faFileExport,
-    faHashtag,
-    faBarcode,
-    faIdCardClip,
-    faUser,
-    faVenusMars,
-    faBook,
-    faStar,
-    faCircleQuestion,
-    faTags,
-    faChartPie,
-    faArrowDownAZ,
-    faFileExcel,
-    faFileCsv,
-    faFilePdf,
-    faChevronDown,
-    faGear,
-    faHeading,
-    faArrowsLeftRight,
-    faArrowsUpDown,
-    faCalendarAlt,
-    faMapMarkerAlt,
-    faEnvelope
+    faCheckCircle, faFileLines, faSliders, faSpinner, faTableList,
+    faTriangleExclamation, faUsers, faIdCard, faFileExport, faHashtag,
+    faBarcode, faIdCardClip, faUser, faVenusMars, faBook, faStar,
+    faCircleQuestion, faTags, faChartPie, faArrowDownAZ, faFileExcel,
+    faFileCsv, faFilePdf, faChevronDown, faGear, faHeading, faArrowsLeftRight,
+    faArrowsUpDown, faCalendarAlt, faMapMarkerAlt, faEnvelope,
+    faLocationDot, faBriefcase, faClock, faGraduationCap, faBookOpen, faCalendarCheck
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import Modal from '../ui/Modal'
 
 const COLUMN_DEFS = [
-    { key: 'nama', label: 'Nama', icon: faUser },
+    { key: 'nama', label: 'Nama Lengkap', icon: faUser },
     { key: 'nbm', label: 'NBM', icon: faBarcode },
     { key: 'subject', label: 'Mata Pelajaran', icon: faBook },
-    { key: 'gender', label: 'Gender', icon: faVenusMars },
-    { key: 'phone', label: 'Whatsapp', icon: faWhatsapp },
+    { key: 'gender', label: 'Jenis Kelamin', icon: faVenusMars },
+    { key: 'phone', label: 'No. WhatsApp', icon: faWhatsapp },
     { key: 'email', label: 'Email', icon: faEnvelope },
     { key: 'status', label: 'Status', icon: faCircleQuestion },
-    { key: 'join_date', label: 'Tgl Bergabung', icon: faCalendarAlt },
+    { key: 'type', label: 'Jenis Pegawai', icon: faIdCard },
+    { key: 'nik', label: 'NIK', icon: faIdCardClip },
+    { key: 'nip', label: 'NIP', icon: faIdCardClip },
+    { key: 'nuptk', label: 'NUPTK', icon: faHashtag },
+    { key: 'birth_place', label: 'Tempat Lahir', icon: faLocationDot },
+    { key: 'birth_date', label: 'Tanggal Lahir', icon: faCalendarAlt },
     { key: 'address', label: 'Alamat', icon: faMapMarkerAlt },
+    { key: 'employment_status', label: 'Status Kepegawaian', icon: faBriefcase },
+    { key: 'teaching_hours', label: 'Jam Mengajar', icon: faClock },
+    { key: 'last_education', label: 'Pendidikan Terakhir', icon: faGraduationCap },
+    { key: 'major', label: 'Jurusan', icon: faBookOpen },
+    { key: 'graduation_year', label: 'Tahun Lulus', icon: faCalendarCheck },
+    { key: 'join_date', label: 'Tgl Bergabung', icon: faCalendarAlt },
 ]
 
 const PRESETS = [
-    { id: 'all', label: 'Data Lengkap', cols: ['nama', 'nbm', 'subject', 'gender', 'phone', 'email', 'status', 'join_date', 'address'] },
-    { id: 'contact', label: 'Kontak', cols: ['nama', 'phone', 'email'] },
-    { id: 'employment', label: 'Kepegawaian', cols: ['nama', 'nbm', 'status', 'join_date'] },
-    { id: 'academic', label: 'Akademik', cols: ['nama', 'subject'] },
+    { id: 'all', label: 'Data Lengkap', cols: COLUMN_DEFS.map(c => c.key) },
+    { id: 'contact', label: 'Kontak', cols: ['nama', 'phone', 'email', 'address'] },
+    { id: 'employment', label: 'Kepegawaian', cols: ['nama', 'nbm', 'status', 'type', 'employment_status', 'join_date', 'teaching_hours'] },
+    { id: 'academic', label: 'Akademik', cols: ['nama', 'subject', 'last_education', 'major', 'graduation_year'] },
+    { id: 'personal', label: 'Pribadi', cols: ['nama', 'gender', 'birth_place', 'birth_date', 'nik', 'nip', 'nuptk'] },
 ]
 
 export default function TeacherExportModal({
@@ -79,7 +67,6 @@ export default function TeacherExportModal({
 
     const handlePresetClick = (cols) => {
         setExportColumns(cols)
-        addToast?.('Preset berhasil diterapkan', 'success')
     }
 
     const columnButtons = COLUMN_DEFS.map(({ key, label, icon }) => {
