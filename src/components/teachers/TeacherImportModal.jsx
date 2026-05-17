@@ -22,7 +22,9 @@ import {
     faTrash,
     faRotate,
     faBolt,
-    faBook
+    faBook,
+    faSchool,
+    faTableList
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 
@@ -68,8 +70,22 @@ export default function TeacherImportModal(props) {
         STATUS_CONFIG
     } = props
 
-    const [showSubjects, setShowSubjects] = useState(false)
+    const [showSubjectsDropdown, setShowSubjectsDropdown] = useState(false)
+    const subjectsDropdownRef = useRef(null)
     const [filterIssuesOnly, setFilterIssuesOnly] = useState(false)
+
+    // Handle click outside for dropdown
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (subjectsDropdownRef.current && !subjectsDropdownRef.current.contains(e.target)) {
+                setShowSubjectsDropdown(false)
+            }
+        }
+        if (showSubjectsDropdown) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [showSubjectsDropdown])
 
     // Inline Editor Component
     const EditableCell = React.memo(({ rowIdx, colKey, value, importPreview, subjectsList, importEditCell, setImportEditCell, handleImportCellEdit, STATUS_CONFIG }) => {
@@ -302,7 +318,7 @@ export default function TeacherImportModal(props) {
                         {importStep === 1 ? (
                             <button
                                 onClick={() => (importRawData.length > 0 && importFileName) ? setImportStep(2) : importFileInputRef.current?.click()}
-                                className="h-10 px-8 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 border border-white/10"
+                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
                             >
                                 {(importRawData.length > 0 && importFileName) ? (
                                     <>Lanjutkan <FontAwesomeIcon icon={faArrowRight} /></>
@@ -319,7 +335,7 @@ export default function TeacherImportModal(props) {
                                     setImportLoading(false)
                                 }}
                                 disabled={!importColumnMapping.name}
-                                className="h-10 px-8 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2 border border-white/10"
+                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
                             >
                                 Review Data <FontAwesomeIcon icon={faArrowRight} />
                             </button>
@@ -327,7 +343,7 @@ export default function TeacherImportModal(props) {
                             <button
                                 onClick={handleCommitImport}
                                 disabled={importing || hasImportBlockingErrors || importReadyRows.length === 0}
-                                className="h-10 px-8 rounded-xl bg-emerald-600 hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 border border-white/10"
+                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
                             >
                                 {importing
                                     ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengimport...</>
@@ -412,98 +428,135 @@ export default function TeacherImportModal(props) {
                         </div>
                     </div>
 
-                    <div className="flex flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 overflow-hidden">
-                        <div className="flex items-center justify-between p-3">
-                            <button
-                                onClick={() => setShowSubjects(!showSubjects)}
-                                className="flex items-center gap-2 group outline-none"
-                            >
-                                <span className="text-[10.5px] font-black uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5 opacity-80 group-hover:text-[var(--color-text)] transition-colors">
-                                    <FontAwesomeIcon icon={faBook} className="text-emerald-500/70" /> Daftar Mapel Valid
-                                </span>
-                                <FontAwesomeIcon
-                                    icon={faChevronDown}
-                                    className={`text-[9px] text-[var(--color-text-muted)] transition-transform duration-300 ${showSubjects ? 'rotate-180' : ''}`}
-                                />
-                            </button>
-                            <button
-                                onClick={handleDownloadTemplate}
-                                className="shrink-0 h-7 px-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
-                            >
-                                <FontAwesomeIcon icon={faDownload} className="text-[10px]" /> Template
-                            </button>
-                        </div>
-
-                        <div className={`grid transition-all duration-300 ease-in-out ${showSubjects ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-                            <div className="overflow-hidden">
-                                <div className="px-3 pb-3 pt-0">
-                                    <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1 pb-1 custom-scrollbar">
-                                        {subjectsList.length > 0 ? subjectsList.map(s => (
-                                            <span key={s} className="px-2 py-0.5 rounded-lg bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] text-[10px] font-bold text-[var(--color-text)] shrink-0 hover:border-emerald-500/30 transition-colors">
-                                                {s}
-                                            </span>
-                                        )) : (
-                                            <span className="text-[11px] text-[var(--color-text-muted)] italic">Belum ada mata pelajaran yang terdaftar.</span>
-                                        )}
+                    {/* --- Reference & Guidance Section (Compact & Zero-Scroll) --- */}
+                    <div className="space-y-4">
+                        {/* Top Header: Actions & Subjects Reference */}
+                        <div className="flex items-center justify-between gap-4 p-3 bg-[var(--color-surface-alt)]/50 rounded-2xl border border-[var(--color-border)] shadow-sm">
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                                        <FontAwesomeIcon icon={faBook} className="text-xs" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text)]">Data Referensi</span>
+                                        <span className="text-[8px] font-bold text-emerald-600">Guru & Mapel</span>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)] shadow-sm">
-                        <div className="px-4 py-3 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between">
-                            <span className="text-[11px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Kolom yang Dikenali</span>
-                            <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-50 px-2.5 py-1 rounded-full bg-[var(--color-border)]/30">Auto-Matching Active</span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[var(--color-border)]">
-                            <div className="flex flex-col">
-                                {[
-                                    { label: 'Nama Lengkap', keys: 'name, nama', req: true, note: 'Diidentifikasi sebagai Nama Guru' },
-                                    { label: 'NBM', keys: 'nbm', req: false, note: 'Nomor Baku Muhammadiyah' },
-                                    { label: 'Mata Pelajaran', keys: 'subject, mapel', req: false, note: 'Sesuai daftar di atas' },
-                                ].map((r, i) => (
-                                    <div key={i} className="flex items-center justify-between gap-4 px-4 py-2.5 hover:bg-[var(--color-surface-alt)]/30 transition-colors border-b border-[var(--color-border)] last:border-b-0">
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="text-[11px] font-black text-[var(--color-text)]">{r.label}</span>
-                                                {r.req && <span className="text-red-500 text-[11px] font-black">*</span>}
+                                <div className="relative" ref={subjectsDropdownRef}>
+                                    <button
+                                        onClick={() => setShowSubjectsDropdown(!showSubjectsDropdown)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300
+                                            ${showSubjectsDropdown 
+                                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20' 
+                                                : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)] hover:border-emerald-500/50 hover:bg-emerald-500/5'}`}
+                                    >
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Daftar Mapel Valid</span>
+                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg ${showSubjectsDropdown ? 'bg-white/20' : 'bg-emerald-500/10 text-emerald-600'}`}>{subjectsList.length}</span>
+                                        <FontAwesomeIcon icon={faChevronDown} className={`text-[8px] transition-transform duration-300 ${showSubjectsDropdown ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {showSubjectsDropdown && (
+                                        <div className="absolute top-full left-0 mt-2 w-[320px] bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="p-3 border-b border-[var(--color-border)]/50">
+                                                <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Daftar Mapel (Copy & Paste):</span>
                                             </div>
-                                            <p className="text-[10px] text-[var(--color-text-muted)] font-medium truncate opacity-70">{r.note}</p>
+                                            <div className="p-2 max-h-[140px] overflow-y-auto custom-scrollbar">
+                                                <div className="grid grid-cols-2 gap-1.5">
+                                                    {subjectsList.map(s => (
+                                                        <span key={s} className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-bold text-[var(--color-text)] hover:border-emerald-500/30 transition-colors truncate">
+                                                            {s}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="p-3 bg-[var(--color-surface-alt)]/30 rounded-b-2xl border-t border-[var(--color-border)]/50">
+                                                <p className="text-[8px] text-[var(--color-text-muted)] italic leading-tight">
+                                                    * Pastikan penulisan di Excel persis seperti di atas.
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="shrink-0 flex items-center gap-1.5">
-                                            {r.keys.split(', ').map(k => (
-                                                <span key={k} className="px-2 py-0.5 rounded-lg bg-[var(--color-primary)]/5 text-[var(--color-primary)] text-[10px] font-black border border-[var(--color-primary)]/10">
-                                                    {k}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
+                                    )}
+                                </div>
                             </div>
-                            <div className="flex flex-col">
-                                {[
-                                    { label: 'Jenis Kelamin', keys: 'gender, jk', req: false, note: 'L (Laki) / P (Perempuan)' },
-                                    { label: 'No. WhatsApp', keys: 'phone, no_hp', req: false, note: '08xx atau +62xxx' },
-                                    { label: 'Email', keys: 'email', req: false, note: 'Email institusi/pribadi' },
-                                ].map((r, i) => (
-                                    <div key={i} className="flex items-center justify-between gap-4 px-4 py-2.5 hover:bg-[var(--color-surface-alt)]/30 transition-colors border-b border-[var(--color-border)] last:border-b-0">
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="text-[11px] font-black text-[var(--color-text)]">{r.label}</span>
-                                                {r.req && <span className="text-red-500 text-[11px] font-black">*</span>}
-                                            </div>
-                                            <p className="text-[10px] text-[var(--color-text-muted)] font-medium truncate opacity-70">{r.note}</p>
-                                        </div>
-                                        <div className="shrink-0 flex items-center gap-1.5">
-                                            {r.keys.split(', ').map(k => (
-                                                <span key={k} className="px-2 py-0.5 rounded-lg bg-[var(--color-primary)]/5 text-[var(--color-primary)] text-[10px] font-black border border-[var(--color-primary)]/10">
-                                                    {k}
-                                                </span>
+
+                            <button
+                                onClick={handleDownloadTemplate}
+                                className="shrink-0 h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+                            >
+                                <FontAwesomeIcon icon={faDownload} /> Download Template
+                            </button>
+                        </div>
+
+                        {/* Bottom: Excel Structure Table */}
+                        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-sm flex flex-col">
+                            <div className="px-4 py-2 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faTableList} className="text-[var(--color-primary)] text-xs" />
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Visualisasi Struktur Kolom Excel</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                                    </span>
+                                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Auto-Match Active</span>
+                                </div>
+                            </div>
+
+                            <div className="overflow-hidden bg-[var(--color-surface-alt)]/10">
+                                <table className="w-full border-collapse table-fixed">
+                                    <thead>
+                                        <tr className="bg-[var(--color-surface)]">
+                                            <th className="w-8 border-r border-b border-[var(--color-border)]"></th>
+                                            {[
+                                                { l: 'A', k: 'NAME', n: 'Nama Lengkap', w: 'w-[21%]' },
+                                                { l: 'B', k: 'NBM', n: 'NBM', w: 'w-[13%]' },
+                                                { l: 'C', k: 'SUBJECT', n: 'Mata Pelajaran', w: 'w-[18%]' },
+                                                { l: 'D', k: 'GENDER', n: 'L/P', w: 'w-[13%]' },
+                                                { l: 'E', k: 'WA', n: 'WhatsApp', w: 'w-[14%]' },
+                                                { l: 'F', k: 'EMAIL', n: 'Email', w: 'w-[21%]' }
+                                            ].map((col, i) => (
+                                                <th key={i} className={`px-2 py-1.5 border-r border-b border-[var(--color-border)] text-left ${col.w} min-w-0 overflow-hidden`}>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <div className="flex items-center justify-between gap-1 min-w-0">
+                                                            <span className="text-[9px] font-black text-[var(--color-text)] shrink-0">{col.l}</span>
+                                                            <span className="text-[7.5px] font-bold text-emerald-600 opacity-80 truncate" title={col.k}>({col.k})</span>
+                                                        </div>
+                                                        <div className="h-0.5 w-full bg-emerald-500/20 rounded-full mt-1"></div>
+                                                    </div>
+                                                </th>
                                             ))}
-                                        </div>
-                                    </div>
-                                ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[
+                                            ['Ahmad S.Pd', '123456789', 'Matematika', 'L', '08123...', 'ahmad@school.com'],
+                                            ['Siti Aminah M.Pd', '987654321', 'Bahasa Inggris', 'P', '08567...', 'siti@school.com']
+                                        ].map((row, rIdx) => (
+                                            <tr key={rIdx}>
+                                                <td className="bg-[var(--color-surface-alt)] border-r border-b border-[var(--color-border)] text-[8px] font-bold text-[var(--color-text-muted)] text-center py-1">
+                                                    {rIdx + 1}
+                                                </td>
+                                                {row.map((cell, cIdx) => (
+                                                    <td key={cIdx} className="px-2 py-1 border-r border-b border-[var(--color-border)] bg-[var(--color-surface)]/40 overflow-hidden">
+                                                        <span className="text-[9px] font-medium text-[var(--color-text)] opacity-70 truncate block" title={cell}>{cell}</span>
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="px-4 py-1.5 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex items-center justify-between">
+                                <p className="text-[8px] text-[var(--color-text-muted)] font-medium italic opacity-60">
+                                    * Gunakan judul kolom yang mendekati nama di atas untuk pencocokan otomatis.
+                                </p>
+                                <div className="flex gap-1.5">
+                                    {['.xlsx', '.csv'].map(ext => (
+                                        <span key={ext} className="text-[7px] font-black text-[var(--color-primary)] px-1 py-0.5 bg-[var(--color-primary)]/5 rounded border border-[var(--color-primary)]/10">{ext}</span>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -252,7 +252,6 @@ export default function StudentImportModal(props) {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            size="xl"
             title="Import Data Siswa"
             description="Unggah data siswa secara masal dari file Excel atau CSV. Sistem akan memvalidasi data secara otomatis."
             icon={faFileImport}
@@ -422,8 +421,8 @@ export default function StudentImportModal(props) {
                                     <button
                                         onClick={() => setShowClassesDropdown(!showClassesDropdown)}
                                         className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300
-                                            ${showClassesDropdown 
-                                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20' 
+                                            ${showClassesDropdown
+                                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20'
                                                 : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)] hover:border-emerald-500/50 hover:bg-emerald-500/5'}`}
                                     >
                                         <span className="text-[10px] font-black uppercase tracking-widest">Daftar Kelas Valid</span>
@@ -479,24 +478,24 @@ export default function StudentImportModal(props) {
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto custom-scrollbar bg-[var(--color-surface-alt)]/10">
-                                <table className="w-full border-collapse">
+                            <div className="overflow-hidden bg-[var(--color-surface-alt)]/10">
+                                <table className="w-full border-collapse table-fixed">
                                     <thead>
                                         <tr className="bg-[var(--color-surface)]">
                                             <th className="w-8 border-r border-b border-[var(--color-border)]"></th>
                                             {[
-                                                { l: 'A', k: 'NAME', n: 'Nama Lengkap' },
-                                                { l: 'B', k: 'GENDER', n: 'L/P' },
-                                                { l: 'C', k: 'CLASS', n: 'Nama Kelas' },
-                                                { l: 'D', k: 'WA', n: 'WhatsApp' },
-                                                { l: 'E', k: 'NIS', n: 'NIS' },
-                                                { l: 'F', k: 'WALI', n: 'Wali' }
+                                                { l: 'A', k: 'NAME', n: 'Nama Lengkap', w: 'w-[21%]' },
+                                                { l: 'B', k: 'GENDER', n: 'L/P', w: 'w-[13%]' },
+                                                { l: 'C', k: 'CLASS', n: 'Nama Kelas', w: 'w-[21%]' },
+                                                { l: 'D', k: 'WA', n: 'WhatsApp', w: 'w-[14%]' },
+                                                { l: 'E', k: 'NIS', n: 'NIS', w: 'w-[13%]' },
+                                                { l: 'F', k: 'WALI', n: 'Wali', w: 'w-[18%]' }
                                             ].map((col, i) => (
-                                                <th key={i} className="px-3 py-1.5 border-r border-b border-[var(--color-border)] text-left">
-                                                    <div className="flex flex-col">
-                                                        <div className="flex items-center justify-between gap-4">
-                                                            <span className="text-[9px] font-black text-[var(--color-text)]">{col.l}</span>
-                                                            <span className="text-[8px] font-bold text-emerald-600 opacity-80">({col.k})</span>
+                                                <th key={i} className={`px-2 py-1.5 border-r border-b border-[var(--color-border)] text-left ${col.w} min-w-0 overflow-hidden`}>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <div className="flex items-center justify-between gap-1 min-w-0">
+                                                            <span className="text-[9px] font-black text-[var(--color-text)] shrink-0">{col.l}</span>
+                                                            <span className="text-[7.5px] font-bold text-emerald-600 opacity-80 truncate" title={col.k}>({col.k})</span>
                                                         </div>
                                                         <div className="h-0.5 w-full bg-emerald-500/20 rounded-full mt-1"></div>
                                                     </div>
@@ -514,8 +513,8 @@ export default function StudentImportModal(props) {
                                                     {rIdx + 1}
                                                 </td>
                                                 {row.map((cell, cIdx) => (
-                                                    <td key={cIdx} className="px-3 py-1 border-r border-b border-[var(--color-border)] bg-[var(--color-surface)]/40">
-                                                        <span className="text-[9px] font-medium text-[var(--color-text)] opacity-70 whitespace-nowrap">{cell}</span>
+                                                    <td key={cIdx} className="px-2 py-1 border-r border-b border-[var(--color-border)] bg-[var(--color-surface)]/40 overflow-hidden">
+                                                        <span className="text-[9px] font-medium text-[var(--color-text)] opacity-70 truncate block" title={cell}>{cell}</span>
                                                     </td>
                                                 ))}
                                             </tr>

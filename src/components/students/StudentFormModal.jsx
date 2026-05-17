@@ -137,16 +137,8 @@ const StudentFormModal = memo(function StudentFormModal({
     }
 
     const handleSafeClose = useCallback(() => {
-        // Simple dirty check: compare with INIT if new, or check if changed if editing
-        const hasContent = form.name.trim() || form.class_id || form.nisn || form.phone
-        if (hasContent && !submitting) {
-            if (window.confirm('Ada perubahan yang belum disimpan. Yakin ingin keluar?')) {
-                onClose()
-            }
-        } else {
-            onClose()
-        }
-    }, [form, submitting, onClose])
+        onClose()
+    }, [onClose])
 
     const clearDraft = useCallback(() => {
         localStorage.removeItem(DRAFT_KEY)

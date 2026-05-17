@@ -210,7 +210,7 @@ const TeacherFormModal = memo(function TeacherFormModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="h-11 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 shadow-sm flex items-center justify-center gap-2"
+                        className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0 flex items-center justify-center"
                     >
                         Batal
                     </button>
@@ -219,7 +219,7 @@ const TeacherFormModal = memo(function TeacherFormModal({
                         type="submit"
                         form="teacher-form-modal"
                         disabled={submitting || uploadingPhoto}
-                        className="h-11 px-8 rounded-xl bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/25 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                        className="h-10 px-6 sm:px-8 rounded-xl bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 shrink-0"
                     >
                         {submitting ? (
                             <>
@@ -229,12 +229,14 @@ const TeacherFormModal = memo(function TeacherFormModal({
                         ) : uploadingPhoto ? (
                             <>
                                 <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
-                                <span>Mengunggah Foto...</span>
+                                <span className="hidden sm:inline">Mengunggah Foto...</span>
+                                <span className="sm:hidden">Mengunggah...</span>
                             </>
                         ) : (
                             <>
                                 <FontAwesomeIcon icon={faSave} className="text-xs opacity-80 shrink-0" />
-                                <span className="truncate">{selectedItem ? 'Simpan Perubahan' : 'Simpan Data'}</span>
+                                <span className="truncate hidden sm:inline">{selectedItem ? 'Simpan Perubahan' : 'Simpan Data'}</span>
+                                <span className="truncate sm:hidden">Simpan</span>
                             </>
                         )}
                     </button>

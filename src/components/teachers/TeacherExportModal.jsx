@@ -98,21 +98,21 @@ export default function TeacherExportModal({
             <button
                 key={key}
                 onClick={toggleColumn}
-                className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-xl border text-left transition-all
+                className={`group relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl border text-left transition-all
                     ${isSelected
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)] shadow-sm'
                         : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'}
                 `}
             >
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all 
-                    ${isSelected ? 'bg-[var(--color-primary)] text-white shadow-md' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'}`}>
-                    <FontAwesomeIcon icon={icon} className="text-[10px]" />
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all 
+                    ${isSelected ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'}`}>
+                    <FontAwesomeIcon icon={icon} className="text-[9px]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className={`text-[10px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>{label}</div>
+                    <div className={`text-[9px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>{label}</div>
                 </div>
                 {isSelected && (
-                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center shadow-lg border border-white dark:border-[var(--color-surface)] animate-in zoom-in duration-200">
+                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center shadow-md border border-white dark:border-[var(--color-surface)] animate-in zoom-in duration-200">
                         {orderIdx}
                     </div>
                 )}
@@ -203,7 +203,7 @@ export default function TeacherExportModal({
                             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">2 — Kolom & Presets</p>
                             <div className="flex gap-2">
                                 <button onClick={() => handlePresetClick(COLUMN_DEFS.map(c => c.key))} className="text-[9px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest bg-[var(--color-primary)]/5 px-2 py-1 rounded-lg transition-colors">Semua</button>
-                                <button onClick={() => handlePresetClick(['nama', 'subject'])} className="text-[9px] font-black text-[var(--color-text-muted)] hover:underline uppercase tracking-widest bg-[var(--color-surface-alt)] px-2 py-1 rounded-lg transition-colors">Reset</button>
+                                <button onClick={() => handlePresetClick(['nama', 'subject'])} className="text-[9px] font-black text-rose-500 hover:underline uppercase tracking-widest bg-rose-500/5 px-2 py-1 rounded-lg transition-colors">Reset</button>
                             </div>
                         </div>
 
@@ -298,11 +298,11 @@ export default function TeacherExportModal({
                     {/* Section 4: Format Grid */}
                     <div className="space-y-3">
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">4 — Mulai Ekspor</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                             {[
                                 { label: 'CSV', icon: faFileCsv, desc: 'Universal', onClick: () => handleExportCSV(fileName, exportOptions), color: 'hover:border-slate-400 hover:bg-slate-50', iconColor: 'text-slate-500' },
                                 { label: 'Excel', icon: faFileExcel, desc: '.xlsx', onClick: () => handleExportExcel(fileName), color: 'hover:border-emerald-400 hover:bg-emerald-50 text-emerald-700', iconColor: 'text-emerald-500' },
-                                { label: 'PDF', icon: faFilePdf, desc: 'Tabel', onClick: () => handleExportPDF(fileName, exportOptions), color: 'hover:border-rose-400 hover:bg-rose-50 text-rose-700', iconColor: 'text-rose-500' },
+                                { label: 'PDF Tabel', icon: faFilePdf, desc: 'Tabel', onClick: () => handleExportPDF(fileName, exportOptions), color: 'hover:border-rose-400 hover:bg-rose-50 text-rose-700', iconColor: 'text-rose-500' },
                             ].map(({ label, icon, desc, onClick, color, iconColor }) => (
                                 <button
                                     key={label}

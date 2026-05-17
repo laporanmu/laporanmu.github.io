@@ -39,32 +39,13 @@ import { StatCard } from '../../components/ui/DataDisplay'
 import * as XLSX from 'xlsx'
 import { useDebounce } from '../../hooks/useDebounce'
 
+import { useTeachersCore } from '../../hooks/teachers/useTeachersCore'
+import { useTeachersImportExport } from '../../hooks/teachers/useTeachersImportExport'
+
 // STATUS_CONFIG imported from TeacherRow component
 const LS_FILTERS = 'teachers_filters'
 const LS_COLS = 'teachers_columns'
 const LS_PAGE_SIZE = 'teachers_page_size'
-
-const SYSTEM_COLS = [
-    { key: 'name', label: 'Nama Lengkap' },
-    { key: 'nbm', label: 'NBM' },
-    { key: 'subject', label: 'Mata Pelajaran' },
-    { key: 'gender', label: 'Jenis Kelamin' },
-    { key: 'phone', label: 'No. WhatsApp' },
-    { key: 'email', label: 'Email' },
-    { key: 'status', label: 'Status' },
-]
-
-const ALL_EXPORT_COLUMNS = [
-    { key: 'nama', label: 'Nama', fn: t => t.name || '' },
-    { key: 'nbm', label: 'NBM', fn: t => t.nbm || '' },
-    { key: 'subject', label: 'Mata Pelajaran', fn: t => t.subject || '' },
-    { key: 'gender', label: 'Gender', fn: t => t.gender === 'L' ? 'Laki-laki' : t.gender === 'P' ? 'Perempuan' : '-' },
-    { key: 'phone', label: 'No. HP/WA', fn: t => t.phone || '' },
-    { key: 'email', label: 'Email', fn: t => t.email || '' },
-    { key: 'status', label: 'Status', fn: t => STATUS_CONFIG[t.status]?.label || t.status || '' },
-    { key: 'join_date', label: 'Tgl Bergabung', fn: t => t.join_date || '' },
-    { key: 'address', label: 'Alamat', fn: t => t.address || '' },
-]
 
 const maskInfo = (str, vis = 4) => {
     if (!str) return '—'
@@ -83,258 +64,72 @@ function getPortalContainer(id) {
 }
 
 export default function TeachersPage() {
-    // core
-    const [teachers, setTeachers] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [submitting, setSubmitting] = useState(false)
-    const [totalRows, setTotalRows] = useState(0)
-    const [subjectsList, setSubjectsList] = useState([])
-    const [classesList, setClassesList] = useState([])
-    const [stats, setStats] = useState({ total: 0, active: 0, male: 0, female: 0, guru: 0, karyawan: 0 })
-    const [uploadingPhoto, setUploadingPhoto] = useState(false)
-    // filters
-    const [searchQuery, setSearchQuery] = useState('')
-    const debouncedSearch = useDebounce(searchQuery, 350)
-    const [filterSubject, setFilterSubject] = useState('')
-    const [filterGender, setFilterGender] = useState('')
-    const [filterStatus, setFilterStatus] = useState('active')
-    const [filterType, setFilterType] = useState('') // '' | 'guru' | 'karyawan'
-    const [filterMissing, setFilterMissing] = useState('')
-    const [sortBy, setSortBy] = useState('name_asc')
-    const [page, setPage] = useState(1)
-    const [jumpPage, setJumpPage] = useState('')
-    const [showAdvFilter, setShowAdvFilter] = useState(false)
-    const [pageSize, setPageSize] = useState(() => {
-        try { return Number(localStorage.getItem(LS_PAGE_SIZE)) || 10 } catch { return 10 }
+    const { addToast } = useToast()
+    const { profile } = useAuth()
+
+    const core = useTeachersCore({ addToast, profile })
+    const {
+        teachers, setTeachers, loading, setLoading, submitting, setSubmitting, totalRows, setTotalRows,
+        subjectsList, setSubjectsList, classesList, setClassesList, stats, setStats, uploadingPhoto, setUploadingPhoto,
+        searchQuery, setSearchQuery, debouncedSearch, filterSubject, setFilterSubject, filterGender, setFilterGender,
+        filterStatus, setFilterStatus, filterType, setFilterType, filterMissing, setFilterMissing, sortBy, setSortBy,
+        page, setPage, jumpPage, setJumpPage, showAdvFilter, setShowAdvFilter, pageSize, setPageSize,
+        visibleCols, setVisibleCols, isColMenuOpen, setIsColMenuOpen, menuPos, setMenuPos, colMenuRef,
+        isPrivacyMode, setIsPrivacyMode, isShortcutOpen, setIsShortcutOpen, isHeaderMenuOpen, setIsHeaderMenuOpen,
+        isModalOpen, setIsModalOpen, isArchiveModalOpen, setIsArchiveModalOpen, isArchivedOpen, setIsArchivedOpen,
+        isProfileOpen, setIsProfileOpen, isImportModalOpen, setIsImportModalOpen, isExportModalOpen, setIsExportModalOpen,
+        isBulkModalOpen, setIsBulkModalOpen, isBulkWAOpen, setIsBulkWAOpen, selectedItem, setSelectedItem,
+        teacherToAction, setTeacherToAction, profileTeacher, setProfileTeacher, profileStats, setProfileStats,
+        profileReports, setProfileReports, loadingProfile, setLoadingProfile, profileTab, setProfileTab,
+        archivedTeachers, setArchivedTeachers, loadingArchived, setLoadingArchived, selectedIds, setSelectedIds,
+        bulkWAIndex, setBulkWAIndex, bulkWAResults, setBulkWAResults, waTemplate, setWaTemplate,
+        quickStatusId, setQuickStatusId, quickStatusRef, headerMenuBtnRef, shortcutBtnRef, headerMenuRect,
+        setHeaderMenuRect, shortcutRect, setShortcutRect, headerMenuMounted, setHeaderMenuMounted,
+        statsScrollRef, activeStatIdx, setActiveStatIdx,
+        activeFilterCount, hasActiveFilters, resetAllFilters, fetchData, fetchStats,
+        handleAdd, handleEdit, handleSubmit, handleArchive, handleRestore, fetchArchived,
+        handleTogglePin, handlePhotoUpload, handleQuickStatus, openProfile,
+        allPageIds, allSelected, someSelected, toggleSelectAll, toggleSelect, handleBulkArchive,
+        bulkWATeachers, startBulkWA, sendNextWA
+    } = core
+
+    const importExport = useTeachersImportExport({
+        teachers,
+        selectedIds,
+        filterStatus,
+        filterGender,
+        filterSubject,
+        filterType,
+        fetchData,
+        fetchStats,
+        addToast,
+        setIsImportModalOpen,
+        setIsExportModalOpen
     })
-    // columns
-    const [visibleCols, setVisibleCols] = useState({ nbm: true, subject: true, gender: true, contact: true, status: true, join: true })
-    const [isColMenuOpen, setIsColMenuOpen] = useState(false)
-    const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
-    const colMenuRef = useRef(null)
-    // ui
-    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
-    const [isShortcutOpen, setIsShortcutOpen] = useState(false)
-    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
-    // modals
-    const [isModalOpen, setIsModalOpen] = useState(false)
-    const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
-    const [isArchivedOpen, setIsArchivedOpen] = useState(false)
-    const [isProfileOpen, setIsProfileOpen] = useState(false)
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
-    const [isExportModalOpen, setIsExportModalOpen] = useState(false)
-    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
-    const [isBulkWAOpen, setIsBulkWAOpen] = useState(false)
-    // form
-    const [selectedItem, setSelectedItem] = useState(null)
-    const [teacherToAction, setTeacherToAction] = useState(null)
-    // profile
-    const [profileTeacher, setProfileTeacher] = useState(null)
-    const [profileStats, setProfileStats] = useState(null)
-    const [profileReports, setProfileReports] = useState([])
-    const [loadingProfile, setLoadingProfile] = useState(false)
-    const [profileTab, setProfileTab] = useState('info')
-    // archived
-    const [archivedTeachers, setArchivedTeachers] = useState([])
-    const [loadingArchived, setLoadingArchived] = useState(false)
-    // bulk
-    const [selectedIds, setSelectedIds] = useState([])
-    const [bulkWAIndex, setBulkWAIndex] = useState(-1)
-    const [bulkWAResults, setBulkWAResults] = useState({})
-    const [waTemplate, setWaTemplate] = useState('info')
-    // quick status
-    const [quickStatusId, setQuickStatusId] = useState(null)
-    const quickStatusRef = useRef(null)
-    // import
-    const [importStep, setImportStep] = useState(1)
-    const [importFileName, setImportFileName] = useState('')
-    const [importRawData, setImportRawData] = useState([])
-    const [importFileHeaders, setImportFileHeaders] = useState([])
-    const [importColumnMapping, setImportColumnMapping] = useState({})
-    const [importPreview, setImportPreview] = useState([])
-    const [importIssues, setImportIssues] = useState([])
-    const [importLoading, setImportLoading] = useState(false)
-    const [importValidationOpen, setImportValidationOpen] = useState(true)
-    const [importDrag, setImportDrag] = useState(false)
-    const [importing, setImporting] = useState(false)
-    const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
-    const [importEditCell, setImportEditCell] = useState(null)
-    const [importSkipDupes, setImportSkipDupes] = useState(true)
-    // export
-    const [exportScope, setExportScope] = useState('filtered')
-    const [exportColumns, setExportColumns] = useState(['nama', 'nbm', 'subject', 'gender', 'phone', 'email', 'status', 'join_date'])
-    const [exporting, setExporting] = useState(false)
+
+    const {
+        importStep, setImportStep, importFileName, setImportFileName, importRawData, setImportRawData,
+        importFileHeaders, setImportFileHeaders, importColumnMapping, setImportColumnMapping,
+        importPreview, setImportPreview, importIssues, setImportIssues, importLoading, setImportLoading,
+        importValidationOpen, setImportValidationOpen, importDrag, setImportDrag, importing, setImporting,
+        importProgress, setImportProgress, importEditCell, setImportEditCell, importSkipDupes, setImportSkipDupes,
+        exportScope, setExportScope, exportColumns, setExportColumns, exporting, setExporting,
+        importReadyRows, hasImportBlockingErrors, SYSTEM_COLS, ALL_EXPORT_COLUMNS,
+        processImportFile, buildImportPreview, handleImportCellEdit, handleRemoveImportRow,
+        handleBulkFix, handleDownloadTemplate, handleCommitImport, getExportData,
+        handleExportCSV, handleExportExcel, handleExportPDF
+    } = importExport
+
+    const STAT_CARD_COUNT = 4
 
     const searchInputRef = useRef(null)
     const importFileRef = useRef(null)
     const headerMenuRef = useRef(null)
     const shortcutRef = useRef(null)
-    // Sticky portal refs & rects for header menu + shortcut dropdowns
-    const headerMenuBtnRef = useRef(null)
-    const shortcutBtnRef = useRef(null)
-    const [headerMenuRect, setHeaderMenuRect] = useState(null)
-    const [shortcutRect, setShortcutRect] = useState(null)
-    // Deferred unmount: keeps portal in DOM for 200ms after close so exit animation can play
-    const [headerMenuMounted, setHeaderMenuMounted] = useState(false)
-    const { addToast } = useToast()
-    const { profile } = useAuth()
-
-    // --- Stats Carousel Dot Indicator ---
-    const statsScrollRef = useRef(null)
-    const [activeStatIdx, setActiveStatIdx] = useState(0)
-    const STAT_CARD_COUNT = 4
 
     // access.teacher_teachers — kalau off, guru hanya bisa lihat (read-only)
     const { enabled: teacherTeachersEnabled } = useFlag('access.teacher_teachers')
     const canEdit = teacherTeachersEnabled
-
-    // ── persist ──────────────────────────────────────────────────────────────
-    useEffect(() => {
-        try { const f = JSON.parse(localStorage.getItem(LS_FILTERS) || '{}'); if (f.filterGender) setFilterGender(f.filterGender); if (f.filterStatus !== undefined) setFilterStatus(f.filterStatus); if (f.filterSubject) setFilterSubject(f.filterSubject); if (f.filterType) setFilterType(f.filterType); if (f.sortBy) setSortBy(f.sortBy) } catch { }
-        try { const c = JSON.parse(localStorage.getItem(LS_COLS) || '{}'); if (Object.keys(c).length) setVisibleCols(c) } catch { }
-    }, [])
-    useEffect(() => { try { localStorage.setItem(LS_FILTERS, JSON.stringify({ filterGender, filterStatus, filterSubject, filterType, sortBy })) } catch { } }, [filterGender, filterStatus, filterSubject, filterType, sortBy])
-    useEffect(() => { try { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) } catch { } }, [visibleCols])
-    useEffect(() => { try { localStorage.setItem(LS_PAGE_SIZE, pageSize) } catch { } }, [pageSize])
-
-    // debounce handled by useDebounce hook — reset page on search change
-    useEffect(() => { setPage(1) }, [debouncedSearch])
-
-    // ── outside click ─────────────────────────────────────────────────────────
-    // Deferred unmount effect for header menu
-    useEffect(() => {
-        if (isHeaderMenuOpen) {
-            setHeaderMenuMounted(true)
-        } else {
-            const t = setTimeout(() => setHeaderMenuMounted(false), 200)
-            return () => clearTimeout(t)
-        }
-    }, [isHeaderMenuOpen])
-
-    // Sticky positioning - keep portaled dropdowns anchored on scroll/resize
-    useEffect(() => {
-        if (!isHeaderMenuOpen && !isShortcutOpen) return
-        const update = () => {
-            if (isHeaderMenuOpen && headerMenuBtnRef.current) setHeaderMenuRect(headerMenuBtnRef.current.getBoundingClientRect())
-            if (isShortcutOpen && shortcutBtnRef.current) setShortcutRect(shortcutBtnRef.current.getBoundingClientRect())
-        }
-        update()
-        window.addEventListener('scroll', update, true)
-        window.addEventListener('resize', update)
-        return () => { window.removeEventListener('scroll', update, true); window.removeEventListener('resize', update) }
-    }, [isHeaderMenuOpen, isShortcutOpen])
-
-    useEffect(() => {
-        const h = e => {
-            if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setIsColMenuOpen(false)
-            if (quickStatusRef.current && !quickStatusRef.current.contains(e.target)) setQuickStatusId(null)
-        }
-        document.addEventListener('mousedown', h)
-        return () => document.removeEventListener('mousedown', h)
-    }, [])
-
-    // ── computed ──────────────────────────────────────────────────────────────
-    const activeFilterCount = [filterGender, filterSubject, filterMissing, filterType, filterStatus !== 'active' ? filterStatus : ''].filter(Boolean).length
-    const hasActiveFilters = !!(searchQuery || activeFilterCount)
-    const resetAllFilters = () => { setSearchQuery(''); setFilterSubject(''); setFilterGender(''); setFilterMissing(''); setFilterStatus('active'); setFilterType(''); setPage(1) }
-
-    // ── keyboard shortcuts ────────────────────────────────────────────────────
-    useEffect(() => {
-        const handler = e => {
-            const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
-            const ctrl = e.ctrlKey || e.metaKey
-            const anyModal = isModalOpen || isArchiveModalOpen || isArchivedOpen || isProfileOpen || isImportModalOpen || isExportModalOpen || isBulkModalOpen || isBulkWAOpen
-            if (e.key === 'Escape') { if (isShortcutOpen) { setIsShortcutOpen(false); return } if (anyModal) return; if (searchQuery) { setSearchQuery(''); return } if (selectedIds.length) { setSelectedIds([]); return } if (hasActiveFilters) { resetAllFilters(); return } }
-            if (ctrl && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus(); searchInputRef.current?.select(); return }
-            if (ctrl && e.key === 'f' && !isTyping) { e.preventDefault(); setShowAdvFilter(v => !v); return }
-            if (ctrl && e.key === 'a' && !isTyping) { e.preventDefault(); toggleSelectAll(); return }
-            if (ctrl && e.key === 'e' && !isTyping) { e.preventDefault(); setIsExportModalOpen(true); return }
-            if (e.key === 'n' && !isTyping) { e.preventDefault(); handleAdd(); return }
-            if (e.key === 'p' && !isTyping) { e.preventDefault(); setIsPrivacyMode(v => !v); return }
-            if (e.key === 'r' && !isTyping) { e.preventDefault(); fetchData(); return }
-            if (e.key === 'x' && !isTyping) { e.preventDefault(); resetAllFilters(); return }
-            if (e.key === '?' && !isTyping) { setIsShortcutOpen(v => !v); return }
-        }
-        window.addEventListener('keydown', handler)
-        return () => window.removeEventListener('keydown', handler)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isModalOpen, isArchiveModalOpen, isArchivedOpen, isProfileOpen, isImportModalOpen, isExportModalOpen, isBulkModalOpen, isBulkWAOpen, isShortcutOpen, searchQuery, selectedIds, hasActiveFilters])
-
-    // ── fetch ─────────────────────────────────────────────────────────────────
-    const fetchData = useCallback(async () => {
-        setLoading(true)
-        try {
-            const from = (page - 1) * pageSize, to = from + pageSize - 1
-            const sortMap = { name_asc: { col: 'name', asc: true }, name_desc: { col: 'name', asc: false }, subject_asc: { col: 'subject', asc: true }, join_asc: { col: 'join_date', asc: true }, join_desc: { col: 'join_date', asc: false } }
-            const { col, asc } = sortMap[sortBy] || sortMap.name_asc
-            let q = supabase.from('teachers').select('*', { count: 'exact' }).is('deleted_at', null).order(col, { ascending: asc }).range(from, to)
-            if (filterStatus) q = q.eq('status', filterStatus)
-            if (filterGender) q = q.eq('gender', filterGender)
-            if (filterSubject) q = q.eq('subject', filterSubject)
-            if (filterType) q = q.eq('type', filterType)
-            if (filterMissing === 'wa') q = q.or('phone.is.null,phone.eq.""')
-            if (debouncedSearch) { const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_'); q = q.or(`name.ilike.%${s}%,nbm.ilike.%${s}%,email.ilike.%${s}%,subject.ilike.%${s}%`) }
-            const { data, error, count } = await q
-            if (error) throw error
-
-            // ── Inject avatar_url dari profiles via email ────────────────────
-            // Butuh view `profiles_with_email` di Supabase (lihat komentar di bawah).
-            // Jika view belum ada, bagian ini di-skip secara graceful.
-            let teachersWithAvatar = data || []
-            const emails = teachersWithAvatar.map(t => t.email).filter(Boolean)
-            if (emails.length > 0) {
-                try {
-                    const { data: profilesData } = await supabase
-                        .from('profiles_with_email')   // view: SELECT p.*, u.email FROM profiles p JOIN auth.users u ON u.id = p.id
-                        .select('avatar_url, email')
-                        .not('avatar_url', 'is', null)
-                        .in('email', emails)
-
-                    if (profilesData?.length) {
-                        const avatarByEmail = Object.fromEntries(
-                            profilesData.map(p => [p.email, p.avatar_url])
-                        )
-                        teachersWithAvatar = teachersWithAvatar.map(t =>
-                            t.email && avatarByEmail[t.email]
-                                ? { ...t, avatar_url: avatarByEmail[t.email] }
-                                : t
-                        )
-                    }
-                } catch {
-                    // View belum dibuat — skip, avatar tidak tampil tapi app tetap jalan
-                }
-            }
-
-            setTeachers([...teachersWithAvatar].sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)))
-            setTotalRows(count ?? 0)
-            const { data: allSubj } = await supabase.from('teachers').select('subject').is('deleted_at', null).not('subject', 'is', null)
-            if (allSubj) setSubjectsList([...new Set(allSubj.map(r => r.subject).filter(Boolean))].sort())
-            const { data: cls } = await supabase.from('classes').select('id,name').order('name')
-            if (cls) setClassesList(cls)
-        } catch { addToast('Gagal memuat data guru', 'error') }
-        finally { setLoading(false) }
-    }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, debouncedSearch, addToast])
-
-    const fetchStats = useCallback(async () => {
-        try {
-            const { data } = await supabase.from('teachers').select('id,gender,status,type').is('deleted_at', null)
-            if (data) setStats({ total: data.length, active: data.filter(t => t.status === 'active').length, male: data.filter(t => t.gender === 'L').length, female: data.filter(t => t.gender === 'P').length, guru: data.filter(t => !t.type || t.type === 'guru').length, karyawan: data.filter(t => t.type === 'karyawan').length })
-        } catch { }
-    }, [])
-
-    const fetchDataRef = useRef(fetchData); const fetchStatsRef = useRef(fetchStats)
-    useEffect(() => { fetchDataRef.current = fetchData }, [fetchData])
-    useEffect(() => { fetchStatsRef.current = fetchStats }, [fetchStats])
-
-    useEffect(() => {
-        const ch = supabase.channel('teachers-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, () => { fetchDataRef.current(); fetchStatsRef.current() }).subscribe()
-        return () => supabase.removeChannel(ch)
-    }, [])
-
-    useEffect(() => { fetchStats() }, [])
-    useEffect(() => { fetchData() }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, debouncedSearch])
-
-
 
     // Insights Row
     const insights = useMemo(() => {
@@ -364,469 +159,10 @@ export default function TeachersPage() {
         })
 
         return res
-    }, [teachers, filterMissing, filterStatus])
-
-    // ── crud ──────────────────────────────────────────────────────────────────
-    const handleAdd = () => { setSelectedItem(null); setIsModalOpen(true) }
-    const handleEdit = item => { setSelectedItem(item); setIsModalOpen(true) }
-    const handleSubmit = async (payload) => {
-        setSubmitting(true)
-        try {
-            if (selectedItem) { const { error } = await supabase.from('teachers').update(payload).eq('id', selectedItem.id); if (error) throw error; addToast('Data guru berhasil diupdate', 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } }) }
-            else { const { data: insData, error } = await supabase.from('teachers').insert([payload]).select().single(); if (error) throw error; addToast('Guru baru berhasil ditambahkan', 'success'); await logAudit({ action: 'INSERT', source: 'OPERATIONAL', tableName: 'teachers', recordId: insData?.id, newData: payload }) }
-            setIsModalOpen(false); fetchData(); fetchStats()
-            return null
-        } catch (err) { return { error: true, code: err.code, message: 'Gagal menyimpan data.' } }
-        finally { setSubmitting(false) }
-    }
-    const handleArchive = async () => {
-        if (!teacherToAction) return; setSubmitting(true)
-        try { const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).eq('id', teacherToAction.id); if (error) throw error; addToast(`"${teacherToAction.name}" diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacherToAction.id, oldData: teacherToAction, newData: { ...teacherToAction, deleted_at: new Date().toISOString() } }); setIsArchiveModalOpen(false); setTeacherToAction(null); fetchData(); fetchStats() }
-        catch { addToast('Gagal mengarsipkan', 'error') } finally { setSubmitting(false) }
-    }
-    const handleRestore = async teacher => {
-        try { const { error } = await supabase.from('teachers').update({ deleted_at: null }).eq('id', teacher.id); if (error) throw error; addToast(`"${teacher.name}" dipulihkan`, 'success'); await logAudit({ action: 'RESTORE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacher.id, oldData: teacher, newData: { ...teacher, deleted_at: null } }); setArchivedTeachers(prev => prev.filter(t => t.id !== teacher.id)); fetchData(); fetchStats() }
-        catch { addToast('Gagal memulihkan', 'error') }
-    }
-    const fetchArchived = async () => {
-        setLoadingArchived(true)
-        try { const { data, error } = await supabase.from('teachers').select('*').not('deleted_at', 'is', null).order('deleted_at', { ascending: false }); if (error) throw error; setArchivedTeachers(data || []) }
-        catch { addToast('Gagal memuat arsip', 'error') } finally { setLoadingArchived(false) }
-    }
-
-    // ── pin ───────────────────────────────────────────────────────────────────
-    const handleTogglePin = async teacher => {
-        const newPinned = !teacher.is_pinned
-
-        // Optimistic UI Update
-        setTeachers(prev => {
-            const updated = prev.map(t =>
-                t.id === teacher.id ? { ...t, is_pinned: newPinned } : t
-            )
-            // Re-sort to put pinned at top
-            return updated.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
-        })
-
-        try {
-            const { error } = await supabase
-                .from('teachers')
-                .update({ is_pinned: newPinned })
-                .eq('id', teacher.id)
-
-            if (error) throw error
-
-            await logAudit({
-                action: 'UPDATE',
-                source: 'OPERATIONAL',
-                tableName: 'teachers',
-                recordId: teacher.id,
-                oldData: { is_pinned: teacher.is_pinned },
-                newData: { is_pinned: newPinned }
-            })
-
-            addToast(
-                newPinned ? (
-                    <span className="flex items-center gap-1.5">
-                        <FontAwesomeIcon icon={faThumbtack} className="text-amber-400 rotate-[-45deg] text-[10px]" />
-                        "{teacher.name}" disematkan ke atas
-                    </span>
-                ) : (
-                    `Sematkan "${teacher.name}" dilepas`
-                ),
-                'success'
-            )
-        } catch (err) {
-            console.error('Pin error:', err)
-            // Rollback on failure
-            setTeachers(prev => {
-                const rolledBack = prev.map(t =>
-                    t.id === teacher.id ? { ...t, is_pinned: teacher.is_pinned } : t
-                )
-                return rolledBack.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
-            })
-            addToast('Gagal menyematkan data', 'error')
-        }
-    }
-
-    const handlePhotoUpload = async (file) => {
-        if (!file) return null
-        setUploadingPhoto(true)
-        try {
-            const fileName = `teacher_${Date.now()}.${file.name.split('.').pop()}`
-            const { error } = await supabase.storage.from('teacher-photo').upload(fileName, file)
-            if (error) throw error
-            const { data } = supabase.storage.from('teacher-photo').getPublicUrl(fileName)
-            return data.publicUrl
-        } catch (err) {
-            console.error('Photo upload error:', err)
-            addToast('Gagal mengunggah foto', 'error')
-            return null
-        } finally { setUploadingPhoto(false) }
-    }
-
-    // ── quick status ──────────────────────────────────────────────────────────
-    const handleQuickStatus = async (teacher, newStatus) => {
-        try { const { error } = await supabase.from('teachers').update({ status: newStatus }).eq('id', teacher.id); if (error) throw error; addToast(`Status ${teacher.name} → ${STATUS_CONFIG[newStatus].label}`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', recordId: teacher.id, oldData: teacher, newData: { ...teacher, status: newStatus } }); setQuickStatusId(null); fetchData(); fetchStats() }
-        catch { addToast('Gagal update status', 'error') }
-    }
-
-    // ── profile ───────────────────────────────────────────────────────────────
-    const openProfile = async (teacher, tab = 'info') => {
-        setProfileTeacher(teacher); setProfileStats(null); setProfileReports([]); setProfileTab(tab); setLoadingProfile(true); setIsProfileOpen(true)
-        try {
-            const { data: reports } = await supabase.from('reports').select('id,created_at,points,description').eq('teacher_name', teacher.name).order('created_at', { ascending: false })
-            if (reports) {
-                const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0, 0, 0, 0)
-                setProfileReports(reports)
-                setProfileStats({ total: reports.length, monthly: reports.filter(r => new Date(r.created_at) >= thisMonth).length, totalPts: reports.reduce((a, r) => a + (r.points || 0), 0), posCount: reports.filter(r => (r.points || 0) > 0).length, negCount: reports.filter(r => (r.points || 0) < 0).length })
-            }
-        } catch { } finally { setLoadingProfile(false) }
-    }
-
-    // ── bulk ──────────────────────────────────────────────────────────────────
-    const allPageIds = teachers.map(t => t.id)
-    const allSelected = allPageIds.length > 0 && allPageIds.every(id => selectedIds.includes(id))
-    const someSelected = selectedIds.length > 0 && !allSelected
-    const toggleSelectAll = () => allSelected ? setSelectedIds(prev => prev.filter(id => !allPageIds.includes(id))) : setSelectedIds(prev => [...new Set([...prev, ...allPageIds])])
-    const toggleSelect = id => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
-    const handleBulkArchive = async () => {
-        setSubmitting(true)
-        try { const idsSnap = [...selectedIds]; const { error } = await supabase.from('teachers').update({ deleted_at: new Date().toISOString() }).in('id', idsSnap); if (error) throw error; addToast(`${idsSnap.length} guru diarsipkan`, 'success'); await logAudit({ action: 'UPDATE', source: 'OPERATIONAL', tableName: 'teachers', newData: { bulk_archive: true, count: idsSnap.length, ids: idsSnap } }); setSelectedIds([]); setIsBulkModalOpen(false); fetchData(); fetchStats() }
-        catch { addToast('Gagal arsip massal', 'error') } finally { setSubmitting(false) }
-    }
-    const bulkWATeachers = useMemo(() => teachers.filter(t => selectedIds.includes(t.id) && t.phone), [teachers, selectedIds])
-    const startBulkWA = () => { if (!bulkWATeachers.length) { addToast('Tidak ada guru terpilih dengan nomor WA', 'warning'); return }; setBulkWAIndex(0); setBulkWAResults({}); setIsBulkWAOpen(true) }
-    const sendNextWA = () => {
-        const t = bulkWATeachers[bulkWAIndex]
-        if (!t) return
-        const msg = {
-            info: `Assalamu'alaikum, *${t.name}*.\nBerikut informasi akun Anda di sistem.`,
-            notif: `Assalamu'alaikum, *${t.name}*.\nAda notifikasi baru untuk Anda di sistem.`
-        }
-        window.open(`https://wa.me/${t.phone.replace(/^0/, '62')}?text=${encodeURIComponent(msg[waTemplate] || msg.info)}`, '_blank')
-        setBulkWAResults(prev => ({ ...prev, [t.id]: 'sent' }))
-        setBulkWAIndex(bulkWAIndex + 1 < bulkWATeachers.length ? bulkWAIndex + 1 : -1)
-
-        logAudit({
-            action: 'SEND',
-            source: 'OPERATIONAL',
-            tableName: 'teachers',
-            recordId: t.id,
-            newData: { channel: 'whatsapp', template: waTemplate, recipient: t.name }
-        })
-    }
-    // ── import ────────────────────────────────────────────────────────────────
-    const processImportFile = async file => {
-        if (!file) return
-        const ext = file.name.toLowerCase()
-        if (!ext.endsWith('.csv') && !ext.endsWith('.xlsx')) { addToast('Format tidak didukung. Gunakan .csv atau .xlsx', 'error'); return }
-        setImportFileName(file.name)
-        setImportLoading(true)
-        try {
-            let rows = []
-            if (ext.endsWith('.csv')) rows = await new Promise(res => Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => res(r.data) }))
-            else rows = await new Promise(res => { const reader = new FileReader(); reader.onload = e => { const wb = XLSX.read(e.target.result, { type: 'array' }); res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })) }; reader.readAsArrayBuffer(file) })
-            
-            if (!rows.length) { addToast('File kosong atau tidak terbaca', 'error'); return }
-
-            const headers = Object.keys(rows[0])
-            setImportRawData(rows)
-            setImportFileHeaders(headers)
-
-            // Auto-mapping
-            const mapping = {}
-            SYSTEM_COLS.forEach(sys => {
-                const match = headers.find(h => {
-                    const lowH = h.toLowerCase().trim()
-                    const lowL = sys.label.toLowerCase()
-                    const lowK = sys.key.toLowerCase()
-                    return lowH === lowL || lowH === lowK || 
-                           (sys.key === 'name' && (lowH === 'nama' || lowH === 'nama lengkap')) ||
-                           (sys.key === 'phone' && (lowH === 'wa' || lowH === 'no. hp/wa')) ||
-                           (sys.key === 'subject' && (lowH === 'mapel' || lowH === 'mata pelajaran')) ||
-                           (sys.key === 'nbm' && (lowH === 'nbm')) ||
-                           (sys.key === 'gender' && (lowH === 'jk' || lowH === 'jenis kelamin'))
-                })
-                if (match) mapping[sys.key] = match
-            })
-            setImportColumnMapping(mapping)
-            setImportStep(2)
-        } catch { addToast('Gagal membaca file import', 'error') }
-        finally { setImportLoading(false) }
-    }
-
-    const buildImportPreview = async (raw, mapping) => {
-        setImportLoading(true)
-        try {
-            const preview = raw.map((row, i) => {
-                const data = {}
-                SYSTEM_COLS.forEach(sys => {
-                    const fileCol = mapping[sys.key]
-                    data[sys.key] = fileCol ? (row[fileCol] || '').toString().trim() : ''
-                })
-
-                // Normalization
-                if (data.gender) {
-                    const g = data.gender.toUpperCase()
-                    data.gender = ['L', 'LAKI-LAKI', 'LAKI LAKI', 'MALE'].includes(g) ? 'L' : ['P', 'PEREMPUAN', 'FEMALE'].includes(g) ? 'P' : ''
-                }
-                if (data.status) {
-                    const s = data.status.toLowerCase()
-                    data.status = ['active', 'aktif'].includes(s) ? 'active' : ['inactive', 'nonaktif'].includes(s) ? 'inactive' : ['leave', 'cuti'].includes(s) ? 'cuti' : 'active'
-                }
-
-                return { ...data, _row: i }
-            })
-
-            // Validation
-            const issues = []
-            preview.forEach((row, i) => {
-                const rowIssues = []
-                if (!row.name) rowIssues.push('Nama tidak boleh kosong')
-                if (row.nbm && preview.slice(0, i).some(p => p.nbm === row.nbm)) rowIssues.push(`NBM "${row.nbm}" duplikat di file`)
-                
-                if (rowIssues.length) {
-                    issues.push({ row: i + 2, level: 'error', messages: rowIssues })
-                    row._hasError = true
-                }
-            })
-
-            setImportPreview(preview)
-            setImportIssues(issues)
-        } finally {
-            setImportLoading(false)
-        }
-    }
-
-    const handleImportCellEdit = (rowIdx, colKey, newValue) => {
-        setImportPreview(prev => {
-            const next = [...prev]
-            next[rowIdx] = { ...next[rowIdx], [colKey]: newValue }
-            
-            // Re-validate row
-            const rowIssues = []
-            if (!next[rowIdx].name) rowIssues.push('Nama tidak boleh kosong')
-            // (Minimal re-validation for speed)
-            
-            next[rowIdx]._hasError = rowIssues.length > 0
-            
-            // Re-build all issues (ideally only update for this row)
-            const newIssues = importIssues.filter(iss => iss.row !== rowIdx + 2)
-            if (rowIssues.length) {
-                newIssues.push({ row: rowIdx + 2, level: 'error', messages: rowIssues })
-            }
-            setImportIssues(newIssues.sort((a,b) => a.row - b.row))
-            
-            return next
-        })
-    }
-
-    const handleRemoveImportRow = idx => {
-        setImportPreview(prev => prev.filter((_, i) => i !== idx))
-        setImportIssues(prev => prev.filter(iss => iss.row !== idx + 2).map(iss => iss.row > idx + 2 ? { ...iss, row: iss.row - 1 } : iss))
-    }
-
-    const handleBulkFix = (colKey, value) => {
-        setImportPreview(prev => prev.map(r => ({ ...r, [colKey]: value, _hasError: colKey === 'name' ? !value : r._hasError })))
-        if (colKey === 'name' && value) setImportIssues(prev => prev.filter(iss => !iss.messages.includes('Nama tidak boleh kosong')))
-        addToast(`Berhasil merubah semua baris ke ${value}`, 'success')
-    }
-
-    const handleDownloadTemplate = () => {
-        const headers = ['Nama', 'NBM', 'Mata Pelajaran', 'Gender', 'No. HP/WA', 'Email', 'Status']
-        const data = [
-            ['Ahmad Fauzi, S.Pd', '12345678', 'Bahasa Indonesia', 'L', '081234567890', 'ahmad@sekolah.sch.id', 'active'],
-            ['Siti Aminah, M.Pd', '87654321', 'Matematika', 'P', '089876543210', 'siti@sekolah.sch.id', 'active']
-        ]
-        const ws = XLSX.utils.aoa_to_sheet([headers, ...data])
-        const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, 'Template Import Guru')
-        XLSX.writeFile(wb, 'template-import-guru.xlsx')
-    }
-
-    const importReadyRows = importPreview.filter(r => !r._hasError)
-    const hasImportBlockingErrors = importIssues.some(x => x.level === 'error')
-
-    const handleCommitImport = async () => {
-        if (!importPreview.length) { addToast('Tidak ada data untuk diimport', 'error'); return }
-        if (hasImportBlockingErrors) { addToast('Masih ada ERROR. Perbaiki file dulu.', 'error'); return }
-        
-        // Filter out dupes if skip is enabled (need to check against DB for real dupe check)
-        const validRows = importPreview.filter(r => !r._hasError)
-        
-        if (!validRows.length) { addToast('Tidak ada baris valid', 'warning'); return }
-        setImporting(true); setImportProgress({ done: 0, total: validRows.length })
-        try {
-            const CHUNK = 50
-            for (let i = 0; i < validRows.length; i += CHUNK) {
-                const chunk = validRows.slice(i, i + CHUNK).map(r => ({ 
-                    name: r.name, 
-                    nbm: r.nbm || null, 
-                    subject: r.subject || null, 
-                    gender: r.gender || null, 
-                    phone: r.phone || null, 
-                    email: r.email || null, 
-                    status: r.status || 'active'
-                }))
-                const { error } = await supabase.from('teachers').insert(chunk); if (error) throw error
-                setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
-            }
-            addToast(`Berhasil import ${validRows.length} guru`, 'success')
-            await logAudit({ action: 'INSERT', source: 'OPERATIONAL', tableName: 'teachers', newData: { bulk_import: true, count: validRows.length, data: validRows } })
-            setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportFileName(''); setImportStep(1)
-            fetchData(); fetchStats()
-        } catch { addToast('Gagal import (cek constraint DB / duplikat)', 'error') }
-        finally { setImporting(false) }
-    }
-
-    // ── export ────────────────────────────────────────────────────────────────
-    const getExportData = async () => {
-        let q = supabase.from('teachers').select('name,nbm,subject,gender,phone,email,status,join_date,address').is('deleted_at', null)
-        
-        if (exportScope === 'selected' && selectedIds.length > 0) {
-            q = q.in('id', selectedIds)
-        } else if (exportScope === 'filtered') { 
-            if (filterStatus) q = q.eq('status', filterStatus)
-            if (filterGender) q = q.eq('gender', filterGender)
-            if (filterSubject) q = q.eq('subject', filterSubject)
-            if (filterType) q = q.eq('type', filterType) 
-        }
-        
-        q = q.order('name')
-        const { data, error } = await q
-        if (error) throw error
-
-        return (data || []).map(t => {
-            const row = {}
-            exportColumns.forEach(key => {
-                const col = ALL_EXPORT_COLUMNS.find(c => c.key === key)
-                if (col) row[col.label] = col.fn(t)
-            })
-            return row
-        })
-    }
-
-    const handleExportCSV = async (filename, options = {}) => {
-        setExporting(true)
-        try {
-            const rows = await getExportData()
-            if (!rows.length) return addToast('Tidak ada data', 'warning')
-            
-            const headers = Object.keys(rows[0])
-            const csvContent = [
-                ...(options.includeHeader !== false ? [headers.join(',')] : []),
-                ...rows.map(r => headers.map(h => {
-                    const v = String(r[h] ?? '').replace(/"/g, '""')
-                    return `"${v}"`
-                }).join(','))
-            ].join('\n')
-            
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-            const a = document.createElement('a')
-            a.href = URL.createObjectURL(blob)
-            a.download = `${filename || 'export_guru'}.csv`
-            a.click()
-
-            await logAudit({
-                action: 'EXPORT',
-                source: 'OPERATIONAL',
-                tableName: 'teachers',
-                newData: {
-                    format: 'csv',
-                    scope: exportScope,
-                    columns: exportColumns,
-                    count: rows.length
-                }
-            })
-
-            addToast(`Export CSV berhasil (${rows.length} guru)`, 'success')
-            setIsExportModalOpen(false)
-        } catch { addToast('Gagal export CSV', 'error') }
-        finally { setExporting(false) }
-    }
-
-    const handleExportExcel = async (filename) => {
-        setExporting(true)
-        try {
-            const rows = await getExportData()
-            if (!rows.length) return addToast('Tidak ada data', 'warning')
-            const ws = XLSX.utils.json_to_sheet(rows)
-            ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 14) }))
-            const wb = XLSX.utils.book_new()
-            XLSX.utils.book_append_sheet(wb, ws, 'Data Guru')
-            XLSX.writeFile(wb, `${filename || 'export_guru'}.xlsx`)
-
-            await logAudit({
-                action: 'EXPORT',
-                source: 'OPERATIONAL',
-                tableName: 'teachers',
-                newData: {
-                    format: 'xlsx',
-                    scope: exportScope,
-                    columns: exportColumns,
-                    count: rows.length
-                }
-            })
-
-            addToast(`Export Excel berhasil (${rows.length} guru)`, 'success')
-            setIsExportModalOpen(false)
-        } catch { addToast('Gagal export Excel', 'error') }
-        finally { setExporting(false) }
-    }
-
-    const handleExportPDF = async (filename, options = {}) => {
-        setExporting(true)
-        try {
-            const [{ default: jsPDF }, autoTableMod] = await Promise.all([
-                import('jspdf'),
-                import('jspdf-autotable'),
-            ])
-            const autoTable = autoTableMod.default || autoTableMod
-            const allRows = await getExportData()
-            if (!allRows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
-
-            const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
-            doc.setFontSize(13)
-            doc.text('Laporan Data Guru', 14, 12)
-            doc.setFontSize(8)
-            doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}  |  Total: ${allRows.length} guru  |  Scope: ${exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'}`, 14, 18)
-
-            const headers = Object.keys(allRows[0])
-            const rows = allRows.map(r => headers.map(h => String(r[h] ?? '')))
-            
-            autoTable(doc, {
-                head: options.includeHeader !== false ? [headers] : [],
-                body: rows,
-                startY: 22,
-                styles: { fontSize: 7.5 },
-                headStyles: { fillColor: [79, 70, 229] },
-                alternateRowStyles: { fillColor: [245, 245, 255] },
-            })
-            
-            doc.save(`${filename || 'export_guru'}.pdf`)
-            addToast(`Export PDF berhasil (${allRows.length} guru)`, 'success')
-            
-            await logAudit({
-                action: 'EXPORT',
-                source: 'OPERATIONAL',
-                tableName: 'teachers',
-                newData: {
-                    format: 'pdf',
-                    scope: exportScope,
-                    columns: exportColumns,
-                    count: allRows.length
-                }
-            })
-            setIsExportModalOpen(false)
-        } catch (e) {
-            console.error(e)
-            addToast('Gagal export PDF', 'error')
-        } finally {
-            setExporting(false)
-        }
-    }
+    }, [teachers, filterMissing, filterStatus, setFilterMissing, setPage, setShowAdvFilter, setFilterStatus])
 
     const disp = val => isPrivacyMode ? maskInfo(val) : (val || '—')
+
 
     // ══════════════════════════════════════════════════════════════════════════
     return (
@@ -1461,9 +797,9 @@ export default function TeachersPage() {
 
                 {/* ════ MODAL Arsipkan ════ */}
                 {isArchiveModalOpen && (
-                    <Modal 
-                        isOpen={isArchiveModalOpen} 
-                        onClose={() => setIsArchiveModalOpen(false)} 
+                    <Modal
+                        isOpen={isArchiveModalOpen}
+                        onClose={() => setIsArchiveModalOpen(false)}
                         title="Konfirmasi Arsip"
                         description="Guru akan dipindahkan ke folder Arsip"
                         icon={faBoxArchive}
@@ -1484,9 +820,9 @@ export default function TeachersPage() {
                                 <button onClick={() => setIsArchiveModalOpen(false)} className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all">
                                     BATAL
                                 </button>
-                                <button 
-                                    onClick={handleArchive} 
-                                    disabled={submitting} 
+                                <button
+                                    onClick={handleArchive}
+                                    disabled={submitting}
                                     className="flex-[2] h-11 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
                                 >
                                     {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (
@@ -1500,9 +836,9 @@ export default function TeachersPage() {
 
 
                 {isBulkModalOpen && (
-                    <Modal 
-                        isOpen={isBulkModalOpen} 
-                        onClose={() => setIsBulkModalOpen(false)} 
+                    <Modal
+                        isOpen={isBulkModalOpen}
+                        onClose={() => setIsBulkModalOpen(false)}
                         title="Arsip Massal"
                         description={`${selectedIds.length} guru akan diarsipkan`}
                         icon={faBoxArchive}
@@ -1523,9 +859,9 @@ export default function TeachersPage() {
                                 <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all">
                                     BATAL
                                 </button>
-                                <button 
-                                    onClick={handleBulkArchive} 
-                                    disabled={submitting} 
+                                <button
+                                    onClick={handleBulkArchive}
+                                    disabled={submitting}
                                     className="flex-[2] h-11 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
                                 >
                                     {submitting ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : (
