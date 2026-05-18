@@ -118,11 +118,15 @@ const StudentFormModal = memo(function StudentFormModal({
         }
     }, [isOpen, DRAFT_KEY, selectedStudent])
 
-    // Save Draft
+    // Save Draft (Debounced 500ms to eliminate synchronous I/O blocking during fast typing)
     useEffect(() => {
-        if (isOpen && !submitting && form.name) {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, metadataFields }))
-        }
+        if (!isOpen || submitting || !form.name) return
+        const timer = setTimeout(() => {
+            try {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, metadataFields }))
+            } catch (e) { console.error('Failed to save draft', e) }
+        }, 500)
+        return () => clearTimeout(timer)
     }, [form, metadataFields, isOpen, submitting, DRAFT_KEY])
 
     const loadDraft = () => {
