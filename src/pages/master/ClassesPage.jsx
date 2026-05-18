@@ -118,7 +118,6 @@ export default function ClassesPage() {
 
     // UI states
     const [searchQuery, setSearchQuery] = useState('')
-    const debouncedSearch = useDebounce(searchQuery, 350)
     const [filterLevel, setFilterLevel] = useState('')
     const [filterProgram, setFilterProgram] = useState('')
     const [sortBy, setSortBy] = useState('name')
@@ -197,8 +196,8 @@ export default function ClassesPage() {
     useEffect(() => { try { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) } catch { } }, [visibleCols])
     useEffect(() => { try { localStorage.setItem(LS_PAGE_SIZE, pageSize) } catch { } }, [pageSize])
 
-    // debounce handled by useDebounce hook — reset page on search/filter change
-    useEffect(() => { setPage(1) }, [debouncedSearch, filterLevel, filterProgram, sortBy, filterNoTeacher, filterCrowded])
+    // reset page on search/filter change
+    useEffect(() => { setPage(1) }, [searchQuery, filterLevel, filterProgram, sortBy, filterNoTeacher, filterCrowded])
 
     // ── outside click ─────────────────────────────────────────────────────────
     // Deferred unmount effect for header menu
@@ -343,7 +342,7 @@ export default function ClassesPage() {
     // Filter & Sort Logic
     const filteredClasses = useMemo(() => {
         let result = classes.filter(c => {
-            const q = debouncedSearch.toLowerCase()
+            const q = searchQuery.toLowerCase()
             const matchSearch = !q || c.name.toLowerCase().includes(q) || (c.major || '').toLowerCase().includes(q) || (c.teacherName || '').toLowerCase().includes(q)
             const matchLevel = !filterLevel || c.grade === filterLevel
             const matchProg = !filterProgram || (c.major || '').includes(filterProgram)
@@ -355,7 +354,7 @@ export default function ClassesPage() {
         else if (sortBy === 'level') result.sort((a, b) => (a.grade || '').localeCompare(b.grade || '') || a.name.localeCompare(b.name))
         else if (sortBy === 'students') result.sort((a, b) => (b.students || 0) - (a.students || 0))
         return result
-    }, [classes, debouncedSearch, filterLevel, filterProgram, filterNoTeacher, filterCrowded, sortBy])
+    }, [classes, searchQuery, filterLevel, filterProgram, filterNoTeacher, filterCrowded, sortBy])
 
     const totalFilteredRows = filteredClasses.length
 

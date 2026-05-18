@@ -90,7 +90,7 @@ const Modal = memo(function Modal({
     const isBottomSheet = mobileVariant === 'bottom-sheet'
 
     // Performance-optimized timing
-    const sheetEase = visible 
+    const sheetEase = visible
         ? 'cubic-bezier(0.2, 0.8, 0.2, 1)'  // Snappy entry
         : 'cubic-bezier(0.3, 0, 1, 1)'      // Accelerating exit (feels faster)
     const duration = visible ? '300ms' : '200ms'
@@ -118,7 +118,7 @@ const Modal = memo(function Modal({
                 className={`bg-[var(--color-surface)] shadow-2xl w-full relative overflow-hidden flex flex-col border border-[var(--color-border)]/60 z-10
                     ${sizeClasses[size]}
                     ${isBottomSheet
-                        ? 'rounded-t-[2.25rem] md:rounded-[2.25rem] max-h-[94vh] md:max-h-[calc(100vh-6rem)]'
+                        ? 'rounded-t-[2.25rem] md:rounded-[2.25rem] max-h-[78vh] md:max-h-[calc(100vh-6rem)]'
                         : 'rounded-[2.25rem] max-h-[calc(100vh-6rem)]'
                     }
                 `}

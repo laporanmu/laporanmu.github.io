@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
+import * as XLSX from 'xlsx'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -7,7 +8,7 @@ import {
     faKeyboard, faChevronLeft, faChevronRight, faGrip,
     faAnglesLeft, faAnglesRight, faDownload, faCopy,
     faGraduationCap, faLayerGroup, faCircleCheck, faCheck,
-    faClock, faCalendarDay, faTableList, faHistory,
+    faClock, faCalendarDay, faTableList, faHistory, faFileImport,
     faFingerprint, faTimeline, faTimes, faFileExport, faEye, faEyeSlash
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -23,10 +24,22 @@ import Pagination from '../../components/ui/Pagination'
 import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
 import AcademicYearFormModal from '../../components/academic-years/AcademicYearFormModal'
 import { ArchiveModal, DeactivateModal } from '../../components/academic-years/AcademicYearActionModals'
+import AcademicYearArchiveModal from '../../components/academic-years/AcademicYearArchiveModal'
 import { AuditTimeline } from '../admin/LogsPage'
 import StatsCarousel from '../../components/StatsCarousel'
 import { StatCard } from '../../components/ui/DataDisplay'
 
+
+const LazyAcademicYearExportModal = React.lazy(() => import('../../components/academic-years/AcademicYearExportModal'))
+const LazyAcademicYearImportModal = React.lazy(() => import('../../components/academic-years/AcademicYearImportModal'))
+
+const SYSTEM_COLS = [
+    { key: 'name', label: 'Tahun Pelajaran (e.g. 2024/2025)' },
+    { key: 'semester', label: 'Semester (Ganjil / Genap)' },
+    { key: 'start_date', label: 'Tanggal Mulai (YYYY-MM-DD)' },
+    { key: 'end_date', label: 'Tanggal Selesai (YYYY-MM-DD)' },
+    { key: 'curriculum', label: 'Kurikulum (e.g. Merdeka)' },
+]
 
 const LS_COLS = 'academic_years_columns'
 const LS_PAGE_SIZE = 'academic_years_page_size'
@@ -276,7 +289,6 @@ export default function AcademicYearsPage() {
 
     // Search & Filter
     const [searchQuery, setSearchQuery] = useState('')
-    const debouncedSearch = useDebounce(searchQuery, 350)
     const [filterSemester, setFilterSemester] = useState('')
     const [filterStatus, setFilterStatus] = useState('')
     const [filterCurriculum, setFilterCurriculum] = useState('')
@@ -339,11 +351,36 @@ export default function AcademicYearsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [isArchivedOpen, setIsArchivedOpen] = useState(false)
+    const [loadingArchived, setLoadingArchived] = useState(false)
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
     const [isPermanentDeleteOpen, setIsPermanentDeleteOpen] = useState(false)
     const [isDeactivateConfirmOpen, setIsDeactivateConfirmOpen] = useState(false)
     const [isReadOnlyDetailOpen, setIsReadOnlyDetailOpen] = useState(false)
     const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+
+    // Import State
+    const [importStep, setImportStep] = useState(1)
+    const [importFileName, setImportFileName] = useState('')
+    const [importRawData, setImportRawData] = useState([])
+    const [importFileHeaders, setImportFileHeaders] = useState([])
+    const [importColumnMapping, setImportColumnMapping] = useState({})
+    const [importPreview, setImportPreview] = useState([])
+    const [importIssues, setImportIssues] = useState([])
+    const [importLoading, setImportLoading] = useState(false)
+    const [importValidationOpen, setImportValidationOpen] = useState(true)
+    const [importDragOver, setImportDragOver] = useState(false)
+    const [importing, setImporting] = useState(false)
+    const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
+    const [importEditCell, setImportEditCell] = useState(null)
+    const [importSkipDupes, setImportSkipDupes] = useState(true)
+    const importFileInputRef = useRef(null)
+
+    // Export State
+    const [exportScope, setExportScope] = useState('filtered')
+    const [exportColumns, setExportColumns] = useState(['name', 'semester', 'start_date', 'end_date', 'curriculum', 'is_active', 'is_locked'])
+    const [exporting, setExporting] = useState(false)
 
     // ── Fetch ────────────────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -369,6 +406,7 @@ export default function AcademicYearsPage() {
 
     const fetchArchived = useCallback(async () => {
         if (!supabase) return
+        setLoadingArchived(true)
         try {
             const { data } = await supabase
                 .from('academic_years')
@@ -377,6 +415,7 @@ export default function AcademicYearsPage() {
                 .order('created_at', { ascending: false })
             setArchivedYears(data || [])
         } catch { }
+        finally { setLoadingArchived(false) }
     }, [])
 
     useEffect(() => { fetchData() }, [fetchData])
@@ -709,13 +748,344 @@ export default function AcademicYearsPage() {
 
     // Count active filters
     const activeFilterCount = (filterSemester ? 1 : 0) + (filterTimeStatus ? 1 : 0) + (searchQuery ? 1 : 0)
-    const handleExportCSV = () => {
-        const header = ['Name', 'Semester', 'Start', 'End', 'Status']
-        const rows = filtered.map(y => [y.name, y.semester, y.start_date, y.end_date, y.is_active ? 'Active' : 'Inactive'])
-        const csv = [header, ...rows].map(r => r.join(',')).join('\n')
-        const blob = new Blob([csv], { type: 'text/csv' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a'); a.href = url; a.download = 'academic-years.csv'; a.click()
+
+    // ── EXPORT HANDLERS ──────────────────────────────────────────────────────
+    const getExportData = async () => {
+        let q = supabase.from('academic_years').select('name,semester,start_date,end_date,curriculum,is_active,is_locked').is('deleted_at', null)
+
+        if (exportScope === 'selected' && selectedIds.length > 0) {
+            q = q.in('id', selectedIds)
+        } else if (exportScope === 'filtered') {
+            if (filterSemester) q = q.eq('semester', filterSemester)
+            if (filterStatus) q = q.eq('is_active', filterStatus === 'active')
+            if (filterCurriculum) q = q.eq('curriculum', filterCurriculum)
+            if (filterLock) q = q.eq('is_locked', filterLock === 'locked')
+        }
+
+        const { data, error } = await q
+        if (error) { addToast('Gagal memuat data export', 'error'); return [] }
+
+        return (data || []).map(y => {
+            const row = {}
+            exportColumns.forEach(colKey => {
+                if (colKey === 'name') row['Tahun Pelajaran'] = y.name
+                if (colKey === 'semester') row['Semester'] = y.semester
+                if (colKey === 'start_date') row['Mulai'] = y.start_date
+                if (colKey === 'end_date') row['Selesai'] = y.end_date
+                if (colKey === 'curriculum') row['Kurikulum'] = y.curriculum
+                if (colKey === 'is_active') row['Status Aktif'] = y.is_active ? 'Aktif' : 'Nonaktif'
+                if (colKey === 'is_locked') row['Status Kunci'] = y.is_locked ? 'Terkunci' : 'Terbuka'
+            })
+            return row
+        })
+    }
+
+    const handleExportCSV = async (filename, options = {}) => {
+        setExporting(true)
+        try {
+            const rows = await getExportData()
+            if (!rows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+
+            const headers = Object.keys(rows[0])
+            const csvContent = [
+                ...(options.includeHeader !== false ? [headers.join(',')] : []),
+                ...rows.map(r => headers.map(h => {
+                    const v = String(r[h] ?? '').replace(/"/g, '""')
+                    return `"${v}"`
+                }).join(','))
+            ].join('\n')
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(blob)
+            a.download = `${filename || 'export_tahun_pelajaran'}.csv`
+            a.click()
+
+            await logAudit({
+                action: 'EXPORT',
+                source: 'MASTER',
+                tableName: 'academic_years',
+                newData: { format: 'csv', scope: exportScope, columns: exportColumns, count: rows.length }
+            })
+
+            addToast(`Export CSV berhasil (${rows.length} periode)`, 'success')
+            setIsExportModalOpen(false)
+        } catch { addToast('Gagal export CSV', 'error') }
+        finally { setExporting(false) }
+    }
+
+    const handleExportExcel = async (filename) => {
+        setExporting(true)
+        try {
+            const rows = await getExportData()
+            if (!rows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+            const ws = XLSX.utils.json_to_sheet(rows)
+            ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 18) }))
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'Data Periode')
+            XLSX.writeFile(wb, `${filename || 'export_tahun_pelajaran'}.xlsx`)
+
+            await logAudit({
+                action: 'EXPORT',
+                source: 'MASTER',
+                tableName: 'academic_years',
+                newData: { format: 'xlsx', scope: exportScope, columns: exportColumns, count: rows.length }
+            })
+
+            addToast(`Export Excel berhasil (${rows.length} periode)`, 'success')
+            setIsExportModalOpen(false)
+        } catch { addToast('Gagal export Excel', 'error') }
+        finally { setExporting(false) }
+    }
+
+    const handleExportPDF = async (filename, options = {}) => {
+        setExporting(true)
+        try {
+            const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+                import('jspdf'),
+                import('jspdf-autotable'),
+            ])
+            const autoTable = autoTableMod.default || autoTableMod
+            const allRows = await getExportData()
+            if (!allRows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+
+            const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
+            doc.setFontSize(13)
+            doc.text('Laporan Data Tahun Pelajaran', 14, 12)
+            doc.setFontSize(8)
+            doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}  |  Total: ${allRows.length} periode  |  Scope: ${exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'}`, 14, 18)
+
+            const headers = Object.keys(allRows[0])
+            const body = allRows.map(r => headers.map(h => r[h]))
+
+            autoTable(doc, {
+                startY: 22,
+                head: [headers],
+                body: body,
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [79, 70, 229] },
+            })
+
+            doc.save(`${filename || 'export_tahun_pelajaran'}.pdf`)
+
+            await logAudit({
+                action: 'EXPORT',
+                source: 'MASTER',
+                tableName: 'academic_years',
+                newData: { format: 'pdf', scope: exportScope, columns: exportColumns, count: allRows.length }
+            })
+
+            addToast(`Export PDF berhasil (${allRows.length} periode)`, 'success')
+            setIsExportModalOpen(false)
+        } catch { addToast('Gagal export PDF', 'error') }
+        finally { setExporting(false) }
+    }
+
+    // ── IMPORT HANDLERS ──────────────────────────────────────────────────────
+    const handleImportClick = () => {
+        if (!isImportModalOpen) {
+            setImportFileName('')
+            setImportRawData([])
+            setImportPreview([])
+            setImportIssues([])
+            setImportStep(1)
+            setIsImportModalOpen(true)
+        } else {
+            importFileInputRef.current?.click()
+        }
+    }
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        await processImportFile(file)
+        e.target.value = ''
+    }
+
+    const processImportFile = async file => {
+        if (!file) return
+        setImportFileName(file.name)
+        setImportLoading(true)
+        try {
+            const data = await file.arrayBuffer()
+            const wb = XLSX.read(data, { type: 'array' })
+            const wsname = wb.SheetNames[0]
+            const ws = wb.Sheets[wsname]
+            const rawJson = XLSX.utils.sheet_to_json(ws, { header: 1 })
+
+            if (!rawJson || rawJson.length < 2) {
+                addToast('File kosong atau tidak memiliki baris data', 'error')
+                return
+            }
+
+            const headers = (rawJson[0] || []).map(h => String(h || '').trim()).filter(Boolean)
+            setImportFileHeaders(headers)
+
+            const rows = rawJson.slice(1).filter(r => r.some(c => c !== undefined && c !== null && c !== ''))
+            setImportRawData(rows)
+
+            // Auto mapping
+            const map = {}
+            SYSTEM_COLS.forEach(sys => {
+                const best = headers.find(h => h.toLowerCase().includes(sys.key.toLowerCase()) || sys.label.toLowerCase().includes(h.toLowerCase()))
+                if (best) map[sys.key] = best
+            })
+            setImportColumnMapping(map)
+            setImportStep(2)
+        } catch {
+            addToast('Gagal membaca file Excel/CSV', 'error')
+        } finally {
+            setImportLoading(false)
+        }
+    }
+
+    const buildImportPreview = async (rawRows, mapping) => {
+        setImportLoading(true)
+        try {
+            const nameCol = importFileHeaders.indexOf(mapping.name)
+            const semCol = importFileHeaders.indexOf(mapping.semester)
+            const startCol = importFileHeaders.indexOf(mapping.start_date)
+            const endCol = importFileHeaders.indexOf(mapping.end_date)
+            const curCol = importFileHeaders.indexOf(mapping.curriculum)
+
+            const preview = rawRows.map((row, i) => {
+                const data = {
+                    name: row[nameCol] !== undefined ? String(row[nameCol]).trim() : '',
+                    semester: row[semCol] !== undefined ? String(row[semCol]).trim() : '',
+                    start_date: row[startCol] !== undefined ? String(row[startCol]).trim() : '',
+                    end_date: row[endCol] !== undefined ? String(row[endCol]).trim() : '',
+                    curriculum: row[curCol] !== undefined ? String(row[curCol]).trim() : 'Merdeka',
+                }
+                return { ...data, _row: i }
+            })
+
+            // Validation
+            const issues = []
+            preview.forEach((row, i) => {
+                const rowIssues = []
+                if (!row.name) rowIssues.push('Tahun Pelajaran tidak boleh kosong')
+                if (!row.semester) rowIssues.push('Semester tidak boleh kosong')
+                if (!row.start_date) rowIssues.push('Tanggal mulai tidak boleh kosong')
+                if (!row.end_date) rowIssues.push('Tanggal selesai tidak boleh kosong')
+                
+                if (row.semester && !['Ganjil', 'Genap'].includes(row.semester)) {
+                    rowIssues.push('Semester harus Ganjil atau Genap')
+                }
+
+                if (row.name && row.semester && years.some(y => y.name === row.name && y.semester === row.semester)) {
+                    rowIssues.push(`Periode "${row.name} (${row.semester})" sudah ada di database`)
+                    row._isDupe = true
+                }
+
+                if (rowIssues.length) {
+                    issues.push({ row: i + 2, level: 'error', messages: rowIssues })
+                    row._hasError = true
+                }
+            })
+
+            setImportPreview(preview)
+            setImportIssues(issues)
+        } finally {
+            setImportLoading(false)
+        }
+    }
+
+    const handleImportCellEdit = (rowIdx, colKey, newValue) => {
+        setImportPreview(prev => {
+            const next = [...prev]
+            next[rowIdx] = { ...next[rowIdx], [colKey]: newValue }
+
+            const rowIssues = []
+            if (!next[rowIdx].name) rowIssues.push('Tahun Pelajaran tidak boleh kosong')
+            if (!next[rowIdx].semester) rowIssues.push('Semester tidak boleh kosong')
+            if (!next[rowIdx].start_date) rowIssues.push('Tanggal mulai tidak boleh kosong')
+            if (!next[rowIdx].end_date) rowIssues.push('Tanggal selesai tidak boleh kosong')
+
+            if (next[rowIdx].semester && !['Ganjil', 'Genap'].includes(next[rowIdx].semester)) {
+                rowIssues.push('Semester harus Ganjil atau Genap')
+            }
+
+            next[rowIdx]._hasError = rowIssues.length > 0
+
+            const newIssues = importIssues.filter(iss => iss.row !== rowIdx + 2)
+            if (rowIssues.length) {
+                newIssues.push({ row: rowIdx + 2, level: 'error', messages: rowIssues })
+            }
+            setImportIssues(newIssues.sort((a, b) => a.row - b.row))
+
+            return next
+        })
+    }
+
+    const handleRemoveImportRow = idx => {
+        setImportPreview(prev => prev.filter((_, i) => i !== idx))
+        setImportIssues(prev => prev.filter(iss => iss.row !== idx + 2).map(iss => iss.row > idx + 2 ? { ...iss, row: iss.row - 1 } : iss))
+    }
+
+    const handleBulkFix = (colKey, value) => {
+        setImportPreview(prev => prev.map(r => ({ ...r, [colKey]: value, _hasError: colKey === 'name' ? !value : r._hasError })))
+        if (colKey === 'name' && value) setImportIssues(prev => prev.filter(iss => !iss.messages.includes('Tahun Pelajaran tidak boleh kosong')))
+        addToast(`Berhasil merubah semua baris ke ${value}`, 'success')
+    }
+
+    const handleDownloadTemplate = () => {
+        const headers = [
+            'Tahun Pelajaran',
+            'Semester',
+            'Tanggal Mulai (YYYY-MM-DD)',
+            'Tanggal Selesai (YYYY-MM-DD)',
+            'Kurikulum'
+        ]
+        const data = [
+            ['2024/2025', 'Ganjil', '2024-07-01', '2024-12-31', 'Merdeka'],
+            ['2024/2025', 'Genap', '2025-01-01', '2025-06-30', 'Merdeka']
+        ]
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...data])
+
+        ws['!cols'] = [
+            { wch: 20 },
+            { wch: 15 },
+            { wch: 25 },
+            { wch: 25 },
+            { wch: 18 }
+        ]
+
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Template Import')
+        XLSX.writeFile(wb, 'Template Import Periode.xlsx')
+    }
+
+    const importReadyRows = importPreview.filter(r => !r._hasError)
+    const hasImportBlockingErrors = importIssues.some(x => x.level === 'error')
+
+    const handleCommitImport = async () => {
+        if (!importPreview.length) { addToast('Tidak ada data untuk diimport', 'error'); return }
+        if (hasImportBlockingErrors) { addToast('Masih ada ERROR. Perbaiki file dulu.', 'error'); return }
+
+        const validRows = importPreview.filter(r => !r._hasError && (!importSkipDupes || !r._isDupe))
+        if (!validRows.length) { addToast('Tidak ada baris valid yang baru', 'warning'); return }
+
+        setImporting(true); setImportProgress({ done: 0, total: validRows.length })
+        try {
+            const CHUNK = 50
+            for (let i = 0; i < validRows.length; i += CHUNK) {
+                const chunk = validRows.slice(i, i + CHUNK).map(r => ({
+                    name: r.name,
+                    semester: r.semester,
+                    start_date: r.start_date,
+                    end_date: r.end_date,
+                    curriculum: r.curriculum || 'Merdeka',
+                    is_active: false
+                }))
+                const { error } = await supabase.from('academic_years').insert(chunk); if (error) throw error
+                setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
+            }
+            addToast(`Berhasil import ${validRows.length} periode`, 'success')
+            await logAudit({ action: 'INSERT', source: 'MASTER', tableName: 'academic_years', newData: { bulk_import: true, count: validRows.length, data: validRows } })
+            setIsImportModalOpen(false); setImportPreview([]); setImportIssues([]); setImportFileName(''); setImportStep(1)
+            fetchData()
+        } catch { addToast('Gagal import (cek constraint DB / duplikat)', 'error') }
+        finally { setImporting(false) }
     }
 
     const resetAllFilters = () => {
@@ -729,10 +1099,10 @@ export default function AcademicYearsPage() {
         setSelectedIds([])
     }
 
-    // filtering logic (Updated to use debouncedSearch)
+    // filtering logic
     const filtered = useMemo(() => {
         return years.filter(y => {
-            const matchesSearch = !debouncedSearch || y.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+            const matchesSearch = !searchQuery || y.name.toLowerCase().includes(searchQuery.toLowerCase())
             const matchesSemester = !filterSemester || y.semester === filterSemester
             const matchesStatus = !filterStatus || (filterStatus === 'active' ? y.is_active : !y.is_active)
             const matchesCurriculum = !filterCurriculum || y.curriculum === filterCurriculum
@@ -752,7 +1122,7 @@ export default function AcademicYearsPage() {
             if (sortBy === 'start_asc') return new Date(a.start_date) - new Date(b.start_date)
             return new Date(b.start_date) - new Date(a.start_date)
         })
-    }, [years, debouncedSearch, filterSemester, filterStatus, filterCurriculum, filterLock, filterTimeStatus, sortBy])
+    }, [years, searchQuery, filterSemester, filterStatus, filterCurriculum, filterLock, filterTimeStatus, sortBy])
 
     const totalRows = filtered.length
     const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
@@ -829,36 +1199,55 @@ export default function AcademicYearsPage() {
                                     onClick={() => setIsHeaderMenuOpen(false)}
                                 />
                                 <div
-                                    className={`fixed z-[9991] w-60 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-all duration-200 ease-out origin-top-right
+                                    className={`fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-all duration-200 ease-out origin-top-right
                                         ${isHeaderMenuOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'}`}
                                     style={{
                                         top: headerMenuRect.bottom + 8,
-                                        left: Math.max(10, headerMenuRect.right - 240)
+                                        left: Math.max(10, headerMenuRect.right - 224)
                                     }}
                                 >
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Manajemen</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); handleImportClick() }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faFileImport} className="text-xs" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Import CSV / Excel</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Unggah data periode masal dari file Excel/CSV</p>
+                                        </div>
+                                    </button>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Export Data</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Cadangkan seluruh database ke format Excel</p>
+                                        </div>
+                                    </button>
+                                    <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                                    <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
                                     <button onClick={() => { setIsHeaderMenuOpen(false); fetchArchived(); setIsArchivedOpen(true) }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
                                         <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
                                         </div>
                                         <div className="text-left">
                                             <p className="text-[11px] font-black leading-tight">Arsip Periode</p>
-                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data</p>
-                                        </div>
-                                    </button>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); handleExportCSV() }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
-                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <FontAwesomeIcon icon={faDownload} className="text-xs" />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-[11px] font-black leading-tight">Export CSV</p>
-                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">{totalRows} data terpilih</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data periode tidak aktif</p>
                                         </div>
                                     </button>
                                 </div>
                             </>,
                             getPortalContainer('portal-academic-header-menu')
                         )}
+
+                        <input
+                            type="file"
+                            ref={importFileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                            accept=".csv,.xlsx"
+                        />
 
                         {/* Keyboard Shortcuts Button - hidden on mobile */}
                         <button onClick={() => { if (!isShortcutOpen) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setIsShortcutOpen(v => !v) }}
@@ -977,7 +1366,7 @@ export default function AcademicYearsPage() {
                             {searchQuery && (
                                 <button type="button" onClick={() => setSearchQuery('')} className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]">
                                     <FontAwesomeIcon icon={faSearch} className="opacity-40" />
-                                    <span>"{(debouncedSearch || searchQuery).slice(0, 20)}{searchQuery.length > 20 ? '...' : ''}"</span>
+                                    <span>"{searchQuery.slice(0, 20)}{searchQuery.length > 20 ? '...' : ''}"</span>
                                     <FontAwesomeIcon icon={faTimes} className="text-[8px] opacity-40 group-hover:text-red-500 transition-colors" />
                                 </button>
                             )}
@@ -1331,23 +1720,83 @@ export default function AcademicYearsPage() {
                     <p className="text-[11px] font-bold text-red-700/70 p-4 rounded-2xl bg-red-500/5 border border-red-500/10">Anda akan mengarsipkan <span className="font-black text-red-600">{selectedIds.length} tahun pelajaran</span> secara bersamaan.</p>
                 </Modal>
 
-                <Modal isOpen={isArchivedOpen} onClose={() => setIsArchivedOpen(false)} title="Manajemen Arsip" description="Data yang telah dinonaktifkan." icon={faBoxArchive} iconBg="bg-amber-500/10" iconColor="text-amber-600" size="lg">
-                    <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-                        {archivedYears.length === 0 ? <div className="py-12 text-center opacity-40"><p className="text-xs font-black uppercase tracking-widest">Tidak ada arsip</p></div> : archivedYears.map(y => (
-                            <div key={y.id} className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center justify-between">
-                                <div><h4 className="text-sm font-black">{y.name} — {y.semester}</h4><p className="text-[10px] font-bold text-[var(--color-text-muted)] truncate">Diarsipkan {new Date(y.deleted_at).toLocaleDateString()}</p></div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => handleRestore(y)} className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center"><FontAwesomeIcon icon={faRotateLeft} /></button>
-                                    <button onClick={() => { setItemToPermanentDelete(y); setIsPermanentDeleteOpen(true) }} className="w-8 h-8 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"><FontAwesomeIcon icon={faTrash} /></button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </Modal>
+                <AcademicYearArchiveModal
+                    isOpen={isArchivedOpen}
+                    onClose={() => setIsArchivedOpen(false)}
+                    archivedYears={archivedYears}
+                    loadingArchived={loadingArchived}
+                    setArchivedYears={setArchivedYears}
+                    fetchArchivedYears={fetchArchived}
+                    fetchData={fetchData}
+                    addToast={addToast}
+                />
 
-                <Modal isOpen={isPermanentDeleteOpen} onClose={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} title="Hapus Permanen" description="Tindakan ini tidak dapat dibatalkan." icon={faTrash} iconBg="bg-red-500/10" iconColor="text-red-500" size="sm" footer={<div className="flex gap-3"><button onClick={() => { setIsPermanentDeleteOpen(false); setItemToPermanentDelete(null) }} className="h-9 px-4 rounded-xl border border-[var(--color-border)] text-[10px] font-black text-[var(--color-text-muted)] transition-all">Batal</button><div className="flex-1" /><button onClick={() => handlePermanentDelete(itemToPermanentDelete)} disabled={submitting} className="h-9 px-6 rounded-xl bg-red-500 text-white font-black text-[10px] transition-all">Hapus Sekarang</button></div>}>
-                    <p className="text-[11px] font-bold text-red-700/70 p-4 rounded-2xl bg-red-500/5 border border-red-500/10">Yakin menghapus permanen <span className="text-red-600 font-black">{itemToPermanentDelete?.name}</span>? Data akan hilang selamanya.</p>
-                </Modal>
+                <React.Suspense fallback={null}>
+                    {isExportModalOpen && (
+                        <LazyAcademicYearExportModal
+                            isOpen={isExportModalOpen}
+                            onClose={() => { if (exporting) return; setIsExportModalOpen(false) }}
+                            years={filtered}
+                            selectedIds={selectedIds}
+                            exportScope={exportScope}
+                            setExportScope={setExportScope}
+                            exportColumns={exportColumns}
+                            setExportColumns={setExportColumns}
+                            exporting={exporting}
+                            handleExportCSV={handleExportCSV}
+                            handleExportExcel={handleExportExcel}
+                            handleExportPDF={handleExportPDF}
+                            addToast={addToast}
+                        />
+                    )}
+                    {isImportModalOpen && (
+                        <LazyAcademicYearImportModal
+                            isOpen={isImportModalOpen}
+                            onClose={() => {
+                                if (importing) return
+                                setIsImportModalOpen(false)
+                                setImportPreview([])
+                                setImportIssues([])
+                                setImportFileName('')
+                                setImportDragOver(false)
+                                setImportStep(1)
+                            }}
+                            importing={importing}
+                            importStep={importStep}
+                            setImportStep={setImportStep}
+                            importPreview={importPreview}
+                            importFileName={importFileName}
+                            importFileInputRef={importFileInputRef}
+                            importDragOver={importDragOver}
+                            setImportDragOver={setImportDragOver}
+                            processImportFile={processImportFile}
+                            handleDownloadTemplate={handleDownloadTemplate}
+                            importFileHeaders={importFileHeaders}
+                            SYSTEM_COLS={SYSTEM_COLS}
+                            importColumnMapping={importColumnMapping}
+                            setImportColumnMapping={setImportColumnMapping}
+                            importRawData={importRawData}
+                            importLoading={importLoading}
+                            setImportLoading={setImportLoading}
+                            buildImportPreview={buildImportPreview}
+                            importIssues={importIssues}
+                            importValidationOpen={importValidationOpen}
+                            setImportValidationOpen={setImportValidationOpen}
+                            importProgress={importProgress}
+                            handleCommitImport={handleCommitImport}
+                            handleImportClick={handleImportClick}
+                            hasImportBlockingErrors={hasImportBlockingErrors}
+                            importReadyRows={importReadyRows}
+                            handleImportCellEdit={handleImportCellEdit}
+                            importEditCell={importEditCell}
+                            setImportEditCell={setImportEditCell}
+                            handleRemoveImportRow={handleRemoveImportRow}
+                            importSkipDupes={importSkipDupes}
+                            setImportSkipDupes={setImportSkipDupes}
+                            handleBulkFix={handleBulkFix}
+                        />
+                    )}
+                </React.Suspense>
             </div>
         </DashboardLayout>
     )

@@ -155,7 +155,6 @@ export default function TeachersPage() {
     const [uploadingPhoto, setUploadingPhoto] = useState(false)
     // filters
     const [searchQuery, setSearchQuery] = useState('')
-    const debouncedSearch = useDebounce(searchQuery, 350)
     const [filterSubject, setFilterSubject] = useState('')
     const [filterGender, setFilterGender] = useState('')
     const [filterStatus, setFilterStatus] = useState('active')
@@ -258,8 +257,8 @@ export default function TeachersPage() {
     useEffect(() => { try { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) } catch { } }, [visibleCols])
     useEffect(() => { try { localStorage.setItem(LS_PAGE_SIZE, pageSize) } catch { } }, [pageSize])
 
-    // debounce handled by useDebounce hook — reset page on search change
-    useEffect(() => { setPage(1) }, [debouncedSearch])
+    // reset page on search change
+    useEffect(() => { setPage(1) }, [searchQuery])
 
     // ── outside click ─────────────────────────────────────────────────────────
     // Deferred unmount effect for header menu
@@ -334,7 +333,7 @@ export default function TeachersPage() {
             if (filterSubject) q = q.eq('subject', filterSubject)
             if (filterType) q = q.eq('type', filterType)
             if (filterMissing === 'wa') q = q.or('phone.is.null,phone.eq.""')
-            if (debouncedSearch) { const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_'); q = q.or(`name.ilike.%${s}%,nbm.ilike.%${s}%,email.ilike.%${s}%,subject.ilike.%${s}%`) }
+            if (searchQuery) { const s = searchQuery.replace(/%/g, '\\%').replace(/_/g, '\\_'); q = q.or(`name.ilike.%${s}%,nbm.ilike.%${s}%,email.ilike.%${s}%,subject.ilike.%${s}%`) }
             const { data, error, count } = await q
             if (error) throw error
 
@@ -374,7 +373,7 @@ export default function TeachersPage() {
             if (cls) setClassesList(cls)
         } catch { addToast('Gagal memuat data guru', 'error') }
         finally { setLoading(false) }
-    }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, debouncedSearch, addToast])
+    }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, searchQuery, addToast])
 
     const fetchStats = useCallback(async () => {
         try {
@@ -393,7 +392,7 @@ export default function TeachersPage() {
     }, [])
 
     useEffect(() => { fetchStats() }, [])
-    useEffect(() => { fetchData() }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, debouncedSearch])
+    useEffect(() => { fetchData() }, [page, sortBy, filterStatus, filterGender, filterSubject, filterType, filterMissing, searchQuery])
 
 
 

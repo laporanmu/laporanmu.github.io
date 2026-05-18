@@ -140,23 +140,35 @@ h6,
   animation: slideOut 0.3s ease-in forwards;
 }
 
-/* Premium Glass Effect */
+/* Premium Glass Effect (Optimized for Mobile Performance) */
 .glass {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(226, 232, 240, 0.8);
   box-shadow: 0 4px 20px -1px rgba(0, 0, 0, 0.05);
   isolation: isolate;
 }
 
 .dark .glass {
-  background: rgba(2, 6, 23, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
   isolation: isolate;
+}
+
+/* Only enable heavy backdrop blur on desktop screens where GPU is powerful */
+@media (min-width: 1024px) {
+  .glass {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+  .dark .glass {
+    background: rgba(2, 6, 23, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
 }
 
 /* Gradient Text */
@@ -324,12 +336,19 @@ tr:hover td {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(4px);
+}
+
+@media (min-width: 1024px) {
+  .modal-overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
 }
 
 .modal-content {
