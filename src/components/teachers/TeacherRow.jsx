@@ -56,7 +56,7 @@ const TeacherRow = memo(({
         `}>
             <td className="px-6 py-4">
                 <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(teacher.id)} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(teacher.id)} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer" />
                     <button
                         onClick={() => handleTogglePin(teacher)}
                         title={teacher.is_pinned ? 'Unpin guru' : 'Pin ke atas'}
@@ -175,7 +175,7 @@ const TeacherMobileCard = memo(({
         <div className={`p-4 transition-colors ${isSelected ? 'bg-[var(--color-primary)]/5' : ''} ${teacher.is_pinned ? 'bg-amber-500/[0.04] border-l-4 border-l-amber-400' : ''}`}>
             <div className="flex items-start gap-3">
                 <div className="flex flex-col items-center gap-3">
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(teacher.id)} className="accent-[var(--color-primary)] w-4 h-4 cursor-pointer shrink-0" />
+                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(teacher.id)} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer shrink-0 mt-1" />
                     <button
                         onClick={() => handleTogglePin(teacher)}
                         className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${teacher.is_pinned ? 'text-amber-500' : 'text-[var(--color-text-muted)] opacity-40'}`}

@@ -332,6 +332,7 @@ export const StudentRow = memo(({
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => onToggleSelect(student.id)}
+                        className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer shrink-0"
                     />
                     <button
                         onClick={() => onTogglePin(student)}

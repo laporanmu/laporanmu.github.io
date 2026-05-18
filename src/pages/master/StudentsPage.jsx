@@ -372,12 +372,6 @@ export default function StudentsPage() {
         selectedStudents, selectedStudentsWithPhone, selectedIdSet, generateCode, handleAddCustomTag,
         bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches,
     } = core
-    // --- Pull-to-Refresh Logic ---
-    const [pullDistance, setPullDistance] = useState(0)
-    const [isRefreshing, setIsRefreshing] = useState(false)
-    const touchStartRef = useRef(0)
-    const pullThreshold = 80 // px
-
     const { enabled: canImportCSV } = useFlag('students.import_csv')
     const { enabled: canImportGSheets } = useFlag('students.import_gsheets')
     const { enabled: canExport } = useFlag('students.export')
@@ -406,41 +400,6 @@ export default function StudentsPage() {
     // --- Enterprise Logic: Data Fetching ---
     const statsScrollRef = useRef(null)
     const [activeStatIdx, setActiveStatIdx] = useState(0)
-
-
-    const handleTouchStart = (e) => {
-        if (window.scrollY === 0) {
-            touchStartRef.current = e.touches[0].clientY
-        } else {
-            touchStartRef.current = -1
-        }
-    }
-
-    const handleTouchMove = (e) => {
-        if (touchStartRef.current === -1 || isRefreshing) return
-        const touchY = e.touches[0].clientY
-        const distance = touchY - touchStartRef.current
-        if (distance > 0) {
-            setPullDistance(Math.min(distance * 0.4, 120)) // dampened pull
-        }
-    }
-
-    const handleTouchEnd = async () => {
-        if (pullDistance > pullThreshold && !isRefreshing) {
-            setIsRefreshing(true)
-            setPullDistance(pullThreshold)
-            try {
-                await Promise.all([fetchData(), fetchStats()])
-                addToast('Data diperbarui', 'success')
-            } finally {
-                setIsRefreshing(false)
-                setPullDistance(0)
-            }
-        } else {
-            setPullDistance(0)
-        }
-        touchStartRef.current = -1
-    }
 
 
 
@@ -650,29 +609,7 @@ export default function StudentsPage() {
                 ` : ''}
             </style>
 
-            <div
-                className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto min-h-screen relative"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-            >
-                {/* Pull-to-Refresh Indicator */}
-                <div
-                    className="absolute left-0 right-0 flex justify-center pointer-events-none z-[100] transition-transform duration-200"
-                    style={{
-                        top: 0,
-                        transform: `translateY(${pullDistance - 40}px)`,
-                        opacity: pullDistance / pullThreshold
-                    }}
-                >
-                    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-2.5 rounded-full shadow-xl flex items-center justify-center">
-                        <FontAwesomeIcon
-                            icon={isRefreshing ? faSpinner : faSync}
-                            className={`text-[var(--color-primary)] text-sm ${isRefreshing ? 'animate-spin' : ''}`}
-                            style={{ transform: `rotate(${pullDistance * 2}deg)` }}
-                        />
-                    </div>
-                </div>
+            <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto min-h-screen relative">
 
                 {/* Privasi Banner */}
                 {isPrivacyMode && (
@@ -1524,7 +1461,7 @@ export default function StudentsPage() {
                         <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
                             {/* Desktop View */}
                             <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full text-sm table-fixed">
+                                <table className="w-full text-sm">
                                     <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
                                         <tr className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                                             <th className="px-4 py-4 text-center w-12">
@@ -1532,7 +1469,7 @@ export default function StudentsPage() {
                                                     type="checkbox"
                                                     checked={selectedStudentIds.length === students.length && students.length > 0}
                                                     onChange={toggleSelectAll}
-                                                    className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                                    className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer shrink-0"
                                                 />
                                             </th>
                                             <th className="px-4 py-4 text-left min-w-[250px]">Siswa</th>

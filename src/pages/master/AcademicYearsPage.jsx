@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -46,6 +46,43 @@ function getPortalContainer(id) {
     }
     return _portalContainers[id]
 }
+
+// ── Isolated Search Input ────────────────────────────────────────────────────
+const DebouncedSearchInput = memo(({ searchQuery, onSearch, inputRef, isLoading }) => {
+    const [value, setValue] = useState(searchQuery)
+
+    // Debounce: propagate ke parent setelah 350ms berhenti mengetik
+    useEffect(() => {
+        const t = setTimeout(() => onSearch(value), 350)
+        return () => clearTimeout(t)
+    }, [value])
+
+    // Sync saat di-clear dari luar (resetAllFilters, klik chip ×)
+    useEffect(() => {
+        if (searchQuery === '' && value !== '') setValue('')
+    }, [searchQuery])
+
+    return (
+        <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm group-focus-within:text-[var(--color-primary)] transition-colors">
+                {isLoading ? (
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xs text-[var(--color-primary)]" />
+                ) : (
+                    <FontAwesomeIcon icon={faSearch} />
+                )}
+            </div>
+            <input
+                ref={inputRef}
+                type="text"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="Cari nama tahun pelajaran (contoh: 2024/2025)... (Ctrl+K)"
+                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-[var(--color-surface-alt)]/50 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all rounded-xl font-bold placeholder:font-normal placeholder:opacity-40"
+            />
+        </div>
+    )
+})
+DebouncedSearchInput.displayName = 'DebouncedSearchInput'
 
 function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDelete, onToggleLock, canEdit }) {
     if (years.length === 0) {
@@ -903,23 +940,13 @@ export default function AcademicYearsPage() {
                 {/* ── Filter Bar ── */}
                 <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
                     <div className="flex flex-row items-center gap-2 p-3">
-                        <div className="flex-1 relative">
-                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
-                                <FontAwesomeIcon icon={faSearch} />
-                            </div>
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="Cari nama tahun pelajaran (contoh: 2024/2025)... (Ctrl+K)"
-                                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-transparent border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl"
+                        <div className="flex-initial w-full lg:w-[232px] xl:w-[352px] min-w-[120px] transition-all duration-300">
+                            <DebouncedSearchInput
+                                searchQuery={searchQuery}
+                                onSearch={setSearchQuery}
+                                inputRef={searchInputRef}
+                                isLoading={loading}
                             />
-                            {searchQuery && (
-                                <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
-                                    <FontAwesomeIcon icon={faTimes} className="text-xs" />
-                                </button>
-                            )}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                             <div className="hidden md:flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 p-1 shadow-none">
@@ -1087,7 +1114,7 @@ export default function AcademicYearsPage() {
                                             <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
                                                 <tr className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                                                     <th className="px-6 py-4 text-center w-12">
-                                                        <input type="checkbox" checked={selectedIds.length === paged.length && paged.length > 0} onChange={toggleSelectAll} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+                                                        <input type="checkbox" checked={selectedIds.length === paged.length && paged.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer" />
                                                     </th>
                                                     {visibleCols.period && <th className="px-6 py-4 text-left">Tahun Pelajaran</th>}
                                                     {visibleCols.semester && <th className="px-6 py-4 text-left">Semester</th>}
@@ -1141,7 +1168,7 @@ export default function AcademicYearsPage() {
                                                     const ts = getTimeStatus(year.start_date, year.end_date)
                                                     return (
                                                         <tr key={year.id} className={`border-t border-[var(--color-border)] transition-colors group/row ${isSelected ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-alt)]/40'}`}>
-                                                            <td className="px-6 py-4"><input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" /></td>
+                                                            <td className="px-6 py-4"><input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer" /></td>
                                                             {visibleCols.period && (
                                                                 <td className="px-6 py-4">
                                                                     <div className="flex items-start gap-3">
@@ -1219,7 +1246,7 @@ export default function AcademicYearsPage() {
                                                 <div key={year.id} className={`p-4 transition-colors group/mob ${isSelected ? 'bg-[var(--color-primary)]/5' : ''}`}>
                                                     <div className="flex items-start gap-3">
                                                         <div className="flex flex-col items-center gap-3 pt-1">
-                                                            <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="accent-[var(--color-primary)] w-4 h-4 cursor-pointer shrink-0" />
+                                                            <input type="checkbox" checked={selectedIds.includes(year.id)} onChange={() => toggleSelect(year.id)} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer shrink-0 mt-1" />
                                                         </div>
                                                         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-black shadow-sm relative transition-transform shrink-0 ${year.is_active ? 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
                                                             <span className="relative z-10">{year.name?.slice(2, 4) || '??'}</span>

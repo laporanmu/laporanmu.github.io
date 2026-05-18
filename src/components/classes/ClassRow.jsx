@@ -32,7 +32,7 @@ export const ClassRow = React.memo(({
                     checked={isSelected}
                     onChange={() => toggleSelect(cls.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
+                    className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer"
                 />
             </td>
 
@@ -199,7 +199,7 @@ export const ClassMobileCard = React.memo(({
                     checked={isSelected}
                     onChange={() => toggleSelect(cls.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 mt-1 rounded border-[var(--color-border)] text-[var(--color-primary)] shrink-0"
+                    className="w-4 h-4 mt-1 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer shrink-0"
                 />
 
                 {/* Identity */}

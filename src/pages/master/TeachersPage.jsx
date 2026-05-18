@@ -1603,7 +1603,7 @@ export default function TeachersPage() {
                                 <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
                                     <tr className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                                         <th className="px-6 py-4 text-center w-12">
-                                            <input type="checkbox" checked={allSelected} ref={el => { if (el) el.indeterminate = someSelected }} onChange={toggleSelectAll} className="rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+                                            <input type="checkbox" checked={allSelected} ref={el => { if (el) el.indeterminate = someSelected }} onChange={toggleSelectAll} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer" />
                                         </th>
                                         <th className="px-6 py-4 text-left">Guru</th>
                                         {visibleCols.nbm && <th className="px-6 py-4 text-left">NBM</th>}
