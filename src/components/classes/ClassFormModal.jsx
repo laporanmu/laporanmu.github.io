@@ -121,16 +121,16 @@ const ClassFormModal = memo(function ClassFormModal({
                 <div className="flex items-center gap-2">
                     <div className="h-1.5 w-24 bg-[var(--color-border)] rounded-full overflow-hidden shrink-0">
                         <div
-                            className="h-full bg-emerald-500 transition-all duration-500"
+                            className="h-full bg-[var(--color-primary)] transition-all duration-500"
                             style={{ width: `${overallProgress}%` }}
                         />
                     </div>
-                    <span className="text-[10px] font-black text-emerald-600">{overallProgress}% Lengkap</span>
+                    <span className="text-[10px] font-black text-[var(--color-primary)]">{overallProgress}% Lengkap</span>
                 </div>
             }
             icon={selectedItem ? faEdit : faPlus}
-            iconBg={selectedItem ? 'bg-indigo-500/10' : 'bg-emerald-500/10'}
-            iconColor={selectedItem ? 'text-indigo-500' : 'text-emerald-600'}
+            iconBg="bg-[var(--color-primary)]/10"
+            iconColor="text-[var(--color-primary)]"
             size="lg"
             mobileVariant="bottom-sheet"
             footer={
@@ -147,7 +147,7 @@ const ClassFormModal = memo(function ClassFormModal({
                         type="submit"
                         form="class-form-modal"
                         disabled={submitting}
-                        className="h-10 px-6 sm:px-8 rounded-xl bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 shrink-0"
+                        className="h-10 px-6 sm:px-8 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 shrink-0"
                     >
                         {submitting ? (
                             <>
@@ -156,7 +156,7 @@ const ClassFormModal = memo(function ClassFormModal({
                             </>
                         ) : (
                             <>
-                                <FontAwesomeIcon icon={selectedItem ? faCheckCircle : faPlus} className="text-xs opacity-80 shrink-0" />
+                                <FontAwesomeIcon icon={faCheckCircle} className="text-xs opacity-80 shrink-0" />
                                 <span className="truncate hidden sm:inline">{selectedItem ? 'Simpan Perubahan' : 'Simpan Data'}</span>
                                 <span className="truncate sm:hidden">Simpan</span>
                             </>
@@ -169,8 +169,8 @@ const ClassFormModal = memo(function ClassFormModal({
                 {/* ── Section: Identitas Kelas ── */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2.5 pt-2">
-                        <div className="w-1 h-4 bg-indigo-500 rounded-full" />
-                        <FontAwesomeIcon icon={faIdBadge} className="text-indigo-500 text-[10px] opacity-70" />
+                        <div className="w-1 h-4 bg-[var(--color-primary)] rounded-full" />
+                        <FontAwesomeIcon icon={faIdBadge} className="text-[var(--color-primary)] text-[10px] opacity-70" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Identitas Kelas</span>
                         <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                     </div>
@@ -204,8 +204,8 @@ const ClassFormModal = memo(function ClassFormModal({
                                         type="button"
                                         onClick={() => setField('gender_type', g)}
                                         className={`flex-1 rounded-lg text-[10px] font-bold tracking-wider transition-all duration-200 flex items-center justify-center gap-2 ${form.gender_type === g
-                                            ? (g === 'Putra' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20')
-                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                            ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20'
+                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'}`}
                                     >
                                         <FontAwesomeIcon icon={g === 'Putra' ? faMars : faVenus} className="text-[10px]" />
                                         {g}
@@ -235,11 +235,11 @@ const ClassFormModal = memo(function ClassFormModal({
                                         key={p}
                                         type="button"
                                         onClick={() => setField('program', p)}
-                                        className={`flex-1 rounded-lg text-[10px] font-bold transition-all duration-200 inline-flex items-center justify-center gap-2 ${form.program === p
-                                            ? 'bg-white dark:bg-[var(--color-surface)] shadow text-[var(--color-primary)]'
-                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                        className={`flex-1 rounded-lg text-[10px] font-bold tracking-wider transition-all duration-200 flex items-center justify-center gap-2 ${form.program === p
+                                            ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20'
+                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'}`}
                                     >
-                                        <FontAwesomeIcon icon={p === 'Boarding' ? faBed : faBuilding} className="text-[10px] opacity-70" />
+                                        <FontAwesomeIcon icon={p === 'Boarding' ? faBed : faBuilding} className="text-[10px]" />
                                         {p}
                                     </button>
                                 ))}
@@ -251,8 +251,8 @@ const ClassFormModal = memo(function ClassFormModal({
                 {/* ── Section: Penanggung Jawab & Periode ── */}
                 <div className="space-y-4 pb-4">
                     <div className="flex items-center gap-2.5 pt-2">
-                        <div className="w-1 h-4 bg-emerald-500 rounded-full" />
-                        <FontAwesomeIcon icon={faUserTie} className="text-emerald-500 text-[10px] opacity-70" />
+                        <div className="w-1 h-4 bg-[var(--color-primary)] rounded-full" />
+                        <FontAwesomeIcon icon={faUserTie} className="text-[var(--color-primary)] text-[10px] opacity-70" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Penanggung Jawab & Periode</span>
                         <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                     </div>

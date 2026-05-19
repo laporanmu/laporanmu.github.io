@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faCheckCircle,
@@ -60,6 +60,16 @@ export default function AcademicYearExportModal({
     const [advancedOpen, setAdvancedOpen] = useState(false)
     const [pdfOrientation, setPdfOrientation] = useState('landscape') // 'landscape' | 'portrait'
     const [includeHeader, setIncludeHeader] = useState(true)
+    const containerRef = useRef(null)
+
+    useEffect(() => {
+        if (exporting && containerRef.current) {
+            const scrollContainer = containerRef.current.parentElement
+            if (scrollContainer) {
+                scrollContainer.scrollTop = 0
+            }
+        }
+    }, [exporting])
 
     if (!isOpen) return null
 
@@ -121,6 +131,7 @@ export default function AcademicYearExportModal({
             iconColor="text-amber-600"
             size="lg"
             mobileVariant="bottom-sheet"
+            contentClassName={exporting ? "relative !overflow-hidden" : "relative"}
             footer={
                 <div className="flex items-center w-full">
                     <button
@@ -133,18 +144,36 @@ export default function AcademicYearExportModal({
                 </div>
             }
         >
-            <div className="relative">
+            <div ref={containerRef}>
                 {/* Overlay Loading Premium */}
                 {exporting && (
-                    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[var(--color-surface)]/40 backdrop-blur-md rounded-2xl animate-in fade-in duration-300">
-                        <div className="bg-[var(--color-surface)] shadow-2xl border border-[var(--color-border)] rounded-3xl p-8 flex flex-col items-center gap-4 scale-110 animate-in zoom-in-95 duration-300">
-                            <div className="relative">
-                                <div className="w-16 h-16 rounded-full border-4 border-[var(--color-primary)]/10 border-t-[var(--color-primary)] animate-spin"></div>
-                                <FontAwesomeIcon icon={faFileExport} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--color-primary)] text-xl animate-pulse" />
+                    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[var(--color-surface)]/60 backdrop-blur-md animate-in fade-in duration-300">
+                        <div className="bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-surface-alt)]/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] border border-[var(--color-border)]/60 rounded-3xl p-8 flex flex-col items-center gap-5 scale-110 animate-in zoom-in-95 duration-300">
+                            <div className="relative w-16 h-16">
+                                {/* Outer pulsing ring */}
+                                <div className="absolute inset-0 rounded-full bg-[var(--color-primary)]/10 animate-ping opacity-75"></div>
+                                {/* Track ring */}
+                                <div className="absolute inset-0 rounded-full border-2 border-[var(--color-primary)]/10"></div>
+                                {/* Spinning active ring with premium glow filter */}
+                                <div 
+                                    className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--color-primary)] border-r-[var(--color-primary)] animate-spin"
+                                    style={{ filter: 'drop-shadow(0 0 4px var(--color-primary))' }}
+                                ></div>
+                                {/* Center icon container - centered absolutely using inset-0 m-auto */}
+                                <div className="absolute inset-0 m-auto w-10 h-10 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)]/60 flex items-center justify-center shadow-sm z-10">
+                                    <FontAwesomeIcon icon={faFileExport} className="text-[var(--color-primary)] text-sm animate-pulse" />
+                                </div>
                             </div>
                             <div className="flex flex-col items-center">
-                                <span className="text-[11px] font-black uppercase tracking-[0.3em] text-[var(--color-primary)]">Mengolah Data</span>
-                                <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase mt-1">Mohon tunggu sebentar...</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-[var(--color-primary)]">Mengolah Data</span>
+                                <span className="text-[8px] font-extrabold text-[var(--color-text-muted)] uppercase tracking-widest mt-1.5 flex items-center gap-1">
+                                    Proses ekspor berjalan
+                                    <span className="inline-flex gap-0.5 items-center">
+                                        <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                        <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                        <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                    </span>
+                                </span>
                             </div>
                         </div>
                     </div>

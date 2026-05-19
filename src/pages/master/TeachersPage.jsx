@@ -985,10 +985,38 @@ export default function TeachersPage() {
                 head: options.includeHeader !== false ? [headers] : [],
                 body: rows,
                 startY: 22,
-                styles: { fontSize: 7.5 },
-                headStyles: { fillColor: [79, 70, 229] },
-                alternateRowStyles: { fillColor: [245, 245, 255] },
+                theme: 'grid',
+                styles: { fontSize: 7.5, cellPadding: 2 },
+                headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                columnStyles: {
+                    'Gender': { halign: 'center' },
+                    'NBM': { halign: 'center' },
+                    'NIK': { halign: 'center' },
+                    'NIP': { halign: 'center' },
+                    'NUPTK': { halign: 'center' },
+                    'Status': { halign: 'center' },
+                    'Tgl Bergabung': { halign: 'center' },
+                    'Tanggal Lahir': { halign: 'center' },
+                    'No. HP/WA': { halign: 'center' },
+                    'Jam Mengajar': { halign: 'right' },
+                    'Tahun Lulus': { halign: 'center' }
+                }
             })
+
+            // Add enterprise footer with pagination and metadata
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(7);
+                doc.setTextColor(150);
+                const dateStr = new Date().toLocaleString('id-ID', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+                doc.text(`Dicetak otomatis oleh Laporanmu pada ${dateStr}`, 14, doc.internal.pageSize.height - 8);
+                doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 8);
+            }
 
             doc.save(`${filename || 'export_guru'}.pdf`)
             addToast(`Export PDF berhasil (${allRows.length} guru)`, 'success')

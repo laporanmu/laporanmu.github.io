@@ -862,9 +862,33 @@ export default function AcademicYearsPage() {
                 startY: 22,
                 head: [headers],
                 body: body,
+                theme: 'grid',
                 styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: [79, 70, 229] },
+                headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                columnStyles: {
+                    'Semester': { halign: 'center' },
+                    'Mulai': { halign: 'center' },
+                    'Selesai': { halign: 'center' },
+                    'Kurikulum': { halign: 'center' },
+                    'Status Aktif': { halign: 'center' },
+                    'Status Kunci': { halign: 'center' }
+                }
             })
+
+            // Add enterprise footer with pagination and metadata
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(7);
+                doc.setTextColor(150);
+                const dateStr = new Date().toLocaleString('id-ID', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+                doc.text(`Dicetak otomatis oleh Laporanmu pada ${dateStr}`, 14, doc.internal.pageSize.height - 8);
+                doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 8);
+            }
 
             doc.save(`${filename || 'export_tahun_pelajaran'}.pdf`)
 

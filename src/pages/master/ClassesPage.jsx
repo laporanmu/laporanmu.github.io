@@ -43,6 +43,15 @@ const LS_FILTERS = 'classes_filters'
 const LS_COLS = 'classes_columns'
 const LS_PAGE_SIZE = 'classes_page_size'
 
+const SYSTEM_COLS = [
+    { key: 'name', label: 'Nama Kelas', synonyms: ['nama kelas', 'kelas', 'name', 'nama', 'class'] },
+    { key: 'grade', label: 'Tingkat', synonyms: ['tingkat', 'grade', 'level'] },
+    { key: 'program', label: 'Program', synonyms: ['program', 'major', 'boarding', 'reguler'] },
+    { key: 'gender_type', label: 'Tipe Gender', synonyms: ['tipe gender', 'gender', 'putra', 'putri', 'l/p', 'jenis kelamin'] },
+    { key: 'teacher', label: 'Wali Kelas', synonyms: ['wali kelas', 'wali', 'teacher', 'guru', 'nama guru'] },
+    { key: 'year', label: 'Tahun Ajaran', synonyms: ['tahun ajaran', 'tahun', 'year', 'akademik', 'academic year'] }
+]
+
 const maskInfo = (str, vis = 4) => {
     if (!str) return '—'
     if (str.length <= vis) return str[0] + '*'.repeat(str.length - 1)
@@ -168,15 +177,20 @@ export default function ClassesPage() {
     const [exportColumns, setExportColumns] = useState(['nama_kelas', 'tingkat', 'program', 'wali_kelas', 'tahun_ajaran', 'jumlah_siswa'])
 
     // Import
-    const [importTab, setImportTab] = useState('guideline') // 'guideline' | 'preview'
+    const [importStep, setImportStep] = useState(1)
     const [importFileName, setImportFileName] = useState('')
+    const [importRawData, setImportRawData] = useState([])
+    const [importFileHeaders, setImportFileHeaders] = useState([])
+    const [importColumnMapping, setImportColumnMapping] = useState({})
     const [importPreview, setImportPreview] = useState([])
     const [importIssues, setImportIssues] = useState([])
-    const [importDupes, setImportDupes] = useState([])
-    const [importSkip, setImportSkip] = useState(true)
-    const [importDrag, setImportDrag] = useState(false)
+    const [importLoading, setImportLoading] = useState(false)
+    const [importValidationOpen, setImportValidationOpen] = useState(true)
+    const [importDragOver, setImportDragOver] = useState(false)
     const [importing, setImporting] = useState(false)
     const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
+    const [importEditCell, setImportEditCell] = useState(null)
+    const [importSkipDupes, setImportSkipDupes] = useState(true)
 
     // Columns
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
@@ -566,10 +580,31 @@ export default function ClassesPage() {
                 head: options.includeHeader !== false ? [headers] : [],
                 body: rows,
                 startY: 22,
-                styles: { fontSize: 7.5 },
-                headStyles: { fillColor: [79, 70, 229] },
-                alternateRowStyles: { fillColor: [245, 245, 255] },
+                theme: 'grid',
+                styles: { fontSize: 7.5, cellPadding: 2 },
+                headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                columnStyles: {
+                    'Tingkat': { halign: 'center' },
+                    'Program': { halign: 'center' },
+                    'Tipe Gender': { halign: 'center' },
+                    'Tahun Ajaran': { halign: 'center' }
+                }
             })
+
+            // Add enterprise footer with pagination and metadata
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(7);
+                doc.setTextColor(150);
+                const dateStr = new Date().toLocaleString('id-ID', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+                doc.text(`Dicetak otomatis oleh Laporanmu pada ${dateStr}`, 14, doc.internal.pageSize.height - 8);
+                doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 8);
+            }
 
             doc.save(`${filename || 'export_kelas'}.pdf`)
             addToast(`Export PDF berhasil (${allRows.length} kelas)`, 'success')
@@ -604,140 +639,166 @@ export default function ClassesPage() {
         ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 25 }, { wch: 20 }]
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, 'Template Import Kelas')
-        const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
-        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = 'Template_Import_Kelas.xlsx'
-        link.click()
-        setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+        XLSX.writeFile(wb, 'Template_Import_Kelas.xlsx')
     }
 
-    const processImportFile = async (file) => {
+    const processImportFile = async file => {
         if (!file) return
         const ext = file.name.toLowerCase()
-        if (!ext.endsWith('.csv') && !ext.endsWith('.xlsx')) {
-            addToast('Format tidak didukung. Gunakan .csv atau .xlsx', 'error')
-            return
-        }
+        if (!ext.endsWith('.csv') && !ext.endsWith('.xlsx')) { addToast('Format tidak didukung. Gunakan .csv atau .xlsx', 'error'); return }
         setImportFileName(file.name)
-        setImportPreview([])
-        setImportIssues([])
-        setImportDupes([])
-        setImportTab('preview')
-
+        setImportLoading(true)
         try {
             let rows = []
-            if (ext.endsWith('.csv')) {
-                rows = await new Promise(res =>
-                    Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => res(r.data) })
-                )
-            } else {
-                rows = await new Promise(res => {
-                    const reader = new FileReader()
-                    reader.onload = e => {
-                        const wb = XLSX.read(e.target.result, { type: 'array' })
-                        res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' }))
-                    }
-                    reader.readAsArrayBuffer(file)
-                })
-            }
+            if (ext.endsWith('.csv')) rows = await new Promise(res => Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => res(r.data) }))
+            else rows = await new Promise(res => { const reader = new FileReader(); reader.onload = e => { const wb = XLSX.read(e.target.result, { type: 'array' }); res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })) }; reader.readAsArrayBuffer(file) })
 
             if (!rows.length) { addToast('File kosong atau tidak terbaca', 'error'); return }
 
-            // Fetch latest metadata for matching
-            const { t: tMap, y: yMap } = await loadMetadata()
-            const teacherByName = Object.fromEntries(
-                teachersList.map(t => [t.name.toLowerCase().trim(), t.id])
-            )
-            const yearByLabel = Object.fromEntries(
-                academicYearsList.map(y => [y.label.toLowerCase().trim(), y.id])
-            )
+            const headers = Object.keys(rows[0])
+            setImportRawData(rows)
+            setImportFileHeaders(headers)
 
-            const issues = [], dupes = []
-            const preview = rows.map((row, i) => {
-                const name = (row['Nama Kelas'] || row['nama_kelas'] || row['name'] || '').toString().trim()
-                const grade = (row['Tingkat'] || row['grade'] || row['level'] || '').toString().trim()
-                const program = (row['Program'] || row['program'] || '').toString().trim()
-                const genderType = (row['Tipe Gender'] || row['tipe_gender'] || row['gender_type'] || '').toString().trim()
-                const teacherRaw = (row['Wali Kelas'] || row['wali_kelas'] || row['teacher'] || '').toString().trim()
-                const yearRaw = (row['Tahun Ajaran'] || row['tahun_ajaran'] || row['year'] || '').toString().trim()
+            // Auto-mapping
+            const mapping = {}
+            const norm = (str) => (str || '').toLowerCase().replace(/[\s\xA0\n\r]+/g, ' ').trim()
+            SYSTEM_COLS.forEach(sys => {
+                const match = headers.find(h => {
+                    const normH = norm(h)
+                    const cleanH = norm(h.split(/[\(\[\{（\n\r]/)[0])
+                    const normL = norm(sys.label)
+                    const normK = norm(sys.key)
+                    if (normH === normL || normH === normK || cleanH === normL || cleanH === normK) return true
+                    if (sys.synonyms && sys.synonyms.some(syn => {
+                        const s = norm(syn)
+                        return normH === s || cleanH === s || cleanH.replace(/[^a-z0-9]/g, '') === s.replace(/[^a-z0-9]/g, '')
+                    })) return true
+                    return false
+                })
+                if (match) mapping[sys.key] = match
+            })
+            setImportColumnMapping(mapping)
+            setImportStep(2)
+        } catch { addToast('Gagal membaca file import', 'error') }
+        finally { setImportLoading(false) }
+    }
 
-                const rowIssues = []
-                if (!name) rowIssues.push({ level: 'error', msg: 'Nama Kelas tidak boleh kosong' })
-                if (!grade) rowIssues.push({ level: 'error', msg: 'Tingkat tidak boleh kosong' })
-                else if (!LEVELS.includes(grade)) rowIssues.push({ level: 'error', msg: `Tingkat "${grade}" tidak valid. Gunakan: ${LEVELS.join(', ')}` })
+    const buildImportPreview = async (raw, mapping) => {
+        setImportLoading(true)
+        try {
+            const teacherByName = Object.fromEntries(teachersList.map(t => [t.name.toLowerCase().trim(), t.id]))
+            const yearByLabel = Object.fromEntries(academicYearsList.map(y => [y.label.toLowerCase().trim(), y.id]))
 
-                if (program && !PROGRAMS.includes(program))
-                    rowIssues.push({ level: 'warn', msg: `Program "${program}" tidak dikenali, akan digunakan apa adanya` })
+            const preview = raw.map((row, i) => {
+                const data = {}
+                SYSTEM_COLS.forEach(sys => {
+                    const fileCol = mapping[sys.key]
+                    data[sys.key] = fileCol ? (row[fileCol] || '').toString().trim() : ''
+                })
 
-                // Resolve teacher ID
-                const homeroom_teacher_id = teacherRaw
-                    ? (teacherByName[teacherRaw.toLowerCase()] || null)
-                    : null
-                if (teacherRaw && !homeroom_teacher_id)
-                    rowIssues.push({ level: 'warn', msg: `Wali kelas "${teacherRaw}" tidak ditemukan, akan dikosongkan` })
+                // Normalization
+                let { name, grade, program, gender_type, teacher, year } = data
+                
+                grade = grade.toString()
+                
+                let homeroom_teacher_id = null
+                if (teacher) homeroom_teacher_id = teacherByName[teacher.toLowerCase()] || null
 
-                // Resolve academic year ID
-                const academic_year_id = yearRaw
-                    ? (yearByLabel[yearRaw.toLowerCase()] || null)
-                    : null
-                if (yearRaw && !academic_year_id)
-                    rowIssues.push({ level: 'warn', msg: `Tahun ajaran "${yearRaw}" tidak ditemukan, akan dikosongkan` })
+                let academic_year_id = null
+                if (year) academic_year_id = yearByLabel[year.toLowerCase()] || null
 
-                if (rowIssues.length)
-                    issues.push({ row: i + 2, level: rowIssues[0].level, messages: rowIssues.map(x => x.msg) })
+                // Compose major
+                let gType = gender_type.toUpperCase().trim()
+                if (['L', 'LAKI-LAKI', 'LAKI LAKI', 'MALE', 'PUTRA'].includes(gType)) gType = 'Putra'
+                else if (['P', 'PEREMPUAN', 'FEMALE', 'PUTRI'].includes(gType)) gType = 'Putri'
+                else gType = gender_type
 
-                // Compose major from program + genderType
-                const major = [program, genderType].filter(Boolean).join(' ') || null
+                const major = [program, gType].filter(Boolean).join(' ') || null
 
-                return {
-                    _row: i,
-                    name,
-                    grade,
-                    major, homeroom_teacher_id,
-                    academic_year_id,
-                    _teacherRaw: teacherRaw,
-                    _yearRaw: yearRaw,
-                    _hasError: rowIssues.some(x => x.level === 'error'),
-                }
+                return { ...data, _row: i, major, homeroom_teacher_id, academic_year_id }
             })
 
-            // Detect duplicate names in file
+            // Validation
+            const issues = []
             preview.forEach((row, i) => {
+                const rowIssues = []
+                if (!row.name) rowIssues.push('Nama Kelas tidak boleh kosong')
+                if (!row.grade) rowIssues.push('Tingkat tidak boleh kosong')
+                else if (!LEVELS.includes(row.grade)) rowIssues.push(`Tingkat "${row.grade}" tidak valid. (Gunakan: ${LEVELS.join(', ')})`)
+                
+                if (row.program && !PROGRAMS.includes(row.program)) rowIssues.push(`Program "${row.program}" tidak dikenali (Gunakan: Boarding/Reguler)`)
+                if (row.teacher && !row.homeroom_teacher_id) rowIssues.push(`Wali Kelas "${row.teacher}" tidak ditemukan, akan dikosongkan`)
+                if (row.year && !row.academic_year_id) rowIssues.push(`Tahun Ajaran "${row.year}" tidak ditemukan, akan dikosongkan`)
+
                 if (row.name && preview.slice(0, i).some(p => p.name.toLowerCase() === row.name.toLowerCase())) {
-                    dupes.push(i)
-                    issues.push({ row: i + 2, level: 'dupe', messages: [`Nama kelas "${row.name}" duplikat dalam file`] })
+                    rowIssues.push(`Nama Kelas "${row.name}" duplikat dalam file`)
+                    row._isDupe = true
+                }
+
+                if (rowIssues.length) {
+                    const isError = rowIssues.some(msg => msg.includes('tidak boleh kosong') || msg.includes('tidak valid'))
+                    issues.push({ row: i + 2, level: row._isDupe ? 'dupe' : (isError ? 'error' : 'warn'), messages: rowIssues })
+                    if (isError) row._hasError = true
+                    else if (row._isDupe) row._hasError = false // handled separately
+                    else row._hasWarn = true
                 }
             })
 
             setImportPreview(preview)
             setImportIssues(issues)
-            setImportDupes(dupes)
-        } catch {
-            addToast('Gagal membaca file import', 'error')
+        } finally {
+            setImportLoading(false)
         }
     }
 
+    const handleImportCellEdit = (rowIdx, colKey, newValue) => {
+        setImportPreview(prev => {
+            const next = [...prev]
+            next[rowIdx] = { ...next[rowIdx], [colKey]: newValue }
+            const r = next[rowIdx]
+
+            // Recalculate major if program or gender_type changed
+            if (colKey === 'program' || colKey === 'gender_type') {
+                let gType = (r.gender_type || '').toUpperCase().trim()
+                if (['L', 'LAKI-LAKI', 'LAKI LAKI', 'MALE', 'PUTRA'].includes(gType)) gType = 'Putra'
+                else if (['P', 'PEREMPUAN', 'FEMALE', 'PUTRI'].includes(gType)) gType = 'Putri'
+                else gType = r.gender_type
+                r.major = [r.program, gType].filter(Boolean).join(' ') || null
+            }
+
+            // Minimal revalidation (can be improved)
+            r._hasError = !r.name || !r.grade || !LEVELS.includes(r.grade)
+            return next
+        })
+    }
+
+    const handleRemoveImportRow = idx => {
+        setImportPreview(prev => prev.filter((_, i) => i !== idx))
+        setImportIssues(prev => prev.filter(iss => iss.row !== idx + 2).map(iss => iss.row > idx + 2 ? { ...iss, row: iss.row - 1 } : iss))
+    }
+
+    const handleBulkFix = (colKey, value) => {
+        setImportPreview(prev => prev.map(r => ({ ...r, [colKey]: value, _hasError: (colKey === 'name' && !value) || (!r.grade) })))
+        addToast(`Berhasil merubah semua baris`, 'success')
+    }
+
+    const handleImportClick = () => importFileRef.current?.click()
+
     const hasImportBlockingErrors = importIssues.some(x => x.level === 'error')
+    const importReadyRows = importPreview.filter(r => !r._hasError && !(importSkipDupes && r._isDupe))
 
     const handleCommitImport = async () => {
         if (!importPreview.length) { addToast('Tidak ada data untuk diimport', 'error'); return }
         if (hasImportBlockingErrors) { addToast('Masih ada ERROR. Perbaiki file dulu.', 'error'); return }
-
-        const dupeSet = new Set(importDupes)
-        const errRows = new Set(importIssues.filter(x => x.level === 'error').map(x => x.row - 2))
-        const validRows = importPreview.filter((_, i) => !errRows.has(i) && !(importSkip && dupeSet.has(i)))
-
-        if (!validRows.length) { addToast('Tidak ada baris valid untuk diimport', 'warning'); return }
+        if (!importReadyRows.length) { addToast('Tidak ada baris valid untuk diimport', 'warning'); return }
 
         setImporting(true)
-        setImportProgress({ done: 0, total: validRows.length })
+        setImportProgress({ done: 0, total: importReadyRows.length })
 
         try {
             const CHUNK = 50
-            for (let i = 0; i < validRows.length; i += CHUNK) {
-                const chunk = validRows.slice(i, i + CHUNK).map(r => ({
+            for (let i = 0; i < importReadyRows.length; i += CHUNK) {
+                const chunk = importReadyRows.slice(i, i + CHUNK).map(r => ({
                     name: r.name,
                     grade: r.grade,
                     major: r.major || null,
@@ -746,29 +807,23 @@ export default function ClassesPage() {
                 }))
                 const { error } = await supabase.from('classes').insert(chunk)
                 if (error) throw error
-                setImportProgress({ done: Math.min(i + CHUNK, validRows.length), total: validRows.length })
+                setImportProgress({ done: Math.min(i + CHUNK, importReadyRows.length), total: importReadyRows.length })
             }
 
-            addToast(`Berhasil import ${validRows.length} kelas`, 'success')
-            await logAudit({
-                action: 'INSERT',
-                source: 'SYSTEM',
-                tableName: 'classes',
-                newData: { bulk_import: true, count: validRows.length }
-            })
+            addToast(`Berhasil import ${importReadyRows.length} kelas`, 'success')
+            await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'classes', newData: { bulk_import: true, count: importReadyRows.length } })
 
             setIsImportModalOpen(false)
+            setImportStep(1)
             setImportPreview([])
             setImportIssues([])
-            setImportDupes([])
             setImportFileName('')
-            setImportTab('guideline')
+            setImportRawData([])
+            setImportFileHeaders([])
+            setImportColumnMapping({})
             fetchData()
-        } catch {
-            addToast('Gagal import (cek constraint DB / duplikat / koneksi)', 'error')
-        } finally {
-            setImporting(false)
-        }
+        } catch { addToast('Gagal import (cek constraint DB)', 'error') }
+        finally { setImporting(false) }
     }
 
     const isAnyModalOpen = isModalOpen || isDeleteModalOpen || isBulkDeleteOpen || isExportModalOpen || isImportModalOpen || isArchivedModalOpen
@@ -838,7 +893,7 @@ export default function ClassesPage() {
                                     }}
                                 >
                                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); setImportTab('guideline'); setImportPreview([]); setImportFileName(''); setIsImportModalOpen(true) }}
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); setImportStep(1); setImportPreview([]); setImportFileName(''); setIsImportModalOpen(true) }}
                                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
                                         <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <FontAwesomeIcon icon={faFileImport} className="text-xs" />
@@ -1492,29 +1547,44 @@ export default function ClassesPage() {
                 />
 
                 {/* ── Import Modal ── */}
+                {/* ── Import Modal ── */}
                 <ClassImportModal
                     isOpen={isImportModalOpen}
                     onClose={() => setIsImportModalOpen(false)}
-                    importTab={importTab}
-                    setImportTab={setImportTab}
-                    importFileName={importFileName}
-                    setImportFileName={setImportFileName}
-                    importPreview={importPreview}
-                    setImportPreview={setImportPreview}
-                    importIssues={importIssues}
-                    setImportIssues={setImportIssues}
-                    importDupes={importDupes}
-                    setImportDupes={setImportDupes}
-                    importSkip={importSkip}
-                    setImportSkip={setImportSkip}
-                    importDrag={importDrag}
-                    setImportDrag={setImportDrag}
                     importing={importing}
-                    importProgress={importProgress}
+                    importStep={importStep}
+                    setImportStep={setImportStep}
+                    importPreview={importPreview}
+                    importFileName={importFileName}
+                    importDragOver={importDragOver}
+                    setImportDragOver={setImportDragOver}
                     processImportFile={processImportFile}
-                    handleCommitImport={handleCommitImport}
+                    teachersList={teachersList}
+                    academicYearsList={academicYearsList}
                     handleDownloadTemplate={handleDownloadTemplate}
-                    importFileRef={importFileRef}
+                    importFileHeaders={importFileHeaders}
+                    SYSTEM_COLS={SYSTEM_COLS}
+                    importColumnMapping={importColumnMapping}
+                    setImportColumnMapping={setImportColumnMapping}
+                    importRawData={importRawData}
+                    importLoading={importLoading}
+                    setImportLoading={setImportLoading}
+                    buildImportPreview={buildImportPreview}
+                    importIssues={importIssues}
+                    importValidationOpen={importValidationOpen}
+                    setImportValidationOpen={setImportValidationOpen}
+                    importProgress={importProgress}
+                    handleCommitImport={handleCommitImport}
+                    handleImportClick={handleImportClick}
+                    hasImportBlockingErrors={hasImportBlockingErrors}
+                    importReadyRows={importReadyRows}
+                    handleImportCellEdit={handleImportCellEdit}
+                    importEditCell={importEditCell}
+                    setImportEditCell={setImportEditCell}
+                    handleRemoveImportRow={handleRemoveImportRow}
+                    importSkipDupes={importSkipDupes}
+                    setImportSkipDupes={setImportSkipDupes}
+                    handleBulkFix={handleBulkFix}
                 />
 
             </div>

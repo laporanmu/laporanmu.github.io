@@ -820,10 +820,37 @@ export function useStudentsImportExport({
                 head: options.includeHeader !== false ? [headers] : [],
                 body: rows,
                 startY: filterInfo.length ? 28 : 22,
-                styles: { fontSize: 7.5 },
-                headStyles: { fillColor: [79, 70, 229] },
-                alternateRowStyles: { fillColor: [245, 245, 255] },
+                theme: 'grid',
+                styles: { fontSize: 7.5, cellPadding: 2 },
+                headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                columnStyles: {
+                    'Poin': { halign: 'right' },
+                    'Gender': { halign: 'center' },
+                    'Kode Registrasi': { halign: 'center' },
+                    'Phone/WA': { halign: 'center' },
+                    'NIS': { halign: 'center' },
+                    'NISN': { halign: 'center' },
+                    'NIK': { halign: 'center' },
+                    'Status': { halign: 'center' },
+                    'Kelengkapan Data': { halign: 'center' }
+                }
             })
+
+            // Add enterprise footer with pagination and metadata
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(7);
+                doc.setTextColor(150);
+                const dateStr = new Date().toLocaleString('id-ID', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+                doc.text(`Dicetak otomatis oleh Laporanmu pada ${dateStr}`, 14, doc.internal.pageSize.height - 8);
+                doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 8);
+            }
+
             doc.save(`${filename || 'export_siswa'}.pdf`)
             addToast(`Export PDF berhasil (${allRows.length} siswa)`, 'success')
             await logAudit({

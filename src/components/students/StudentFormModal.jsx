@@ -391,16 +391,16 @@ const StudentFormModal = memo(function StudentFormModal({
                 <div className="flex items-center gap-2">
                     <div className="h-1.5 w-24 bg-[var(--color-border)] rounded-full overflow-hidden shrink-0">
                         <div
-                            className="h-full bg-emerald-500 transition-all duration-500"
+                            className="h-full bg-[var(--color-primary)] transition-all duration-500"
                             style={{ width: `${overallProgress}%` }}
                         />
                     </div>
-                    <span className="text-[10px] font-black text-emerald-600">{overallProgress}% Lengkap</span>
+                    <span className="text-[10px] font-black text-[var(--color-primary)]">{overallProgress}% Lengkap</span>
                 </div>
             }
             icon={selectedStudent ? faEdit : faPlus}
-            iconBg={selectedStudent ? 'bg-indigo-500/10' : 'bg-emerald-500/10'}
-            iconColor={selectedStudent ? 'text-indigo-500' : 'text-emerald-600'}
+            iconBg="bg-[var(--color-primary)]/10"
+            iconColor="text-[var(--color-primary)]"
             size="lg"
             mobileVariant="bottom-sheet"
             footer={
@@ -672,8 +672,8 @@ const StudentFormModal = memo(function StudentFormModal({
                         </div>
 
                         <div className="flex items-center gap-2.5 pt-2">
-                            <div className="w-1 h-4 bg-indigo-500 rounded-full" />
-                            <FontAwesomeIcon icon={faUser} className="text-indigo-500 text-[10px] opacity-70" />
+                            <div className="w-1 h-4 bg-[var(--color-primary)] rounded-full" />
+                            <FontAwesomeIcon icon={faUser} className="text-[var(--color-primary)] text-[10px] opacity-70" />
                             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Detail Personal</span>
                             <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                         </div>
@@ -751,6 +751,7 @@ const StudentFormModal = memo(function StudentFormModal({
                                     options={['Islam', 'Kristen', 'Katolik', 'Hindu', 'Budha', 'Khonghucu'].map(r => ({ id: r, name: r }))}
                                     placeholder="Pilih Agama"
                                     icon={faPrayingHands}
+                                    status={getStatus('religion')}
                                 />
                             </div>
                         </div>
@@ -784,8 +785,8 @@ const StudentFormModal = memo(function StudentFormModal({
                         </div>
 
                         <div className="flex items-center gap-2.5 pt-2">
-                            <div className="w-1 h-4 bg-emerald-500 rounded-full" />
-                            <FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-[10px] opacity-70" />
+                            <div className="w-1 h-4 bg-[var(--color-primary)] rounded-full" />
+                            <FontAwesomeIcon icon={faSchool} className="text-[var(--color-primary)] text-[10px] opacity-70" />
                             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Penempatan & Akademik</span>
                             <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                         </div>
@@ -863,8 +864,8 @@ const StudentFormModal = memo(function StudentFormModal({
                                 {/* AYAH */}
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2.5 pt-2">
-                                        <div className="w-1 h-4 bg-indigo-500 rounded-full" />
-                                        <FontAwesomeIcon icon={faIdCard} className="text-indigo-500 text-[10px] opacity-70" />
+                                        <div className="w-1 h-4 bg-[var(--color-primary)] rounded-full" />
+                                        <FontAwesomeIcon icon={faIdCard} className="text-[var(--color-primary)] text-[10px] opacity-70" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Data Ayah</span>
                                         <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                     </div>
@@ -943,8 +944,8 @@ const StudentFormModal = memo(function StudentFormModal({
                                 {/* IBU */}
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-1 h-4 bg-rose-500 rounded-full" />
-                                        <FontAwesomeIcon icon={faUser} className="text-rose-500 text-[10px] opacity-70" />
+                                        <div className="w-1 h-4 bg-[var(--color-primary)] rounded-full" />
+                                        <FontAwesomeIcon icon={faUser} className="text-[var(--color-primary)] text-[10px] opacity-70" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Data Ibu</span>
                                         <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
                                     </div>
