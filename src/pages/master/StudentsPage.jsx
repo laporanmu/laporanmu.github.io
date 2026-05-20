@@ -2814,6 +2814,9 @@ export default function StudentsPage() {
                             onClose={() => setPhotoZoom(null)}
                             title="Foto Profil"
                             description="Preview foto profil siswa"
+                            icon={faImage}
+                            iconBg="bg-[var(--color-primary)]/10"
+                            iconColor="text-[var(--color-primary)]"
                             size="md"
                             noPadding={true}
                             contentClassName="flex flex-col bg-[var(--color-surface-alt)]"

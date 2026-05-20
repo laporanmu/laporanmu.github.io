@@ -27,7 +27,7 @@ import { ArchiveModal, DeactivateModal } from '../../components/academic-years/A
 import AcademicYearArchiveModal from '../../components/academic-years/AcademicYearArchiveModal'
 import { AuditTimeline } from '../admin/LogsPage'
 import StatsCarousel from '../../components/StatsCarousel'
-import { StatCard } from '../../components/ui/DataDisplay'
+import { StatCard, EmptyState } from '../../components/ui/DataDisplay'
 
 
 const LazyAcademicYearExportModal = React.lazy(() => import('../../components/academic-years/AcademicYearExportModal'))
@@ -100,13 +100,12 @@ DebouncedSearchInput.displayName = 'DebouncedSearchInput'
 function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDelete, onToggleLock, canEdit }) {
     if (years.length === 0) {
         return (
-            <div className="relative w-full overflow-hidden bg-[var(--color-surface-alt)]/10 flex flex-col items-center justify-center py-20 opacity-40 group/empty">
-                <div className="w-14 h-14 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-xl mb-3 group-hover/empty:scale-110 transition-transform">
-                    <FontAwesomeIcon icon={faSearch} />
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">Tidak Ada Data Ditemukan</p>
-                <p className="text-[9px] font-bold mt-1.5 opacity-60">Sesuaikan filter atau kata kunci pencarian Anda</p>
-            </div>
+            <EmptyState
+                icon={faSearch}
+                title="Tidak Ada Data Ditemukan"
+                description="Sesuaikan filter atau kata kunci pencarian Anda"
+                color="indigo"
+            />
         )
     }
 
@@ -1353,7 +1352,7 @@ export default function AcademicYearsPage() {
                 {/* ── Filter Bar ── */}
                 <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
                     <div className="flex flex-row items-center gap-2 p-3">
-                        <div className="flex-initial w-full lg:w-[232px] xl:w-[352px] min-w-[120px] transition-all duration-300">
+                        <div className="flex-1 min-w-[120px] transition-all duration-300">
                             <DebouncedSearchInput
                                 searchQuery={searchQuery}
                                 onSearch={setSearchQuery}
@@ -1574,8 +1573,8 @@ export default function AcademicYearsPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {isEmpty ? (
-                                                    <tr><td colSpan="5" className="py-24 text-center opacity-40"><FontAwesomeIcon icon={faSearch} className="text-4xl mb-4" /><p className="text-xs font-black uppercase tracking-widest">Tidak ada data ditemukan</p></td></tr>
+{isEmpty ? (
+                                                    <tr><td colSpan="5" className="py-24 text-center"><EmptyState icon={faSearch} title="Tidak ada data ditemukan" description="Sesuaikan filter atau kata kunci pencarian Anda" color="slate" variant="plain" /></td></tr>
                                                 ) : paged.map(year => {
                                                     const isSelected = selectedIds.includes(year.id);
                                                     const ts = getTimeStatus(year.start_date, year.end_date)
