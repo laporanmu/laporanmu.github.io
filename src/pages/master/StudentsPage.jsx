@@ -468,17 +468,17 @@ export default function StudentsPage() {
         try { return localStorage.getItem('students_mobile_view') || 'card' } catch { return 'card' }
     }) // 'card' | 'list'
     const [isViewTransitioning, setIsViewTransitioning] = useState(false)
+    const [pendingView, setPendingView] = useState(mobileView)
     const viewTransitionTimer = useRef(null)
 
     const switchMobileView = useCallback((newView) => {
         if (newView === mobileView || isViewTransitioning) return
+        setPendingView(newView) // instant button highlight
         setIsViewTransitioning(true)
-        // Brief skeleton shimmer before revealing new view
         if (viewTransitionTimer.current) clearTimeout(viewTransitionTimer.current)
         viewTransitionTimer.current = setTimeout(() => {
             setMobileView(newView)
             try { localStorage.setItem('students_mobile_view', newView) } catch (e) { }
-            // Let new view render, then fade skeleton out
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     setIsViewTransitioning(false)
@@ -1793,14 +1793,14 @@ export default function StudentsPage() {
                                             <div className="flex items-center bg-[var(--color-surface)] shadow-inner p-1 rounded-[1.2rem] border border-[var(--color-border)]">
                                                 <button
                                                     onClick={() => switchMobileView('card')}
-                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all ${mobileView === 'card' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
+                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all duration-200 ${pendingView === 'card' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
                                                 >
                                                     <FontAwesomeIcon icon={faTable} className="text-[11px]" />
                                                     Card
                                                 </button>
                                                 <button
                                                     onClick={() => switchMobileView('list')}
-                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all ${mobileView === 'list' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
+                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all duration-200 ${pendingView === 'list' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
                                                 >
                                                     <FontAwesomeIcon icon={faTableList} className="text-[11px]" />
                                                     List

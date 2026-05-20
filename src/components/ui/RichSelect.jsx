@@ -1,12 +1,15 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronDown, faSearch, faXmark, faCheck } from '@fortawesome/free-solid-svg-icons'
 
 /**
  * RichSelect - A premium, reusable dropdown component with auto-flip, portal, and search support.
+ * 
+ * @param {boolean} compact - Lightweight mode: no portal, smaller padding, inline absolute dropdown.
+ *                             Ideal for pagination or toolbar selects with few options.
  */
-const RichSelect = ({ 
+const RichSelect = memo(({ 
     value, 
     onChange, 
     options = [], 
@@ -18,11 +21,13 @@ const RichSelect = ({
     searchable = false,
     className = "",
     disabled = false,
-    allowCustom = false
+    allowCustom = false,
+    compact = false
 }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [search, setSearch] = useState('')
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, placement: 'bottom', maxHeight: 240 })
+    const [compactPlacement, setCompactPlacement] = useState('bottom')
     const ref = useRef(null)
     const searchInputRef = useRef(null)
 
@@ -60,35 +65,54 @@ const RichSelect = ({
         }
     }, [searchable])
 
-    const toggle = () => {
+    const toggle = useCallback(() => {
         const nextState = !isOpen
         if (nextState) {
-            updateCoords()
+            if (compact && ref.current) {
+                // Lightweight flip check for compact mode
+                const rect = ref.current.getBoundingClientRect()
+                const dropdownH = options.length * 32 + 16 // estimate
+                const spaceBelow = window.innerHeight - rect.bottom - 8
+                setCompactPlacement(spaceBelow < dropdownH ? 'top' : 'bottom')
+            } else if (!compact) {
+                updateCoords()
+            }
             setSearch('')
         }
         setIsOpen(nextState)
-    }
+    }, [isOpen, compact, updateCoords, options.length])
+
+    const handleSelect = useCallback((id) => {
+        onChange(id)
+        setIsOpen(false)
+    }, [onChange])
 
     useEffect(() => {
-        if (isOpen) {
+        if (!isOpen) return
+
+        // Compact mode: only need click-outside handler
+        const handleClickOutside = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) setIsOpen(false)
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+
+        if (!compact) {
             window.addEventListener('scroll', updateCoords, true)
             window.addEventListener('resize', updateCoords)
-            if (searchable && searchInputRef.current) {
-                setTimeout(() => searchInputRef.current?.focus(), 100)
-            }
+        }
+
+        if (searchable && searchInputRef.current) {
+            setTimeout(() => searchInputRef.current?.focus(), 100)
+        }
             
-            const handleClickOutside = (e) => {
-                if (ref.current && !ref.current.contains(e.target)) setIsOpen(false)
-            }
-            document.addEventListener('mousedown', handleClickOutside)
-            
-            return () => {
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+            if (!compact) {
                 window.removeEventListener('scroll', updateCoords, true)
                 window.removeEventListener('resize', updateCoords)
-                document.removeEventListener('mousedown', handleClickOutside)
             }
         }
-    }, [isOpen, updateCoords, searchable])
+    }, [isOpen, updateCoords, searchable, compact])
 
     const filteredOptions = useMemo(() => {
         if (!search) return options
@@ -96,7 +120,91 @@ const RichSelect = ({
         return options.filter(o => o.name?.toLowerCase().includes(s) || o.id?.toString().toLowerCase().includes(s))
     }, [options, search])
 
-    const selectedOption = options.find(o => String(o.id) === String(value)) || (extraOption?.id === value ? extraOption : (allowCustom && value ? { id: value, name: value } : null))
+    const selectedOption = useMemo(() => {
+        return options.find(o => String(o.id) === String(value)) || (extraOption?.id === value ? extraOption : (allowCustom && value ? { id: value, name: value } : null))
+    }, [options, value, extraOption, allowCustom])
+
+    // ─── Dropdown content (shared between compact & portal modes) ───
+    const renderDropdown = () => (
+        <>
+            {/* Search Bar */}
+            {searchable && (
+                <div className="p-2 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                    <div className="relative">
+                        <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] opacity-40" />
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Cari..."
+                            className="w-full h-8 pl-8 pr-8 rounded-lg border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all font-bold"
+                        />
+                        {search && (
+                            <button 
+                                onClick={() => setSearch('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 transition-colors"
+                            >
+                                <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            <div 
+                className="py-1 overflow-y-auto custom-scrollbar"
+                style={{ maxHeight: compact ? 200 : Math.min(searchable ? 280 : 240, coords.maxHeight - 80) }}
+            >
+                {extraOption && (
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleSelect(extraOption.id) }}
+                        className={`w-full text-left px-3 py-1.5 text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group whitespace-nowrap ${value === extraOption.id ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-amber-600'}`}
+                    >
+                        <div className="flex items-center gap-2.5">
+                            <div className={`w-1.5 h-1.5 rounded-full ${value === extraOption.id ? 'bg-[var(--color-primary)]' : 'bg-amber-600'}`} />
+                            {extraOption.name}
+                        </div>
+                        {value === extraOption.id && <FontAwesomeIcon icon={faCheck} className="text-[10px]" />}
+                    </button>
+                )}
+                
+                {allowCustom && search && !options.some(o => o.name?.toLowerCase() === search.toLowerCase()) && (
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleSelect(search) }}
+                        className="w-full text-left px-3 py-1.5 text-[11px] font-bold text-[var(--color-primary)] bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 transition-all flex items-center justify-between group whitespace-nowrap border-b border-[var(--color-border)]"
+                    >
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                            <span>Gunakan "{search}"</span>
+                        </div>
+                        <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                    </button>
+                )}
+                
+                {filteredOptions.length === 0 ? (
+                    <div className="px-4 py-6 text-center">
+                        <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-40">{allowCustom ? 'Ketik untuk menambahkan' : 'Tidak ditemukan'}</p>
+                    </div>
+                ) : filteredOptions.map((opt) => (
+                    <button
+                        key={opt.id}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleSelect(opt.id) }}
+                        className={`w-full text-left ${compact ? 'px-3 py-1.5' : 'px-4 py-2'} text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group whitespace-nowrap ${String(value) === String(opt.id) ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-[var(--color-text)]'}`}
+                    >
+                        <div className="flex items-center gap-2.5">
+                            <div className={`w-1.5 h-1.5 rounded-full transition-all ${String(value) === String(opt.id) ? 'bg-[var(--color-primary)] scale-125 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.4)]' : 'bg-[var(--color-border)] group-hover:bg-[var(--color-text-muted)]'}`} />
+                            {opt.name}
+                        </div>
+                        {String(value) === String(opt.id) && <FontAwesomeIcon icon={faCheck} className="text-[10px] animate-in zoom-in-50 duration-300" />}
+                    </button>
+                ))}
+            </div>
+        </>
+    )
 
     return (
         <div className={`relative ${className}`} ref={ref}>
@@ -104,111 +212,57 @@ const RichSelect = ({
                 type="button"
                 onClick={disabled ? undefined : toggle}
                 disabled={disabled}
-                className={`w-full flex items-center justify-between gap-2 ${small ? 'px-3 h-8 sm:h-9' : 'pl-9 pr-3 h-11'} rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full flex items-center justify-between gap-2 ${compact ? 'px-2.5 h-8' : small ? 'px-3 h-8 sm:h-9' : 'pl-9 pr-3 h-11'} rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
                 <div className="flex items-center gap-2 truncate">
-                    {icon && !small && <FontAwesomeIcon icon={icon} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors ${iconStatusClasses[status]}`} />}
+                    {icon && !small && !compact && <FontAwesomeIcon icon={icon} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors ${iconStatusClasses[status]}`} />}
                     <span className={selectedOption ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-60'}>
                         {selectedOption ? selectedOption.name : placeholder}
                     </span>
                 </div>
-                <FontAwesomeIcon icon={faChevronDown} className={`text-[9px] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`} />
+                <FontAwesomeIcon icon={faChevronDown} className={`text-[9px] opacity-40 transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`} />
             </button>
 
-            {isOpen && createPortal(
+            {isOpen && (compact ? (
+                /* ─── Compact: inline absolute dropdown with auto-flip ─── */
                 <div 
-                    className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
+                    className={`absolute z-50 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-2xl overflow-hidden animate-in fade-in ${compactPlacement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'} duration-150`}
                     onMouseDown={(e) => e.stopPropagation()}
                     style={{
-                        width: 'max-content',
-                        minWidth: coords.width,
-                        maxWidth: small ? coords.width : Math.max(300, coords.width),
-                        left: coords.left,
-                        top: coords.placement === 'top' ? 'auto' : coords.bottom + 8,
-                        bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
+                        minWidth: '100%',
+                        right: 0,
+                        ...(compactPlacement === 'top'
+                            ? { bottom: '100%', marginBottom: 4 }
+                            : { top: '100%', marginTop: 4 }
+                        ),
                     }}
                 >
-                    {/* Search Bar */}
-                    {searchable && (
-                        <div className="p-2 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                            <div className="relative">
-                                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] opacity-40" />
-                                <input
-                                    ref={searchInputRef}
-                                    type="text"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Cari..."
-                                    className="w-full h-8 pl-8 pr-8 rounded-lg border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all font-bold"
-                                />
-                                {search && (
-                                    <button 
-                                        onClick={() => setSearch('')}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 transition-colors"
-                                    >
-                                        <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
+                    {renderDropdown()}
+                </div>
+            ) : (
+                /* ─── Full: portal dropdown with auto-flip ─── */
+                createPortal(
                     <div 
-                        className="py-1.5 overflow-y-auto custom-scrollbar"
-                        style={{ maxHeight: Math.min(searchable ? 280 : 240, coords.maxHeight - 80) }}
+                        className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        style={{
+                            width: 'max-content',
+                            minWidth: coords.width,
+                            maxWidth: small ? coords.width : Math.max(300, coords.width),
+                            left: coords.left,
+                            top: coords.placement === 'top' ? 'auto' : coords.bottom + 8,
+                            bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
+                        }}
                     >
-                        {extraOption && (
-                            <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); onChange(extraOption.id); setIsOpen(false); }}
-                                className={`w-full text-left px-4 py-2 text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group whitespace-nowrap ${value === extraOption.id ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-amber-600'}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${value === extraOption.id ? 'bg-[var(--color-primary)]' : 'bg-amber-600'}`} />
-                                    {extraOption.name}
-                                </div>
-                                {value === extraOption.id && <FontAwesomeIcon icon={faCheck} className="text-[10px]" />}
-                            </button>
-                        )}
-                        
-                        {allowCustom && search && !options.some(o => o.name?.toLowerCase() === search.toLowerCase()) && (
-                            <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); onChange(search); setIsOpen(false); }}
-                                className="w-full text-left px-4 py-2 text-[11px] font-bold text-[var(--color-primary)] bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 transition-all flex items-center justify-between group whitespace-nowrap border-b border-[var(--color-border)]"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
-                                    <span>Gunakan "{search}"</span>
-                                </div>
-                                <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
-                            </button>
-                        )}
-                        
-                        {filteredOptions.length === 0 ? (
-                            <div className="px-4 py-6 text-center">
-                                <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-40">{allowCustom ? 'Ketik untuk menambahkan' : 'Tidak ditemukan'}</p>
-                            </div>
-                        ) : filteredOptions.map((opt) => (
-                            <button
-                                key={opt.id}
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); onChange(opt.id); setIsOpen(false); }}
-                                className={`w-full text-left px-4 py-2 text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group whitespace-nowrap ${String(value) === String(opt.id) ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-[var(--color-text)]'}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-1.5 h-1.5 rounded-full transition-all ${String(value) === String(opt.id) ? 'bg-[var(--color-primary)] scale-125 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.4)]' : 'bg-[var(--color-border)] group-hover:bg-[var(--color-text-muted)]'}`} />
-                                    {opt.name}
-                                </div>
-                                {String(value) === String(opt.id) && <FontAwesomeIcon icon={faCheck} className="text-[10px] animate-in zoom-in-50 duration-300" />}
-                            </button>
-                        ))}
-                    </div>
-                </div>,
-                document.body
-            )}
+                        {renderDropdown()}
+                    </div>,
+                    document.body
+                )
+            ))}
         </div>
     )
-}
+})
+
+RichSelect.displayName = 'RichSelect'
 
 export default RichSelect

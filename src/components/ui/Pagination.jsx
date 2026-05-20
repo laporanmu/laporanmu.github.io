@@ -1,8 +1,23 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { 
-    faChevronLeft, faChevronRight, faAnglesLeft, faAnglesRight, faChevronDown 
+    faChevronLeft, faChevronRight, faAnglesLeft, faAnglesRight
 } from '@fortawesome/free-solid-svg-icons'
+import RichSelect from './RichSelect'
+
+const PAGE_SIZE_OPTIONS = [
+    { id: 10, name: '10' },
+    { id: 25, name: '25' },
+    { id: 50, name: '50' },
+    { id: 100, name: '100' },
+]
+
+const PAGE_SIZE_OPTIONS_MOBILE = [
+    { id: 10, name: '10 / hal' },
+    { id: 25, name: '25 / hal' },
+    { id: 50, name: '50 / hal' },
+    { id: 100, name: '100 / hal' },
+]
 
 /**
  * Standard Pagination component based on StudentsPage style.
@@ -30,6 +45,11 @@ export default function Pagination({
 
     if (totalRows === 0) return null
 
+    const handlePageSizeChange = (val) => {
+        setPageSize(Number(val))
+        setPage(1)
+    }
+
     return (
         <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 rounded-b-2xl">
             {/* ── MOBILE COMPACT PAGINATION (< md) ── */}
@@ -39,15 +59,14 @@ export default function Pagination({
                         <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-0.5">Total Data</span>
                         <span className="text-[12px] font-extrabold text-[var(--color-text)] tracking-tight">{totalRows} <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider ml-0.5">{label}</span></span>
                     </div>
-                    <div className="relative bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] shadow-sm">
-                        <select
+                    <div className="w-24">
+                        <RichSelect
                             value={pageSize}
-                            onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                            className="h-9 pl-3 pr-7 bg-transparent text-[10px] font-black outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-[var(--color-primary)]/20 rounded-xl text-[var(--color-text)]"
-                        >
-                            {[10, 25, 50, 100].map(v => <option key={v} value={v}>{v} / hal</option>)}
-                        </select>
-                        <FontAwesomeIcon icon={faChevronDown} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[8px] text-[var(--color-primary)] pointer-events-none" />
+                            onChange={handlePageSizeChange}
+                            options={PAGE_SIZE_OPTIONS_MOBILE}
+                            compact
+                            small
+                        />
                     </div>
                 </div>
 
@@ -108,15 +127,14 @@ export default function Pagination({
                     <div className="h-8 w-px bg-[var(--color-border)] hidden sm:block mx-1 opacity-50" />
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">Baris:</span>
-                        <div className="relative">
-                            <select
+                        <div className="w-[72px]">
+                            <RichSelect
                                 value={pageSize}
-                                onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                                className="h-9 pl-3 pr-7 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black outline-none focus:border-[var(--color-primary)] transition-all appearance-none cursor-pointer hover:bg-[var(--color-surface-alt)]"
-                            >
-                                {[10, 25, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
-                            </select>
-                            <FontAwesomeIcon icon={faChevronDown} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[8px] text-[var(--color-text-muted)] pointer-events-none" />
+                                onChange={handlePageSizeChange}
+                                options={PAGE_SIZE_OPTIONS}
+                                compact
+                                small
+                            />
                         </div>
                     </div>
                 </div>
