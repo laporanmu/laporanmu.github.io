@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 
 /**
  * useLongPress custom hook
@@ -6,17 +6,17 @@ import { useState, useRef, useCallback } from 'react';
  * @param {Object} options - { delay, onClick }
  */
 export default function useLongPress(onLongPress, { delay = 500, onClick = null } = {}) {
-    const [longPressTriggered, setLongPressTriggered] = useState(false);
     const timerRef = useRef();
     const sourceRef = useRef();
+    const longPressTriggeredRef = useRef(false);
 
     const start = useCallback((event) => {
         event.persist();
-        setLongPressTriggered(false);
+        longPressTriggeredRef.current = false;
         sourceRef.current = event.target;
         timerRef.current = setTimeout(() => {
             onLongPress(event);
-            setLongPressTriggered(true);
+            longPressTriggeredRef.current = true;
         }, delay);
     }, [onLongPress, delay]);
 
@@ -24,11 +24,11 @@ export default function useLongPress(onLongPress, { delay = 500, onClick = null 
         if (timerRef.current) {
             clearTimeout(timerRef.current);
         }
-        if (shouldTriggerClick && !longPressTriggered && onClick) {
+        if (shouldTriggerClick && !longPressTriggeredRef.current && onClick) {
             onClick(event);
         }
-        setLongPressTriggered(false);
-    }, [longPressTriggered, onClick]);
+        longPressTriggeredRef.current = false;
+    }, [onClick]);
 
     return {
         onMouseDown: (e) => start(e),
@@ -38,3 +38,4 @@ export default function useLongPress(onLongPress, { delay = 500, onClick = null 
         onTouchEnd: (e) => clear(e),
     };
 }
+

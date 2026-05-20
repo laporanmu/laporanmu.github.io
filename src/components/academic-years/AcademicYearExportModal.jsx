@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faCheckCircle,
@@ -21,7 +21,8 @@ import {
     faChevronDown,
     faGear,
     faArrowsLeftRight,
-    faArrowsUpDown
+    faArrowsUpDown,
+    faTags
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 
@@ -70,6 +71,15 @@ export default function AcademicYearExportModal({
             }
         }
     }, [exporting])
+
+    const activePresetId = useMemo(() => {
+        const sortedCols = [...exportColumns].sort().join(',')
+        const active = PRESETS.find(preset => {
+            const presetSorted = [...preset.cols].sort().join(',')
+            return sortedCols === presetSorted
+        })
+        return active ? active.id : null
+    }, [exportColumns])
 
     if (!isOpen) return null
 
@@ -212,7 +222,7 @@ export default function AcademicYearExportModal({
                     </div>
 
                     {/* Section 2: Columns */}
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">2 — Kolom & Presets</p>
                             <div className="flex gap-2">
@@ -221,17 +231,39 @@ export default function AcademicYearExportModal({
                             </div>
                         </div>
 
-                        {/* Presets Row */}
-                        <div className="flex flex-wrap gap-2 mb-1">
-                            {PRESETS.map(preset => (
-                                <button
-                                    key={preset.id}
-                                    onClick={() => handlePresetClick(preset.cols)}
-                                    className="px-3 py-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all active:scale-95"
-                                >
-                                    {preset.label}
-                                </button>
-                            ))}
+                        {/* Presets Sub-section with label and horizontal scroll */}
+                        <div className="flex flex-col gap-2 p-3 bg-[var(--color-surface-alt)]/40 rounded-2xl border border-[var(--color-border)]/50">
+                            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider text-[var(--color-text-muted)] opacity-60">
+                                <FontAwesomeIcon icon={faTags} className="text-[9px]" />
+                                <span>Pilih Paket Kolom (Preset)</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {PRESETS.map(preset => {
+                                    const isActive = activePresetId === preset.id
+                                    return (
+                                        <button
+                                            key={preset.id}
+                                            onClick={() => handlePresetClick(preset.cols)}
+                                            className={`px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 shrink-0
+                                                ${isActive
+                                                    ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm shadow-[var(--color-primary)]/20'
+                                                    : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]'}`}
+                                        >
+                                            {preset.label}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Divider Line */}
+                        <div className="relative flex items-center justify-center my-1">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-dashed border-[var(--color-border)]/65"></div>
+                            </div>
+                            <div className="relative bg-[var(--color-surface)] px-3 text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">
+                                Pilih Kolom Kustom
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -266,7 +298,7 @@ export default function AcademicYearExportModal({
                         </div>
 
                         {advancedOpen && (
-                            <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5">
                                         <FontAwesomeIcon icon={faHeading} />
@@ -291,8 +323,8 @@ export default function AcademicYearExportModal({
                                     </label>
                                     <div className="flex gap-1 bg-[var(--color-surface)] p-1 rounded-lg border border-[var(--color-border)]">
                                         {[
-                                            { v: 'landscape', l: 'LS', icon: faArrowsLeftRight },
-                                            { v: 'portrait', l: 'PT', icon: faArrowsUpDown }
+                                            { v: 'landscape', l: 'Landscape', icon: faArrowsLeftRight },
+                                            { v: 'portrait', l: 'Portrait', icon: faArrowsUpDown }
                                         ].map(opt => (
                                             <button
                                                 key={opt.v}

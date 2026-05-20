@@ -371,7 +371,7 @@ export default function StudentsPage() {
         resettingPin, uploadingPhoto, broadcastTemplate, setBroadcastTemplate, customWaMsg, setCustomWaMsg, broadcastIndex, setBroadcastIndex,
         formDataRef, importFileInputRef, photoInputRef, searchInputRef, headerMenuRef, shortcutRef, cardCaptureRef,
         selectedStudents, selectedStudentsWithPhone, selectedIdSet, generateCode, handleAddCustomTag,
-        bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches,
+        bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches, allStudentsForBulk, matchingPhotos,
     } = core
     const { enabled: canImportCSV } = useFlag('students.import_csv')
     const { enabled: canImportGSheets } = useFlag('students.import_gsheets')
@@ -464,6 +464,14 @@ export default function StudentsPage() {
     useEffect(() => {
         localStorage.setItem('students_visible_columns', JSON.stringify(visibleColumns))
     }, [visibleColumns])
+
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768)
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
     const [mobileView, setMobileView] = useState(() => {
         try { return localStorage.getItem('students_mobile_view') || 'card' } catch { return 'card' }
     }) // 'card' | 'list'
@@ -1480,205 +1488,207 @@ export default function StudentsPage() {
                     <div>
                         <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
                             {/* Desktop View */}
-                            <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
-                                        <tr className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                            <th className="px-4 py-4 text-center w-12">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedStudentIds.length === students.length && students.length > 0}
-                                                    onChange={toggleSelectAll}
-                                                    className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer shrink-0"
-                                                />
-                                            </th>
-                                            <th className="px-4 py-4 text-left min-w-[250px]">Siswa</th>
-
-                                            {visibleColumns.gender && (
-                                                <th className="px-4 py-4 text-center w-20">Gender</th>
-                                            )}
-                                            {visibleColumns.kelas && (
-                                                <th className="px-4 py-4 text-center w-44">Kelas</th>
-                                            )}
-                                            {visibleColumns.status && (
-                                                <th className="px-4 py-4 text-center w-32">Status</th>
-                                            )}
-                                            {visibleColumns.poin && (
-                                                <th className="px-4 py-4 text-center w-28">Poin</th>
-                                            )}
-                                            {visibleColumns.last_report && (
-                                                <th className="px-4 py-4 text-center w-32 whitespace-nowrap">Lap. Terakhir</th>
-                                            )}
-                                            {visibleColumns.profil && (
-                                                <th className="px-4 py-4 text-center w-32">Profil</th>
-                                            )}
-                                            {visibleColumns.tags && (
-                                                <th className="px-4 py-4 text-center w-28">Label</th>
-                                            )}
-
-                                            {/* COLUMN TOGGLE BUTTON —” di dalam header Aksi */}
-                                            <th className="px-4 py-4 text-center pr-4 relative w-[280px]">
-                                                <div className="flex items-center justify-center">
-                                                    {visibleColumns.aksi && <span>Aksi</span>}
-                                                </div>
-
-                                                {/* Toggle Button —” absolute kanan, seperti checkbox di kiri */}
-                                                <div className="absolute right-6 top-1/2 -translate-y-1/2" ref={colMenuRef}>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            const rect = e.currentTarget.getBoundingClientRect()
-                                                            const menuHeight = 220
-                                                            const spaceBelow = window.innerHeight - rect.bottom
-                                                            const showUp = spaceBelow < menuHeight && rect.top > menuHeight
-                                                            setColMenuPos({
-                                                                top: showUp ? (rect.top + window.scrollY - menuHeight - 8) : (rect.bottom + window.scrollY + 8),
-                                                                right: window.innerWidth - rect.right - window.scrollX,
-                                                                showUp
-                                                            })
-                                                            setIsColMenuOpen(p => !p)
-                                                        }}
-                                                        title="Atur kolom"
-                                                        className={`w-6 h-6 rounded-md flex items-center justify-center transition-all
-                            ${isColMenuOpen
-                                                                ? 'bg-[var(--color-primary)] text-white'
-                                                                : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'
-                                                            }`}
-                                                    >
-                                                        <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
-                                                            <rect x="0" y="0" width="5" height="5" rx="1" />
-                                                            <rect x="7" y="0" width="5" height="5" rx="1" />
-                                                            <rect x="0" y="7" width="5" height="5" rx="1" />
-                                                            <rect x="7" y="7" width="5" height="5" rx="1" />
-                                                        </svg>
-                                                    </button>
-
-                                                    {/* Dropdown Menu —” Portal agar tidak ter-clip oleh overflow tabel */}
-                                                    {isColMenuOpen && createPortal(
-                                                        <div
-                                                            id="portal-column-menu"
-                                                            onMouseDown={(e) => e.stopPropagation()}
-                                                            className={`absolute z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${colMenuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
-                                                            style={{ top: colMenuPos.top, right: colMenuPos.right }}
-                                                        >
-                                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">
-                                                                Tampilkan Kolom
-                                                            </p>
-                                                            {[
-                                                                { key: 'gender', label: 'Gender' },
-                                                                { key: 'kelas', label: 'Kelas' },
-                                                                { key: 'status', label: 'Status' },
-                                                                { key: 'poin', label: 'Poin' },
-                                                                { key: 'last_report', label: 'Lap. Terakhir' },
-                                                                { key: 'profil', label: 'Profil' },
-                                                                { key: 'tags', label: 'Label' },
-                                                                { key: 'aksi', label: 'Aksi' },
-                                                            ].map(({ key, label }) => (
-                                                                <button
-                                                                    key={key}
-                                                                    onClick={() => toggleColumn(key)}
-                                                                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left"
-                                                                >
-                                                                    <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
-                                                                    <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleColumns[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
-                                                                        <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${visibleColumns[key] ? 'translate-x-[14px]' : 'translate-x-0'}`} />
-                                                                    </div>
-                                                                </button>
-                                                            ))}
-                                                        </div>,
-                                                        getPortalContainer('portal-column-menu')
-                                                    )}
-                                                </div>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {loading ? (
-                                            Array.from({ length: 10 }).map((_, i) => (
-                                                <StudentSkeletonRow key={i} />
-                                            ))
-                                        ) : students.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={9} className="px-6 py-20">
-                                                    <EmptyState
-                                                        variant="plain"
-                                                        icon={activeFilterCount > 0 || searchQuery ? faSearch : faUsers}
-                                                        title={activeFilterCount > 0 || searchQuery ? "Pencarian Tidak Ditemukan" : "Belum Ada Data Siswa"}
-                                                        description={activeFilterCount > 0 || searchQuery
-                                                            ? "Maaf, kami tidak menemukan data siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
-                                                            : "Database siswa Anda masih kosong. Mulai tambahkan siswa baru atau import data untuk mulai mengelola."
-                                                        }
-                                                        action={
-                                                            activeFilterCount > 0 || searchQuery ? (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={resetAllFilters}
-                                                                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
-                                                                >
-                                                                    Reset Semua Filter
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => { setIsModalOpen(true); setActiveModal('add'); }}
-                                                                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 hover:scale-105 transition-all flex items-center gap-2"
-                                                                >
-                                                                    <FontAwesomeIcon icon={faPlus} />
-                                                                    Tambah Siswa Pertama
-                                                                </button>
-                                                            )
-                                                        }
+                            {!isMobile && (
+                                <div className="hidden md:block overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-[var(--color-surface-alt)] sticky top-0 z-10">
+                                            <tr className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                                <th className="px-4 py-4 text-center w-12">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedStudentIds.length === students.length && students.length > 0}
+                                                        onChange={toggleSelectAll}
+                                                        className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer shrink-0"
                                                     />
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            students.map((student) => (
-                                                <StudentRow
-                                                    key={student.id}
-                                                    student={student}
-                                                    visibleColumns={visibleColumns}
-                                                    isSelected={selectedIdSet.has(student.id)}
-                                                    lastReportMap={lastReportMap}
-                                                    isPrivacyMode={isPrivacyMode}
-                                                    onEdit={canEdit && canEditStudent ? handleEdit : null}
-                                                    onViewProfile={handleViewProfile}
-                                                    onViewQR={handleViewQR}
-                                                    onViewPrint={handleViewPrint}
-                                                    onViewTags={handleViewTags}
-                                                    onViewClassHistory={handleViewClassHistory}
-                                                    onConfirmDelete={canEdit && canDeleteStudent ? confirmDelete : null}
-                                                    onClassBreakdown={handleClassBreakdown}
-                                                    onPhotoZoom={setPhotoZoom}
-                                                    onToggleSelect={toggleSelectStudent}
-                                                    onQuickPoint={handleQuickPoint}
-                                                    onInlineUpdate={canEdit && canEditStudent ? handleInlineUpdate : null}
-                                                    onTogglePin={handleTogglePin}
-                                                    classesList={classesList}
-                                                    formatRelativeDate={formatRelativeDate}
-                                                    RiskThreshold={RiskThreshold}
-                                                    buildWAMessage={buildWAMessage}
-                                                    openWAForStudent={openWAForStudent}
-                                                    waTemplate={waTemplate}
-                                                />
-                                            ))
-                                        )}
+                                                </th>
+                                                <th className="px-4 py-4 text-left min-w-[250px]">Siswa</th>
 
-                                        {/* Quick Inline Add Row */}
-                                        {isInlineAddOpen && (
-                                            <StudentInlineAddRow
-                                                classesList={classesList}
-                                                submitting={submittingInline}
-                                                canEdit={canEdit}
-                                                visibleColumns={visibleColumns}
-                                                initialClassId={inlineForm.class_id}
-                                                onSubmit={handleInlineSubmit}
-                                                onCancel={() => setIsInlineAddOpen(false)}
-                                            />
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                {visibleColumns.gender && (
+                                                    <th className="px-4 py-4 text-center w-20">Gender</th>
+                                                )}
+                                                {visibleColumns.kelas && (
+                                                    <th className="px-4 py-4 text-center w-44">Kelas</th>
+                                                )}
+                                                {visibleColumns.status && (
+                                                    <th className="px-4 py-4 text-center w-32">Status</th>
+                                                )}
+                                                {visibleColumns.poin && (
+                                                    <th className="px-4 py-4 text-center w-28">Poin</th>
+                                                )}
+                                                {visibleColumns.last_report && (
+                                                    <th className="px-4 py-4 text-center w-32 whitespace-nowrap">Lap. Terakhir</th>
+                                                )}
+                                                {visibleColumns.profil && (
+                                                    <th className="px-4 py-4 text-center w-32">Profil</th>
+                                                )}
+                                                {visibleColumns.tags && (
+                                                    <th className="px-4 py-4 text-center w-28">Label</th>
+                                                )}
+
+                                                {/* COLUMN TOGGLE BUTTON —” di dalam header Aksi */}
+                                                <th className="px-4 py-4 text-center pr-4 relative w-[280px]">
+                                                    <div className="flex items-center justify-center">
+                                                        {visibleColumns.aksi && <span>Aksi</span>}
+                                                    </div>
+
+                                                    {/* Toggle Button —” absolute kanan, seperti checkbox di kiri */}
+                                                    <div className="absolute right-6 top-1/2 -translate-y-1/2" ref={colMenuRef}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                const rect = e.currentTarget.getBoundingClientRect()
+                                                                const menuHeight = 220
+                                                                const spaceBelow = window.innerHeight - rect.bottom
+                                                                const showUp = spaceBelow < menuHeight && rect.top > menuHeight
+                                                                setColMenuPos({
+                                                                    top: showUp ? (rect.top + window.scrollY - menuHeight - 8) : (rect.bottom + window.scrollY + 8),
+                                                                    right: window.innerWidth - rect.right - window.scrollX,
+                                                                    showUp
+                                                                })
+                                                                setIsColMenuOpen(p => !p)
+                                                            }}
+                                                            title="Atur kolom"
+                                                            className={`w-6 h-6 rounded-md flex items-center justify-center transition-all
+                                ${isColMenuOpen
+                                                                    ? 'bg-[var(--color-primary)] text-white'
+                                                                    : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'
+                                                                }`}
+                                                        >
+                                                            <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
+                                                                <rect x="0" y="0" width="5" height="5" rx="1" />
+                                                                <rect x="7" y="0" width="5" height="5" rx="1" />
+                                                                <rect x="0" y="7" width="5" height="5" rx="1" />
+                                                                <rect x="7" y="7" width="5" height="5" rx="1" />
+                                                            </svg>
+                                                        </button>
+
+                                                        {/* Dropdown Menu —” Portal agar tidak ter-clip oleh overflow tabel */}
+                                                        {isColMenuOpen && createPortal(
+                                                            <div
+                                                                id="portal-column-menu"
+                                                                onMouseDown={(e) => e.stopPropagation()}
+                                                                className={`absolute z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 p-2 space-y-0.5 animate-in fade-in zoom-in-95 ${colMenuPos.showUp ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
+                                                                style={{ top: colMenuPos.top, right: colMenuPos.right }}
+                                                            >
+                                                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">
+                                                                    Tampilkan Kolom
+                                                                </p>
+                                                                {[
+                                                                    { key: 'gender', label: 'Gender' },
+                                                                    { key: 'kelas', label: 'Kelas' },
+                                                                    { key: 'status', label: 'Status' },
+                                                                    { key: 'poin', label: 'Poin' },
+                                                                    { key: 'last_report', label: 'Lap. Terakhir' },
+                                                                    { key: 'profil', label: 'Profil' },
+                                                                    { key: 'tags', label: 'Label' },
+                                                                    { key: 'aksi', label: 'Aksi' },
+                                                                ].map(({ key, label }) => (
+                                                                    <button
+                                                                        key={key}
+                                                                        onClick={() => toggleColumn(key)}
+                                                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left"
+                                                                    >
+                                                                        <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
+                                                                        <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleColumns[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                                                            <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${visibleColumns[key] ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>,
+                                                            getPortalContainer('portal-column-menu')
+                                                        )}
+                                                    </div>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {loading ? (
+                                                Array.from({ length: 10 }).map((_, i) => (
+                                                    <StudentSkeletonRow key={i} />
+                                                ))
+                                            ) : students.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={9} className="px-6 py-20">
+                                                        <EmptyState
+                                                            variant="plain"
+                                                            icon={activeFilterCount > 0 || searchQuery ? faSearch : faUsers}
+                                                            title={activeFilterCount > 0 || searchQuery ? "Pencarian Tidak Ditemukan" : "Belum Ada Data Siswa"}
+                                                            description={activeFilterCount > 0 || searchQuery
+                                                                ? "Maaf, kami tidak menemukan data siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                                                : "Database siswa Anda masih kosong. Mulai tambahkan siswa baru atau import data untuk mulai mengelola."
+                                                            }
+                                                            action={
+                                                                activeFilterCount > 0 || searchQuery ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={resetAllFilters}
+                                                                        className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                                                    >
+                                                                        Reset Semua Filter
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => { setIsModalOpen(true); setActiveModal('add'); }}
+                                                                        className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 hover:scale-105 transition-all flex items-center gap-2"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faPlus} />
+                                                                        Tambah Siswa Pertama
+                                                                    </button>
+                                                                )
+                                                            }
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                students.map((student) => (
+                                                    <StudentRow
+                                                        key={student.id}
+                                                        student={student}
+                                                        visibleColumns={visibleColumns}
+                                                        isSelected={selectedIdSet.has(student.id)}
+                                                        lastReportMap={lastReportMap}
+                                                        isPrivacyMode={isPrivacyMode}
+                                                        onEdit={canEdit && canEditStudent ? handleEdit : null}
+                                                        onViewProfile={handleViewProfile}
+                                                        onViewQR={handleViewQR}
+                                                        onViewPrint={handleViewPrint}
+                                                        onViewTags={handleViewTags}
+                                                        onViewClassHistory={handleViewClassHistory}
+                                                        onConfirmDelete={canEdit && canDeleteStudent ? confirmDelete : null}
+                                                        onClassBreakdown={handleClassBreakdown}
+                                                        onPhotoZoom={setPhotoZoom}
+                                                        onToggleSelect={toggleSelectStudent}
+                                                        onQuickPoint={handleQuickPoint}
+                                                        onInlineUpdate={canEdit && canEditStudent ? handleInlineUpdate : null}
+                                                        onTogglePin={handleTogglePin}
+                                                        classesList={classesList}
+                                                        formatRelativeDate={formatRelativeDate}
+                                                        RiskThreshold={RiskThreshold}
+                                                        buildWAMessage={buildWAMessage}
+                                                        openWAForStudent={openWAForStudent}
+                                                        waTemplate={waTemplate}
+                                                    />
+                                                ))
+                                            )}
+
+                                            {/* Quick Inline Add Row */}
+                                            {isInlineAddOpen && (
+                                                <StudentInlineAddRow
+                                                    classesList={classesList}
+                                                    submitting={submittingInline}
+                                                    canEdit={canEdit}
+                                                    visibleColumns={visibleColumns}
+                                                    initialClassId={inlineForm.class_id}
+                                                    onSubmit={handleInlineSubmit}
+                                                    onCancel={() => setIsInlineAddOpen(false)}
+                                                />
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
 
                             {/* Quick Add trigger FOR DESKTOP — stays below table */}
-                            {!isInlineAddOpen && canEdit && canAddStudent && (
+                            {!isMobile && !isInlineAddOpen && canEdit && canAddStudent && (
                                 <div className="hidden md:block p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/5">
                                     <button
                                         onClick={() => {
@@ -1692,9 +1702,8 @@ export default function StudentsPage() {
                                 </div>
                             )}
 
-
                             {/* Mobile View Selection Header */}
-                            {selectedStudentIds.length > 0 && (
+                            {isMobile && selectedStudentIds.length > 0 && (
                                 <div className="sticky top-0 z-40 -mx-3 mb-4 px-4 py-2 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-[var(--color-border)] flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 rounded-lg bg-[var(--color-primary)] text-white flex items-center justify-center text-[10px] font-black">
@@ -1719,285 +1728,283 @@ export default function StudentsPage() {
                                 </div>
                             )}
 
-                            <div
-                                className="md:hidden px-3 pb-3 space-y-3"
-                                style={{
-                                    paddingBottom:
-                                        selectedStudentIds.length > 0
-                                            ? `calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 96px)`
-                                            : `calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 16px)`,
-                                }}
-                            >
+                            {isMobile && (
+                                <div
+                                    className="md:hidden px-3 pb-3 space-y-3"
+                                    style={{
+                                        paddingBottom:
+                                            selectedStudentIds.length > 0
+                                                ? `calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 96px)`
+                                                : `calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 16px)`,
+                                    }}
+                                >
 
-                                {loading ? (
-                                    <div className="space-y-4 pt-2">
-                                        {mobileView === 'card' ? (
-                                            Array.from({ length: 5 }).map((_, i) => (
-                                                <StudentSkeletonCard key={i} />
-                                            ))
-                                        ) : (
-                                            <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/50 overflow-hidden shadow-sm">
-                                                {Array.from({ length: 8 }).map((_, i) => (
-                                                    <div key={i} className="animate-pulse flex items-center gap-4 px-4 py-4">
-                                                        <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-alt)]" />
-                                                        <div className="flex-1 space-y-2">
-                                                            <div className="w-3/4 h-3 bg-[var(--color-surface-alt)] rounded" />
-                                                            <div className="w-1/2 h-2 bg-[var(--color-surface-alt)]/60 rounded" />
+                                    {loading ? (
+                                        <div className="space-y-4 pt-2">
+                                            {mobileView === 'card' ? (
+                                                Array.from({ length: 5 }).map((_, i) => (
+                                                    <StudentSkeletonCard key={i} />
+                                                ))
+                                            ) : (
+                                                <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/50 overflow-hidden shadow-sm">
+                                                    {Array.from({ length: 8 }).map((_, i) => (
+                                                        <div key={i} className="animate-pulse flex items-center gap-4 px-4 py-4">
+                                                            <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-alt)]" />
+                                                            <div className="flex-1 space-y-2">
+                                                                <div className="w-3/4 h-3 bg-[var(--color-surface-alt)] rounded" />
+                                                                <div className="w-1/2 h-2 bg-[var(--color-surface-alt)]/60 rounded" />
+                                                            </div>
+                                                            <div className="w-10 h-6 bg-[var(--color-surface-alt)] rounded-lg" />
                                                         </div>
-                                                        <div className="w-10 h-6 bg-[var(--color-surface-alt)] rounded-lg" />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : students.length === 0 ? (
-                                    <div className="py-12">
-                                        <EmptyState
-                                            variant="plain"
-                                            icon={activeFilterCount > 0 || searchQuery ? faSearch : faUsers}
-                                            title={activeFilterCount > 0 || searchQuery ? "Pencarian Tidak Ditemukan" : "Belum Ada Data Siswa"}
-                                            description={activeFilterCount > 0 || searchQuery
-                                                ? "Maaf, kami tidak menemukan siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
-                                                : "Database siswa Anda masih kosong. Mulai tambahkan siswa baru untuk mulai mengelola."
-                                            }
-                                            action={
-                                                activeFilterCount > 0 || searchQuery ? (
-                                                    <button
-                                                        onClick={resetAllFilters}
-                                                        className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
-                                                    >
-                                                        Reset Semua Filter
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => { setIsModalOpen(true); setActiveModal('add'); }}
-                                                        className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 active:scale-95 transition-all flex items-center gap-2"
-                                                    >
-                                                        <FontAwesomeIcon icon={faPlus} />
-                                                        Tambah Siswa Pertama
-                                                    </button>
-                                                )
-                                            }
-                                        />
-                                    </div>
-                                ) : (
-                                    <>
-                                        {/* Mobile View Switcher */}
-                                        <div className="pt-3 pb-2 px-1 mb-1 flex items-center justify-between bg-[var(--color-surface)]/20 rounded-2xl -mx-3 px-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                                    {totalRows} Data ditemukan
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center bg-[var(--color-surface)] shadow-inner p-1 rounded-[1.2rem] border border-[var(--color-border)]">
-                                                <button
-                                                    onClick={() => switchMobileView('card')}
-                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all duration-200 ${pendingView === 'card' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
-                                                >
-                                                    <FontAwesomeIcon icon={faTable} className="text-[11px]" />
-                                                    Card
-                                                </button>
-                                                <button
-                                                    onClick={() => switchMobileView('list')}
-                                                    className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all duration-200 ${pendingView === 'list' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
-                                                >
-                                                    <FontAwesomeIcon icon={faTableList} className="text-[11px]" />
-                                                    List
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-2 relative">
-                                            {/* Skeleton Transition Overlay */}
-                                            {isViewTransitioning && (
-                                                <div className="animate-in fade-in duration-150 z-10 relative">
-                                                    {mobileView === 'card'
-                                                        ? <MobileListSkeleton count={7} />
-                                                        : <MobileCardSkeleton count={3} />
-                                                    }
-                                                </div>
-                                            )}
-
-                                            {/* Card View Container */}
-                                            <div
-                                                className="space-y-3 transition-all duration-300 ease-in-out"
-                                                style={{
-                                                    opacity: !isViewTransitioning && mobileView === 'card' ? 1 : 0,
-                                                    transform: !isViewTransitioning && mobileView === 'card' ? 'translateY(0)' : 'translateY(-8px)',
-                                                    maxHeight: mobileView === 'card' ? '99999px' : '0px',
-                                                    overflow: mobileView === 'card' ? 'visible' : 'hidden',
-                                                    pointerEvents: !isViewTransitioning && mobileView === 'card' ? 'auto' : 'none',
-                                                    position: mobileView === 'card' ? 'relative' : 'absolute',
-                                                    width: '100%',
-                                                }}
-                                            >
-                                                {students.map(student => {
-                                                    const isRisk = (student.total_points || 0) <= RiskThreshold
-                                                    return (
-                                                        <div
-                                                            key={student.id}
-                                                            className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
-                                                        >
-                                                            {isRisk && (
-                                                                <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
-                                                            )}
-                                                            <StudentMobileCard
-                                                                student={student}
-                                                                isSelected={selectedIdSet.has(student.id)}
-                                                                hasSelection={selectedIdSet.size > 0}
-                                                                onToggleSelect={toggleSelectStudent}
-                                                                onViewProfile={handleViewProfile}
-                                                                onEdit={canEdit ? handleEdit : null}
-                                                                onConfirmDelete={canEdit ? confirmDelete : null}
-                                                                onTogglePin={handleTogglePin}
-                                                                onQuickPoint={handleQuickPoint}
-                                                                isPrivacyMode={isPrivacyMode}
-                                                                RiskThreshold={RiskThreshold}
-                                                                buildWAMessage={buildWAMessage}
-                                                                openWAForStudent={openWAForStudent}
-                                                                waTemplate={waTemplate}
-                                                            />
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-
-                                            {/* List View Container */}
-                                            <div
-                                                className="flex flex-col gap-2 transition-all duration-300 ease-in-out"
-                                                style={{
-                                                    opacity: !isViewTransitioning && mobileView === 'list' ? 1 : 0,
-                                                    transform: !isViewTransitioning && mobileView === 'list' ? 'translateY(0)' : 'translateY(8px)',
-                                                    maxHeight: mobileView === 'list' ? '99999px' : '0px',
-                                                    overflow: mobileView === 'list' ? 'visible' : 'hidden',
-                                                    pointerEvents: !isViewTransitioning && mobileView === 'list' ? 'auto' : 'none',
-                                                    position: mobileView === 'list' ? 'relative' : 'absolute',
-                                                    width: '100%',
-                                                }}
-                                            >
-                                                 {students.length > 0 && canEdit && (
-                                                     <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
-                                                         <FontAwesomeIcon icon={faCircleInfo} />
-                                                         Ketuk baris siswa untuk menu cepat & poin
-                                                     </div>
-                                                 )}
-                                                <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/40 overflow-hidden shadow-sm">
-                                                    {students.map((student) => (
-                                                        <StudentMobileListRow
-                                                            key={student.id}
-                                                            student={student}
-                                                            isSelected={selectedIdSet.has(student.id)}
-                                                            hasSelection={selectedIdSet.size > 0}
-                                                            onToggleSelect={toggleSelectStudent}
-                                                            onViewProfile={handleViewProfile}
-                                                            onEdit={canEdit ? handleEdit : null}
-                                                            onTogglePin={handleTogglePin}
-                                                            onQuickPoint={handleQuickPoint}
-                                                            isPrivacyMode={isPrivacyMode}
-                                                            RiskThreshold={RiskThreshold}
-                                                            canEdit={canEdit}
-                                                            onConfirmDelete={canEdit ? confirmDelete : null}
-                                                            buildWAMessage={buildWAMessage}
-                                                            openWAForStudent={openWAForStudent}
-                                                            waTemplate={waTemplate}
-                                                        />
                                                     ))}
                                                 </div>
-                                            </div>
-
-                                            {/* Quick Add trigger — stays below list */}
-                                            {!isInlineAddOpen && canEdit && canAddStudent && (
-                                                <button
-                                                    onClick={() => {
-                                                        setIsInlineAddOpen(true)
-                                                        setTimeout(() => quickAddRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80)
-                                                    }}
-                                                    className="w-full py-3 flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--color-primary)] bg-[var(--color-primary)]/[0.04] hover:bg-[var(--color-primary)]/10 active:scale-[0.98] transition-all border-2 border-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/40 border-dashed rounded-2xl mt-4 mb-2 shadow-sm"
-                                                >
-                                                    <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                                                    Quick Add Siswa
-                                                </button>
-                                            )}
-
-                                            {/* Quick Add form — BELOW the list (correct position) */}
-                                            {isInlineAddOpen && canEdit && canAddStudent && (
-                                                <div ref={quickAddRef} className="p-3 rounded-2xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/[0.02] shadow-sm mt-2 animate-in slide-in-from-bottom-4 fade-in duration-300">
-                                                    <div className="flex items-center justify-between gap-3 mb-2">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Quick Add Siswa</p>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setIsInlineAddOpen(false)}
-                                                            className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
-                                                        >
-                                                            <FontAwesomeIcon icon={faXmark} />
-                                                        </button>
-                                                    </div>
-
-                                                    <form
-                                                        onSubmit={(e) => {
-                                                            e.preventDefault()
-                                                            handleInlineSubmit()
-                                                        }}
-                                                        className="grid grid-cols-1 gap-2.5"
-                                                    >
-                                                        <input
-                                                            type="text"
-                                                            value={inlineForm.name}
-                                                            onChange={e => setInlineForm(p => ({ ...p, name: e.target.value }))}
-                                                            placeholder="Nama siswa..."
-                                                            autoFocus
-                                                            required
-                                                            className="input-field text-sm h-11 px-3 rounded-xl border-[var(--color-border)] focus:border-[var(--color-primary)] bg-[var(--color-surface)] w-full font-bold"
-                                                        />
-
-                                                        <div className="grid grid-cols-[1fr_112px] gap-2">
-                                                            <RichSelect
-                                                                value={inlineForm.class_id}
-                                                                onChange={val => setInlineForm(p => ({ ...p, class_id: val }))}
-                                                                options={classesList.map(c => ({ id: c.id, name: c.name }))}
-                                                                placeholder="Pilih kelas"
-                                                                small
-                                                                searchable
-                                                            />
-                                                            <div className="flex items-center justify-end gap-1">
-                                                                {['L', 'P'].map(g => (
-                                                                    <button
-                                                                        key={g}
-                                                                        type="button"
-                                                                        onClick={() => setInlineForm(p => ({ ...p, gender: g }))}
-                                                                        className={`h-11 flex-1 rounded-xl text-[10px] font-black border transition-all ${inlineForm.gender === g
-                                                                            ? (g === 'L' ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/15' : 'bg-pink-500 text-white border-pink-500 shadow-lg shadow-pink-500/15')
-                                                                            : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
-                                                                    >
-                                                                        {g}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        <input
-                                                            type="tel"
-                                                            value={inlineForm.phone}
-                                                            onChange={e => setInlineForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))}
-                                                            placeholder="No. HP/WA (opsional)"
-                                                            className="input-field text-[11px] h-11 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] w-full font-bold"
-                                                        />
-
-                                                        <button
-                                                            type="submit"
-                                                            disabled={submittingInline || !canEdit || !inlineForm.name.trim()}
-                                                            className="h-11 w-full rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                                                        >
-                                                            {submittingInline ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faCheck} /> Simpan</>}
-                                                        </button>
-                                                    </form>
-                                                </div>
                                             )}
                                         </div>
-                                    </>
-                                )}
-                            </div>
+                                    ) : students.length === 0 ? (
+                                        <div className="py-12">
+                                            <EmptyState
+                                                variant="plain"
+                                                icon={activeFilterCount > 0 || searchQuery ? faSearch : faUsers}
+                                                title={activeFilterCount > 0 || searchQuery ? "Pencarian Tidak Ditemukan" : "Belum Ada Data Siswa"}
+                                                description={activeFilterCount > 0 || searchQuery
+                                                    ? "Maaf, kami tidak menemukan siswa dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                                    : "Database siswa Anda masih kosong. Mulai tambahkan siswa baru untuk mulai mengelola."
+                                                }
+                                                action={
+                                                    activeFilterCount > 0 || searchQuery ? (
+                                                        <button
+                                                            onClick={resetAllFilters}
+                                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                                        >
+                                                            Reset Semua Filter
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => { setIsModalOpen(true); setActiveModal('add'); }}
+                                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 active:scale-95 transition-all flex items-center gap-2"
+                                                        >
+                                                            <FontAwesomeIcon icon={faPlus} />
+                                                            Tambah Siswa Pertama
+                                                        </button>
+                                                    )
+                                                }
+                                            />
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Mobile View Switcher */}
+                                            <div className="pt-3 pb-2 px-1 mb-1 flex items-center justify-between bg-[var(--color-surface)]/20 rounded-2xl -mx-3 px-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                                        {totalRows} Data ditemukan
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center bg-[var(--color-surface)] shadow-inner p-1 rounded-[1.2rem] border border-[var(--color-border)]">
+                                                    <button
+                                                        onClick={() => switchMobileView('card')}
+                                                        className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all duration-200 ${pendingView === 'card' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
+                                                    >
+                                                        <FontAwesomeIcon icon={faTable} className="text-[11px]" />
+                                                        Card
+                                                    </button>
+                                                    <button
+                                                        onClick={() => switchMobileView('list')}
+                                                        className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all duration-200 ${pendingView === 'list' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
+                                                    >
+                                                        <FontAwesomeIcon icon={faTableList} className="text-[11px]" />
+                                                        List
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-2 relative">
+                                                {/* Skeleton Transition Overlay */}
+                                                {isViewTransitioning && (
+                                                    <div className="animate-in fade-in duration-150 z-10 relative">
+                                                        {mobileView === 'card'
+                                                            ? <MobileListSkeleton count={7} />
+                                                            : <MobileCardSkeleton count={3} />
+                                                        }
+                                                    </div>
+                                                )}
+
+                                                {/* Card View Container */}
+                                                {mobileView === 'card' && (
+                                                    <div
+                                                        className="space-y-3 transition-all duration-300 ease-in-out"
+                                                        style={{
+                                                            opacity: !isViewTransitioning ? 1 : 0,
+                                                            transform: !isViewTransitioning ? 'translateY(0)' : 'translateY(-8px)',
+                                                            width: '100%',
+                                                        }}
+                                                    >
+                                                        {students.map(student => {
+                                                            const isRisk = (student.total_points || 0) <= RiskThreshold
+                                                            return (
+                                                                <div
+                                                                    key={student.id}
+                                                                    className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
+                                                                >
+                                                                    {isRisk && (
+                                                                        <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
+                                                                    )}
+                                                                    <StudentMobileCard
+                                                                        student={student}
+                                                                        isSelected={selectedIdSet.has(student.id)}
+                                                                        hasSelection={selectedIdSet.size > 0}
+                                                                        onToggleSelect={toggleSelectStudent}
+                                                                        onViewProfile={handleViewProfile}
+                                                                        onEdit={canEdit ? handleEdit : null}
+                                                                        onConfirmDelete={canEdit ? confirmDelete : null}
+                                                                        onTogglePin={handleTogglePin}
+                                                                        onQuickPoint={handleQuickPoint}
+                                                                        isPrivacyMode={isPrivacyMode}
+                                                                        RiskThreshold={RiskThreshold}
+                                                                        buildWAMessage={buildWAMessage}
+                                                                        openWAForStudent={openWAForStudent}
+                                                                        waTemplate={waTemplate}
+                                                                    />
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                )}
+
+                                                {/* List View Container */}
+                                                {mobileView === 'list' && (
+                                                    <div
+                                                        className="flex flex-col gap-2 transition-all duration-300 ease-in-out"
+                                                        style={{
+                                                            opacity: !isViewTransitioning ? 1 : 0,
+                                                            transform: !isViewTransitioning ? 'translateY(0)' : 'translateY(8px)',
+                                                            width: '100%',
+                                                        }}
+                                                    >
+                                                        {students.length > 0 && canEdit && (
+                                                            <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
+                                                                <FontAwesomeIcon icon={faCircleInfo} />
+                                                                Ketuk baris siswa untuk menu cepat & poin
+                                                            </div>
+                                                        )}
+                                                        <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/40 overflow-hidden shadow-sm">
+                                                            {students.map((student) => (
+                                                                <StudentMobileListRow
+                                                                    key={student.id}
+                                                                    student={student}
+                                                                    isSelected={selectedIdSet.has(student.id)}
+                                                                    hasSelection={selectedIdSet.size > 0}
+                                                                    onToggleSelect={toggleSelectStudent}
+                                                                    onViewProfile={handleViewProfile}
+                                                                    onEdit={canEdit ? handleEdit : null}
+                                                                    onTogglePin={handleTogglePin}
+                                                                    onQuickPoint={handleQuickPoint}
+                                                                    isPrivacyMode={isPrivacyMode}
+                                                                    RiskThreshold={RiskThreshold}
+                                                                    canEdit={canEdit}
+                                                                    onConfirmDelete={canEdit ? confirmDelete : null}
+                                                                    buildWAMessage={buildWAMessage}
+                                                                    openWAForStudent={openWAForStudent}
+                                                                    waTemplate={waTemplate}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Quick Add trigger — stays below list */}
+                                                {!isInlineAddOpen && canEdit && canAddStudent && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsInlineAddOpen(true)
+                                                            setTimeout(() => quickAddRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80)
+                                                        }}
+                                                        className="w-full py-3 flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--color-primary)] bg-[var(--color-primary)]/[0.04] hover:bg-[var(--color-primary)]/10 active:scale-[0.98] transition-all border-2 border-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/40 border-dashed rounded-2xl mt-4 mb-2 shadow-sm"
+                                                    >
+                                                        <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                                                        Quick Add Siswa
+                                                    </button>
+                                                )}
+
+                                                {/* Quick Add form — BELOW the list (correct position) */}
+                                                {isInlineAddOpen && canEdit && canAddStudent && (
+                                                    <div ref={quickAddRef} className="p-3 rounded-2xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/[0.02] shadow-sm mt-2 animate-in slide-in-from-bottom-4 fade-in duration-300">
+                                                        <div className="flex items-center justify-between gap-3 mb-2">
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Quick Add Siswa</p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setIsInlineAddOpen(false)}
+                                                                className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
+                                                            >
+                                                                <FontAwesomeIcon icon={faXmark} />
+                                                            </button>
+                                                        </div>
+
+                                                        <form
+                                                            onSubmit={(e) => {
+                                                                e.preventDefault()
+                                                                handleInlineSubmit()
+                                                            }}
+                                                            className="grid grid-cols-1 gap-2.5"
+                                                        >
+                                                            <input
+                                                                type="text"
+                                                                value={inlineForm.name}
+                                                                onChange={e => setInlineForm(p => ({ ...p, name: e.target.value }))}
+                                                                placeholder="Nama siswa..."
+                                                                autoFocus
+                                                                required
+                                                                className="input-field text-sm h-11 px-3 rounded-xl border-[var(--color-border)] focus:border-[var(--color-primary)] bg-[var(--color-surface)] w-full font-bold"
+                                                            />
+
+                                                            <div className="grid grid-cols-[1fr_112px] gap-2">
+                                                                <RichSelect
+                                                                    value={inlineForm.class_id}
+                                                                    onChange={val => setInlineForm(p => ({ ...p, class_id: val }))}
+                                                                    options={classesList.map(c => ({ id: c.id, name: c.name }))}
+                                                                    placeholder="Pilih kelas"
+                                                                    small
+                                                                    searchable
+                                                                />
+                                                                <div className="flex items-center justify-end gap-1">
+                                                                    {['L', 'P'].map(g => (
+                                                                        <button
+                                                                            key={g}
+                                                                            type="button"
+                                                                            onClick={() => setInlineForm(p => ({ ...p, gender: g }))}
+                                                                            className={`h-11 flex-1 rounded-xl text-[10px] font-black border transition-all ${inlineForm.gender === g
+                                                                                ? (g === 'L' ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/15' : 'bg-pink-500 text-white border-pink-500 shadow-lg shadow-pink-500/15')
+                                                                                : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] bg-[var(--color-surface)]'}`}
+                                                                        >
+                                                                            {g}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            <input
+                                                                type="tel"
+                                                                value={inlineForm.phone}
+                                                                onChange={e => setInlineForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))}
+                                                                placeholder="No. HP/WA (opsional)"
+                                                                className="input-field text-[11px] h-11 px-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface)] w-full font-bold"
+                                                            />
+
+                                                            <button
+                                                                type="submit"
+                                                                disabled={submittingInline || !canEdit || !inlineForm.name.trim()}
+                                                                className="h-11 w-full rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--color-primary)]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                                            >
+                                                                {submittingInline ? <FontAwesomeIcon icon={faSpinner} className="fa-spin" /> : <><FontAwesomeIcon icon={faCheck} /> Simpan</>}
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Pagination Footer */}
                             {totalRows > 0 && (
@@ -2095,6 +2102,8 @@ export default function StudentsPage() {
                     handleBulkPhotoMatch={handleBulkPhotoMatch}
                     handleBulkPhotoUpload={handleBulkPhotoUpload}
                     setBulkPhotoMatches={setBulkPhotoMatches}
+                    allStudentsForBulk={allStudentsForBulk}
+                    matchingPhotos={matchingPhotos}
                 />
 
                 {/* ===================== */}
@@ -2803,26 +2812,55 @@ export default function StudentsPage() {
                         <Modal
                             isOpen={!!photoZoom}
                             onClose={() => setPhotoZoom(null)}
-                            title={photoZoom.name}
-                            description={photoZoom.className}
+                            title="Foto Profil"
+                            description="Preview foto profil siswa"
                             size="md"
                             noPadding={true}
-                            contentClassName="flex flex-col items-center justify-center bg-black/5"
+                            contentClassName="flex flex-col bg-[var(--color-surface-alt)]"
+                            footer={
+                                <div className="flex items-center justify-between w-full gap-3">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] text-xs font-black shrink-0">
+                                            {(photoZoom.name || '?').charAt(0)}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-bold text-[var(--color-text)] truncate">{photoZoom.name}</p>
+                                            <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider truncate">
+                                                {[photoZoom.registrationCode, photoZoom.className].filter(Boolean).join(' • ')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await fetch(photoZoom.url)
+                                                    const blob = await res.blob()
+                                                    const url = URL.createObjectURL(blob)
+                                                    const a = document.createElement('a')
+                                                    a.href = url
+                                                    a.download = `${(photoZoom.name || 'foto').replace(/\s+/g, '_')}.jpg`
+                                                    document.body.appendChild(a)
+                                                    a.click()
+                                                    document.body.removeChild(a)
+                                                    URL.revokeObjectURL(url)
+                                                } catch { }
+                                            }}
+                                            className="h-9 px-4 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[9px] font-black uppercase tracking-widest hover:bg-[var(--color-primary)] hover:text-white transition-all flex items-center gap-2 border border-[var(--color-primary)]/20"
+                                        >
+                                            <FontAwesomeIcon icon={faDownload} className="text-[10px]" /> Download
+                                        </button>
+                                    </div>
+                                </div>
+                            }
                         >
-                            <div className="relative w-full aspect-square sm:aspect-auto sm:h-[60vh] flex items-center justify-center p-4">
+                            <div className="relative w-full aspect-[3/4] sm:aspect-auto sm:h-[55vh] flex items-center justify-center p-6">
                                 <img
                                     src={photoZoom.url}
                                     alt={photoZoom.name}
-                                    className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl ring-4 ring-white/10"
+                                    className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl ring-1 ring-white/10"
+                                    onError={(e) => { e.target.onerror = null; e.target.src = '' }}
                                 />
-                            </div>
-                            <div className="p-6 pt-0 flex flex-col items-center">
-                                <button
-                                    onClick={() => setPhotoZoom(null)}
-                                    className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-border)] transition-all"
-                                >
-                                    Tutup
-                                </button>
                             </div>
                         </Modal>
                     )

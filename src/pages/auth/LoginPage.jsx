@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faEnvelope, faLock, faArrowRight, faSpinner, faEye, faEyeSlash, faSun, faMoon, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { faEnvelope, faLock, faArrowRight, faSpinner, faEye, faEyeSlash, faSun, faMoon, faTriangleExclamation, faKey, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -40,6 +40,13 @@ export default function LoginPage() {
     });
 
     const [cooldownRemaining, setCooldownRemaining] = useState(0);
+
+    useEffect(() => {
+        document.title = 'Laporanmu - Login Staff & Guru'
+        return () => {
+            document.title = 'Laporanmu'
+        }
+    }, [])
 
     useEffect(() => {
         if (!lockoutUntil) return;
