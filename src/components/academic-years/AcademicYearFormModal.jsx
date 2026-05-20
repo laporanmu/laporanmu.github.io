@@ -270,7 +270,7 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
                                     type="date"
                                     value={formData.startDate}
                                     onChange={e => handleChange('startDate', e.target.value)}
-                                    className="w-full px-3.5 h-9 opacity-0 cursor-pointer outline-none bg-transparent"
+                                    className="w-full px-3.5 h-9 opacity-0 cursor-pointer outline-none bg-transparent date-input-hidden z-10"
                                 />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
                                     <FontAwesomeIcon icon={faCalendar} className="text-[10px]" />
@@ -291,7 +291,7 @@ const AcademicYearFormModal = memo(function AcademicYearFormModal({
                                     type="date"
                                     value={formData.endDate}
                                     onChange={e => handleChange('endDate', e.target.value)}
-                                    className="w-full px-3.5 h-9 opacity-0 cursor-pointer outline-none bg-transparent"
+                                    className="w-full px-3.5 h-9 opacity-0 cursor-pointer outline-none bg-transparent date-input-hidden z-10"
                                 />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
                                     <FontAwesomeIcon icon={faCalendar} className="text-[10px]" />

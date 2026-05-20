@@ -311,7 +311,29 @@ const TeacherFormModal = memo(function TeacherFormModal({
                             </div>
                             <div className="sm:col-span-3 relative group">
                                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tanggal Lahir</label>
-                                <input type="date" value={form.birth_date} onChange={e => setField('birth_date', e.target.value)} className={inputCls('birth_date')} />
+                                <div className={`relative h-11 w-full rounded-xl border transition-all bg-[var(--color-surface)] focus-within:ring-1
+                                    ${getStatus('birth_date') === 'error' ? 'border-rose-500/50 focus-within:border-rose-500 focus-within:ring-rose-500 bg-rose-50/5' :
+                                    getStatus('birth_date') === 'warning' ? 'border-amber-500 bg-amber-50/10 focus-within:border-amber-500 focus-within:ring-amber-500' :
+                                    getStatus('birth_date') === 'success' ? 'border-emerald-500/30 bg-emerald-50/5 focus-within:border-emerald-500 focus-within:ring-emerald-500' :
+                                    'border-[var(--color-border)] focus-within:border-[var(--color-primary)] focus-within:ring-[var(--color-primary)]'
+                                    }`}>
+                                    <div className={`absolute inset-0 flex items-center px-4 pointer-events-none text-[13px] ${form.birth_date ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-40'}`}>
+                                        {form.birth_date ? (() => {
+                                            const parts = form.birth_date.split('-')
+                                            if (parts.length === 3) {
+                                                const [y, m, d] = parts
+                                                return `${d}/${m}/${y}`
+                                            }
+                                            return form.birth_date
+                                        })() : 'dd/mm/yyyy'}
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={form.birth_date}
+                                        onChange={e => setField('birth_date', e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer outline-none bg-transparent date-input-hidden z-10"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -358,7 +380,29 @@ const TeacherFormModal = memo(function TeacherFormModal({
                         <div className="grid grid-cols-2 gap-2">
                             <div className="relative group">
                                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tgl Bergabung</label>
-                                <input type="date" value={form.join_date} onChange={e => setField('join_date', e.target.value)} className={inputCls('join_date')} />
+                                <div className={`relative h-11 w-full rounded-xl border transition-all bg-[var(--color-surface)] focus-within:ring-1
+                                    ${getStatus('join_date') === 'error' ? 'border-rose-500/50 focus-within:border-rose-500 focus-within:ring-rose-500 bg-rose-50/5' :
+                                    getStatus('join_date') === 'warning' ? 'border-amber-500 bg-amber-50/10 focus-within:border-amber-500 focus-within:ring-amber-500' :
+                                    getStatus('join_date') === 'success' ? 'border-emerald-500/30 bg-emerald-50/5 focus-within:border-emerald-500 focus-within:ring-emerald-500' :
+                                    'border-[var(--color-border)] focus-within:border-[var(--color-primary)] focus-within:ring-[var(--color-primary)]'
+                                    }`}>
+                                    <div className={`absolute inset-0 flex items-center px-4 pointer-events-none text-[13px] ${form.join_date ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-40'}`}>
+                                        {form.join_date ? (() => {
+                                            const parts = form.join_date.split('-')
+                                            if (parts.length === 3) {
+                                                const [y, m, d] = parts
+                                                return `${d}/${m}/${y}`
+                                            }
+                                            return form.join_date
+                                        })() : 'dd/mm/yyyy'}
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={form.join_date}
+                                        onChange={e => setField('join_date', e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer outline-none bg-transparent date-input-hidden z-10"
+                                    />
+                                </div>
                             </div>
                             <div className="relative group">
                                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Jam Mengajar</label>

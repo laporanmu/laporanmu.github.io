@@ -772,14 +772,24 @@ const StudentFormModal = memo(function StudentFormModal({
                             </div>
                             <div className="relative group">
                                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">Tanggal Lahir</label>
-                                <div className="relative">
+                                <div className="relative h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus-within:border-[var(--color-primary)] focus-within:ring-1 focus-within:ring-[var(--color-primary)] transition-all">
+                                    <div className={`absolute inset-0 flex items-center pl-9 pr-3 pointer-events-none text-[13px] ${form.birth_date ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-40'}`}>
+                                        {form.birth_date ? (() => {
+                                            const parts = form.birth_date.split('-')
+                                            if (parts.length === 3) {
+                                                const [y, m, d] = parts
+                                                return `${d}/${m}/${y}`
+                                            }
+                                            return form.birth_date
+                                        })() : 'dd/mm/yyyy'}
+                                    </div>
                                     <input
                                         type="date"
                                         value={form.birth_date}
                                         onChange={(e) => setField('birth_date', e.target.value)}
-                                        className="w-full pl-9 pr-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[13px] text-[var(--color-text)]"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer outline-none bg-transparent date-input-hidden z-10"
                                     />
-                                    <FontAwesomeIcon icon={faCalendarAlt} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)]" />
+                                    <FontAwesomeIcon icon={faCalendarAlt} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50 text-xs transition-colors group-focus-within:text-[var(--color-primary)] pointer-events-none" />
                                 </div>
                             </div>
                         </div>

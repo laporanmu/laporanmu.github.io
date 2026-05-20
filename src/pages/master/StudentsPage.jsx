@@ -96,6 +96,7 @@ import { useStudentsImportExport } from '../../hooks/students/useStudentsImportE
 import { generateStudentPDF as _generateStudentPDF, handlePrintThermal as _handlePrintThermal, handleSavePNG as _handleSavePNG } from '../../utils/students/studentPdfUtils'
 import { useStudentsCore } from '../../hooks/students/useStudentsCore'
 import StudentClassHistoryModal from '../../components/students/StudentClassHistoryModal'
+import { MobileListSkeleton, MobileCardSkeleton } from '../../components/ui/Skeleton'
 
 // NOTE(perf): library import/export di-load on-demand via dynamic import
 // NOTE(perf): jsPDF/html2canvas/qrcode/autotable di-load on-demand via dynamic import
@@ -466,6 +467,25 @@ export default function StudentsPage() {
     const [mobileView, setMobileView] = useState(() => {
         try { return localStorage.getItem('students_mobile_view') || 'card' } catch { return 'card' }
     }) // 'card' | 'list'
+    const [isViewTransitioning, setIsViewTransitioning] = useState(false)
+    const viewTransitionTimer = useRef(null)
+
+    const switchMobileView = useCallback((newView) => {
+        if (newView === mobileView || isViewTransitioning) return
+        setIsViewTransitioning(true)
+        // Brief skeleton shimmer before revealing new view
+        if (viewTransitionTimer.current) clearTimeout(viewTransitionTimer.current)
+        viewTransitionTimer.current = setTimeout(() => {
+            setMobileView(newView)
+            try { localStorage.setItem('students_mobile_view', newView) } catch (e) { }
+            // Let new view render, then fade skeleton out
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setIsViewTransitioning(false)
+                })
+            })
+        }, 280)
+    }, [mobileView, isViewTransitioning])
 
     // Stable callback for DebouncedSearchInput
     const handleSearchChange = useCallback((val) => setSearchQuery(val), [setSearchQuery])
@@ -1772,14 +1792,14 @@ export default function StudentsPage() {
                                             </div>
                                             <div className="flex items-center bg-[var(--color-surface)] shadow-inner p-1 rounded-[1.2rem] border border-[var(--color-border)]">
                                                 <button
-                                                    onClick={() => { setMobileView('card'); try { localStorage.setItem('students_mobile_view', 'card') } catch (e) { } }}
+                                                    onClick={() => switchMobileView('card')}
                                                     className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all ${mobileView === 'card' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
                                                 >
                                                     <FontAwesomeIcon icon={faTable} className="text-[11px]" />
                                                     Card
                                                 </button>
                                                 <button
-                                                    onClick={() => { setMobileView('list'); try { localStorage.setItem('students_mobile_view', 'list') } catch (e) { } }}
+                                                    onClick={() => switchMobileView('list')}
                                                     className={`h-8 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black transition-all ${mobileView === 'list' ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
                                                 >
                                                     <FontAwesomeIcon icon={faTableList} className="text-[11px]" />
@@ -1788,64 +1808,103 @@ export default function StudentsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3 mt-2">
-                                            {mobileView === 'card' ? students.map(student => {
-                                                const isRisk = (student.total_points || 0) <= RiskThreshold
-                                                return (
-                                                    <div
-                                                        key={student.id}
-                                                        className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
-                                                    >
-                                                        {isRisk && (
-                                                            <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
-                                                        )}
-                                                        <StudentMobileCard
+                                        <div className="mt-2 relative">
+                                            {/* Skeleton Transition Overlay */}
+                                            {isViewTransitioning && (
+                                                <div className="animate-in fade-in duration-150 z-10 relative">
+                                                    {mobileView === 'card'
+                                                        ? <MobileListSkeleton count={7} />
+                                                        : <MobileCardSkeleton count={3} />
+                                                    }
+                                                </div>
+                                            )}
+
+                                            {/* Card View Container */}
+                                            <div
+                                                className="space-y-3 transition-all duration-300 ease-in-out"
+                                                style={{
+                                                    opacity: !isViewTransitioning && mobileView === 'card' ? 1 : 0,
+                                                    transform: !isViewTransitioning && mobileView === 'card' ? 'translateY(0)' : 'translateY(-8px)',
+                                                    maxHeight: mobileView === 'card' ? '99999px' : '0px',
+                                                    overflow: mobileView === 'card' ? 'visible' : 'hidden',
+                                                    pointerEvents: !isViewTransitioning && mobileView === 'card' ? 'auto' : 'none',
+                                                    position: mobileView === 'card' ? 'relative' : 'absolute',
+                                                    width: '100%',
+                                                }}
+                                            >
+                                                {students.map(student => {
+                                                    const isRisk = (student.total_points || 0) <= RiskThreshold
+                                                    return (
+                                                        <div
+                                                            key={student.id}
+                                                            className={`relative rounded-2xl transition-all ${isRisk ? 'ring-1 ring-red-500/40 ring-offset-0' : ''}`}
+                                                        >
+                                                            {isRisk && (
+                                                                <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-red-500 z-10 pointer-events-none" />
+                                                            )}
+                                                            <StudentMobileCard
+                                                                student={student}
+                                                                isSelected={selectedIdSet.has(student.id)}
+                                                                hasSelection={selectedIdSet.size > 0}
+                                                                onToggleSelect={toggleSelectStudent}
+                                                                onViewProfile={handleViewProfile}
+                                                                onEdit={canEdit ? handleEdit : null}
+                                                                onConfirmDelete={canEdit ? confirmDelete : null}
+                                                                onTogglePin={handleTogglePin}
+                                                                onQuickPoint={handleQuickPoint}
+                                                                isPrivacyMode={isPrivacyMode}
+                                                                RiskThreshold={RiskThreshold}
+                                                                buildWAMessage={buildWAMessage}
+                                                                openWAForStudent={openWAForStudent}
+                                                                waTemplate={waTemplate}
+                                                            />
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+
+                                            {/* List View Container */}
+                                            <div
+                                                className="flex flex-col gap-2 transition-all duration-300 ease-in-out"
+                                                style={{
+                                                    opacity: !isViewTransitioning && mobileView === 'list' ? 1 : 0,
+                                                    transform: !isViewTransitioning && mobileView === 'list' ? 'translateY(0)' : 'translateY(8px)',
+                                                    maxHeight: mobileView === 'list' ? '99999px' : '0px',
+                                                    overflow: mobileView === 'list' ? 'visible' : 'hidden',
+                                                    pointerEvents: !isViewTransitioning && mobileView === 'list' ? 'auto' : 'none',
+                                                    position: mobileView === 'list' ? 'relative' : 'absolute',
+                                                    width: '100%',
+                                                }}
+                                            >
+                                                 {students.length > 0 && canEdit && (
+                                                     <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
+                                                         <FontAwesomeIcon icon={faCircleInfo} />
+                                                         Ketuk baris siswa untuk menu cepat & poin
+                                                     </div>
+                                                 )}
+                                                <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/40 overflow-hidden shadow-sm">
+                                                    {students.map((student) => (
+                                                        <StudentMobileListRow
+                                                            key={student.id}
                                                             student={student}
                                                             isSelected={selectedIdSet.has(student.id)}
                                                             hasSelection={selectedIdSet.size > 0}
                                                             onToggleSelect={toggleSelectStudent}
                                                             onViewProfile={handleViewProfile}
                                                             onEdit={canEdit ? handleEdit : null}
-                                                            onConfirmDelete={canEdit ? confirmDelete : null}
                                                             onTogglePin={handleTogglePin}
                                                             onQuickPoint={handleQuickPoint}
                                                             isPrivacyMode={isPrivacyMode}
                                                             RiskThreshold={RiskThreshold}
+                                                            canEdit={canEdit}
+                                                            onConfirmDelete={canEdit ? confirmDelete : null}
                                                             buildWAMessage={buildWAMessage}
                                                             openWAForStudent={openWAForStudent}
                                                             waTemplate={waTemplate}
                                                         />
-                                                    </div>
-                                                )
-                                            })
-                                                : (
-                                                    <div className="flex flex-col gap-2">
-                                                        {students.length > 0 && canEdit && (
-                                                            <div className="text-[9px] font-black text-[var(--color-text-muted)] opacity-50 text-center uppercase tracking-widest flex items-center justify-center gap-2 pb-1 animate-pulse">
-                                                                <FontAwesomeIcon icon={faAnglesLeft} />
-                                                                Geser baris ke kiri untuk menu Edit & Poin
-                                                            </div>
-                                                        )}
-                                                        <div className="bg-[var(--color-surface)] rounded-[1.5rem] border border-[var(--color-border)] divide-y divide-[var(--color-border)]/40 overflow-hidden shadow-sm">
-                                                            {students.map((student) => (
-                                                                <StudentMobileListRow
-                                                                    key={student.id}
-                                                                    student={student}
-                                                                    isSelected={selectedIdSet.has(student.id)}
-                                                                    hasSelection={selectedIdSet.size > 0}
-                                                                    onToggleSelect={toggleSelectStudent}
-                                                                    onViewProfile={handleViewProfile}
-                                                                    onEdit={canEdit ? handleEdit : null}
-                                                                    onTogglePin={handleTogglePin}
-                                                                    onQuickPoint={handleQuickPoint}
-                                                                    isPrivacyMode={isPrivacyMode}
-                                                                    RiskThreshold={RiskThreshold}
-                                                                    canEdit={canEdit}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                    ))}
+                                                </div>
+                                            </div>
 
                                             {/* Quick Add trigger — stays below list */}
                                             {!isInlineAddOpen && canEdit && canAddStudent && (
