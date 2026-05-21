@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [
-    react(), 
+    react(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -33,6 +33,10 @@ export default defineConfig({
     })
   ],
   base: '/',
+  server: {
+    host: true,       // expose ke jaringan lokal
+    port: 5173,
+  },
   build: {
     rollupOptions: {
       output: {
@@ -43,6 +47,8 @@ export default defineConfig({
           'vendor-icons': ['@fortawesome/fontawesome-svg-core', '@fortawesome/free-solid-svg-icons', '@fortawesome/react-fontawesome'],
         }
       }
-    }
+    },
+    chunkSizeWarningLimit: 1000,
+    sourcemap: false,
   }
 })
