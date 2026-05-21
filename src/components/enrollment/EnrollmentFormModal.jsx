@@ -7,6 +7,7 @@ import {
     faCalendarAlt, faIdCard, faPhone, faCamera, faSuitcase, faCheck, faTrash
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
+import RichSelect from '../ui/RichSelect'
 import {
     PROGRAM_OPTIONS, QURAN_LEVELS, UNIFORM_SIZES
 } from '../../utils/enrollment/enrollmentConstants'
@@ -204,7 +205,7 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                                 ) : (
                                     <>
                                         <FontAwesomeIcon icon={faSave} className="text-xs opacity-80 shrink-0" />
-                                        <span>{isEditing ? 'Simpan' : 'Kirim'}</span>
+                                        <span>{isEditing ? 'Simpan Perubahan' : 'Daftarkan Santri'}</span>
                                     </>
                                 )}
                             </button>
@@ -293,8 +294,8 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                                         </label>
                                         <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
                                             {[
-                                                ['L', 'Laki-laki', 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'],
-                                                ['P', 'Perempuan', 'bg-rose-500 text-white shadow-lg shadow-rose-500/20']
+                                                ['L', 'Putra', 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'],
+                                                ['P', 'Putri', 'bg-rose-500 text-white shadow-lg shadow-rose-500/20']
                                             ].map(([val, labelStr, activeCls]) => (
                                                 <button
                                                     key={val}
@@ -311,15 +312,14 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                                         <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">
                                             Program <span className="text-rose-500">*</span>
                                         </label>
-                                        <select
+                                        <RichSelect
                                             value={form.program}
-                                            onChange={e => setField('program', e.target.value)}
-                                            className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-[var(--color-primary)] transition-all font-bold"
-                                        >
-                                            {PROGRAM_OPTIONS.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
-                                        </select>
+                                            onChange={val => setField('program', val)}
+                                            options={PROGRAM_OPTIONS}
+                                            placeholder="Pilih Program"
+                                            icon={faGraduationCap}
+                                            status={getStatus('program', true)}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -507,29 +507,24 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Pekerjaan Ayah</label>
-                                    <select
+                                    <RichSelect
                                         value={form.father_occupation}
-                                        onChange={e => setField('father_occupation', e.target.value)}
-                                        className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-[var(--color-primary)] transition-all"
-                                    >
-                                        <option value="">Pilih Pekerjaan</option>
-                                        {OCCUPATION_LIST.map(o => (
-                                            <option key={o} value={o}>{o}</option>
-                                        ))}
-                                    </select>
+                                        onChange={val => setField('father_occupation', val)}
+                                        options={OCCUPATION_LIST.map(o => ({ id: o, name: o }))}
+                                        placeholder="Pilih Pekerjaan"
+                                        icon={faSuitcase}
+                                        searchable
+                                    />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Pendidikan Ayah</label>
-                                    <select
+                                    <RichSelect
                                         value={form.father_education}
-                                        onChange={e => setField('father_education', e.target.value)}
-                                        className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-[var(--color-primary)] transition-all"
-                                    >
-                                        <option value="">Pilih Pendidikan</option>
-                                        {EDUCATION_LEVELS.map(el => (
-                                            <option key={el} value={el}>{el}</option>
-                                        ))}
-                                    </select>
+                                        onChange={val => setField('father_education', val)}
+                                        options={EDUCATION_LEVELS.map(el => ({ id: el, name: el }))}
+                                        placeholder="Pilih Pendidikan"
+                                        icon={faGraduationCap}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -584,29 +579,24 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Pekerjaan Ibu</label>
-                                    <select
+                                    <RichSelect
                                         value={form.mother_occupation}
-                                        onChange={e => setField('mother_occupation', e.target.value)}
-                                        className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-[var(--color-primary)] transition-all"
-                                    >
-                                        <option value="">Pilih Pekerjaan</option>
-                                        {OCCUPATION_LIST.map(o => (
-                                            <option key={o} value={o}>{o}</option>
-                                        ))}
-                                    </select>
+                                        onChange={val => setField('mother_occupation', val)}
+                                        options={OCCUPATION_LIST.map(o => ({ id: o, name: o }))}
+                                        placeholder="Pilih Pekerjaan"
+                                        icon={faSuitcase}
+                                        searchable
+                                    />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Pendidikan Ibu</label>
-                                    <select
+                                    <RichSelect
                                         value={form.mother_education}
-                                        onChange={e => setField('mother_education', e.target.value)}
-                                        className="w-full px-3 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] outline-none focus:border-[var(--color-primary)] transition-all"
-                                    >
-                                        <option value="">Pilih Pendidikan</option>
-                                        {EDUCATION_LEVELS.map(el => (
-                                            <option key={el} value={el}>{el}</option>
-                                        ))}
-                                    </select>
+                                        onChange={val => setField('mother_education', val)}
+                                        options={EDUCATION_LEVELS.map(el => ({ id: el, name: el }))}
+                                        placeholder="Pilih Pendidikan"
+                                        icon={faGraduationCap}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -751,7 +741,7 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)]/50 pb-1.5">Identitas Calon Santri</p>
                             <div className="grid grid-cols-2 gap-2 text-xs">
                                 <div><span className="opacity-50">Nama:</span> <span className="font-bold">{form.name}</span></div>
-                                <div><span className="opacity-50">Gender:</span> <span className="font-bold">{form.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</span></div>
+                                <div><span className="opacity-50">Gender:</span> <span className="font-bold">{form.gender === 'L' ? 'Putra' : 'Putri'}</span></div>
                                 <div><span className="opacity-50">Tempat Lahir:</span> <span className="font-bold">{form.birth_place || '-'}</span></div>
                                 <div><span className="opacity-50">Tanggal Lahir:</span> <span className="font-bold">{form.birth_date || '-'}</span></div>
                                 <div><span className="opacity-50">NISN:</span> <span className="font-bold">{form.nisn || '-'}</span></div>

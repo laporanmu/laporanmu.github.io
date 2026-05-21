@@ -1,11 +1,11 @@
 import React, { memo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faXmark, faPen, faTrash, faArrowRight,
+    faXmark, faPen, faTrash, faArrowRight, faArrowLeft,
     faUser, faMars, faVenus, faSchool, faBookQuran,
     faPhone, faMapMarkerAlt, faHeart, faCheckCircle,
     faXmarkCircle, faClipboardList, faGraduationCap,
-    faTShirt, faCalendarDay
+    faTShirt, faCalendarDay, faUsers, faBoxArchive
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import {
@@ -51,12 +51,72 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
     }
     const nextStatus = getNextStatus()
 
+    // Previous status based on current (for rollback support)
+    const getPrevStatus = () => {
+        if (status === 'verifikasi') return 'mendaftar'
+        if (status === 'tes') return 'verifikasi'
+        if (status === 'diterima' || status === 'ditolak') return 'tes'
+        return null
+    }
+    const prevStatus = getPrevStatus()
+
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Detail Pendaftar" maxWidth="max-w-xl">
-            <div className="px-5 sm:px-6">
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Detail Pendaftar"
+            description="Detail rincian berkas, identitas, dan data keluarga calon santri"
+            icon={faUser}
+            iconBg="bg-[var(--color-primary)]/10"
+            iconColor="text-[var(--color-primary)]"
+            size="md"
+            mobileVariant="bottom-sheet"
+            footer={
+                canEdit ? (
+                    <div className="flex items-center gap-2 flex-wrap w-full">
+                        <button onClick={() => onEdit(enrollment)} className="px-4 py-2.5 rounded-xl border border-[var(--color-border)] text-[11px] font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center gap-2">
+                            <FontAwesomeIcon icon={faPen} className="text-[9px]" /> Edit
+                        </button>
+                        <button onClick={() => onDelete(enrollment)} className="px-4 py-2.5 rounded-xl border border-amber-500/20 text-[11px] font-bold text-amber-600 hover:bg-amber-500/10 transition-all flex items-center gap-2" title="Arsipkan Pendaftar">
+                            <FontAwesomeIcon icon={faBoxArchive} className="text-[9px]" /> Arsipkan
+                        </button>
+
+                        <div className="flex-1" />
+
+                        {prevStatus && (
+                            <button
+                                onClick={() => onStatusChange(enrollment, prevStatus)}
+                                className="px-4 py-2.5 rounded-xl border border-rose-500/20 bg-rose-500/5 text-[11px] font-bold text-rose-600 hover:bg-rose-500/10 transition-all flex items-center gap-2"
+                            >
+                                <FontAwesomeIcon icon={faArrowLeft} className="text-[9px]" />
+                                Kembali ke {prevStatus === 'mendaftar' ? 'Mendaftar' : prevStatus === 'verifikasi' ? 'Verifikasi' : 'Tes'}
+                            </button>
+                        )}
+                        {status !== 'ditolak' && status !== 'diterima' && (
+                            <button
+                                onClick={() => onStatusChange(enrollment, 'ditolak')}
+                                className="px-4 py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/5 text-[11px] font-bold text-rose-600 hover:bg-rose-500/10 transition-all flex items-center gap-2"
+                            >
+                                <FontAwesomeIcon icon={faXmarkCircle} className="text-[9px]" /> Tolak
+                            </button>
+                        )}
+                        {nextStatus && (
+                            <button
+                                onClick={() => onStatusChange(enrollment, nextStatus)}
+                                className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-wider shadow-md shadow-[var(--color-primary)]/20 hover:shadow-lg transition-all flex items-center gap-2"
+                            >
+                                <FontAwesomeIcon icon={faArrowRight} className="text-[9px]" />
+                                {nextStatus === 'verifikasi' ? 'Verifikasi' : nextStatus === 'tes' ? 'Lanjut Tes' : 'Terima'}
+                            </button>
+                        )}
+                    </div>
+                ) : null
+            }
+        >
+            <div className="px-1">
 
                 {/* Header Card */}
-                <div className="glass rounded-2xl border border-[var(--color-border)] p-5 mb-5 relative overflow-hidden">
+                <div className="bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] rounded-2xl p-5 mb-5 relative overflow-hidden">
                     {/* Ambient glow */}
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-[var(--color-primary)]/5 rounded-full blur-2xl pointer-events-none" />
 
@@ -121,11 +181,16 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
                 </div>
 
                 {/* Content Sections */}
-                <div className="space-y-4 max-h-[50vh] overflow-y-auto scrollbar-hide pr-1 -mr-1">
+                <div className="space-y-4">
 
                     {/* Identitas */}
-                    <div className="glass rounded-2xl border border-[var(--color-border)] p-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Identitas</p>
+                    <div className="bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] rounded-2xl p-4">
+                        <div className="flex items-center gap-2.5 pt-1 mb-4">
+                            <div className="w-1 h-4 bg-indigo-500 rounded-full" />
+                            <FontAwesomeIcon icon={faUser} className="text-indigo-500 text-[10px] opacity-70" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Identitas</span>
+                            <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
+                        </div>
                         <InfoRow icon={faCalendarDay} label="Tempat, Tanggal Lahir" value={`${birth_place || '-'}, ${birth_date || '-'}`} />
                         <InfoRow icon={faGraduationCap} label="NISN" value={nisn} />
                         <InfoRow icon={faSchool} label="Asal Sekolah" value={school_origin} />
@@ -134,8 +199,13 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
                     </div>
 
                     {/* Al-Quran */}
-                    <div className="glass rounded-2xl border border-[var(--color-border)] p-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Kemampuan Al-Quran</p>
+                    <div className="bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] rounded-2xl p-4">
+                        <div className="flex items-center gap-2.5 pt-1 mb-4">
+                            <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                            <FontAwesomeIcon icon={faBookQuran} className="text-emerald-500 text-[10px] opacity-70" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Kemampuan Al-Quran</span>
+                            <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
+                        </div>
                         <div className="flex items-center gap-4">
                             <div className="flex-1">
                                 <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Bacaan</p>
@@ -161,8 +231,13 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
                     </div>
 
                     {/* Keluarga */}
-                    <div className="glass rounded-2xl border border-[var(--color-border)] p-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Data Keluarga</p>
+                    <div className="bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] rounded-2xl p-4">
+                        <div className="flex items-center gap-2.5 pt-1 mb-4">
+                            <div className="w-1 h-4 bg-purple-500 rounded-full" />
+                            <FontAwesomeIcon icon={faUsers} className="text-purple-500 text-[10px] opacity-70" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Data Keluarga</span>
+                            <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
+                        </div>
                         <InfoRow icon={faUser} label="Ayah" value={`${father_name || '-'}${father_occupation ? ` · ${father_occupation}` : ''}`} />
                         {father_phone && <InfoRow icon={faPhone} label="HP Ayah" value={father_phone} color="text-emerald-500" />}
                         <InfoRow icon={faUser} label="Ibu" value={`${mother_name || '-'}${mother_occupation ? ` · ${mother_occupation}` : ''}`} />
@@ -170,8 +245,13 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
                     </div>
 
                     {/* Tambahan */}
-                    <div className="glass rounded-2xl border border-[var(--color-border)] p-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Info Tambahan</p>
+                    <div className="bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)] rounded-2xl p-4">
+                        <div className="flex items-center gap-2.5 pt-1 mb-4">
+                            <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                            <FontAwesomeIcon icon={faClipboardList} className="text-amber-500 text-[10px] opacity-70" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Info Tambahan</span>
+                            <div className="h-[1px] flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent opacity-40" />
+                        </div>
                         <InfoRow icon={faMapMarkerAlt} label="Alamat" value={address} color="text-indigo-500" />
                         <InfoRow icon={faPhone} label="HP Utama" value={phone} color="text-emerald-500" />
                         {health_notes && <InfoRow icon={faHeart} label="Riwayat Kesehatan" value={health_notes} color="text-rose-500" />}
@@ -181,46 +261,18 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
 
                     {/* Notes */}
                     {notes && (
-                        <div className="glass rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] p-4">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Catatan Internal</p>
+                        <div className="bg-[var(--color-surface)] border border-amber-500/20 bg-amber-500/[0.03] shadow-sm rounded-2xl p-4">
+                            <div className="flex items-center gap-2.5 pt-1 mb-3">
+                                <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                                <FontAwesomeIcon icon={faClipboardList} className="text-amber-500 text-[10px] opacity-70" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Catatan Internal</span>
+                                <div className="h-[1px] flex-1 bg-gradient-to-r from-amber-500/20 to-transparent opacity-40" />
+                            </div>
                             <p className="text-[12px] text-[var(--color-text)]">{notes}</p>
                         </div>
                     )}
                 </div>
             </div>
-
-            {/* Footer Actions */}
-            {canEdit && (
-                <div className="px-5 sm:px-6 py-4 mt-4 border-t border-[var(--color-border)] flex items-center gap-2 flex-wrap">
-                    <button onClick={() => onEdit(enrollment)} className="px-4 py-2.5 rounded-xl border border-[var(--color-border)] text-[11px] font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center gap-2">
-                        <FontAwesomeIcon icon={faPen} className="text-[9px]" /> Edit
-                    </button>
-                    <button onClick={() => onDelete(enrollment)} className="px-4 py-2.5 rounded-xl border border-rose-500/20 text-[11px] font-bold text-rose-500 hover:bg-rose-500/10 transition-all flex items-center gap-2">
-                        <FontAwesomeIcon icon={faTrash} className="text-[9px]" /> Hapus
-                    </button>
-
-                    <div className="flex-1" />
-
-                    {/* Status actions */}
-                    {status !== 'ditolak' && status !== 'diterima' && (
-                        <button
-                            onClick={() => onStatusChange(enrollment, 'ditolak')}
-                            className="px-4 py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/5 text-[11px] font-bold text-rose-600 hover:bg-rose-500/10 transition-all flex items-center gap-2"
-                        >
-                            <FontAwesomeIcon icon={faXmarkCircle} className="text-[9px]" /> Tolak
-                        </button>
-                    )}
-                    {nextStatus && (
-                        <button
-                            onClick={() => onStatusChange(enrollment, nextStatus)}
-                            className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-wider shadow-md shadow-[var(--color-primary)]/20 hover:shadow-lg transition-all flex items-center gap-2"
-                        >
-                            <FontAwesomeIcon icon={faArrowRight} className="text-[9px]" />
-                            {nextStatus === 'verifikasi' ? 'Verifikasi' : nextStatus === 'tes' ? 'Lanjut Tes' : 'Terima'}
-                        </button>
-                    )}
-                </div>
-            )}
         </Modal>
     )
 }

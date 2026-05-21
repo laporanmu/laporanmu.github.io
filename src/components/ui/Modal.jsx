@@ -153,9 +153,9 @@ const Modal = memo(function Modal({
                                 {title}
                             </h3>
                             {description && (
-                                <p className="text-[10px] font-bold text-[var(--color-text-muted)] leading-relaxed mt-0.5 opacity-50">
+                                <div className="text-[10px] font-bold text-[var(--color-text-muted)] leading-relaxed mt-0.5 opacity-50">
                                     {description}
-                                </p>
+                                </div>
                             )}
                         </div>
                     </div>

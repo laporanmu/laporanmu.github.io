@@ -2,7 +2,7 @@ import React, { memo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faMars, faVenus, faEye, faPen, faTrash,
-    faArrowRight, faSchool, faBookQuran, faUserPlus,
+    faArrowRight, faArrowLeft, faSchool, faBookQuran, faUserPlus,
     faCheckCircle, faXmarkCircle, faClipboardCheck,
     faChevronRight
 } from '@fortawesome/free-solid-svg-icons'
@@ -33,15 +33,13 @@ export const EnrollmentRow = memo(({
     return (
         <tr className={`group transition-colors duration-150 ${isSelected ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-alt)]/50'}`}>
             {/* Checkbox */}
-            <td className="w-10 pl-4 pr-1">
-                <button
-                    onClick={() => onToggleSelect(enrollment.id)}
-                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected
-                        ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white scale-110'
-                        : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'}`}
-                >
-                    {isSelected && <FontAwesomeIcon icon={faCheckCircle} className="text-[9px]" />}
-                </button>
+            <td className="w-10 pl-4 pr-1 text-center">
+                <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleSelect(enrollment.id)}
+                    className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer shrink-0"
+                />
             </td>
 
             {/* Name + Reg Number */}
@@ -100,28 +98,46 @@ export const EnrollmentRow = memo(({
             {/* Aksi */}
             <td className="py-3 px-3">
                 <div className="flex items-center gap-1">
-                    <button onClick={() => onView(enrollment)} className="w-8 h-8 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all" title="Lihat Detail">
-                        <FontAwesomeIcon icon={faEye} className="text-xs" />
+                    <button onClick={() => onView(enrollment)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm" title="Lihat Detail">
+                        <FontAwesomeIcon icon={faEye} />
                     </button>
                     {canEdit && (
                         <>
-                            <button onClick={() => onEdit(enrollment)} className="w-8 h-8 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 transition-all" title="Edit">
-                                <FontAwesomeIcon icon={faPen} className="text-xs" />
+                            <button onClick={() => onEdit(enrollment)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 transition-all text-sm" title="Edit">
+                                <FontAwesomeIcon icon={faPen} />
                             </button>
                             {/* Quick status actions */}
-                            {status === 'mendaftar' && (
-                                <button onClick={() => onStatusChange(enrollment, 'verifikasi')} className="w-8 h-8 rounded-lg hover:bg-amber-500/10 flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 transition-all" title="Lanjut Verifikasi">
-                                    <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
-                                </button>
-                            )}
+                            {/* Backward progress actions */}
                             {status === 'verifikasi' && (
-                                <button onClick={() => onStatusChange(enrollment, 'tes')} className="w-8 h-8 rounded-lg hover:bg-purple-500/10 flex items-center justify-center text-[var(--color-text-muted)] hover:text-purple-500 transition-all" title="Lanjut Tes">
-                                    <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
+                                <button onClick={() => onStatusChange(enrollment, 'mendaftar')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Kembalikan ke Mendaftar">
+                                    <FontAwesomeIcon icon={faArrowLeft} />
                                 </button>
                             )}
                             {status === 'tes' && (
-                                <button onClick={() => onStatusChange(enrollment, 'diterima')} className="w-8 h-8 rounded-lg hover:bg-emerald-500/10 flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 transition-all" title="Terima">
-                                    <FontAwesomeIcon icon={faCheckCircle} className="text-xs" />
+                                <button onClick={() => onStatusChange(enrollment, 'verifikasi')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Kembalikan ke Verifikasi">
+                                    <FontAwesomeIcon icon={faArrowLeft} />
+                                </button>
+                            )}
+                            {(status === 'diterima' || status === 'ditolak') && (
+                                <button onClick={() => onStatusChange(enrollment, 'tes')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm" title="Kembalikan ke Tahap Tes">
+                                    <FontAwesomeIcon icon={faArrowLeft} />
+                                </button>
+                            )}
+
+                            {/* Forward progress actions */}
+                            {status === 'mendaftar' && (
+                                <button onClick={() => onStatusChange(enrollment, 'verifikasi')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/10 transition-all text-sm" title="Lanjut Verifikasi">
+                                    <FontAwesomeIcon icon={faArrowRight} />
+                                </button>
+                            )}
+                            {status === 'verifikasi' && (
+                                <button onClick={() => onStatusChange(enrollment, 'tes')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-purple-500 hover:bg-purple-500/10 transition-all text-sm" title="Lanjut Tes">
+                                    <FontAwesomeIcon icon={faArrowRight} />
+                                </button>
+                            )}
+                            {status === 'tes' && (
+                                <button onClick={() => onStatusChange(enrollment, 'diterima')} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-emerald-500 hover:bg-emerald-500/10 transition-all text-sm" title="Terima">
+                                    <FontAwesomeIcon icon={faCheckCircle} />
                                 </button>
                             )}
                         </>
@@ -151,14 +167,12 @@ export const EnrollmentMobileCard = memo(({
             {/* Header */}
             <div className="flex items-start gap-3 p-4 pb-3">
                 {/* Checkbox */}
-                <button
-                    onClick={() => onToggleSelect(enrollment.id)}
-                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${isSelected
-                        ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
-                        : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'}`}
-                >
-                    {isSelected && <FontAwesomeIcon icon={faCheckCircle} className="text-[8px]" />}
-                </button>
+                <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleSelect(enrollment.id)}
+                    className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer shrink-0 mt-1"
+                />
 
                 {/* Avatar */}
                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${gender === 'L'
@@ -212,6 +226,23 @@ export const EnrollmentMobileCard = memo(({
                     <button onClick={() => onEdit(enrollment)} className="flex-1 h-8 rounded-lg text-[10px] font-bold text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-amber-500/5 flex items-center justify-center gap-1.5 transition-all">
                         <FontAwesomeIcon icon={faPen} className="text-[9px]" /> Edit
                     </button>
+                    {/* Backward action on Mobile */}
+                    {status !== 'mendaftar' && (
+                        <>
+                            <div className="w-px h-4 bg-[var(--color-border)]" />
+                            <button
+                                onClick={() => {
+                                    const prev = status === 'verifikasi' ? 'mendaftar' : status === 'tes' ? 'verifikasi' : 'tes'
+                                    onStatusChange(enrollment, prev)
+                                }}
+                                className="flex-1 h-8 rounded-lg text-[10px] font-bold text-rose-600 hover:bg-rose-500/5 flex items-center justify-center gap-1 transition-all"
+                                title="Kembalikan Status"
+                            >
+                                <FontAwesomeIcon icon={faArrowLeft} className="text-[8px]" /> Kembali
+                            </button>
+                        </>
+                    )}
+                    {/* Forward action on Mobile */}
                     {(status === 'mendaftar' || status === 'verifikasi' || status === 'tes') && (
                         <>
                             <div className="w-px h-4 bg-[var(--color-border)]" />

@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
 import {
-    MOCK_ENROLLMENTS, MOCK_WAVES,
     ENROLLMENT_STATUS, getStatusConfig
 } from '../../utils/enrollment/enrollmentConstants'
 
@@ -11,6 +12,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     const [waves, setWaves] = useState([])
     const [loading, setLoading] = useState(true)
     const [totalRows, setTotalRows] = useState(0)
+    const [archivedEnrollments, setArchivedEnrollments] = useState([])
+    const [loadingArchived, setLoadingArchived] = useState(false)
 
     // ── FILTERS ──
     const [searchQuery, setSearchQuery] = useState('')
@@ -49,25 +52,12 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     // Reset page on filter change
     useEffect(() => { setPage(1) }, [debouncedSearch, filterWave, filterStatus, filterGender, filterProgram, sortBy])
 
-    // ── COMPUTED: STATS ──
-    const globalStats = useMemo(() => {
-        const all = MOCK_ENROLLMENTS
-        const total = all.length
-        const mendaftar = all.filter(e => e.status === 'mendaftar').length
-        const verifikasi = all.filter(e => e.status === 'verifikasi').length
-        const tes = all.filter(e => e.status === 'tes').length
-        const diterima = all.filter(e => e.status === 'diterima').length
-        const ditolak = all.filter(e => e.status === 'ditolak').length
-        const boys = all.filter(e => e.gender === 'L').length
-        const girls = all.filter(e => e.gender === 'P').length
-        const activeWave = MOCK_WAVES.find(w => w.is_active)
-        const quota = activeWave?.quota || 0
-        const quotaUsed = diterima
-        const quotaLeft = Math.max(0, quota - quotaUsed)
-        return { total, mendaftar, verifikasi, tes, diterima, ditolak, boys, girls, quota, quotaUsed, quotaLeft, activeWave }
-    }, [])
+    // ── GLOBAL STATS & PIPELINE ──
+    const [globalStats, setGlobalStats] = useState({
+        total: 0, mendaftar: 0, verifikasi: 0, tes: 0, diterima: 0, ditolak: 0,
+        boys: 0, girls: 0, quota: 0, quotaUsed: 0, quotaLeft: 0, activeWave: null
+    })
 
-    // ── COMPUTED: PIPELINE DISTRIBUTION ──
     const pipelineDistribution = useMemo(() => {
         const total = globalStats.total || 1
         return {
@@ -79,76 +69,152 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         }
     }, [globalStats])
 
-    // ── COMPUTED: FILTERED + SORTED + PAGINATED ──
-    const filteredEnrollments = useMemo(() => {
-        let data = [...MOCK_ENROLLMENTS]
-
-        // Search
-        if (debouncedSearch) {
-            const q = debouncedSearch.toLowerCase()
-            data = data.filter(e =>
-                e.name.toLowerCase().includes(q) ||
-                e.registration_number.toLowerCase().includes(q) ||
-                e.nisn?.toLowerCase().includes(q) ||
-                e.school_origin?.toLowerCase().includes(q) ||
-                e.phone?.includes(q)
-            )
-        }
-
-        // Filters
-        if (filterWave) data = data.filter(e => e.wave_id === filterWave)
-        if (filterStatus) data = data.filter(e => e.status === filterStatus)
-        if (filterGender) data = data.filter(e => e.gender === filterGender)
-        if (filterProgram) data = data.filter(e => e.program === filterProgram)
-
-        // Sort
-        switch (sortBy) {
-            case 'name_asc': data.sort((a, b) => a.name.localeCompare(b.name)); break
-            case 'name_desc': data.sort((a, b) => b.name.localeCompare(a.name)); break
-            case 'date_desc': data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break
-            case 'date_asc': data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); break
-            default: break
-        }
-
-        return data
-    }, [debouncedSearch, filterWave, filterStatus, filterGender, filterProgram, sortBy])
-
-    const paginatedEnrollments = useMemo(() => {
-        const start = (page - 1) * pageSize
-        return filteredEnrollments.slice(start, start + pageSize)
-    }, [filteredEnrollments, page, pageSize])
-
-    // ── ACTIVE FILTER COUNT ──
     const activeFilterCount = useMemo(() =>
         [filterWave, filterStatus, filterGender, filterProgram, debouncedSearch].filter(Boolean).length
     , [filterWave, filterStatus, filterGender, filterProgram, debouncedSearch])
 
-    // ── SELECTED ──
     const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds])
     const selectedEnrollments = useMemo(() =>
-        paginatedEnrollments.filter(e => selectedIdSet.has(e.id))
-    , [paginatedEnrollments, selectedIdSet])
-    const allSelected = paginatedEnrollments.length > 0 && selectedIds.length === paginatedEnrollments.length
+        enrollments.filter(e => selectedIdSet.has(e.id))
+    , [enrollments, selectedIdSet])
+    const allSelected = enrollments.length > 0 && selectedIds.length === enrollments.length
 
     const isAnyModalOpen = useMemo(() =>
         !!(isFormOpen || isProfileOpen || isWaveModalOpen || activeModal)
     , [isFormOpen, isProfileOpen, isWaveModalOpen, activeModal])
 
-    // ── LOAD DATA (mock) ──
-    const fetchData = useCallback(() => {
+    // ── FETCH WAVES ──
+    const fetchWaves = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('enrollment_waves')
+                .select('*')
+                .order('created_at', { ascending: true })
+            if (error) throw error
+            setWaves(data || [])
+            return data || []
+        } catch (err) {
+            console.error('[useEnrollmentCore] Error fetching waves:', err)
+            return []
+        }
+    }, [])
+
+    // ── FETCH DATA ──
+    const fetchData = useCallback(async () => {
         setLoading(true)
-        // Simulate network delay
-        setTimeout(() => {
-            setEnrollments(paginatedEnrollments)
-            setTotalRows(filteredEnrollments.length)
-            setWaves(MOCK_WAVES)
+        try {
+            // 1. Fetch Waves
+            const wavesData = await fetchWaves()
+
+            // 2. Fetch all entries for global statistics calculation
+            const { data: allRows, error: statsErr } = await supabase
+                .from('enrollments')
+                .select('id, gender, status, wave_id, metadata')
+                .is('metadata->>deleted_at', null)
+            
+            if (statsErr) throw statsErr
+
+            const total = allRows.length
+            const mendaftar = allRows.filter(e => e.status === 'mendaftar').length
+            const verifikasi = allRows.filter(e => e.status === 'verifikasi').length
+            const tes = allRows.filter(e => e.status === 'tes').length
+            const diterima = allRows.filter(e => e.status === 'diterima').length
+            const ditolak = allRows.filter(e => e.status === 'ditolak').length
+            const boys = allRows.filter(e => e.gender === 'L').length
+            const girls = allRows.filter(e => e.gender === 'P').length
+            
+            const activeWave = wavesData.find(w => w.is_active)
+            const quota = activeWave?.quota || 0
+            const quotaUsed = diterima
+            const quotaLeft = Math.max(0, quota - quotaUsed)
+
+            setGlobalStats({
+                total, mendaftar, verifikasi, tes, diterima, ditolak,
+                boys, girls, quota, quotaUsed, quotaLeft, activeWave
+            })
+
+            // 3. Build filtered page query
+            let q = supabase
+                .from('enrollments')
+                .select('*, enrollment_waves(name)', { count: 'exact' })
+                .is('metadata->>deleted_at', null)
+
+            if (filterWave) q = q.eq('wave_id', filterWave)
+            if (filterStatus) q = q.eq('status', filterStatus)
+            if (filterGender) q = q.eq('gender', filterGender)
+            if (filterProgram) q = q.eq('program', filterProgram)
+
+            if (debouncedSearch) {
+                const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
+                q = q.or(`name.ilike.%${s}%,registration_number.ilike.%${s}%,nisn.ilike.%${s}%,phone.ilike.%${s}%,school_origin.ilike.%${s}%`)
+            }
+
+            if (sortBy === 'name_asc') q = q.order('name', { ascending: true })
+            else if (sortBy === 'name_desc') q = q.order('name', { ascending: false })
+            else if (sortBy === 'date_asc') q = q.order('created_at', { ascending: true })
+            else q = q.order('created_at', { ascending: false })
+
+            const from = (page - 1) * pageSize
+            const to = from + pageSize - 1
+            q = q.range(from, to)
+
+            const { data: pageRows, count, error: pageErr } = await q
+            if (pageErr) throw pageErr
+
+            setTotalRows(count || 0)
+
+            const transformed = (pageRows || []).map(e => {
+                const meta = e.metadata || {}
+                return {
+                    id: e.id,
+                    registration_number: e.registration_number || `PSB-${new Date(e.created_at || Date.now()).getFullYear()}-${String(e.id).slice(0, 4).toUpperCase()}`,
+                    name: e.name,
+                    gender: e.gender || 'L',
+                    birth_place: e.birth_place || meta.birth_place || '',
+                    birth_date: e.birth_date || meta.birth_date || '',
+                    nisn: e.nisn || meta.nisn || '',
+                    school_origin: e.school_origin || meta.school_origin || '',
+                    previous_pesantren: e.previous_pesantren || meta.previous_pesantren || '',
+                    phone: e.phone || meta.phone || '',
+                    photo_url: e.photo_url || meta.photo_url || '',
+                    program: e.program || meta.program || 'reguler',
+                    quran_level: e.quran_level || meta.quran_level || 'belum',
+                    hafalan_quran: e.hafalan_quran ?? meta.hafalan_quran ?? 0,
+                    status: e.status || 'mendaftar',
+                    wave_id: e.wave_id || '',
+                    waveName: e.enrollment_waves?.name || '-',
+                    
+                    // Metadata auxiliary nested fields
+                    father_name: meta.father_name || '',
+                    father_occupation: meta.father_occupation || '',
+                    father_education: meta.father_education || '',
+                    father_phone: meta.father_phone || '',
+                    mother_name: meta.mother_name || '',
+                    mother_occupation: meta.mother_occupation || '',
+                    mother_education: meta.mother_education || '',
+                    mother_phone: meta.mother_phone || '',
+                    guardian_name: meta.guardian_name || '',
+                    guardian_relation: meta.guardian_relation || '',
+                    guardian_phone: meta.guardian_phone || '',
+                    address: meta.address || '',
+                    health_notes: meta.health_notes || '',
+                    uniform_size: meta.uniform_size || 'M',
+                    created_at: e.created_at
+                }
+            })
+
+            setEnrollments(transformed)
+        } catch (err) {
+            console.error('[useEnrollmentCore] Fetch data error:', err)
+            addToast('Gagal memuat data pendaftaran dari database', 'error')
+        } finally {
             setLoading(false)
-        }, 400)
-    }, [paginatedEnrollments, filteredEnrollments])
+        }
+    }, [page, pageSize, filterWave, filterStatus, filterGender, filterProgram, sortBy, debouncedSearch, fetchWaves, addToast])
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    // ── ACTIONS ──
+    // ── CRUD MUTATION ACTIONS ──
     const handleAdd = useCallback(() => {
         setSelectedEnrollment(null)
         setIsFormOpen(true)
@@ -178,19 +244,84 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         setSelectedEnrollment(null)
     }, [])
 
-    const handleSubmit = useCallback((formData) => {
+    const handleSubmit = useCallback(async (formData) => {
         setSubmitting(true)
-        setTimeout(() => {
-            if (selectedEnrollment) {
-                addToast('Data pendaftar berhasil diperbarui', 'success')
-            } else {
-                addToast('Pendaftar baru berhasil ditambahkan', 'success')
+        try {
+            const isEdit = !!(selectedEnrollment && selectedEnrollment.id)
+            
+            const payload = {
+                name: formData.name,
+                gender: formData.gender || 'L',
+                birth_place: formData.birth_place || null,
+                birth_date: formData.birth_date || null,
+                nisn: formData.nisn || null,
+                school_origin: formData.school_origin || null,
+                previous_pesantren: formData.previous_pesantren || null,
+                phone: formData.phone || null,
+                photo_url: formData.photo_url || null,
+                program: formData.program || 'reguler',
+                quran_level: formData.quran_level || 'belum',
+                hafalan_quran: formData.hafalan_quran || 0,
+                status: formData.status || 'mendaftar',
+                wave_id: formData.wave_id || null,
+                metadata: {
+                    father_name: formData.father_name || '',
+                    father_occupation: formData.father_occupation || '',
+                    father_education: formData.father_education || '',
+                    father_phone: formData.father_phone || '',
+                    mother_name: formData.mother_name || '',
+                    mother_occupation: formData.mother_occupation || '',
+                    mother_education: formData.mother_education || '',
+                    mother_phone: formData.mother_phone || '',
+                    guardian_name: formData.guardian_name || '',
+                    guardian_relation: formData.guardian_relation || '',
+                    guardian_phone: formData.guardian_phone || '',
+                    address: formData.address || '',
+                    health_notes: formData.health_notes || '',
+                    uniform_size: formData.uniform_size || 'M'
+                }
             }
+
+            if (isEdit) {
+                const { error } = await supabase
+                    .from('enrollments')
+                    .update(payload)
+                    .eq('id', selectedEnrollment.id)
+                if (error) throw error
+                
+                await logAudit({
+                    action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: selectedEnrollment.id,
+                    oldData: selectedEnrollment,
+                    newData: { ...selectedEnrollment, ...formData }
+                })
+                addToast('Data pendaftaran berhasil diperbarui', 'success')
+            } else {
+                const year = new Date().getFullYear()
+                const randCode = Math.floor(1000 + Math.random() * 9000)
+                payload.registration_number = `PSB-${year}-${randCode}`
+
+                const { data, error } = await supabase
+                    .from('enrollments')
+                    .insert([payload])
+                    .select()
+                if (error) throw error
+
+                await logAudit({
+                    action: 'INSERT', source: 'OPERATIONAL', tableName: 'enrollments', recordId: data?.[0]?.id,
+                    newData: payload
+                })
+                addToast('Pendaftaran santri baru berhasil disimpan', 'success')
+            }
+
             setIsFormOpen(false)
             setSelectedEnrollment(null)
-            setSubmitting(false)
             fetchData()
-        }, 600)
+        } catch (err) {
+            console.error('[useEnrollmentCore] Submit error:', err)
+            addToast('Gagal menyimpan data pendaftaran', 'error')
+        } finally {
+            setSubmitting(false)
+        }
     }, [selectedEnrollment, addToast, fetchData])
 
     const confirmDelete = useCallback((enrollment) => {
@@ -198,29 +329,140 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         setActiveModal('delete')
     }, [])
 
-    const executeDelete = useCallback(() => {
+    const executeDelete = useCallback(async () => {
         if (!enrollmentToDelete) return
-        addToast(`${enrollmentToDelete.name} dihapus dari daftar`, 'success')
-        setActiveModal(null)
-        setEnrollmentToDelete(null)
-        fetchData()
+        try {
+            const meta = enrollmentToDelete.metadata || {}
+            const nextMeta = { ...meta, deleted_at: new Date().toISOString() }
+            const { error } = await supabase
+                .from('enrollments')
+                .update({ metadata: nextMeta })
+                .eq('id', enrollmentToDelete.id)
+            if (error) throw error
+
+            addToast(`Pendaftar "${enrollmentToDelete.name}" berhasil diarsipkan`, 'success')
+            
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: enrollmentToDelete.id,
+                oldData: enrollmentToDelete,
+                newData: { ...enrollmentToDelete, metadata: nextMeta }
+            })
+
+            setActiveModal(null)
+            setEnrollmentToDelete(null)
+            fetchData()
+        } catch (err) {
+            console.error('[useEnrollmentCore] Archive error:', err)
+            addToast('Gagal mengarsipkan data pendaftaran', 'error')
+        }
     }, [enrollmentToDelete, addToast, fetchData])
 
+    // ── ARCHIVE FUNCTIONS ──
+    const fetchArchivedEnrollments = useCallback(async () => {
+        setLoadingArchived(true)
+        try {
+            const { data, error } = await supabase
+                .from('enrollments')
+                .select('*, enrollment_waves(name)')
+                .not('metadata->>deleted_at', 'is', null)
+                .order('created_at', { ascending: false })
+            if (error) throw error
+            setArchivedEnrollments((data || []).map(e => ({
+                ...e,
+                waveName: e.enrollment_waves?.name || '-'
+            })))
+        } catch (err) {
+            console.error('Fetch archived error:', err)
+            addToast('Gagal memuat arsip', 'error')
+        } finally {
+            setLoadingArchived(false)
+        }
+    }, [addToast])
+
+    const handleRestoreEnrollment = useCallback(async (enrollment) => {
+        try {
+            const meta = { ...enrollment.metadata }
+            delete meta.deleted_at
+
+            const { error } = await supabase
+                .from('enrollments')
+                .update({ metadata: meta })
+                .eq('id', enrollment.id)
+            if (error) throw error
+
+            addToast(`${enrollment.name} berhasil dipulihkan`, 'success')
+            await logAudit({
+                action: 'UPDATE',
+                source: 'SYSTEM',
+                tableName: 'enrollments',
+                recordId: enrollment.id,
+                oldData: enrollment,
+                newData: { ...enrollment, metadata: meta }
+            })
+            fetchArchivedEnrollments()
+            fetchData()
+        } catch (err) {
+            console.error('Restore error:', err)
+            addToast('Gagal memulihkan', 'error')
+        }
+    }, [fetchArchivedEnrollments, fetchData, addToast])
+
+    const handlePermanentDeleteEnrollment = useCallback(async (enrollment) => {
+        try {
+            const { error } = await supabase
+                .from('enrollments')
+                .delete()
+                .eq('id', enrollment.id)
+            if (error) throw error
+
+            addToast(`${enrollment.name} dihapus permanen`, 'success')
+            await logAudit({
+                action: 'DELETE',
+                source: 'SYSTEM',
+                tableName: 'enrollments',
+                recordId: enrollment.id,
+                oldData: enrollment
+            })
+            fetchArchivedEnrollments()
+        } catch (err) {
+            console.error('Permanent delete error:', err)
+            addToast('Gagal menghapus data', 'error')
+        }
+    }, [fetchArchivedEnrollments, addToast])
+
     // ── STATUS TRANSITIONS ──
-    const updateStatus = useCallback((enrollment, newStatus) => {
-        const cfg = getStatusConfig(newStatus)
-        addToast(`${enrollment.name} → ${cfg.label}`, 'success')
-        fetchData()
+    const updateStatus = useCallback(async (enrollment, newStatus) => {
+        try {
+            const { error } = await supabase
+                .from('enrollments')
+                .update({ status: newStatus })
+                .eq('id', enrollment.id)
+            if (error) throw error
+
+            const cfg = getStatusConfig(newStatus)
+            addToast(`Status ${enrollment.name} berhasil diubah ke ${cfg.label}`, 'success')
+            
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: enrollment.id,
+                oldData: enrollment,
+                newData: { ...enrollment, status: newStatus }
+            })
+
+            fetchData()
+        } catch (err) {
+            console.error('[useEnrollmentCore] Status transition error:', err)
+            addToast('Gagal memperbarui status pendaftar', 'error')
+        }
     }, [addToast, fetchData])
 
     // ── BULK ACTIONS ──
     const toggleSelectAll = useCallback(() => {
         setSelectedIds(prev =>
-            prev.length === paginatedEnrollments.length
+            prev.length === enrollments.length
                 ? []
-                : paginatedEnrollments.map(e => e.id)
+                : enrollments.map(e => e.id)
         )
-    }, [paginatedEnrollments])
+    }, [enrollments])
 
     const toggleSelect = useCallback((id) => {
         setSelectedIds(prev =>
@@ -228,20 +470,91 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         )
     }, [])
 
-    const handleBulkApprove = useCallback(() => {
-        const count = selectedIds.length
-        addToast(`${count} pendaftar diterima`, 'success')
-        setSelectedIds([])
-        setActiveModal(null)
-        fetchData()
+    const handleBulkApprove = useCallback(async () => {
+        if (!selectedIds.length) return
+        try {
+            const { error } = await supabase
+                .from('enrollments')
+                .update({ status: 'diterima' })
+                .in('id', selectedIds)
+            if (error) throw error
+
+            addToast(`${selectedIds.length} pendaftar berhasil diterima`, 'success')
+            setSelectedIds([])
+            setActiveModal(null)
+            fetchData()
+        } catch (err) {
+            console.error('[useEnrollmentCore] Bulk approve error:', err)
+            addToast('Gagal menerima pendaftar secara massal', 'error')
+        }
     }, [selectedIds, addToast, fetchData])
 
-    const handleBulkReject = useCallback(() => {
-        const count = selectedIds.length
-        addToast(`${count} pendaftar ditolak`, 'success')
-        setSelectedIds([])
-        setActiveModal(null)
-        fetchData()
+    const handleBulkReject = useCallback(async () => {
+        if (!selectedIds.length) return
+        try {
+            const { error } = await supabase
+                .from('enrollments')
+                .update({ status: 'ditolak' })
+                .in('id', selectedIds)
+            if (error) throw error
+
+            addToast(`${selectedIds.length} pendaftar berhasil ditolak`, 'success')
+            setSelectedIds([])
+            setActiveModal(null)
+            fetchData()
+        } catch (err) {
+            console.error('[useEnrollmentCore] Bulk reject error:', err)
+            addToast('Gagal menolak pendaftar secara massal', 'error')
+        }
+    }, [selectedIds, addToast, fetchData])
+
+    const handleBulkArchive = useCallback(async () => {
+        if (!selectedIds.length) return
+        try {
+            const { data, error: fetchErr } = await supabase
+                .from('enrollments')
+                .select('id, metadata')
+                .in('id', selectedIds)
+            if (fetchErr) throw fetchErr
+
+            const updates = (data || []).map(row => {
+                const meta = row.metadata || {}
+                return supabase
+                    .from('enrollments')
+                    .update({ metadata: { ...meta, deleted_at: new Date().toISOString() } })
+                    .eq('id', row.id)
+            })
+
+            await Promise.all(updates)
+
+            addToast(`${selectedIds.length} pendaftar berhasil diarsipkan`, 'success')
+            setSelectedIds([])
+            setActiveModal(null)
+            fetchData()
+        } catch (err) {
+            console.error('[useEnrollmentCore] Bulk archive error:', err)
+            addToast('Gagal mengarsipkan pendaftar secara massal', 'error')
+        }
+    }, [selectedIds, addToast, fetchData])
+
+    const handleBulkStatusChange = useCallback(async (newStatus) => {
+        if (!selectedIds.length) return
+        try {
+            const { error } = await supabase
+                .from('enrollments')
+                .update({ status: newStatus })
+                .in('id', selectedIds)
+            if (error) throw error
+
+            const cfg = getStatusConfig(newStatus)
+            addToast(`${selectedIds.length} pendaftar diubah status menjadi ${cfg.label}`, 'success')
+            setSelectedIds([])
+            setActiveModal(null)
+            fetchData()
+        } catch (err) {
+            console.error('[useEnrollmentCore] Bulk status change error:', err)
+            addToast('Gagal memperbarui status secara massal', 'error')
+        }
     }, [selectedIds, addToast, fetchData])
 
     // ── FILTER RESET ──
@@ -257,12 +570,14 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
 
     return {
         // Data
-        enrollments: paginatedEnrollments,
+        enrollments,
         waves,
         loading,
-        totalRows: filteredEnrollments.length,
+        totalRows,
         globalStats,
         pipelineDistribution,
+        archivedEnrollments,
+        loadingArchived,
 
         // Filters
         searchQuery, setSearchQuery,
@@ -303,6 +618,11 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         updateStatus,
         toggleSelectAll, toggleSelect,
         handleBulkApprove, handleBulkReject,
+        fetchArchivedEnrollments,
+        handleRestoreEnrollment,
+        handlePermanentDeleteEnrollment,
+        handleBulkArchive,
+        handleBulkStatusChange,
 
         // Refs
         searchInputRef,
