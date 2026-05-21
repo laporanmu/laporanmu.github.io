@@ -135,7 +135,7 @@ export default memo(function StudentProfileModal({
                         <div className="relative shrink-0">
                             <div className="w-20 h-20 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-1 flex items-center justify-center text-2xl font-black overflow-hidden shadow-lg">
                                 {selectedStudent.photo_url && !isPrivacyMode ? (
-                                    <img src={selectedStudent.photo_url} className="w-full h-full object-cover rounded-lg" alt="" />
+                                    <img src={selectedStudent.photo_url} className="w-full h-full object-cover rounded-lg" alt="" onError={(e) => { e.target.onerror = null; e.target.parentElement.innerHTML = `<span>${selectedStudent.name?.charAt(0) || '?'}</span>` }} />
                                 ) : (
                                     <span>{isPrivacyMode ? maskInfo(selectedStudent.name, 1) : (selectedStudent.name?.charAt(0) || '?')}</span>
                                 )}

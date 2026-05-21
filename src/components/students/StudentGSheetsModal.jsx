@@ -37,19 +37,19 @@ export default function StudentGSheetsModal({
             size="md"
             mobileVariant="bottom-sheet"
             footer={
-                <div className="flex items-center w-full gap-2.5">
+                <div className="flex items-center w-full gap-2">
                     <button
                         onClick={onDownloadTemplate}
                         title="Download Format Excel/CSV"
-                        className="h-10 px-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2 shrink-0 group"
+                        className="h-10 px-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-1.5 shrink-0 group"
                     >
-                        <FontAwesomeIcon icon={faDownload} className="opacity-80 group-hover:animate-bounce" />
-                        <span className="hidden sm:inline">Template</span>
+                        <FontAwesomeIcon icon={faDownload} className="opacity-80 group-hover:animate-bounce text-[9px]" />
+                        <span>Template</span>
                     </button>
 
                     <button
                         onClick={onClose}
-                        className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
+                        className="h-10 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0"
                     >
                         Batal
                     </button>
@@ -59,12 +59,12 @@ export default function StudentGSheetsModal({
                     <button
                         onClick={handleFetchGSheets}
                         disabled={fetchingGSheets || urlStatus !== 'valid'}
-                        className="h-10 px-8 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-white/10 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="h-10 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 border border-white/10 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {fetchingGSheets ? (
-                            <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> <span className="hidden sm:inline">Sinkron...</span></>
+                            <><FontAwesomeIcon icon={faSpinner} className="fa-spin text-[9px]" /> <span>Sinkron...</span></>
                         ) : (
-                            <><FontAwesomeIcon icon={faLink} className="opacity-80" /> <span className="hidden sm:inline">Hubungkan</span></>
+                            <><FontAwesomeIcon icon={faLink} className="opacity-80 text-[9px]" /> <span>Hubungkan</span></>
                         )}
                     </button>
                 </div>

@@ -361,13 +361,14 @@ export const StudentRow = memo(({
                             className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black shadow-sm overflow-hidden relative cursor-pointer transition-transform hover:scale-110
                                 ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)]'}
                                 ${isPrivacyMode ? 'blur-sm grayscale opacity-60' : ''}`}
-                            onClick={() => { if (isPrivacyMode) return; student.photo_url && onPhotoZoom({ url: student.photo_url, name: student.name }) }}
+                            onClick={() => { if (isPrivacyMode) return; student.photo_url && onPhotoZoom({ url: student.photo_url, name: student.name, registrationCode: student.registration_code, className: student.className }) }}
                             title={student.photo_url && !isPrivacyMode ? 'Klik untuk zoom foto' : ''}
                         >
                             {student.photo_url
-                                ? <img src={student.photo_url} alt="" className="w-full h-full object-cover relative z-10" />
-                                : <span className="relative z-10">{isPrivacyMode ? '*' : (student.name || 'S').charAt(0)}</span>
+                                ? <img src={student.photo_url} alt="" className="w-full h-full object-cover relative z-10" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = '') }} />
+                                : null
                             }
+                            <span className="relative z-10" style={student.photo_url ? { display: 'none' } : {}}>{isPrivacyMode ? '*' : (student.name || 'S').charAt(0)}</span>
                         </div>
                         {/* Rank badge — pojok kiri bawah avatar */}
                         {student._rank <= 3 && student._rank >= 1 && (student.total_points > 0) && (
@@ -425,7 +426,7 @@ export const StudentRow = memo(({
                                                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black shadow-inner relative group/pop-img
                                                         ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 text-[var(--color-primary)]'}`}>
                                                         {student.photo_url ? (
-                                                            <img src={student.photo_url} className="w-full h-full object-cover rounded-2xl" />
+                                                            <img src={student.photo_url} className="w-full h-full object-cover rounded-2xl" onError={(e) => { e.target.onerror = null; e.target.parentElement.innerHTML = `<span>${(student.name || 'S').charAt(0)}</span>` }} />
                                                         ) : (
                                                             <span>{(student.name || 'S').charAt(0)}</span>
                                                         )}
@@ -934,15 +935,16 @@ export const StudentMobileCard = memo(({
                     {/* AVATAR SECTION */}
                     <div className="relative pointer-events-none">
                         <div
-                            className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black shadow-inner border-2 transition-all
+                            className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-black shadow-inner border-2 transition-all overflow-hidden
                                 ${isSelected ? 'border-[var(--color-primary)] scale-110' : 'border-white dark:border-gray-800'}
                                 ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-gradient-to-br from-[var(--color-primary)] via-[var(--color-primary)]/90 to-[var(--color-accent)] text-white'}
                                 ${isPrivacyMode ? 'blur-md grayscale opacity-60' : ''}`}
                         >
                             {student.photo_url
-                                ? <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
-                                : <span>{isPrivacyMode ? '*' : (student.name || 'S').charAt(0)}</span>
+                                ? <img src={student.photo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = '') }} />
+                                : null
                             }
+                            <span style={student.photo_url ? { display: 'none' } : {}}>{isPrivacyMode ? '*' : (student.name || 'S').charAt(0)}</span>
 
                             {/* Selection Checkmark Badge - Top Left of Avatar */}
                             {isSelected && (
@@ -1398,12 +1400,12 @@ export const StudentMobileListRow = memo(({
                 {/* Avatar (Slim) */}
                 <div className="relative shrink-0 pointer-events-none">
                     <div
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black shadow-inner border transition-all
+                        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-black shadow-inner border transition-all overflow-hidden
                             ${isRisk ? 'bg-red-500/10 text-red-500 border-red-200 shadow-red-200' : 'bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 text-[var(--color-primary)] border-[var(--color-border)]'}
                             ${isPrivacyMode ? 'blur-md grayscale opacity-60' : ''}`}
                     >
                         {student.photo_url && !isPrivacyMode ? (
-                            <img src={student.photo_url} className="w-full h-full object-cover rounded-lg" alt="" />
+                            <img src={student.photo_url} className="w-full h-full object-cover rounded-lg" alt="" onError={(e) => { e.target.onerror = null; e.target.parentElement.innerHTML = `<span class="text-[11px]">${(student.name || 'S').charAt(0)}</span>` }} />
                         ) : (
                             <span className="text-[11px]">{isPrivacyMode ? '*' : (student.name || 'S').charAt(0)}</span>
                         )}

@@ -18,7 +18,11 @@ import {
     faNewspaper,
     faTag,
     faCalendar,
-    faPrint
+    faPrint,
+    faEnvelope,
+    faPhone,
+    faLocationDot,
+    faChevronDown
 } from '@fortawesome/free-solid-svg-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
@@ -204,6 +208,8 @@ export default function LandingPage() {
     const [newsLoading, setNewsLoading] = useState(true)
     const [selectedNews, setSelectedNews] = useState(null)
     const [newsBadge, setNewsBadge] = useState(0)
+    const [openFaq, setOpenFaq] = useState(null)
+    const [showScrollTop, setShowScrollTop] = useState(false)
     const realtimeDebounceRef = useRef(null)
 
     const fetchNews = useCallback(async () => {
@@ -220,7 +226,12 @@ export default function LandingPage() {
     }, [])
 
     useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 20)
+        document.title = 'Laporanmu - Sistem Manajemen Perilaku & Kedisiplinan Siswa'
+
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 20)
+            setShowScrollTop(window.scrollY > 500)
+        }
         window.addEventListener('scroll', handleScroll, { passive: true })
 
         fetchNews()
@@ -240,10 +251,15 @@ export default function LandingPage() {
             .subscribe()
 
         return () => {
+            document.title = 'Laporanmu'
             window.removeEventListener('scroll', handleScroll)
             supabase.removeChannel(channel)
         }
     }, [fetchNews])
+
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
 
     return (
         <div className="min-h-screen bg-[var(--color-surface)] transition-colors duration-300 overflow-hidden">
@@ -274,6 +290,7 @@ export default function LandingPage() {
                         {/* Desktop Nav */}
                         <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-8 bg-[var(--color-surface)]/50 dark:bg-[var(--color-surface-alt)]/50 backdrop-blur-md px-6 py-2.5 rounded-full border border-[var(--color-border)]">
                             <a href="#visi-misi" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Visi</a>
+                            <a href="#fitur" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Fitur</a>
                             <a href="#alur" className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">Alur</a>
                             <a href="#Informasi" onClick={() => setNewsBadge(0)} className="relative text-[var(--color-text-muted)] hover:text-[var(--color-primary)] font-medium text-sm transition-all hover:scale-105 active:scale-95">
                                 Informasi
@@ -317,6 +334,7 @@ export default function LandingPage() {
                         <div className="flex flex-col gap-2">
                             {[
                                 { name: 'Visi & Misi', id: 'visi-misi' },
+                                { name: 'Fitur Utama', id: 'fitur' },
                                 { name: 'Alur Kerja', id: 'alur' },
                                 { name: 'Informasi', id: 'Informasi' }
                             ].map((item, i) => (
@@ -487,6 +505,44 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* ═══ FITUR UNGGULAN ═══ */}
+            <section id="fitur" className="py-24 relative z-10 bg-[var(--color-surface-alt)]/30 border-t border-[var(--color-border)]">
+                <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
+                    <Reveal>
+                        <div className="text-center mb-16">
+                            <span className="text-[var(--color-primary)] font-bold uppercase tracking-[0.3em] text-[10px] mb-3 block">Modul Terintegrasi</span>
+                            <h2 className="text-3xl sm:text-4xl font-black text-[var(--color-text)] mb-4">
+                                Fitur Unggulan <span className="text-[var(--color-primary)]">Laporanmu</span>
+                            </h2>
+                            <p className="text-sm sm:text-base text-[var(--color-text-muted)] max-w-xl mx-auto leading-relaxed">
+                                Sistem dirancang khusus untuk mempermudah tugas guru BK, staf keamanan, wali kelas, hingga wali murid.
+                            </p>
+                        </div>
+                    </Reveal>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {[
+                            { icon: faChartLine, title: "Poin Perilaku & Tatib", desc: "Catat skor pelanggaran (minus) dan prestasi (plus) siswa secara instan sesuai aturan buku saku sekolah." },
+                            { icon: faSearch, title: "Portal Wali Murid", desc: "Orang tua cukup memasukkan NISN/ID siswa untuk mengecek rekapitulasi poin, absensi, dan raport secara real-time tanpa perlu mendaftar." },
+                            { icon: faUsers, title: "Raport Bulanan & Absensi", desc: "Pembuatan laporan absensi bulanan serta akumulasi nilai perilaku siswa secara otomatis untuk wali kelas." },
+                            { icon: faShieldAlt, title: "Sistem Keamanan Gerbang", desc: "Modul khusus untuk satpam/petugas piket mencatat waktu keterlambatan atau izin keluar masuk siswa di gerbang sekolah." },
+                            { icon: faNewspaper, title: "Pengumuman Real-time", desc: "Bagikan berita penting sekolah, jadwal ujian, rapat wali murid, hingga artikel edukasi karakter secara terintegrasi." },
+                            { icon: faStar, title: "AI Insights & Prediksi", desc: "Analisis cerdas berbasis AI untuk mendeteksi dini tren perilaku buruk siswa agar sekolah dapat memberikan tindakan preventif." }
+                        ].map((fitur, idx) => (
+                            <Reveal key={idx} delay={0.08 * idx}>
+                                <div className="group h-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2rem] p-8 hover:border-[var(--color-primary)]/50 transition-all duration-300 hover:shadow-xl flex flex-col">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-[var(--color-primary)] flex items-center justify-center text-lg mb-6 group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={fitur.icon} />
+                                    </div>
+                                    <h4 className="font-bold text-[var(--color-text)] text-lg mb-3 group-hover:text-[var(--color-primary)] transition-colors">{fitur.title}</h4>
+                                    <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{fitur.desc}</p>
+                                </div>
+                            </Reveal>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* ═══ Informasi ═══ */}
             <Reveal>
                 <section id="Informasi" className="py-24 relative z-10">
@@ -582,13 +638,17 @@ export default function LandingPage() {
                                                 className="group bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] overflow-hidden hover:shadow-2xl hover:border-[var(--color-primary)]/30 transition-all duration-500 flex flex-col h-full cursor-pointer ring-1 ring-inset ring-transparent hover:ring-[var(--color-primary)]/10"
                                                 onClick={() => setSelectedNews(item)}
                                             >
-                                                {item.image_url && (
-                                                    <div className="h-44 w-full overflow-hidden shrink-0 relative">
+                                                <div className="h-44 w-full overflow-hidden shrink-0 relative">
+                                                    {item.image_url ? (
                                                         <img src={item.image_url} alt={item.image_alt || item.title} loading="lazy"
                                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                                                    </div>
-                                                )}
+                                                    ) : (
+                                                        <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 flex items-center justify-center">
+                                                            <FontAwesomeIcon icon={faNewspaper} className="text-4xl text-[var(--color-primary)]/30" />
+                                                        </div>
+                                                    )}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                                                </div>
                                                 <div className="p-7 flex flex-col flex-1">
                                                     <div className="flex items-center gap-2 mb-4 flex-wrap">
                                                         <span className="px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[9px] font-black uppercase tracking-wider border border-[var(--color-primary)]/10">
@@ -665,6 +725,50 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* ═══ FAQ SECTION ═══ */}
+            <section className="py-24 bg-[var(--color-surface-alt)]/20 border-t border-[var(--color-border)] relative z-10">
+                <div className="max-w-4xl mx-auto px-6">
+                    <Reveal>
+                        <div className="text-center mb-16">
+                            <span className="text-[var(--color-primary)] font-bold uppercase tracking-[0.3em] text-[10px] mb-3 block">Tanya Jawab</span>
+                            <h2 className="text-3xl font-black text-[var(--color-text)] mb-4">Pertanyaan Populer</h2>
+                            <p className="text-sm text-[var(--color-text-muted)] max-w-md mx-auto">Masih bingung? Temukan jawaban untuk pertanyaan yang paling sering diajukan di bawah ini.</p>
+                        </div>
+                    </Reveal>
+
+                    <div className="space-y-4">
+                        {[
+                            { q: "Bagaimana cara orang tua/wali murid memantau poin anaknya?", a: "Orang tua tidak perlu mendaftar akun atau login. Cukup klik tombol 'Portal Wali Murid' atau akses menu 'Cek Poin & Raport', lalu masukkan NISN atau ID Siswa untuk melihat detail poin pelanggaran, absensi, dan raport secara langsung secara real-time." },
+                            { q: "Siapa saja yang memiliki hak akses untuk menginput poin perilaku?", a: "Input poin perilaku hanya bisa dilakukan oleh staf sekolah yang terdaftar (seperti Guru BK, Wali Kelas, Guru Piket, dan Administrator) dengan login menggunakan email staf resmi yang disetujui." },
+                            { q: "Apakah skor poin siswa bisa diatur ulang (reset)?", a: "Ya, sistem Laporanmu mendukung manajemen Tahun Pelajaran. Skor poin siswa dapat dikonfigurasi untuk di-reset secara otomatis setiap pergantian semester atau tahun ajaran baru oleh Administrator." },
+                            { q: "Bagaimana jika ada kesalahan pencatatan poin pelanggaran?", a: "Jika terdapat kesalahan input poin oleh guru, wali murid dapat melakukan koordinasi dengan pihak sekolah. Administrator atau guru BK yang memiliki otorisasi dapat melakukan revisi atau menghapus riwayat pelanggaran tersebut melalui dashboard staf." }
+                        ].map((faq, idx) => {
+                            const isOpen = openFaq === idx
+                            return (
+                                <Reveal key={idx} delay={0.05 * idx}>
+                                    <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] overflow-hidden transition-all duration-300">
+                                        <button
+                                            onClick={() => setOpenFaq(isOpen ? null : idx)}
+                                            className="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]/50 transition-colors"
+                                        >
+                                            <span>{faq.q}</span>
+                                            <span className={`text-[var(--color-primary)] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                                                <FontAwesomeIcon icon={faChevronDown} className="text-xs" />
+                                            </span>
+                                        </button>
+                                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-48 border-t border-[var(--color-border)]' : 'max-h-0'}`}>
+                                            <p className="px-6 py-5 text-sm text-[var(--color-text-muted)] leading-relaxed bg-[var(--color-surface-alt)]/20">
+                                                {faq.a}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </Reveal>
+                            )
+                        })}
+                    </div>
+                </div>
+            </section>
+
             {/* ═══ CTA ═══ */}
             <Reveal>
                 <section className="py-24 relative z-10 px-4 sm:px-6 lg:px-8">
@@ -697,8 +801,39 @@ export default function LandingPage() {
             </Reveal>
 
             {/* ═══ FOOTER ═══ */}
-            <footer id="kontak" className="bg-[var(--color-surface)] text-[var(--color-text)] py-6 md:py-8 border-t border-[var(--color-border)] relative z-10">
+            <footer id="kontak" className="bg-[var(--color-surface)] text-[var(--color-text)] py-12 md:py-16 border-t border-[var(--color-border)] relative z-10">
                 <div className="max-w-7xl mx-auto px-6">
+                    {/* Kontak Detail Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-12 mb-12 border-b border-[var(--color-border)]">
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shrink-0">
+                                <FontAwesomeIcon icon={faEnvelope} className="text-sm" />
+                            </div>
+                            <div>
+                                <h5 className="font-bold text-xs uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Hubungi Kami</h5>
+                                <a href="mailto:support@laporanmu.com" className="text-sm font-semibold hover:text-[var(--color-primary)] transition-colors">itzme.rizal@gmail.com</a>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shrink-0">
+                                <FontAwesomeIcon icon={faPhone} className="text-sm" />
+                            </div>
+                            <div>
+                                <h5 className="font-bold text-xs uppercase tracking-widest text-[var(--color-text-muted)] mb-1">WhatsApp Center</h5>
+                                <a href="https://wa.me/6281230660013" target="_blank" rel="noreferrer" className="text-sm font-semibold hover:text-[var(--color-primary)] transition-colors">+62 812-3066-0013</a>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shrink-0">
+                                <FontAwesomeIcon icon={faLocationDot} className="text-sm" />
+                            </div>
+                            <div>
+                                <h5 className="font-bold text-xs uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Alamat Layanan</h5>
+                                <p className="text-sm font-semibold text-[var(--color-text)]">Jln. Pemandian No. 88, Patemon, Tanggul.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-4">
                         <div className="flex flex-col md:flex-row items-center gap-4 md:gap-10">
                             <Link to="/" className="flex items-center gap-2 group">
@@ -711,6 +846,7 @@ export default function LandingPage() {
                             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
                                 {[
                                     { name: 'Visi', id: 'visi-misi' },
+                                    { name: 'Fitur', id: 'fitur' },
                                     { name: 'Alur', id: 'alur' },
                                     { name: 'Informasi', id: 'Informasi' }
                                 ].map((item, idx) => (
@@ -742,6 +878,15 @@ export default function LandingPage() {
                     <ChatAssistant />
                 </Suspense>
             </div>
+
+            {/* Scroll to Top Floating Button */}
+            <button
+                onClick={scrollToTop}
+                className={`fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full glass border border-[var(--color-border)] text-[var(--color-primary)] flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-90 ${showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+                aria-label="Scroll to top"
+            >
+                <FontAwesomeIcon icon={faArrowRight} className="-rotate-90" />
+            </button>
         </div>
     )
 }

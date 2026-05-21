@@ -103,6 +103,7 @@ const StudentFormModal = memo(function StudentFormModal({
     const [hasDraft, setHasDraft] = useState(false)
 
     const [avatarFile, setAvatarFile] = useState(null)
+    const [photoError, setPhotoError] = useState(false)
     const dupTimerRef = useRef(null)
     const photoRef = useRef(null)
 
@@ -281,6 +282,7 @@ const StudentFormModal = memo(function StudentFormModal({
         setDuplicateWarning(null)
         setCurrentStep(1)
         setIsQuickMode(false)
+        setPhotoError(false)
     }, [isOpen, selectedStudent])
 
 
@@ -565,15 +567,12 @@ const StudentFormModal = memo(function StudentFormModal({
                                     className={`w-[88px] h-[88px] rounded-2xl bg-[var(--color-surface-alt)] border flex items-center justify-center overflow-hidden transition-all cursor-pointer ${form.photo_url || avatarPreview ? 'border-emerald-500/50' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'}`}
                                     onClick={() => photoRef.current?.click()}
                                 >
-                                    {(avatarPreview || form.photo_url) ? (
+                                    {(avatarPreview || (form.photo_url && !photoError)) ? (
                                         <img
                                             src={avatarPreview || form.photo_url}
                                             alt="Preview"
                                             className="w-full h-full object-cover animate-in fade-in zoom-in duration-300"
-                                            onError={(e) => {
-                                                e.target.onerror = null;
-                                                e.target.src = "";
-                                            }}
+                                            onError={() => setPhotoError(true)}
                                         />
                                     ) : (
                                         <div className="flex flex-col items-center justify-center gap-1.5 opacity-40 group-hover:opacity-100 group-hover:text-[var(--color-primary)] transition-all">

@@ -359,7 +359,7 @@ export default function AcademicYearImportModal(props) {
 
                     {/* --- Reference & Guidance Section --- */}
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between gap-4 p-3 bg-[var(--color-surface-alt)]/50 rounded-2xl border border-[var(--color-border)] shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-[var(--color-surface-alt)]/50 rounded-2xl border border-[var(--color-border)] shadow-sm">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
                                     <FontAwesomeIcon icon={faCalendar} className="text-xs" />
@@ -372,7 +372,7 @@ export default function AcademicYearImportModal(props) {
 
                             <button
                                 onClick={handleDownloadTemplate}
-                                className="shrink-0 h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+                                className="shrink-0 h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
                             >
                                 <FontAwesomeIcon icon={faDownload} /> Download Template
                             </button>

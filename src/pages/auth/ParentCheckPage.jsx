@@ -58,6 +58,13 @@ export default function ParentCheckPage() {
     const { addToast } = useToast()
     const { isDark, toggleTheme } = useTheme()
 
+    useEffect(() => {
+        document.title = 'Laporanmu - Portal Cek Poin Wali Murid'
+        return () => {
+            document.title = 'Laporanmu'
+        }
+    }, [])
+
     // Bersihkan interval cooldown saat unmount
     useEffect(() => () => { if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current) }, [])
 
@@ -1018,6 +1025,8 @@ export default function ParentCheckPage() {
                                 <FontAwesomeIcon icon={faKey} className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[var(--color-text-muted)] opacity-70" />
                                 <input
                                     type="password"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     value={pin}
                                     onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                     placeholder="••••"

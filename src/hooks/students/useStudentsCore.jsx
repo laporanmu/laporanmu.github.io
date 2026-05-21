@@ -130,6 +130,7 @@ export function useStudentsCore({ addToast, addUndoToast }) {
     const [bulkPhotoMatches, setBulkPhotoMatches] = useState([])
     const [matchingPhotos, setMatchingPhotos] = useState(false)
     const [uploadingBulkPhotos, setUploadingBulkPhotos] = useState(false)
+    const [allStudentsForBulk, setAllStudentsForBulk] = useState([])
     const [broadcastTemplate, setBroadcastTemplate] = useState('summary')
     const [customWaMsg, setCustomWaMsg] = useState('')
     const [broadcastIndex, setBroadcastIndex] = useState(-1)
@@ -994,37 +995,99 @@ Laporanmu System`
         setIsPrintModalOpen(true)
     }
 
-    const handleBulkPhotoMatch = async (files, method = 'nisn') => {
-        setMatchingPhotos(true)
-        const normalize = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim()
-
-        const matches = Array.from(files).map(file => {
-            const fileName = file.name.split('.')[0].trim().toLowerCase()
-            const normalizedFileName = normalize(fileName)
-
-            const s = students.find(std => {
-                if (method === 'name') {
-                    const normalizedStdName = normalize(std.name)
-                    return normalizedStdName === normalizedFileName || normalizedStdName.includes(normalizedFileName) || normalizedFileName.includes(normalizedStdName)
+    // Canvas-based image compression utility
+    const compressImage = (file, maxSize = 800, quality = 0.7) => {
+        return new Promise((resolve) => {
+            const img = new Image()
+            img.onload = () => {
+                const canvas = document.createElement('canvas')
+                let { width, height } = img
+                if (width > maxSize || height > maxSize) {
+                    if (width > height) { height = Math.round(height * maxSize / width); width = maxSize }
+                    else { width = Math.round(width * maxSize / height); height = maxSize }
                 }
-                if (method === 'code') {
-                    return normalize(std.registration_code) === normalizedFileName || normalize(std.id) === normalizedFileName
-                }
-                // Default NISN
-                return normalize(std.nisn) === normalizedFileName
-            })
-
-            return {
-                file,
-                studentId: s?.id || null,
-                studentName: s?.name || '?',
-                preview: URL.createObjectURL(file),
-                status: s ? 'matched' : 'unmatched',
-                matchMethod: method
+                canvas.width = width; canvas.height = height
+                const ctx = canvas.getContext('2d')
+                ctx.drawImage(img, 0, 0, width, height)
+                canvas.toBlob((blob) => {
+                    const compressedFile = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() })
+                    resolve(compressedFile)
+                }, 'image/jpeg', quality)
             }
+            img.src = URL.createObjectURL(file)
         })
-        setBulkPhotoMatches(prev => [...prev, ...matches])
-        setMatchingPhotos(false)
+    }
+
+    const handleBulkPhotoMatch = async (files, method = 'nisn', autoCompress = false) => {
+        setMatchingPhotos(true)
+        try {
+            // Fetch ALL students from DB (not just the filtered/paginated ones)
+            let allStudents = allStudentsForBulk
+            if (allStudents.length === 0) {
+                const { data } = await supabase
+                    .from('students')
+                    .select('id, name, nisn, registration_code')
+                    .is('deleted_at', null)
+                allStudents = data || []
+                setAllStudentsForBulk(allStudents)
+            }
+
+            if (allStudents.length === 0) {
+                addToast('Tidak ada data siswa ditemukan', 'error')
+                return
+            }
+
+            // Normalize: lowercase, strip diacritics/unicode, keep spaces
+            const normalize = (str) => (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+            // Strip to alphanumeric only (for ID-based matching)
+            const normalizeStrict = (str) => normalize(str).replace(/[^a-z0-9]/g, '')
+            // Split name into words for word-overlap matching
+            const getWords = (str) => normalize(str).split(/\s+/).filter(w => w.length > 0)
+
+            const matches = await Promise.all(Array.from(files).map(async (file) => {
+                // Optional auto-compress
+                const originalSize = file.size
+                const processedFile = autoCompress ? await compressImage(file) : file
+
+                const fileBaseName = file.name.replace(/\.[^.]+$/, '').trim()
+                const normalizedFileName = normalize(fileBaseName)
+                const fileWords = getWords(fileBaseName)
+
+                const s = allStudents.find(std => {
+                    if (method === 'name') {
+                        const normalizedStdName = normalize(std.name)
+                        const stdWords = getWords(std.name)
+                        if (normalizedStdName === normalizedFileName) return true
+                        if (normalizedStdName.includes(normalizedFileName) || normalizedFileName.includes(normalizedStdName)) return true
+                        if (normalizeStrict(std.name) === normalizeStrict(fileBaseName)) return true
+                        if (fileWords.length >= 2 && fileWords.every(fw => stdWords.some(sw => sw.startsWith(fw) || fw.startsWith(sw)))) return true
+                        return false
+                    }
+                    if (method === 'code') {
+                        return normalizeStrict(std.registration_code) === normalizeStrict(fileBaseName) || normalizeStrict(std.id) === normalizeStrict(fileBaseName)
+                    }
+                    return normalizeStrict(std.nisn) === normalizeStrict(fileBaseName)
+                })
+
+                return {
+                    file: processedFile,
+                    originalFile: file,
+                    studentId: s?.id || null,
+                    studentName: s?.name || '?',
+                    preview: URL.createObjectURL(processedFile),
+                    status: s ? 'matched' : 'unmatched',
+                    matchMethod: method,
+                    originalSize,
+                    compressedSize: processedFile.size
+                }
+            }))
+            setBulkPhotoMatches(prev => [...prev, ...matches])
+        } catch (err) {
+            console.error('Bulk photo match error:', err)
+            addToast('Gagal mencocokkan foto', 'error')
+        } finally {
+            setMatchingPhotos(false)
+        }
     }
 
     const handleBulkPhotoUpload = async () => {
@@ -1034,8 +1097,8 @@ Laporanmu System`
         for (const item of matched) {
             try {
                 const name = `${item.studentId}_${Date.now()}.${item.file.name.split('.').pop()}`
-                await supabase.storage.from('photos').upload(name, item.file)
-                const { data } = supabase.storage.from('photos').getPublicUrl(name)
+                await supabase.storage.from('student-photo').upload(name, item.file)
+                const { data } = supabase.storage.from('student-photo').getPublicUrl(name)
                 await supabase.from('students').update({ photo_url: data.publicUrl }).eq('id', item.studentId)
             } catch { }
         }
@@ -1283,7 +1346,7 @@ Laporanmu System`
         handleInlineSubmit, handleViewQR, handleViewPrint, handleBulkWA, buildWAMessage, openWAForStudent, waTemplate,
         generateStudentPDF, handlePrintSingle, handlePrintThermal, handleSavePNG, handleBulkPrint,
         handleBulkPhotoMatch, handleBulkPhotoUpload, handleClassBreakdown, handleBatchResetPoints,
-        bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches,
+        bulkPhotoMatches, uploadingBulkPhotos, setBulkPhotoMatches, allStudentsForBulk, matchingPhotos,
         // State Helpers
         resetPointsClassId, setResetPointsClassId, resettingPoints,
         classBreakdownData, loadingBreakdown,
