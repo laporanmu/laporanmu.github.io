@@ -65,6 +65,7 @@ const TeachersPage = lazyRetry(() => import('./pages/master/TeachersPage.jsx'))
 const ClassesPage = lazyRetry(() => import('./pages/master/ClassesPage.jsx'))
 const PoinPage = lazyRetry(() => import('./pages/master/PoinPage.jsx'))
 const AcademicYearsPage = lazyRetry(() => import('./pages/master/AcademicYearsPage.jsx'))
+const EnrollmentPage = lazyRetry(() => import('./pages/master/EnrollmentPage.jsx'))
 
 // ─── Role Hierarchy ───────────────────────────────────────────────────────────
 // developer > admin > guru = satpam > viewer
@@ -95,6 +96,7 @@ const ROUTE_ALIASES = [
   { from: '/admin/db', to: '/admin/database' },
   { from: '/admin/task', to: '/admin/tasks' },
   { from: '/playground', to: '/admin/playground' },
+  { from: '/master/psb', to: '/master/enrollment' },
 ]
 
 // ─── Loading Spinner ──────────────────────────────────────────────────────────
@@ -541,6 +543,11 @@ function AppRoutes() {
             <Route path="/master/academic-years" element={
               <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.academic_years" label="Tahun Pelajaran">
                 <AcademicYearsPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/master/enrollment" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.enrollment" label="PSB / Enrollment">
+                <EnrollmentPage />
               </RoleFlagRoute>
             } />
 
