@@ -14,6 +14,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     const [totalRows, setTotalRows] = useState(0)
     const [archivedEnrollments, setArchivedEnrollments] = useState([])
     const [loadingArchived, setLoadingArchived] = useState(false)
+    const [allEnrollments, setAllEnrollments] = useState([])
 
     // ── FILTERS ──
     const [searchQuery, setSearchQuery] = useState('')
@@ -33,12 +34,18 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [isWaveModalOpen, setIsWaveModalOpen] = useState(false)
     const [activeModal, setActiveModal] = useState(null) // 'delete' | 'bulkApprove' | 'bulkReject' | null
+    const [isConvertOpen, setIsConvertOpen] = useState(false)
 
     // ── ACTION CONTEXT ──
     const [selectedEnrollment, setSelectedEnrollment] = useState(null)
     const [enrollmentToDelete, setEnrollmentToDelete] = useState(null)
     const [selectedIds, setSelectedIds] = useState([])
     const [submitting, setSubmitting] = useState(false)
+    const [convertingEnrollment, setConvertingEnrollment] = useState(null)
+    const [converting, setConverting] = useState(false)
+
+    // ── CLASSES ──
+    const [classes, setClasses] = useState([])
 
     // ── REFS ──
     const searchInputRef = useRef(null)
@@ -103,16 +110,22 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            // 1. Fetch Waves
+            // 1. Fetch Waves & Classes
             const wavesData = await fetchWaves()
+            const { data: classesData } = await supabase
+                .from('classes')
+                .select('*')
+                .order('name', { ascending: true })
+            setClasses(classesData || [])
 
             // 2. Fetch all entries for global statistics calculation
             const { data: allRows, error: statsErr } = await supabase
                 .from('enrollments')
-                .select('id, gender, status, wave_id, metadata')
+                .select('id, gender, status, wave_id, metadata, program, school_origin, created_at')
                 .is('metadata->>deleted_at', null)
             
             if (statsErr) throw statsErr
+            setAllEnrollments(allRows || [])
 
             const total = allRows.length
             const mendaftar = allRows.filter(e => e.status === 'mendaftar').length
@@ -214,6 +227,37 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
 
     useEffect(() => { fetchData() }, [fetchData])
 
+    // Self-healing: auto-link enrollments without wave_id to the active wave
+    useEffect(() => {
+        if (loading || waves.length === 0 || enrollments.length === 0) return
+
+        const activeWave = waves.find(w => w.is_active)
+        if (!activeWave) return
+
+        const unlinked = enrollments.filter(e => !e.wave_id)
+        if (unlinked.length === 0) return
+
+        const patchUnlinked = async () => {
+            console.log(`[Self-Healing] Patching ${unlinked.length} enrollments to active wave: ${activeWave.name}`)
+            let patchedAny = false
+            for (const e of unlinked) {
+                try {
+                    const { error } = await supabase
+                        .from('enrollments')
+                        .update({ wave_id: activeWave.id })
+                        .eq('id', e.id)
+                    if (!error) patchedAny = true
+                } catch (err) {
+                    console.error('[Self-Healing] Error patching enrollment:', e.name, err)
+                }
+            }
+            if (patchedAny) {
+                fetchData()
+            }
+        }
+        patchUnlinked()
+    }, [enrollments, waves, loading, fetchData])
+
     // ── CRUD MUTATION ACTIONS ──
     const handleAdd = useCallback(() => {
         setSelectedEnrollment(null)
@@ -263,7 +307,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
                 quran_level: formData.quran_level || 'belum',
                 hafalan_quran: formData.hafalan_quran || 0,
                 status: formData.status || 'mendaftar',
-                wave_id: formData.wave_id || null,
+                wave_id: formData.wave_id || globalStats.activeWave?.id || null,
                 metadata: {
                     father_name: formData.father_name || '',
                     father_occupation: formData.father_occupation || '',
@@ -296,9 +340,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
                 })
                 addToast('Data pendaftaran berhasil diperbarui', 'success')
             } else {
-                const year = new Date().getFullYear()
-                const randCode = Math.floor(1000 + Math.random() * 9000)
-                payload.registration_number = `PSB-${year}-${randCode}`
+                payload.registration_number = generateCode()
 
                 const { data, error } = await supabase
                     .from('enrollments')
@@ -322,7 +364,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         } finally {
             setSubmitting(false)
         }
-    }, [selectedEnrollment, addToast, fetchData])
+    }, [selectedEnrollment, addToast, fetchData, globalStats])
 
     const confirmDelete = useCallback((enrollment) => {
         setEnrollmentToDelete(enrollment)
@@ -430,6 +472,172 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         }
     }, [fetchArchivedEnrollments, addToast])
 
+    // ── HELPERS & NOTIFICATIONS ──
+    const generateCode = useCallback(() => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+        const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+        const part2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+        return `REG-${part1}-${part2}`
+    }, [])
+
+    const sendFonnteMessage = async (target, message) => {
+        const token = import.meta.env.VITE_FONNTE_TOKEN || ''
+        if (!token) return false
+        try {
+            const res = await fetch('https://api.fonnte.com/send', {
+                method: 'POST',
+                headers: {
+                    'Authorization': token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    target: target,
+                    message: message
+                })
+            })
+            const data = await res.json()
+            return data.status === true
+        } catch (err) {
+            console.error('[Fonnte] Error sending message:', err)
+            return false
+        }
+    }
+
+    const triggerNotification = useCallback(async (enrollment, newStatus) => {
+        const phone = enrollment.phone || enrollment.father_phone || enrollment.mother_phone
+        if (!phone) return
+
+        let msg = ''
+        const name = enrollment.name
+        const reg = enrollment.registration_number || ''
+
+        if (newStatus === 'verifikasi') {
+            msg = `Assalamualaikum Wr. Wb.\n\nYth. Wali dari *${name}*,\n\nBerkas pendaftaran calon santri dengan nomor pendaftaran *${reg}* telah berhasil diverifikasi.\n\nTerima kasih.`
+        } else if (newStatus === 'tes') {
+            msg = `Assalamualaikum Wr. Wb.\n\nYth. Wali dari *${name}*,\n\nPendaftaran *${reg}* dinyatakan lolos berkas. Tahap selanjutnya adalah Ujian Seleksi.\n\nTerima kasih.`
+        } else if (newStatus === 'diterima') {
+            msg = `Assalamualaikum Wr. Wb.\n\nSelamat! Calon santri atas nama *${name}* (*${reg}*) dinyatakan *DITERIMA* di Pondok Pesantren Laporanmu.\n\nSilakan lakukan daftar ulang. Terima kasih.`
+        } else if (newStatus === 'ditolak') {
+            msg = `Assalamualaikum Wr. Wb.\n\nYth. Wali dari *${name}*,\n\nKami menyampaikan permohonan maaf bahwa pendaftaran *${reg}* saat ini belum dapat diterima.\n\nTerima kasih.`
+        }
+
+        if (!msg) return
+
+        let cleanPhone = phone.replace(/[^0-9]/g, '')
+        if (cleanPhone.startsWith('0')) {
+            cleanPhone = '62' + cleanPhone.slice(1)
+        }
+
+        // Try Fonnte
+        const sent = await sendFonnteMessage(cleanPhone, msg)
+        if (sent) {
+            addToast('Notifikasi terkirim via Fonnte', 'success')
+        } else {
+            // Fallback to WhatsApp Web
+            const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`
+            window.open(url, '_blank')
+            addToast('Membuka WhatsApp Web untuk notifikasi', 'info')
+        }
+    }, [addToast])
+
+    const handleConvertToStudent = useCallback(async (enrollment, classId) => {
+        if (!classId) {
+            addToast('Silakan pilih kelas tujuan terlebih dahulu', 'warning')
+            return false
+        }
+        setConverting(true)
+        try {
+            const pin = String(Math.floor(1000 + Math.random() * 9000))
+            const regCode = enrollment.registration_number && enrollment.registration_number.startsWith('REG-')
+                ? enrollment.registration_number
+                : generateCode()
+
+            const studentPayload = {
+                registration_code: regCode,
+                pin: pin,
+                total_points: 0,
+                name: enrollment.name,
+                gender: enrollment.gender || 'L',
+                class_id: classId,
+                phone: enrollment.phone || enrollment.father_phone || enrollment.mother_phone || '',
+                photo_url: enrollment.photo_url || '',
+                nisn: enrollment.nisn || '',
+                nis: enrollment.nis || '',
+                birth_date: enrollment.birth_date || null,
+                birth_place: enrollment.birth_place || '',
+                address: enrollment.address || '',
+                guardian_name: enrollment.father_name || enrollment.guardian_name || '',
+                guardian_relation: enrollment.father_name ? 'Ayah' : (enrollment.guardian_relation || 'Ayah'),
+                status: 'aktif',
+                tags: [],
+                metadata: {
+                    school_origin: enrollment.school_origin || '',
+                    uniform_size: enrollment.uniform_size || 'M',
+                    health_notes: enrollment.health_notes || '',
+                    previous_pesantren: enrollment.previous_pesantren || '',
+                    father_name: enrollment.father_name || '',
+                    father_occupation: enrollment.father_occupation || '',
+                    father_education: enrollment.father_education || '',
+                    father_phone: enrollment.father_phone || '',
+                    mother_name: enrollment.mother_name || '',
+                    mother_occupation: enrollment.mother_occupation || '',
+                    mother_education: enrollment.mother_education || '',
+                    mother_phone: enrollment.mother_phone || '',
+                    converted_from_enrollment_id: enrollment.id
+                }
+            }
+
+            // Insert to students
+            const { data: studentData, error: studentError } = await supabase
+                .from('students')
+                .insert([studentPayload])
+                .select()
+            if (studentError) throw studentError
+
+            // Update enrollment metadata & status
+            const currentMeta = enrollment.metadata || {}
+            const nextMeta = {
+                ...currentMeta,
+                converted_to_student: {
+                    status: true,
+                    converted_at: new Date().toISOString(),
+                    student_id: studentData?.[0]?.id,
+                    generated_nis: enrollment.nis || ''
+                }
+            }
+
+            const { error: enrollUpdateErr } = await supabase
+                .from('enrollments')
+                .update({
+                    status: 'diterima',
+                    metadata: nextMeta
+                })
+                .eq('id', enrollment.id)
+            if (enrollUpdateErr) throw enrollUpdateErr
+
+            // Add Audit Log
+            await logAudit({
+                action: 'INSERT',
+                source: 'SYSTEM',
+                tableName: 'students',
+                recordId: studentData?.[0]?.id,
+                newData: studentPayload
+            })
+
+            addToast(`Santri "${enrollment.name}" berhasil dikonversi menjadi siswa aktif!`, 'success')
+            setIsConvertOpen(false)
+            setConvertingEnrollment(null)
+            fetchData()
+            return true
+        } catch (err) {
+            console.error('[useEnrollmentCore] Conversion error:', err)
+            addToast('Gagal mengonversi pendaftar menjadi siswa aktif: ' + err.message, 'error')
+            return false
+        } finally {
+            setConverting(false)
+        }
+    }, [addToast, generateCode, fetchData])
+
     // ── STATUS TRANSITIONS ──
     const updateStatus = useCallback(async (enrollment, newStatus) => {
         try {
@@ -449,11 +657,12 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             })
 
             fetchData()
+            triggerNotification(enrollment, newStatus)
         } catch (err) {
             console.error('[useEnrollmentCore] Status transition error:', err)
             addToast('Gagal memperbarui status pendaftar', 'error')
         }
-    }, [addToast, fetchData])
+    }, [addToast, fetchData, triggerNotification])
 
     // ── BULK ACTIONS ──
     const toggleSelectAll = useCallback(() => {
@@ -480,6 +689,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             if (error) throw error
 
             addToast(`${selectedIds.length} pendaftar berhasil diterima`, 'success')
+            selectedEnrollments.forEach(e => triggerNotification(e, 'diterima'))
             setSelectedIds([])
             setActiveModal(null)
             fetchData()
@@ -487,7 +697,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             console.error('[useEnrollmentCore] Bulk approve error:', err)
             addToast('Gagal menerima pendaftar secara massal', 'error')
         }
-    }, [selectedIds, addToast, fetchData])
+    }, [selectedIds, selectedEnrollments, addToast, fetchData, triggerNotification])
 
     const handleBulkReject = useCallback(async () => {
         if (!selectedIds.length) return
@@ -499,6 +709,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             if (error) throw error
 
             addToast(`${selectedIds.length} pendaftar berhasil ditolak`, 'success')
+            selectedEnrollments.forEach(e => triggerNotification(e, 'ditolak'))
             setSelectedIds([])
             setActiveModal(null)
             fetchData()
@@ -506,7 +717,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             console.error('[useEnrollmentCore] Bulk reject error:', err)
             addToast('Gagal menolak pendaftar secara massal', 'error')
         }
-    }, [selectedIds, addToast, fetchData])
+    }, [selectedIds, selectedEnrollments, addToast, fetchData, triggerNotification])
 
     const handleBulkArchive = useCallback(async () => {
         if (!selectedIds.length) return
@@ -548,6 +759,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
 
             const cfg = getStatusConfig(newStatus)
             addToast(`${selectedIds.length} pendaftar diubah status menjadi ${cfg.label}`, 'success')
+            selectedEnrollments.forEach(e => triggerNotification(e, newStatus))
             setSelectedIds([])
             setActiveModal(null)
             fetchData()
@@ -555,7 +767,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             console.error('[useEnrollmentCore] Bulk status change error:', err)
             addToast('Gagal memperbarui status secara massal', 'error')
         }
-    }, [selectedIds, addToast, fetchData])
+    }, [selectedIds, selectedEnrollments, addToast, fetchData, triggerNotification])
 
     // ── FILTER RESET ──
     const resetAllFilters = useCallback(() => {
@@ -600,6 +812,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         isWaveModalOpen, setIsWaveModalOpen,
         activeModal, setActiveModal,
         isAnyModalOpen,
+        isConvertOpen, setIsConvertOpen,
 
         // Actions
         selectedEnrollment, setSelectedEnrollment,
@@ -609,6 +822,10 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         selectedEnrollments,
         allSelected,
         submitting,
+        convertingEnrollment, setConvertingEnrollment,
+        converting,
+        classes,
+        allEnrollments,
 
         // Functions
         fetchData,
@@ -623,6 +840,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         handlePermanentDeleteEnrollment,
         handleBulkArchive,
         handleBulkStatusChange,
+        handleConvertToStudent,
+        generateCode,
 
         // Refs
         searchInputRef,

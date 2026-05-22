@@ -54,9 +54,8 @@ export const PIPELINE_STEPS = [
 ]
 
 export const PROGRAM_OPTIONS = [
-    { id: 'tahfidz', name: 'Tahfidz', desc: 'Program hafalan Al-Quran intensif' },
-    { id: 'reguler', name: 'Reguler', desc: 'Program pendidikan umum & diniyah' },
-    { id: 'intensif', name: 'Intensif', desc: 'Program akselerasi akademik & diniyah' },
+    { id: 'boarding', name: 'Boarding (Pondok)', desc: 'Program kepesantrenan & asrama intensif' },
+    { id: 'reguler', name: 'Reguler (Fullday)', desc: 'Program sekolah harian umum & diniyah' },
 ]
 
 export const QURAN_LEVELS = [

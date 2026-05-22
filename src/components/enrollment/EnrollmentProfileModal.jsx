@@ -5,7 +5,8 @@ import {
     faUser, faMars, faVenus, faSchool, faBookQuran,
     faPhone, faMapMarkerAlt, faHeart, faCheckCircle,
     faXmarkCircle, faClipboardList, faGraduationCap,
-    faTShirt, faCalendarDay, faUsers, faBoxArchive
+    faTShirt, faCalendarDay, faUsers, faBoxArchive,
+    faUserGraduate
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import {
@@ -27,7 +28,7 @@ function InfoRow({ icon, label, value, color = '' }) {
     )
 }
 
-function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete, onStatusChange, canEdit = true }) {
+function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete, onStatusChange, onConvertToStudent, canEdit = true }) {
     if (!enrollment) return null
 
     const {
@@ -60,6 +61,8 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
     }
     const prevStatus = getPrevStatus()
 
+    const isConverted = enrollment.metadata?.converted_to_student?.status
+
     return (
         <Modal
             isOpen={isOpen}
@@ -69,7 +72,7 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
             icon={faUser}
             iconBg="bg-[var(--color-primary)]/10"
             iconColor="text-[var(--color-primary)]"
-            size="md"
+            size="lg"
             mobileVariant="bottom-sheet"
             footer={
                 canEdit ? (
@@ -83,7 +86,20 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
 
                         <div className="flex-1" />
 
-                        {prevStatus && (
+                        {status === 'diterima' && !isConverted && (
+                            <button
+                                onClick={() => {
+                                    onClose();
+                                    onConvertToStudent?.(enrollment);
+                                }}
+                                className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-wider shadow-md shadow-indigo-500/20 hover:shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2 active:scale-95"
+                            >
+                                <FontAwesomeIcon icon={faUserGraduate} className="text-[10px]" />
+                                Konversi ke Siswa
+                            </button>
+                        )}
+
+                        {prevStatus && !isConverted && (
                             <button
                                 onClick={() => onStatusChange(enrollment, prevStatus)}
                                 className="px-4 py-2.5 rounded-xl border border-rose-500/20 bg-rose-500/5 text-[11px] font-bold text-rose-600 hover:bg-rose-500/10 transition-all flex items-center gap-2"
@@ -176,6 +192,14 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
                         <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20">
                             <FontAwesomeIcon icon={faXmarkCircle} className="text-rose-500 text-sm" />
                             <span className="text-[11px] font-bold text-rose-600">Pendaftar ditolak</span>
+                        </div>
+                    )}
+
+                    {/* Converted badge */}
+                    {isConverted && (
+                        <div className="mt-3 flex items-center gap-2.5 px-3 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                            <FontAwesomeIcon icon={faUserGraduate} className="text-indigo-600 text-sm animate-pulse" />
+                            <span className="text-[11px] font-black text-indigo-600">Telah Dikonversi ke Siswa Aktif</span>
                         </div>
                     )}
                 </div>

@@ -1,10 +1,12 @@
-import React, { useState, memo, useCallback } from 'react'
+import React, { useState, useRef, memo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faUserPlus, faUsers, faCheckCircle, faXmarkCircle, faClipboardList,
     faMars, faVenus, faSliders, faRotateLeft, faXmark, faWaveSquare,
     faSquareCheck, faCheckDouble, faBookQuran, faSearch, faSchool,
-    faHourglassHalf, faArrowRight, faTrash, faBoxArchive, faChevronDown
+    faHourglassHalf, faArrowRight, faTrash, faBoxArchive, faChevronDown,
+    faFileExport, faFileExcel, faFilePdf, faChartPie, faFileImport
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
@@ -20,7 +22,18 @@ import EnrollmentProfileModal from '../../components/enrollment/EnrollmentProfil
 import EnrollmentWaveModal from '../../components/enrollment/EnrollmentWaveModal'
 import EnrollmentSearch from '../../components/enrollment/EnrollmentSearch'
 import EnrollmentArchiveModal from '../../components/enrollment/EnrollmentArchiveModal'
+import EnrollmentConvertModal from '../../components/enrollment/EnrollmentConvertModal'
+import EnrollmentImportModal from '../../components/enrollment/EnrollmentImportModal'
+import EnrollmentExportModal from '../../components/enrollment/EnrollmentExportModal'
+import EnrollmentStatsModal from '../../components/enrollment/EnrollmentStatsModal'
+import { useEnrollmentImportExport } from '../../hooks/enrollment/useEnrollmentImportExport'
 import { STATUS_CONFIG, PROGRAM_OPTIONS } from '../../utils/enrollment/enrollmentConstants'
+
+function getPortalContainer(id) {
+    let el = document.getElementById(id)
+    if (!el) { el = document.createElement('div'); el.id = id; document.body.appendChild(el) }
+    return el
+}
 
 
 export default function EnrollmentPage() {
@@ -29,6 +42,12 @@ export default function EnrollmentPage() {
     const [jumpPage, setJumpPage] = useState('')
     const [isArchiveOpen, setIsArchiveOpen] = useState(false)
     const [showStatusDropdown, setShowStatusDropdown] = useState(false)
+
+    // Header menu dropdown
+    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
+    const [headerMenuRect, setHeaderMenuRect] = useState(null)
+    const headerMenuBtnRef = useRef(null)
+    const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
 
     const {
         enrollments, waves, loading, totalRows, globalStats, pipelineDistribution,
@@ -47,10 +66,33 @@ export default function EnrollmentPage() {
         handleBulkApprove, handleBulkReject, searchInputRef, fetchData,
         archivedEnrollments, loadingArchived, fetchArchivedEnrollments,
         handleRestoreEnrollment, handlePermanentDeleteEnrollment,
-        handleBulkArchive, handleBulkStatusChange
+        handleBulkArchive, handleBulkStatusChange,
+        isConvertOpen, setIsConvertOpen,
+        convertingEnrollment, setConvertingEnrollment,
+        converting, classes, handleConvertToStudent,
+        generateCode, debouncedSearch, selectedEnrollments, allEnrollments
     } = core
 
     const handleSearchChange = useCallback((val) => setSearchQuery(val), [setSearchQuery])
+
+    const importFileInputRef = useRef(null)
+    const ie = useEnrollmentImportExport({
+        enrollments,
+        waves,
+        fetchData,
+        addToast,
+        closeModal,
+        importFileInputRef,
+        generateCode,
+        selectedIds,
+        selectedEnrollments,
+        filterWave,
+        filterStatus,
+        filterGender,
+        filterProgram,
+        debouncedSearch,
+        sortBy
+    })
 
     return (
         <DashboardLayout title="PSB / Enrollment" subtitle="Penerimaan Santri Baru">
@@ -63,14 +105,89 @@ export default function EnrollmentPage() {
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola pendaftaran dan seleksi calon santri baru</p>
                     </div>
                     <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                        <button onClick={() => { setIsArchiveOpen(true); fetchArchivedEnrollments(); }} className="h-9 px-3 sm:px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0" title="Arsip Pendaftar">
-                            <FontAwesomeIcon icon={faBoxArchive} className="text-[10px]" />
-                            <span className="hidden sm:inline">Arsip</span>
+                        {/* Header Menu Button */}
+                        <button
+                            ref={headerMenuBtnRef}
+                            onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                            title="Aksi lainnya"
+                        >
+                            <FontAwesomeIcon icon={faSliders} />
                         </button>
-                        <button onClick={() => setIsWaveModalOpen(true)} className="h-9 px-3 sm:px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0" title="Gelombang Pendaftaran">
-                            <FontAwesomeIcon icon={faWaveSquare} className="text-[10px]" />
-                            <span className="hidden sm:inline">Gelombang</span>
-                        </button>
+
+                        {/* Portaled Header Menu Dropdown */}
+                        {isHeaderMenuOpen && headerMenuRect && createPortal(
+                            <>
+                                <div
+                                    className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px] transition-opacity duration-200 opacity-100"
+                                    onClick={() => setIsHeaderMenuOpen(false)}
+                                />
+                                <div
+                                    className="fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-all duration-200 ease-out origin-top-right opacity-100 scale-100 translate-y-0 animate-in fade-in zoom-in-95"
+                                    style={{
+                                        top: headerMenuRect.bottom + 8,
+                                        left: Math.max(10, headerMenuRect.right - 224)
+                                    }}
+                                >
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); ie.handleImportClick() }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faFileImport} className="text-xs" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Import Excel / CSV</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Unggah massal data calon santri</p>
+                                        </div>
+                                    </button>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); ie.setIsExportModalOpen(true) }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Export Data</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Cadangkan data ke Excel, CSV, PDF</p>
+                                        </div>
+                                    </button>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsStatsModalOpen(true) }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faChartPie} className="text-xs" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Statistik PSB</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Visualisasi chart data pendaftaran</p>
+                                        </div>
+                                    </button>
+
+                                    <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Manajemen</p>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsWaveModalOpen(true) }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faWaveSquare} className="text-xs" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Gelombang</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Atur periode & kuota pendaftaran</p>
+                                        </div>
+                                    </button>
+                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsArchiveOpen(true); fetchArchivedEnrollments() }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Arsip Pendaftar</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data yang diarsipkan</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </>,
+                            getPortalContainer('portal-enrollment-header-menu')
+                        )}
+
                         <button onClick={handleAdd} className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 border border-white/10 shrink-0">
                             <FontAwesomeIcon icon={faUserPlus} className="text-[10px]" />
                             <span>Tambah Pendaftar</span>
@@ -256,7 +373,20 @@ export default function EnrollmentPage() {
                 enrollment={selectedEnrollment} submitting={submitting} waves={waves} />
             <EnrollmentProfileModal isOpen={isProfileOpen} onClose={closeProfile}
                 enrollment={selectedEnrollment} onEdit={(e) => { closeProfile(); handleEdit(e) }}
-                onDelete={(e) => { closeProfile(); confirmDelete(e) }} onStatusChange={(e, s) => { closeProfile(); updateStatus(e, s) }} />
+                onDelete={(e) => { closeProfile(); confirmDelete(e) }} onStatusChange={(e, s) => { closeProfile(); updateStatus(e, s) }}
+                onConvertToStudent={(e) => {
+                    setConvertingEnrollment(e);
+                    setIsConvertOpen(true);
+                }}
+            />
+            <EnrollmentConvertModal
+                isOpen={isConvertOpen}
+                onClose={() => { setIsConvertOpen(false); setConvertingEnrollment(null); }}
+                enrollment={convertingEnrollment}
+                classes={classes}
+                onConvert={handleConvertToStudent}
+                converting={converting}
+            />
             <EnrollmentWaveModal isOpen={isWaveModalOpen} onClose={() => setIsWaveModalOpen(false)}
                 waves={waves} addToast={addToast} onRefresh={fetchData} />
             <EnrollmentArchiveModal isOpen={isArchiveOpen} onClose={() => setIsArchiveOpen(false)}
@@ -604,6 +734,77 @@ export default function EnrollmentPage() {
                     </div>
                 )
             }
+            {/* Import & Export Modals */}
+            <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".csv, .xlsx"
+                className="hidden"
+                onChange={ie.handleFileChange}
+            />
+
+            <EnrollmentImportModal
+                isOpen={ie.isImportModalOpen}
+                onClose={() => ie.setIsImportModalOpen(false)}
+                importing={ie.importing}
+                importStep={ie.importStep}
+                setImportStep={ie.setImportStep}
+                importPreview={ie.importPreview}
+                importFileName={ie.importFileName}
+                importFileInputRef={importFileInputRef}
+                importDragOver={ie.importDragOver}
+                setImportDragOver={ie.setImportDragOver}
+                processImportFile={ie.processImportFile}
+                waves={waves}
+                handleDownloadTemplate={ie.handleDownloadTemplate}
+                importFileHeaders={ie.importFileHeaders}
+                SYSTEM_COLS={ie.SYSTEM_COLS}
+                importColumnMapping={ie.importColumnMapping}
+                setImportColumnMapping={ie.setImportColumnMapping}
+                importRawData={ie.importRawData}
+                importLoading={ie.importLoading}
+                setImportLoading={ie.setImportLoading}
+                buildImportPreview={ie.buildImportPreview}
+                importIssues={ie.importIssues}
+                importValidationOpen={ie.importValidationOpen}
+                setImportValidationOpen={ie.setImportValidationOpen}
+                importProgress={ie.importProgress}
+                handleCommitImport={ie.handleCommitImport}
+                handleImportClick={ie.handleImportClick}
+                hasImportBlockingErrors={ie.hasImportBlockingErrors}
+                importReadyRows={ie.importReadyRows}
+                handleImportCellEdit={ie.handleImportCellEdit}
+                importEditCell={ie.importEditCell}
+                setImportEditCell={ie.setImportEditCell}
+                handleRemoveImportRow={ie.handleRemoveImportRow}
+                importSkipDupes={ie.importSkipDupes}
+                setImportSkipDupes={ie.setImportSkipDupes}
+                handleBulkFix={ie.handleBulkFix}
+                importDuplicates={ie.importDuplicates}
+            />
+
+            <EnrollmentExportModal
+                isOpen={ie.isExportModalOpen}
+                onClose={() => ie.setIsExportModalOpen(false)}
+                enrollments={enrollments}
+                selectedIds={selectedIds}
+                exportScope={ie.exportScope}
+                setExportScope={ie.setExportScope}
+                exportColumns={ie.exportColumns}
+                setExportColumns={ie.setExportColumns}
+                exporting={ie.exporting}
+                handleExportCSV={ie.handleExportCSV}
+                handleExportExcel={ie.handleExportExcel}
+                handleExportPDF={ie.handleExportPDF}
+                addToast={addToast}
+            />
+
+            <EnrollmentStatsModal
+                isOpen={isStatsModalOpen}
+                onClose={() => setIsStatsModalOpen(false)}
+                enrollments={allEnrollments}
+                waves={waves}
+            />
         </DashboardLayout>
     )
 }
