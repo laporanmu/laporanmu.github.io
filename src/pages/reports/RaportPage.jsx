@@ -19,6 +19,8 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import PageHeader from '../../components/ui/PageHeader'
 import { StatCard, EmptyState } from '../../components/ui/DataDisplay'
 import Modal from '../../components/ui/Modal'
+import RaportImportModal from '../../components/reports/RaportImportModal'
+import RaportExportModal from '../../components/reports/RaportExportModal'
 import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
 import { useToast } from '../../context/ToastContext'
@@ -94,6 +96,9 @@ export default function RaportPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [filterType, setFilterType] = useState('all') // all, boarding, regular
     const [isFilterOpen, setIsFilterOpen] = useState(false)
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+    const [exporting, setExporting] = useState(false)
     const [stats, setStats] = useState({ totalKelas: 0, totalSiswa: 0, totalRaport: 0, bulanIni: now.getMonth() + 1 })
     const [classProgress, setClassProgress] = useState({})
     const [showAllIncompleteBanner, setShowAllIncompleteBanner] = useState(false)
@@ -328,6 +333,7 @@ export default function RaportPage() {
     const [bulkMode, setBulkMode] = useState(false)
     const [bulkValues, setBulkValues] = useState({})
     const [bulkSelected, setBulkSelected] = useState(new Set())  // UIUX: bulk select state
+    const selectedStudentIds = useMemo(() => Array.from(bulkSelected), [bulkSelected])
     const [pendingNav, setPendingNav] = useState(null)
     const [templateOpenId, setTemplateOpenId] = useState(null) // FITUR 3: template catatan per santri
     const [catatanArabMap, setCatatanArabMap] = useState({}) // map studentId → terjemahan Arab catatan
@@ -1299,6 +1305,8 @@ export default function RaportPage() {
         }
     }, [selectedMonth, selectedYear, bulanObj, addToast, profile])
 
+
+
     // ── Import XLS
     const fileInputRef = useRef(null)
     // Update rect on scroll to keep dropdowns attached
@@ -2046,6 +2054,297 @@ export default function RaportPage() {
         } catch (e) { addToast('Gagal membuat ZIP: ' + e.message, 'error'); setZipBlast(null) }
     }, [generatePDFBlob, selectedMonth, selectedYear, selectedClass, addToast, profile])
 
+    const getSelectedOrActiveStudents = useCallback((scope) => {
+        if (scope === 'selected') {
+            return students.filter(s => selectedStudentIds.includes(s.id))
+        }
+        return students
+    }, [students, selectedStudentIds])
+
+    const handleExportCSVModal = useCallback((scope, options) => {
+        setExporting(true)
+        try {
+            const targetStudents = getSelectedOrActiveStudents(scope)
+            if (!targetStudents.length) {
+                addToast('Tidak ada data untuk diexport', 'warning')
+                return
+            }
+
+            const headerMap = {
+                nama: 'Nama',
+                nilai_akhlak: 'Akhlak',
+                nilai_ibadah: 'Ibadah',
+                nilai_kebersihan: 'Kebersihan',
+                nilai_quran: "Al-Qur'an",
+                nilai_bahasa: 'Bahasa',
+                avg: 'Rata-rata',
+                predikat: 'Predikat',
+                berat_badan: 'BB(kg)',
+                tinggi_badan: 'TB(cm)',
+                ziyadah: 'Ziyadah',
+                murojaah: "Muroja'ah",
+                hari_sakit: 'Sakit',
+                hari_izin: 'Izin',
+                hari_alpa: 'Alpa',
+                hari_pulang: 'Pulang',
+                catatan: 'Catatan'
+            }
+
+            const activeColumns = options.columns || []
+            const headers = options.includeHeader !== false ? ['No', ...activeColumns.map(col => headerMap[col] || col)] : []
+
+            const rows = targetStudents.map((s, i) => {
+                const sc = scores[s.id] || {}, ex = extras[s.id] || {}
+                const avg = calcAvg(sc)
+                const predikat = avg ? GRADE(Number(avg)).id : ''
+
+                const rowData = [i + 1]
+                activeColumns.forEach(col => {
+                    if (col === 'nama') rowData.push(s.name)
+                    else if (col === 'nilai_akhlak') rowData.push(sc.nilai_akhlak ?? '')
+                    else if (col === 'nilai_ibadah') rowData.push(sc.nilai_ibadah ?? '')
+                    else if (col === 'nilai_kebersihan') rowData.push(sc.nilai_kebersihan ?? '')
+                    else if (col === 'nilai_quran') rowData.push(sc.nilai_quran ?? '')
+                    else if (col === 'nilai_bahasa') rowData.push(sc.nilai_bahasa ?? '')
+                    else if (col === 'avg') rowData.push(avg ?? '')
+                    else if (col === 'predikat') rowData.push(predikat)
+                    else if (col === 'berat_badan') rowData.push(ex.berat_badan ?? '')
+                    else if (col === 'tinggi_badan') rowData.push(ex.tinggi_badan ?? '')
+                    else if (col === 'ziyadah') rowData.push(ex.ziyadah ?? '')
+                    else if (col === 'murojaah') rowData.push(ex.murojaah ?? '')
+                    else if (col === 'hari_sakit') rowData.push(ex.hari_sakit ?? '')
+                    else if (col === 'hari_izin') rowData.push(ex.hari_izin ?? '')
+                    else if (col === 'hari_alpa') rowData.push(ex.hari_alpa ?? '')
+                    else if (col === 'hari_pulang') rowData.push(ex.hari_pulang ?? '')
+                    else if (col === 'catatan') rowData.push(ex.catatan ?? '')
+                })
+                return rowData
+            })
+
+            const allRows = options.includeHeader !== false ? [headers, ...rows] : rows
+            const csv = allRows.map(r => r.map(escapeCsvCell).join(',')).join('\n')
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${options.fileName || 'export'}.csv`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+
+            addToast(`CSV berhasil diexport (${targetStudents.length} santri)`, 'success')
+            logAudit({
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { format: 'CSV', count: targetStudents.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, scope }
+            })
+        } catch (e) {
+            console.error(e)
+            addToast('Gagal export CSV: ' + e.message, 'error')
+        } finally {
+            setExporting(false)
+        }
+    }, [students, scores, extras, selectedClass, selectedMonth, selectedYear, addToast, selectedStudentIds, getSelectedOrActiveStudents])
+
+    const handleExportExcelModal = useCallback(async (scope, options) => {
+        setExporting(true)
+        try {
+            const targetStudents = getSelectedOrActiveStudents(scope)
+            if (!targetStudents.length) {
+                addToast('Tidak ada data untuk diexport', 'warning')
+                return
+            }
+
+            if (!window.XLSX) {
+                await new Promise((res, rej) => {
+                    const s = document.createElement('script')
+                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+                    s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
+                    document.head.appendChild(s)
+                })
+            }
+
+            const headerMap = {
+                nama: 'Nama',
+                nilai_akhlak: 'Akhlak',
+                nilai_ibadah: 'Ibadah',
+                nilai_kebersihan: 'Kebersihan',
+                nilai_quran: "Al-Qur'an",
+                nilai_bahasa: 'Bahasa',
+                avg: 'Rata-rata',
+                predikat: 'Predikat',
+                berat_badan: 'BB(kg)',
+                tinggi_badan: 'TB(cm)',
+                ziyadah: 'Ziyadah',
+                murojaah: "Muroja'ah",
+                hari_sakit: 'Sakit',
+                hari_izin: 'Izin',
+                hari_alpa: 'Alpa',
+                hari_pulang: 'Pulang',
+                catatan: 'Catatan'
+            }
+
+            const activeColumns = options.columns || []
+            const headers = options.includeHeader !== false ? ['No', ...activeColumns.map(col => headerMap[col] || col)] : []
+
+            const rows = targetStudents.map((s, i) => {
+                const sc = scores[s.id] || {}, ex = extras[s.id] || {}
+                const avg = calcAvg(sc)
+                const predikat = avg ? GRADE(Number(avg)).id : ''
+
+                const rowData = [i + 1]
+                activeColumns.forEach(col => {
+                    if (col === 'nama') rowData.push(s.name)
+                    else if (col === 'nilai_akhlak') rowData.push(sc.nilai_akhlak !== '' && sc.nilai_akhlak !== undefined ? Number(sc.nilai_akhlak) : '')
+                    else if (col === 'nilai_ibadah') rowData.push(sc.nilai_ibadah !== '' && sc.nilai_ibadah !== undefined ? Number(sc.nilai_ibadah) : '')
+                    else if (col === 'nilai_kebersihan') rowData.push(sc.nilai_kebersihan !== '' && sc.nilai_kebersihan !== undefined ? Number(sc.nilai_kebersihan) : '')
+                    else if (col === 'nilai_quran') rowData.push(sc.nilai_quran !== '' && sc.nilai_quran !== undefined ? Number(sc.nilai_quran) : '')
+                    else if (col === 'nilai_bahasa') rowData.push(sc.nilai_bahasa !== '' && sc.nilai_bahasa !== undefined ? Number(sc.nilai_bahasa) : '')
+                    else if (col === 'avg') rowData.push(avg ? Number(avg) : '')
+                    else if (col === 'predikat') rowData.push(predikat)
+                    else if (col === 'berat_badan') rowData.push(ex.berat_badan !== '' && ex.berat_badan !== undefined ? Number(ex.berat_badan) : '')
+                    else if (col === 'tinggi_badan') rowData.push(ex.tinggi_badan !== '' && ex.tinggi_badan !== undefined ? Number(ex.tinggi_badan) : '')
+                    else if (col === 'ziyadah') rowData.push(ex.ziyadah ?? '')
+                    else if (col === 'murojaah') rowData.push(ex.murojaah ?? '')
+                    else if (col === 'hari_sakit') rowData.push(ex.hari_sakit !== '' && ex.hari_sakit !== undefined ? Number(ex.hari_sakit) : '')
+                    else if (col === 'hari_izin') rowData.push(ex.hari_izin !== '' && ex.hari_izin !== undefined ? Number(ex.hari_izin) : '')
+                    else if (col === 'hari_alpa') rowData.push(ex.hari_alpa !== '' && ex.hari_alpa !== undefined ? Number(ex.hari_alpa) : '')
+                    else if (col === 'hari_pulang') rowData.push(ex.hari_pulang !== '' && ex.hari_pulang !== undefined ? Number(ex.hari_pulang) : '')
+                    else if (col === 'catatan') rowData.push(ex.catatan ?? '')
+                })
+                return rowData
+            })
+
+            const XLSX = window.XLSX
+            const allRows = options.includeHeader !== false ? [headers, ...rows] : rows
+            const ws = XLSX.utils.aoa_to_sheet(allRows)
+            ws['!cols'] = [{ wch: 4 }, ...activeColumns.map(col => ({ wch: col === 'nama' || col === 'catatan' ? 28 : 12 }))]
+
+            const wb = XLSX.utils.book_new()
+            const sheetName = `${bulanObj?.id_str || ''} ${selectedYear}`.trim().slice(0, 31)
+            XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Raport')
+            XLSX.writeFile(wb, `${options.fileName || 'export'}.xlsx`)
+
+            addToast(`XLSX berhasil diexport (${targetStudents.length} santri)`, 'success')
+            logAudit({
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { format: 'XLSX', count: targetStudents.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, scope }
+            })
+        } catch (e) {
+            console.error(e)
+            addToast('Gagal export XLSX: ' + e.message, 'error')
+        } finally {
+            setExporting(false)
+        }
+    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, selectedStudentIds, getSelectedOrActiveStudents])
+
+    const handleExportAllClassesModal = useCallback(async (customFileName) => {
+        setExporting(true)
+        try {
+            if (!window.XLSX) {
+                await new Promise((res, rej) => {
+                    const s = document.createElement('script')
+                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+                    s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
+                    document.head.appendChild(s)
+                })
+            }
+
+            const { data: allCls, error: clsErr } = await supabase.from('classes').select('id, name')
+            if (clsErr) throw clsErr
+
+            const { data: allStu, error: stuErr } = await supabase.from('students').select('id, name, class_id').is('deleted_at', null).order('name')
+            if (stuErr) throw stuErr
+
+            const { data: allRep, error: repErr } = await supabase.from('student_monthly_reports').select('*').eq('month', selectedMonth).eq('year', selectedYear)
+            if (repErr) throw repErr
+
+            const XLSX = window.XLSX
+            const wb = XLSX.utils.book_new()
+            const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
+
+            let sheetAdded = 0
+
+            for (const cls of allCls) {
+                const classStudents = allStu.filter(s => s.class_id === cls.id)
+                if (classStudents.length === 0) continue
+
+                const rows = classStudents.map((s, i) => {
+                    const rep = allRep.find(r => r.student_id === s.id) || {}
+                    const sc = { nilai_akhlak: rep.nilai_akhlak, nilai_ibadah: rep.nilai_ibadah, nilai_kebersihan: rep.nilai_kebersihan, nilai_quran: rep.nilai_quran, nilai_bahasa: rep.nilai_bahasa }
+                    const avg = calcAvg(sc)
+                    const predikat = avg ? GRADE(Number(avg)).id : ''
+
+                    return [
+                        i + 1, s.name,
+                        rep.nilai_akhlak !== null && rep.nilai_akhlak !== undefined ? Number(rep.nilai_akhlak) : '',
+                        rep.nilai_ibadah !== null && rep.nilai_ibadah !== undefined ? Number(rep.nilai_ibadah) : '',
+                        rep.nilai_kebersihan !== null && rep.nilai_kebersihan !== undefined ? Number(rep.nilai_kebersihan) : '',
+                        rep.nilai_quran !== null && rep.nilai_quran !== undefined ? Number(rep.nilai_quran) : '',
+                        rep.nilai_bahasa !== null && rep.nilai_bahasa !== undefined ? Number(rep.nilai_bahasa) : '',
+                        avg ? Number(avg) : '', predikat,
+                        rep.berat_badan !== null && rep.berat_badan !== undefined ? Number(rep.berat_badan) : '',
+                        rep.tinggi_badan !== null && rep.tinggi_badan !== undefined ? Number(rep.tinggi_badan) : '',
+                        rep.ziyadah ?? '', rep.murojaah ?? '',
+                        rep.hari_sakit !== null && rep.hari_sakit !== undefined ? Number(rep.hari_sakit) : '',
+                        rep.hari_izin !== null && rep.hari_izin !== undefined ? Number(rep.hari_izin) : '',
+                        rep.hari_alpa !== null && rep.hari_alpa !== undefined ? Number(rep.hari_alpa) : '',
+                        rep.hari_pulang !== null && rep.hari_pulang !== undefined ? Number(rep.hari_pulang) : '',
+                        rep.catatan || '',
+                    ]
+                })
+
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+                ws['!cols'] = [
+                    { wch: 4 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 8 },
+                    { wch: 10 }, { wch: 12 }, { wch: 7 }, { wch: 7 }, { wch: 12 }, { wch: 12 },
+                    { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 10 }, { wch: 30 }
+                ]
+
+                const sheetName = (cls.name || 'Kelas').replace(/[\\/?*\[\]]/g, '').substring(0, 31)
+                XLSX.utils.book_append_sheet(wb, ws, sheetName)
+                sheetAdded++
+            }
+
+            if (sheetAdded === 0) {
+                addToast('Tidak ada data siswa untuk diexport', 'warning')
+                return
+            }
+
+            const finalFileName = customFileName || `Raport_Semua_Kelas_${bulanObj?.id_str || ''}_${selectedYear}`
+            XLSX.writeFile(wb, `${finalFileName}.xlsx`)
+            addToast(`Berhasil export semua kelas (${sheetAdded} sheet)`, 'success')
+
+            logAudit({
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                newData: { format: 'XLSX_ALL_CLASSES', month: selectedMonth, year: selectedYear, filename: finalFileName }
+            })
+        } catch (err) {
+            addToast('Gagal memproses export massal: ' + err.message, 'error')
+            console.error(err)
+        } finally {
+            setExporting(false)
+        }
+    }, [selectedMonth, selectedYear, bulanObj, addToast])
+
+    const handleExportZipModal = useCallback((scope) => {
+        const targetStudents = getSelectedOrActiveStudents(scope)
+        if (!targetStudents.length) {
+            addToast('Tidak ada data untuk diexport', 'warning')
+            return
+        }
+        runZipBlast(targetStudents, null)
+    }, [getSelectedOrActiveStudents, runZipBlast, addToast])
+
+    const handlePrintAllModal = useCallback((scope) => {
+        const targetStudents = getSelectedOrActiveStudents(scope)
+        if (!targetStudents.length) {
+            addToast('Tidak ada data untuk dicetak', 'warning')
+            return
+        }
+        openPrintWindow(targetStudents)
+    }, [getSelectedOrActiveStudents, openPrintWindow, addToast])
+
     // ─── Render helpers ───────────────────────────────────────────────────────
 
     useEffect(() => {
@@ -2606,12 +2905,10 @@ export default function RaportPage() {
 
                             {/* Export Group (Grid on mobile, flex on desktop) */}
                             <div className="grid grid-cols-4 md:flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 md:pb-0">
-                                <button onClick={exportCSV} className="h-9 md:px-4 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 text-[10px] font-black flex items-center justify-center transition-all hover:bg-teal-500/20">CSV</button>
-                                <button onClick={exportXLS} className="h-9 md:px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[10px] font-black flex items-center justify-center transition-all hover:bg-emerald-500/20" title="Export Kelas Ini (XLS)">XLS</button>
-                                <button onClick={() => {
-                                    const completeds = students.filter(s => isComplete(scores[s.id] || {}))
-                                    if (completeds.length) runZipBlast(completeds, null)
-                                }} className="h-9 md:px-4 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 text-[10px] font-black flex items-center justify-center transition-all hover:bg-sky-500/20">ZIP</button>
+                                <button onClick={() => setIsExportModalOpen(true)} className="col-span-3 md:col-span-auto h-9 md:px-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-indigo-500/20">
+                                    <FontAwesomeIcon icon={faFileExport} className="text-[10px]" />
+                                    <span>Export</span>
+                                </button>
                                 <button onClick={() => {
                                     const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
                                     if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
@@ -3973,6 +4270,15 @@ export default function RaportPage() {
                             )}
 
                             <button
+                                ref={headerMenuBtnRef}
+                                onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                                title="Data & Backup Operations"
+                            >
+                                <FontAwesomeIcon icon={faSliders} />
+                            </button>
+
+                            <button
                                 ref={shortcutBtnRef}
                                 onClick={() => { if (!showShortcutModal) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setShowShortcutModal(v => !v) }}
                                 className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center text-sm transition-all active:scale-95
@@ -3983,15 +4289,6 @@ export default function RaportPage() {
                                 title="Keyboard Shortcuts (?)"
                             >
                                 <FontAwesomeIcon icon={faKeyboard} />
-                            </button>
-
-                            <button
-                                ref={headerMenuBtnRef}
-                                onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
-                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                                title="Data & Backup Operations"
-                            >
-                                <FontAwesomeIcon icon={faSliders} />
                             </button>
 
                             <button onClick={() => { setTutorialStep(0); setShowTutorialModal(true) }} aria-label="Panduan penggunaan" className="h-9 px-3 gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center justify-center hover:bg-amber-500/15 transition-all" title="Panduan & Tutorial">
@@ -4079,55 +4376,80 @@ export default function RaportPage() {
                                 left: Math.max(10, headerMenuRect.right - 224)
                             }}
                         >
-                            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-                                <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Data & Backup</p>
-                            </div>
-                            
                             <div className="p-2 space-y-1">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-1">Operasi</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-1">Data</p>
 
-                            {/* Import Section */}
-                            <input type="file" ref={fileInputRef} onChange={importXLS} accept=".xlsx, .xls" className="hidden" />
-                            <button onClick={() => { setIsHeaderMenuOpen(false); fileInputRef.current?.click() }}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <FontAwesomeIcon icon={faFileImport} className="text-xs" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[11px] font-black leading-tight">Import XLS</p>
-                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Restore data dari file Excel backup</p>
-                                </div>
-                            </button>
+                                {/* Import Section */}
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsImportModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileImport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Import XLS</p>
+                                        <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Restore data dari file Excel backup</p>
+                                    </div>
+                                </button>
 
-                            <button onClick={() => { setIsHeaderMenuOpen(false); exportAllClassesXLS() }}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
-                                <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <FontAwesomeIcon icon={faFileExport} className="text-xs" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[11px] font-black leading-tight">Export Semua</p>
-                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Backup seluruh kelas bulan ini ke XLS</p>
-                                </div>
-                            </button>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Export Data</p>
+                                        <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Cadangkan, backup, atau cetak massal</p>
+                                    </div>
+                                </button>
 
-                            <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
-                            <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Arsip</p>
+                                <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                                <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
 
-                            <button onClick={() => { setIsHeaderMenuOpen(false); setStep(4); loadArchive() }}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
-                                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[11px] font-black leading-tight">Riwayat Raport</p>
-                                    <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat dan cetak arsip bulan sebelumnya</p>
-                                </div>
-                            </button>
+                                <button onClick={() => { setIsHeaderMenuOpen(false); setStep(4); loadArchive() }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[11px] font-black leading-tight">Riwayat Raport</p>
+                                        <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat dan cetak arsip bulan sebelumnya</p>
+                                    </div>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </>,
-                document.body
-            )}
+                    </>,
+                    document.body
+                )}
+
+                {/* SaaS Raport Import Modal */}
+                <RaportImportModal
+                    isOpen={isImportModalOpen}
+                    onClose={() => setIsImportModalOpen(false)}
+                    selectedMonth={selectedMonth}
+                    selectedYear={selectedYear}
+                    musyrif={musyrif}
+                    profile={profile}
+                    onSuccess={loadStudents}
+                    activeClassName={selectedClass?.name}
+                />
+
+                {/* SaaS Raport Export Modal */}
+                <RaportExportModal
+                    isOpen={isExportModalOpen}
+                    onClose={() => setIsExportModalOpen(false)}
+                    students={students}
+                    selectedStudentIds={selectedStudentIds}
+                    activeClassName={selectedClass?.name}
+                    selectedMonthName={bulanObj?.id_str}
+                    selectedYear={selectedYear}
+                    exporting={exporting}
+                    handleExportCSV={handleExportCSVModal}
+                    handleExportExcel={handleExportExcelModal}
+                    handleExportAllClasses={handleExportAllClassesModal}
+                    handleExportZip={handleExportZipModal}
+                    handlePrintAll={handlePrintAllModal}
+                    addToast={addToast}
+                />
 
                 {/* ── Hidden print container ── */}
                 {printQueue.length > 0 && (

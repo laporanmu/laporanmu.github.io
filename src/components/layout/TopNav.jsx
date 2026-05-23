@@ -75,10 +75,10 @@ const FINANCE_ITEMS = [
 ]
 
 const REPORTS_ITEMS = [
-    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen izin keluar masuk area santri", color: "bg-red-500/10 text-red-500" },
-    { to: "/raport", label: "Rekap Poin Bulanan", icon: faClipboardList, desc: "Laporan perkembangan poin & prestasi bulanan", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/attendance", label: "Laporan Absensi", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
-    { to: "/behavior", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
+    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen Izin Keluar Masuk Santri", color: "bg-red-500/10 text-red-500" },
+    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Rekapitulasi Akademik Santri", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/attendance", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekapitulasi Absensi Santri", color: "bg-emerald-500/10 text-emerald-600" },
+    { to: "/behavior", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Rekapitulasi Pelanggaran & Prestasi Santri", color: "bg-orange-500/10 text-orange-500" },
 ]
 
 // Admin-only items — hanya tampil untuk developer & admin

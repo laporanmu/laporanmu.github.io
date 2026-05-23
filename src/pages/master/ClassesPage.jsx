@@ -13,6 +13,7 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Modal from '../../components/ui/Modal'
 import Breadcrumb from '../../components/ui/Breadcrumb'
+import PageHeader from '../../components/ui/PageHeader'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
@@ -860,13 +861,13 @@ export default function ClassesPage() {
                 )}
 
                 {/* ── Header ── */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                    <div>
-                        <Breadcrumb badge="Master Data" items={['Class Management']} className="mb-1" />
-                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Data Kelas</h1>
-                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} data kelas dalam sistem.</p>
-                    </div>
-                    <div className="flex gap-2 items-center">
+                <PageHeader
+                    badge="Master Data"
+                    breadcrumbs={['Class Management']}
+                    title="Data Kelas"
+                    subtitle={`Kelola ${stats.total} data kelas dalam sistem.`}
+                    actions={
+                        <>
                         {/* Header Menu Button */}
                         <button
                             ref={headerMenuBtnRef}
@@ -1021,8 +1022,9 @@ export default function ClassesPage() {
                             <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
                             <span>{canEdit ? 'Tambah Kelas' : 'Read-only'}</span>
                         </button>
-                    </div>
-                </div>
+                        </>
+                    }
+                />
 
                 {/* ── Stats ── */}
                 <StatsCarousel count={STAT_CARD_COUNT} cols={4}>

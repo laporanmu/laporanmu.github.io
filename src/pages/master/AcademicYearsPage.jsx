@@ -12,6 +12,7 @@ import {
     faFingerprint, faTimeline, faTimes, faFileExport, faEye, faEyeSlash
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
+import PageHeader from '../../components/ui/PageHeader'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
@@ -1197,13 +1198,13 @@ export default function AcademicYearsPage() {
                 )}
 
                 {/* ── Header Row ── */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                    <div>
-                        <Breadcrumb badge="Master Data" items={['Academic Cycle']} className="mb-1" />
-                        <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Tahun Pelajaran</h1>
-                        <p className="text-[var(--color-text-muted)] text-[11px] mt-1 font-medium">Kelola {stats.total} periode akademik dalam ekosistem.</p>
-                    </div>
-                    <div className="flex gap-2 items-center">
+                <PageHeader
+                    badge="Master Data"
+                    breadcrumbs={['Academic Cycle']}
+                    title="Tahun Pelajaran"
+                    subtitle={`Kelola ${stats.total} periode akademik dalam ekosistem.`}
+                    actions={
+                        <>
                         {/* Header Menu Button */}
                         <button
                             ref={headerMenuBtnRef}
@@ -1327,8 +1328,9 @@ export default function AcademicYearsPage() {
                                 <span>Tambah Periode</span>
                             </button>
                         )}
-                    </div>
-                </div>
+                        </>
+                    }
+                />
 
                 {/* ── Stats ── */}
                 <StatsCarousel count={STAT_CARD_COUNT} cols={4}>

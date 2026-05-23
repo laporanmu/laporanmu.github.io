@@ -378,8 +378,8 @@ function TeacherSearch({ teacherList, value, onChange, label }) {
   const filtered = useMemo(() => {
     if (!query.trim()) return teacherList
     const q = query.toLowerCase()
-    return teacherList.filter(t => 
-      t.name.toLowerCase().includes(q) || 
+    return teacherList.filter(t =>
+      t.name.toLowerCase().includes(q) ||
       (t.nbm || '').toLowerCase().includes(q) ||
       (t.nip || '').toLowerCase().includes(q) ||
       (t.nik || '').toLowerCase().includes(q) ||
@@ -1779,7 +1779,7 @@ export default function GatePage() {
         <PageHeader
           badge="Reports"
           breadcrumbs={['Gate Monitor']}
-          title="Log Keluar Masuk"
+          title="Portal Keluar Masuk"
           subtitle="Pencatatan real-time warga sekolah & tamu eksternal."
           actions={
             <div className="flex items-center gap-3">
