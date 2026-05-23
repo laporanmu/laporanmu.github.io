@@ -855,17 +855,19 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
                     .eq('id', waveId)
                     .single()
 
-                const quota = wave?.metadata?.quota || wave?.quota || 0
-                const { data: accepted } = await supabase
-                    .from('enrollments')
-                    .select('id, metadata')
-                    .in('status', ['diterima', 'daftar_ulang'])
-                    .eq('wave_id', waveId)
-                    .is('metadata->>deleted_at', null)
+                const quota = Number(wave?.metadata?.quota || wave?.quota || 0)
+                if (quota > 0) {
+                    const { data: accepted } = await supabase
+                        .from('enrollments')
+                        .select('id, metadata')
+                        .in('status', ['diterima', 'daftar_ulang'])
+                        .eq('wave_id', waveId)
+                        .is('metadata->>deleted_at', null)
 
-                const activeAccepted = (accepted || []).filter(e => !e.metadata?.is_waiting_list && e.id !== enrollment.id)
-                const activeCount = activeAccepted.length
-                isWaitingList = activeCount >= quota
+                    const activeAccepted = (accepted || []).filter(e => !e.metadata?.is_waiting_list && e.id !== enrollment.id)
+                    const activeCount = activeAccepted.length
+                    isWaitingList = activeCount >= quota
+                }
             }
 
             const meta = enrollment.metadata || {}
@@ -931,17 +933,19 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
                     .eq('id', waveId)
                     .single()
 
-                const quota = wave?.metadata?.quota || wave?.quota || 0
-                const { data: accepted } = await supabase
-                    .from('enrollments')
-                    .select('id, metadata')
-                    .in('status', ['diterima', 'daftar_ulang'])
-                    .eq('wave_id', waveId)
-                    .is('metadata->>deleted_at', null)
+                const quota = Number(wave?.metadata?.quota || wave?.quota || 0)
+                if (quota > 0) {
+                    const { data: accepted } = await supabase
+                        .from('enrollments')
+                        .select('id, metadata')
+                        .in('status', ['diterima', 'daftar_ulang'])
+                        .eq('wave_id', waveId)
+                        .is('metadata->>deleted_at', null)
 
-                const activeAccepted = (accepted || []).filter(e => !e.metadata?.is_waiting_list && e.id !== assessmentEnrollment.id)
-                const activeCount = activeAccepted.length
-                isWaitingList = activeCount >= quota
+                    const activeAccepted = (accepted || []).filter(e => !e.metadata?.is_waiting_list && e.id !== assessmentEnrollment.id)
+                    const activeCount = activeAccepted.length
+                    isWaitingList = activeCount >= quota
+                }
             }
 
             const meta = assessmentEnrollment.metadata || {}
