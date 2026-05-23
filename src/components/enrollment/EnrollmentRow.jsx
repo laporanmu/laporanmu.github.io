@@ -7,28 +7,74 @@ import {
     faChevronRight
 } from '@fortawesome/free-solid-svg-icons'
 import {
-    getStatusConfig, getQuranLevelConfig, getProgramLabel, formatEnrollmentDate
+    getStatusConfig, getQuranLevelConfig, getProgramLabel, formatEnrollmentDate, REQUIRED_DOCUMENTS
 } from '../../utils/enrollment/enrollmentConstants'
 
 // ─── Status Badge ──────────────────────────────────────────────────────────────
-const StatusBadge = memo(({ status }) => {
+const StatusBadge = memo(({ enrollment }) => {
+    const status = enrollment?.status || 'mendaftar'
+    const isWaitingList = enrollment?.metadata?.is_waiting_list
+    const acceptanceConfirmed = enrollment?.metadata?.acceptance_confirmed
+
+    if (isWaitingList && status === 'diterima') {
+        return (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-500" title="Kandidat masuk daftar cadangan karena kuota penuh">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Waiting List
+            </span>
+        )
+    }
+
     const cfg = getStatusConfig(status)
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${cfg.color}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-            {cfg.label}
-        </span>
+        <div className="flex flex-col items-start lg:items-end gap-1">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${cfg.color}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                {cfg.label}
+            </span>
+            {acceptanceConfirmed && (status === 'diterima' || status === 'daftar_ulang') && (
+                <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded w-max">
+                    Bersedia ✓
+                </span>
+            )}
+        </div>
     )
 })
 StatusBadge.displayName = 'StatusBadge'
+
+const PaymentDots = memo(({ enrollment }) => {
+    const payment = enrollment.metadata?.payment || {}
+    const regStatus = payment.registration?.status || 'belum'
+    const reregStatus = payment.reregistration?.status || 'belum'
+    const equipStatus = payment.equipment?.status || 'belum'
+
+    const getDotClass = (status) => {
+        if (status === 'lunas') return 'bg-emerald-500 shadow-sm border border-emerald-500/20'
+        if (status === 'pending') return 'bg-amber-500 shadow-sm border border-amber-500/20 animate-pulse'
+        return 'bg-gray-400/40 border border-gray-400/20'
+    }
+
+    return (
+        <div className="flex items-center gap-1 cursor-help shrink-0 ml-1.5" title="Status Pembayaran (Pendaftaran, Daftar Ulang, Perlengkapan)">
+            <span className={`w-1.5 h-1.5 rounded-full ${getDotClass(regStatus)}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${getDotClass(reregStatus)}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${getDotClass(equipStatus)}`} />
+        </div>
+    )
+})
+PaymentDots.displayName = 'PaymentDots'
 
 // ─── Desktop Table Row ────────────────────────────────────────────────────────
 export const EnrollmentRow = memo(({
     enrollment, isSelected, onToggleSelect, onView, onEdit,
     onDelete, onStatusChange, canEdit = true
 }) => {
-    const { name, gender, registration_number, school_origin, program, status, created_at, quran_level, wave_id } = enrollment
+    const { name, gender, registration_number, school_origin, program, status, created_at, quran_level, wave_id, documents } = enrollment
     const quranCfg = getQuranLevelConfig(quran_level)
+
+    const docsCount = REQUIRED_DOCUMENTS.length
+    const presentDocs = REQUIRED_DOCUMENTS.filter(d => documents?.[d.id]).length
+    const missingCount = docsCount - presentDocs
 
     return (
         <tr className={`group transition-colors duration-150 ${isSelected ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-alt)]/50'}`}>
@@ -59,6 +105,12 @@ export const EnrollmentRow = memo(({
                         <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-60 tracking-wider">{registration_number}</span>
                             <FontAwesomeIcon icon={gender === 'L' ? faMars : faVenus} className={`text-[8px] ${gender === 'L' ? 'text-blue-400' : 'text-pink-400'}`} />
+                            {missingCount === 0 ? (
+                                <span className="ml-1 text-[8px] font-bold bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-500/20">Berkas Lengkap</span>
+                            ) : (
+                                <span className="ml-1 text-[8px] font-bold bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded border border-rose-500/20">Kurang {missingCount} Berkas</span>
+                            )}
+                            <PaymentDots enrollment={enrollment} />
                         </div>
                     </div>
                 </div>
@@ -87,7 +139,7 @@ export const EnrollmentRow = memo(({
 
             {/* Status */}
             <td className="py-3 px-3">
-                <StatusBadge status={status} />
+                <StatusBadge enrollment={enrollment} />
             </td>
 
             {/* Tanggal Daftar */}
@@ -154,8 +206,12 @@ export const EnrollmentMobileCard = memo(({
     enrollment, isSelected, onToggleSelect, onView, onEdit,
     onStatusChange, canEdit = true
 }) => {
-    const { name, gender, registration_number, school_origin, program, status, created_at, quran_level, hafalan_quran } = enrollment
+    const { name, gender, registration_number, school_origin, program, status, created_at, quran_level, hafalan_quran, documents } = enrollment
     const quranCfg = getQuranLevelConfig(quran_level)
+
+    const docsCount = REQUIRED_DOCUMENTS.length
+    const presentDocs = REQUIRED_DOCUMENTS.filter(d => documents?.[d.id]).length
+    const missingCount = docsCount - presentDocs
 
     return (
         <div
@@ -189,11 +245,17 @@ export const EnrollmentMobileCard = memo(({
                     <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[9px] font-bold text-[var(--color-text-muted)] opacity-50 tracking-wider">{registration_number}</span>
                         <FontAwesomeIcon icon={gender === 'L' ? faMars : faVenus} className={`text-[8px] ${gender === 'L' ? 'text-blue-400' : 'text-pink-400'}`} />
+                        {missingCount === 0 ? (
+                            <span className="ml-1 text-[8px] font-bold bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-500/20">Berkas Lengkap</span>
+                        ) : (
+                            <span className="ml-1 text-[8px] font-bold bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded border border-rose-500/20">Kurang {missingCount} Berkas</span>
+                        )}
+                        <PaymentDots enrollment={enrollment} />
                     </div>
                 </div>
 
                 {/* Status Badge */}
-                <StatusBadge status={status} />
+                <StatusBadge enrollment={enrollment} />
             </div>
 
             {/* Details Grid */}

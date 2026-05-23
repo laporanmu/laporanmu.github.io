@@ -6,7 +6,8 @@ import {
     faMars, faVenus, faSliders, faRotateLeft, faXmark, faWaveSquare,
     faSquareCheck, faCheckDouble, faBookQuran, faSearch, faSchool,
     faHourglassHalf, faArrowRight, faTrash, faBoxArchive, faChevronDown,
-    faFileExport, faFileExcel, faFilePdf, faChartPie, faFileImport
+    faFileExport, faFileExcel, faFilePdf, faChartPie, faFileImport,
+    faClipboardCheck, faGraduationCap
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
@@ -26,8 +27,10 @@ import EnrollmentConvertModal from '../../components/enrollment/EnrollmentConver
 import EnrollmentImportModal from '../../components/enrollment/EnrollmentImportModal'
 import EnrollmentExportModal from '../../components/enrollment/EnrollmentExportModal'
 import EnrollmentStatsModal from '../../components/enrollment/EnrollmentStatsModal'
+import EnrollmentAssessmentModal from '../../components/enrollment/EnrollmentAssessmentModal'
+import EnrollmentPaymentModal from '../../components/enrollment/EnrollmentPaymentModal'
 import { useEnrollmentImportExport } from '../../hooks/enrollment/useEnrollmentImportExport'
-import { STATUS_CONFIG, PROGRAM_OPTIONS } from '../../utils/enrollment/enrollmentConstants'
+import { STATUS_CONFIG, PROGRAM_OPTIONS, REQUIRED_DOCUMENTS } from '../../utils/enrollment/enrollmentConstants'
 
 function getPortalContainer(id) {
     let el = document.getElementById(id)
@@ -42,6 +45,9 @@ export default function EnrollmentPage() {
     const [jumpPage, setJumpPage] = useState('')
     const [isArchiveOpen, setIsArchiveOpen] = useState(false)
     const [showStatusDropdown, setShowStatusDropdown] = useState(false)
+    const [validationModal, setValidationModal] = useState({ isOpen: false, type: '', missingDocs: [], enrollment: null, nextStatus: '' })
+    const [isPaymentOpen, setIsPaymentOpen] = useState(false)
+    const [paymentEnrollment, setPaymentEnrollment] = useState(null)
 
     // Header menu dropdown
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
@@ -68,12 +74,35 @@ export default function EnrollmentPage() {
         handleRestoreEnrollment, handlePermanentDeleteEnrollment,
         handleBulkArchive, handleBulkStatusChange,
         isConvertOpen, setIsConvertOpen,
+        isAssessmentOpen, setIsAssessmentOpen,
+        assessmentEnrollment, handleAssessmentSubmit,
         convertingEnrollment, setConvertingEnrollment,
         converting, classes, handleConvertToStudent,
-        generateCode, debouncedSearch, selectedEnrollments, allEnrollments
+        generateCode, debouncedSearch, selectedEnrollments, allEnrollments,
+        updateNotes, updatePaymentStatus
     } = core
 
+    const activePaymentEnrollment = paymentEnrollment ? enrollments.find(e => e.id === paymentEnrollment.id) || paymentEnrollment : null
+
     const handleSearchChange = useCallback((val) => setSearchQuery(val), [setSearchQuery])
+
+    const handleStatusChangeWithValidation = useCallback((enrollment, nextStatus) => {
+        const currentStatus = enrollment.status;
+
+        // Validasi 1: Mendaftar -> Verifikasi (Membutuhkan dokumen kelengkapan fisik)
+        if (currentStatus === 'mendaftar' && nextStatus === 'verifikasi') {
+            const missingDocs = REQUIRED_DOCUMENTS.filter(doc => !enrollment.documents?.[doc.id]);
+            if (missingDocs.length > 0) {
+                setValidationModal({ isOpen: true, type: 'docs', missingDocs, enrollment, nextStatus });
+                return;
+            }
+        }
+
+        // Validasi 2: dihapus karena sudah di-handle oleh AssessmentModal di useEnrollmentCore
+
+        // Lolos validasi, eksekusi pembaruan
+        updateStatus(enrollment, nextStatus);
+    }, [updateStatus]);
 
     const importFileInputRef = useRef(null)
     const ie = useEnrollmentImportExport({
@@ -340,7 +369,7 @@ export default function EnrollmentPage() {
                                 ) : enrollments.map(e => (
                                     <EnrollmentRow key={e.id} enrollment={e} isSelected={selectedIdSet.has(e.id)}
                                         onToggleSelect={toggleSelect} onView={handleViewProfile} onEdit={handleEdit}
-                                        onDelete={confirmDelete} onStatusChange={updateStatus} />
+                                        onDelete={confirmDelete} onStatusChange={handleStatusChangeWithValidation} />
                                 ))}
                             </tbody>
                         </table>
@@ -355,7 +384,7 @@ export default function EnrollmentPage() {
                         ) : enrollments.map(e => (
                             <EnrollmentMobileCard key={e.id} enrollment={e} isSelected={selectedIdSet.has(e.id)}
                                 onToggleSelect={toggleSelect} onView={handleViewProfile} onEdit={handleEdit}
-                                onStatusChange={updateStatus} />
+                                onStatusChange={handleStatusChangeWithValidation} />
                         ))}
                     </div>
 
@@ -373,10 +402,16 @@ export default function EnrollmentPage() {
                 enrollment={selectedEnrollment} submitting={submitting} waves={waves} />
             <EnrollmentProfileModal isOpen={isProfileOpen} onClose={closeProfile}
                 enrollment={selectedEnrollment} onEdit={(e) => { closeProfile(); handleEdit(e) }}
-                onDelete={(e) => { closeProfile(); confirmDelete(e) }} onStatusChange={(e, s) => { closeProfile(); updateStatus(e, s) }}
+                onDelete={(e) => { closeProfile(); confirmDelete(e) }} onStatusChange={(e, s) => { closeProfile(); handleStatusChangeWithValidation(e, s) }}
                 onConvertToStudent={(e) => {
                     setConvertingEnrollment(e);
                     setIsConvertOpen(true);
+                }}
+                onUpdateNotes={updateNotes}
+                onUpdatePaymentStatus={updatePaymentStatus}
+                onManagePayment={(e) => {
+                    setPaymentEnrollment(e);
+                    setIsPaymentOpen(true);
                 }}
             />
             <EnrollmentConvertModal
@@ -393,6 +428,64 @@ export default function EnrollmentPage() {
                 archivedEnrollments={archivedEnrollments} loadingArchived={loadingArchived}
                 fetchArchivedEnrollments={fetchArchivedEnrollments} handleRestoreEnrollment={handleRestoreEnrollment}
                 handlePermanentDeleteEnrollment={handlePermanentDeleteEnrollment} addToast={addToast} />
+
+            {/* Validation Guard Modal */}
+            <Modal
+                isOpen={validationModal.isOpen}
+                onClose={() => setValidationModal(prev => ({ ...prev, isOpen: false }))}
+                title={validationModal.type === 'docs' ? "Dokumen Belum Lengkap" : "Peringatan Nilai Tes"}
+                description={validationModal.type === 'docs' ? 'Ada dokumen fisik pendaftaran yang kurang' : 'Nilai Tes belum diisi untuk santri ini'}
+                icon={validationModal.type === 'docs' ? faClipboardCheck : faGraduationCap}
+                iconBg="bg-amber-500/10"
+                iconColor="text-amber-500"
+                size="sm"
+                mobileVariant="bottom-sheet"
+                footer={
+                    <div className="flex items-center w-full gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setValidationModal(prev => ({ ...prev, isOpen: false }))}
+                            className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
+                        >
+                            Batal
+                        </button>
+                        <div className="flex-1" />
+                        <button
+                            type="button"
+                            onClick={() => {
+                                updateStatus(validationModal.enrollment, validationModal.nextStatus);
+                                setValidationModal(prev => ({ ...prev, isOpen: false }));
+                            }}
+                            className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 shrink-0"
+                        >
+                            <FontAwesomeIcon icon={faArrowRight} className="text-[11px] opacity-70" />
+                            Tetap Lanjutkan
+                        </button>
+                    </div>
+                }
+            >
+                <div className="px-1 space-y-3">
+                    <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                        {validationModal.type === 'docs'
+                            ? `Siswa atas nama `
+                            : `Siswa atas nama `}
+                        <span className="text-amber-600 font-black px-1.5 py-0.5 bg-amber-500/10 rounded-md border border-amber-500/20">{validationModal.enrollment?.name}</span>
+                        {validationModal.type === 'docs'
+                            ? ` belum melengkapi dokumen berikut:`
+                            : ` belum memiliki riwayat Nilai Tes/Seleksi. Apakah Anda yakin ingin meluluskannya secara langsung?`}
+                    </p>
+                    {validationModal.type === 'docs' && validationModal.missingDocs.length > 0 && (
+                        <div className="flex flex-col gap-1.5 py-1">
+                            {validationModal.missingDocs.map((doc, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-[10px] font-bold text-[var(--color-text)] bg-[var(--color-surface-alt)] px-3 py-2 rounded-lg border border-[var(--color-border)]">
+                                    <FontAwesomeIcon icon={faXmarkCircle} className="text-rose-500 shrink-0" />
+                                    {doc.name}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </Modal>
 
             {/* Archive confirmation */}
             <Modal isOpen={activeModal === 'delete'} onClose={closeModal} title="Arsipkan Pendaftar" maxWidth="max-w-sm">
@@ -804,6 +897,22 @@ export default function EnrollmentPage() {
                 onClose={() => setIsStatsModalOpen(false)}
                 enrollments={allEnrollments}
                 waves={waves}
+            />
+
+            <EnrollmentAssessmentModal
+                isOpen={isAssessmentOpen}
+                onClose={() => setIsAssessmentOpen(false)}
+                onSubmit={handleAssessmentSubmit}
+                enrollment={assessmentEnrollment}
+                submitting={submitting}
+            />
+
+            <EnrollmentPaymentModal
+                isOpen={isPaymentOpen}
+                onClose={() => { setIsPaymentOpen(false); setPaymentEnrollment(null); }}
+                enrollment={activePaymentEnrollment}
+                onUpdateStatus={updatePaymentStatus}
+                submitting={submitting}
             />
         </DashboardLayout>
     )

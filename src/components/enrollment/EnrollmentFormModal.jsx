@@ -4,12 +4,12 @@ import {
     faArrowRight, faArrowLeft, faSave, faSpinner, faCheckCircle,
     faUser, faUsers, faFileAlt, faClipboardCheck, faMars, faVenus,
     faSchool, faBookQuran, faHeart, faGraduationCap, faMapMarkerAlt,
-    faCalendarAlt, faIdCard, faPhone, faCamera, faSuitcase, faCheck, faTrash
+    faCalendarAlt, faIdCard, faPhone, faCamera, faSuitcase, faCheck, faCalendarDay
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import RichSelect from '../ui/RichSelect'
 import {
-    PROGRAM_OPTIONS, QURAN_LEVELS, UNIFORM_SIZES
+    PROGRAM_OPTIONS, QURAN_LEVELS, UNIFORM_SIZES, TEST_SCORES, REQUIRED_DOCUMENTS
 } from '../../utils/enrollment/enrollmentConstants'
 import {
     EDUCATION_LEVELS, OCCUPATION_LIST
@@ -25,7 +25,7 @@ const STEPS = [
 const INITIAL_FORM = {
     name: '', gender: 'L', birth_place: '', birth_date: '', nisn: '',
     school_origin: '', previous_pesantren: '', phone: '', photo_url: '',
-    program: 'reguler', quran_level: 'belum', hafalan_quran: 0,
+    program: 'reguler', quran_level: 'belum', hafalan_quran: 0, test_score: '',
     father_name: '', father_occupation: '', father_education: '', father_phone: '',
     mother_name: '', mother_occupation: '', mother_education: '', mother_phone: '',
     guardian_name: '', guardian_relation: '', guardian_phone: '',
@@ -415,40 +415,46 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                                     <FontAwesomeIcon icon={faBookQuran} className="text-sm" />
                                 </div>
                                 <div>
-                                    <p className="text-[12px] font-bold text-[var(--color-text)]">Kemampuan Al-Quran</p>
-                                    <p className="text-[9px] text-[var(--color-text-muted)]">Tingkat bacaan dan hafalan saat ini</p>
+                                    <p className="text-[12px] font-bold text-[var(--color-text)]">Data Akademik & Seleksi</p>
+                                    <p className="text-[9px] text-[var(--color-text-muted)]">Kemampuan Al-Quran dan Hasil Tes</p>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Tingkat Bacaan</label>
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                        {QURAN_LEVELS.map(q => (
-                                            <button
-                                                key={q.id}
-                                                type="button"
-                                                onClick={() => setField('quran_level', q.id)}
-                                                className={`px-3 py-2 rounded-xl border text-[11px] font-bold transition-all duration-200 ${form.quran_level === q.id ? `${q.color} border-current ring-1 ring-current/25 shadow-sm` : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
-                                            >
-                                                {q.name}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <RichSelect
+                                        value={form.quran_level}
+                                        onChange={v => setField('quran_level', v)}
+                                        options={QURAN_LEVELS}
+                                        placeholder="Pilih tingkat bacaan..."
+                                        icon={faBookQuran}
+                                    />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Hafalan (Juz)</label>
-                                    <div className="flex items-center gap-3 h-11 px-2 border border-[var(--color-border)] rounded-xl bg-[var(--color-surface-alt)]/20">
+                                    <div className="flex items-center gap-3 h-11 px-3 border border-[var(--color-border)] rounded-xl bg-[var(--color-surface-alt)]/20 overflow-hidden">
                                         <input
                                             type="range"
                                             min="0"
                                             max="30"
                                             value={form.hafalan_quran}
                                             onChange={e => setField('hafalan_quran', Number(e.target.value))}
-                                            className="flex-1 accent-emerald-500 h-1 rounded-lg cursor-pointer"
+                                            className="min-w-0 w-full flex-1 accent-emerald-500 h-1 rounded-lg cursor-pointer"
                                         />
-                                        <span className="text-base font-black text-emerald-600 w-8 text-center tabular-nums">{form.hafalan_quran}</span>
+                                        <span className="text-sm font-black text-emerald-600 w-6 text-right tabular-nums shrink-0">{form.hafalan_quran}</span>
                                     </div>
-                                    <p className="text-[9px] text-[var(--color-text-muted)] mt-1">Jumlah juz yang sudah dihafal</p>
+                                    <p className="text-[9px] text-[var(--color-text-muted)] mt-1 hidden lg:block truncate" title="Jumlah juz yang sudah dihafal">Juz yang dihafal</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 opacity-50">Nilai Tes / Seleksi</label>
+                                    <RichSelect
+                                        value={form.test_score}
+                                        onChange={v => setField('test_score', v)}
+                                        options={TEST_SCORES}
+                                        placeholder="Belum Dites"
+                                        extraOption={{ id: '', name: 'Belum Dites' }}
+                                        icon={faClipboardCheck}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -711,6 +717,37 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                             </div>
                         </div>
 
+                        {/* Document Checklist */}
+                        <div className="p-4 border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] space-y-4">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center">
+                                    <FontAwesomeIcon icon={faFileAlt} className="text-sm" />
+                                </div>
+                                <div>
+                                    <p className="text-[12px] font-bold text-[var(--color-text)]">Kelengkapan Dokumen Fisik</p>
+                                    <p className="text-[9px] text-[var(--color-text-muted)]">Ceklis dokumen yang sudah diserahkan</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {REQUIRED_DOCUMENTS.map(doc => {
+                                    const isChecked = !!form.documents?.[doc.id]
+                                    return (
+                                        <button
+                                            key={doc.id}
+                                            type="button"
+                                            onClick={() => setField('documents', { ...(form.documents || {}), [doc.id]: !isChecked })}
+                                            className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${isChecked ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 ring-1 ring-emerald-500/20' : 'border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]'}`}
+                                        >
+                                            <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border transition-colors ${isChecked ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-[var(--color-border)] text-transparent bg-[var(--color-surface-alt)]'}`}>
+                                                <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                                            </div>
+                                            <span className="text-[11px] font-bold">{doc.name}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
                         <div className="relative group">
                             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-1 mb-1 block opacity-50">No. HP Utama (Konfirmasi WhatsApp)</label>
                             <div className="relative">
@@ -748,6 +785,7 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                                 <div><span className="opacity-50">Asal Sekolah:</span> <span className="font-bold">{form.school_origin}</span></div>
                                 <div><span className="opacity-50">Program:</span> <span className="font-bold">{PROGRAM_OPTIONS.find(p => p.id === form.program)?.name}</span></div>
                                 <div><span className="opacity-50">Hafalan Juz:</span> <span className="font-bold">{form.hafalan_quran} Juz</span></div>
+                                <div><span className="opacity-50">Nilai Seleksi:</span> <span className="font-bold">{form.test_score ? TEST_SCORES.find(t => t.id === form.test_score)?.name : 'Belum Dites'}</span></div>
                             </div>
                         </div>
 
@@ -768,6 +806,20 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                                 <div><span className="opacity-50">Alamat:</span> <span className="font-bold">{form.address}</span></div>
                                 <div><span className="opacity-50">Kesehatan:</span> <span className="font-bold">{form.health_notes || 'Tidak ada riwayat'}</span></div>
                                 <div><span className="opacity-50">Ukuran Seragam:</span> <span className="font-bold">{form.uniform_size}</span></div>
+                                <div className="col-span-1 pt-2 border-t border-[var(--color-border)]/50 mt-1">
+                                    <span className="opacity-50 block mb-1">Dokumen Lengkap:</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {REQUIRED_DOCUMENTS.filter(doc => form.documents?.[doc.id]).length > 0 ? (
+                                            REQUIRED_DOCUMENTS.filter(doc => form.documents?.[doc.id]).map(doc => (
+                                                <span key={doc.id} className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 font-bold border border-emerald-500/20">
+                                                    <FontAwesomeIcon icon={faCheck} className="mr-1" /> {doc.name}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span className="font-bold text-rose-500">Belum ada dokumen yang diserahkan</span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -16,9 +16,9 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
     // Map waves options array for RichSelect
     const waveOptions = useMemo(() => {
         const opts = [{ id: 'all', name: 'Semua Gelombang' }]
-        ;(waves || []).forEach(w => {
-            opts.push({ id: w.id, name: w.name })
-        })
+            ; (waves || []).forEach(w => {
+                opts.push({ id: w.id, name: w.name })
+            })
         return opts
     }, [waves])
 
@@ -205,7 +205,8 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
                 </div>
             }
         >
-            <style dangerouslySetInnerHTML={{__html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @media print {
                     /* Document page size and margins optimized for A4 */
                     @page {
@@ -417,8 +418,8 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
                     </div>
                     <h3 className="text-sm font-black text-[var(--color-text)]">Tidak Ada Data Ditemukan</h3>
                     <p className="text-[11px] text-[var(--color-text-muted)] mt-1 max-w-sm">
-                        {selectedWave !== 'all' 
-                            ? 'Tidak ada calon santri terdaftar pada gelombang yang dipilih ini.' 
+                        {selectedWave !== 'all'
+                            ? 'Tidak ada calon santri terdaftar pada gelombang yang dipilih ini.'
                             : 'Tambahkan calon pendaftar atau impor berkas terlebih dahulu untuk melihat dashboard analitik.'}
                     </p>
                 </div>
@@ -430,7 +431,7 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
                             <div>
                                 <h1 className="text-2xl font-black tracking-tight text-indigo-950 uppercase">LAPORAN ANALISIS & STATISTIK PSB</h1>
                                 <p className="text-[10px] text-slate-500 font-extrabold mt-1">
-                                    Penerimaan Santri Baru · Pondok Pesantren Laporanmu
+                                    Penerimaan Santri Baru · Muhammadiyah Boarding School Tanggul
                                 </p>
                             </div>
                             <div className="text-right">
@@ -448,7 +449,7 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
                             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Corong Seleksi (Funnel Pendaftaran)</span>
                             <FontAwesomeIcon icon={faFilter} className="text-violet-500 text-xs" />
                         </div>
-                        
+
                         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2">
                             {[
                                 { title: 'Pendaftaran', sub: 'Santri Baru', count: stats.funnel.total, pct: '100%', bg: 'bg-indigo-50 border-indigo-200 text-indigo-700' },
@@ -569,13 +570,12 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
                                                     <span className="absolute inset-0 bg-slate-200/50 w-[4px] rounded-full" />
                                                 )}
                                                 <div
-                                                    className={`h-full rounded-full transition-all duration-700 ease-out ${
-                                                        w.quota 
-                                                            ? (w.percentage >= 90 ? 'bg-gradient-to-r from-rose-500 to-red-600' 
-                                                               : w.percentage >= 70 ? 'bg-gradient-to-r from-amber-500 to-orange-600' 
-                                                               : 'bg-gradient-to-r from-emerald-400 to-emerald-600')
+                                                    className={`h-full rounded-full transition-all duration-700 ease-out ${w.quota
+                                                            ? (w.percentage >= 90 ? 'bg-gradient-to-r from-rose-500 to-red-600'
+                                                                : w.percentage >= 70 ? 'bg-gradient-to-r from-amber-500 to-orange-600'
+                                                                    : 'bg-gradient-to-r from-emerald-400 to-emerald-600')
                                                             : 'bg-gradient-to-r from-indigo-500 to-violet-600'
-                                                    }`}
+                                                        }`}
                                                     style={{ width: `${w.percentage}%` }}
                                                 />
                                             </div>
@@ -603,13 +603,13 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
                                             <XAxis dataKey="displayName" stroke="var(--color-text)" fontSize={8.5} fontWeight="extrabold" tickLine={false} />
                                             <YAxis stroke="var(--color-text-muted)" fontSize={9} tickLine={false} />
                                             {/* Custom Tooltip that correctly shows the full school name on hover */}
-                                            <Tooltip 
+                                            <Tooltip
                                                 formatter={(value, name, props) => [value, 'Calon Santri']}
                                                 labelFormatter={(label, items) => {
                                                     const fullItem = stats.schoolData.find(s => s.displayName === label);
                                                     return fullItem ? fullItem.name : label;
                                                 }}
-                                                contentStyle={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', fontSize: 10 }} 
+                                                contentStyle={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', fontSize: 10 }}
                                             />
                                             <Bar dataKey="Jumlah" fill="#3b82f6" radius={[8, 8, 0, 0]} maxBarSize={32}>
                                                 {stats.schoolData.map((entry, idx) => (
@@ -645,13 +645,13 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
                                         <XAxis dataKey="name" stroke="var(--color-text-muted)" fontSize={9} fontWeight="bold" tickLine={false} />
                                         <YAxis stroke="var(--color-text-muted)" fontSize={9} tickLine={false} />
                                         <Tooltip contentStyle={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', fontSize: 10 }} />
-                                        <Area 
-                                            type="monotone" 
-                                            dataKey="Pendaftar" 
-                                            stroke="#4f46e5" 
-                                            strokeWidth={3} 
-                                            fillOpacity={1} 
-                                            fill="url(#colorDaily)" 
+                                        <Area
+                                            type="monotone"
+                                            dataKey="Pendaftar"
+                                            stroke="#4f46e5"
+                                            strokeWidth={3}
+                                            fillOpacity={1}
+                                            fill="url(#colorDaily)"
                                             dot={{ r: 5, strokeWidth: 2.5, fill: '#ffffff', stroke: '#4f46e5' }}
                                             activeDot={{ r: 7, strokeWidth: 3, fill: '#ffffff', stroke: '#4f46e5' }}
                                         />

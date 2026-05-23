@@ -5,6 +5,7 @@ export const ENROLLMENT_STATUS = {
     VERIFIKASI: 'verifikasi',
     TES: 'tes',
     DITERIMA: 'diterima',
+    DAFTAR_ULANG: 'daftar_ulang',
     DITOLAK: 'ditolak',
 }
 
@@ -31,11 +32,18 @@ export const STATUS_CONFIG = {
         step: 3,
     },
     diterima: {
-        label: 'Diterima',
+        label: 'Lulus Seleksi',
         color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
         dot: 'bg-emerald-500',
         icon: 'faCircleCheck',
         step: 4,
+    },
+    daftar_ulang: {
+        label: 'Daftar Ulang',
+        color: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+        dot: 'bg-indigo-500',
+        icon: 'faClipboardCheck',
+        step: 5,
     },
     ditolak: {
         label: 'Ditolak',
@@ -50,7 +58,8 @@ export const PIPELINE_STEPS = [
     { key: 'mendaftar', label: 'Mendaftar' },
     { key: 'verifikasi', label: 'Verifikasi' },
     { key: 'tes', label: 'Tes' },
-    { key: 'diterima', label: 'Diterima' },
+    { key: 'diterima', label: 'Lulus Seleksi' },
+    { key: 'daftar_ulang', label: 'Daftar Ulang' },
 ]
 
 export const PROGRAM_OPTIONS = [
@@ -71,6 +80,14 @@ export const TEST_SCORES = [
     { id: 'jayyid', name: 'Jayyid (Baik)', color: 'text-indigo-600 bg-indigo-500/10' },
     { id: 'maqbul', name: 'Maqbul (Cukup)', color: 'text-amber-600 bg-amber-500/10' },
     { id: 'rasib', name: 'Rasib (Kurang)', color: 'text-rose-600 bg-rose-500/10' },
+]
+
+export const REQUIRED_DOCUMENTS = [
+    { id: 'kk', name: 'Kartu Keluarga (KK)' },
+    { id: 'akte', name: 'Akte Kelahiran' },
+    { id: 'ijazah', name: 'Ijazah / SKL / Rapor' },
+    { id: 'foto', name: 'Pas Foto 3x4' },
+    { id: 'surat_sehat', name: 'Surat Keterangan Sehat' },
 ]
 
 export const UNIFORM_SIZES = ['S', 'M', 'L', 'XL', 'XXL']

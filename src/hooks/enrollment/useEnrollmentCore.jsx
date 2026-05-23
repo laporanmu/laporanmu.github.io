@@ -6,6 +6,16 @@ import {
     ENROLLMENT_STATUS, getStatusConfig
 } from '../../utils/enrollment/enrollmentConstants'
 
+const STATUS_ORDER = {
+    'mendaftar': 1,
+    'verifikasi': 2,
+    'tes': 3,
+    'diterima': 4,
+    'ditolak': 4,
+    'daftar_ulang': 5
+}
+
+
 export function useEnrollmentCore({ addToast, addUndoToast }) {
     // ── DATA ──
     const [enrollments, setEnrollments] = useState([])
@@ -35,6 +45,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     const [isWaveModalOpen, setIsWaveModalOpen] = useState(false)
     const [activeModal, setActiveModal] = useState(null) // 'delete' | 'bulkApprove' | 'bulkReject' | null
     const [isConvertOpen, setIsConvertOpen] = useState(false)
+    const [isAssessmentOpen, setIsAssessmentOpen] = useState(false)
+    const [assessmentEnrollment, setAssessmentEnrollment] = useState(null)
 
     // ── ACTION CONTEXT ──
     const [selectedEnrollment, setSelectedEnrollment] = useState(null)
@@ -78,17 +90,17 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
 
     const activeFilterCount = useMemo(() =>
         [filterWave, filterStatus, filterGender, filterProgram, debouncedSearch].filter(Boolean).length
-    , [filterWave, filterStatus, filterGender, filterProgram, debouncedSearch])
+        , [filterWave, filterStatus, filterGender, filterProgram, debouncedSearch])
 
     const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds])
     const selectedEnrollments = useMemo(() =>
         enrollments.filter(e => selectedIdSet.has(e.id))
-    , [enrollments, selectedIdSet])
+        , [enrollments, selectedIdSet])
     const allSelected = enrollments.length > 0 && selectedIds.length === enrollments.length
 
     const isAnyModalOpen = useMemo(() =>
-        !!(isFormOpen || isProfileOpen || isWaveModalOpen || activeModal)
-    , [isFormOpen, isProfileOpen, isWaveModalOpen, activeModal])
+        !!(isFormOpen || isProfileOpen || isWaveModalOpen || activeModal || isAssessmentOpen)
+        , [isFormOpen, isProfileOpen, isWaveModalOpen, activeModal, isAssessmentOpen])
 
     // ── FETCH WAVES ──
     const fetchWaves = useCallback(async () => {
@@ -123,7 +135,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
                 .from('enrollments')
                 .select('id, gender, status, wave_id, metadata, program, school_origin, created_at')
                 .is('metadata->>deleted_at', null)
-            
+
             if (statsErr) throw statsErr
             setAllEnrollments(allRows || [])
 
@@ -135,7 +147,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             const ditolak = allRows.filter(e => e.status === 'ditolak').length
             const boys = allRows.filter(e => e.gender === 'L').length
             const girls = allRows.filter(e => e.gender === 'P').length
-            
+
             const activeWave = wavesData.find(w => w.is_active)
             const quota = activeWave?.quota || 0
             const quotaUsed = diterima
@@ -149,7 +161,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             // 3. Build filtered page query
             let q = supabase
                 .from('enrollments')
-                .select('*, enrollment_waves(name)', { count: 'exact' })
+                .select('*, enrollment_waves(name, metadata)', { count: 'exact' })
                 .is('metadata->>deleted_at', null)
 
             if (filterWave) q = q.eq('wave_id', filterWave)
@@ -193,10 +205,11 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
                     program: e.program || meta.program || 'reguler',
                     quran_level: e.quran_level || meta.quran_level || 'belum',
                     hafalan_quran: e.hafalan_quran ?? meta.hafalan_quran ?? 0,
+                    test_score: e.test_score || meta.test_score || null,
                     status: e.status || 'mendaftar',
                     wave_id: e.wave_id || '',
                     waveName: e.enrollment_waves?.name || '-',
-                    
+
                     // Metadata auxiliary nested fields
                     father_name: meta.father_name || '',
                     father_occupation: meta.father_occupation || '',
@@ -212,6 +225,12 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
                     address: meta.address || '',
                     health_notes: meta.health_notes || '',
                     uniform_size: meta.uniform_size || 'M',
+                    documents: meta.documents || {},
+                    history: meta.history || [],
+                    notes: e.notes || meta.notes || '',
+                    interview: meta.interview || null,
+                    wave_metadata: e.enrollment_waves?.metadata || {},
+                    metadata: meta,
                     created_at: e.created_at
                 }
             })
@@ -292,7 +311,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         setSubmitting(true)
         try {
             const isEdit = !!(selectedEnrollment && selectedEnrollment.id)
-            
+
             const payload = {
                 name: formData.name,
                 gender: formData.gender || 'L',
@@ -322,7 +341,9 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
                     guardian_phone: formData.guardian_phone || '',
                     address: formData.address || '',
                     health_notes: formData.health_notes || '',
-                    uniform_size: formData.uniform_size || 'M'
+                    uniform_size: formData.uniform_size || 'M',
+                    test_score: formData.test_score || null,
+                    documents: formData.documents || {}
                 }
             }
 
@@ -332,7 +353,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
                     .update(payload)
                     .eq('id', selectedEnrollment.id)
                 if (error) throw error
-                
+
                 await logAudit({
                     action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: selectedEnrollment.id,
                     oldData: selectedEnrollment,
@@ -366,6 +387,78 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         }
     }, [selectedEnrollment, addToast, fetchData, globalStats])
 
+    const checkForWaitingListPromotion = useCallback(async (waveId) => {
+        if (!waveId) return
+
+        try {
+            const { data: wave } = await supabase
+                .from('enrollment_waves')
+                .select('*')
+                .eq('id', waveId)
+                .single()
+            if (!wave) return
+            const quota = wave.metadata?.quota || wave.quota || 0
+
+            const { data: accepted } = await supabase
+                .from('enrollments')
+                .select('id, metadata')
+                .in('status', ['diterima', 'daftar_ulang'])
+                .eq('wave_id', waveId)
+                .is('metadata->>deleted_at', null)
+
+            const activeAccepted = (accepted || []).filter(e => !e.metadata?.is_waiting_list)
+            const activeCount = activeAccepted.length
+
+            if (activeCount < quota) {
+                const slotsOpen = quota - activeCount
+
+                const { data: waitingList } = await supabase
+                    .from('enrollments')
+                    .select('*')
+                    .eq('wave_id', waveId)
+                    .eq('status', 'diterima')
+                    .eq('metadata->>is_waiting_list', 'true')
+                    .is('metadata->>deleted_at', null)
+                    .order('created_at', { ascending: true })
+                    .limit(slotsOpen)
+
+                if (waitingList && waitingList.length > 0) {
+                    for (const candidate of waitingList) {
+                        const meta = candidate.metadata || {}
+                        const currentHistory = meta.history || []
+                        const nextMeta = {
+                            ...meta,
+                            is_waiting_list: false,
+                            history: [...currentHistory, {
+                                action: 'STATUS_CHANGE',
+                                from: 'waiting_list',
+                                to: 'diterima',
+                                timestamp: new Date().toISOString(),
+                                by: 'Sistem PSB (Auto-Promote)'
+                            }]
+                        }
+
+                        await supabase
+                            .from('enrollments')
+                            .update({ metadata: nextMeta })
+                            .eq('id', candidate.id)
+
+                        await logAudit({
+                            action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: candidate.id,
+                            oldData: candidate,
+                            newData: { ...candidate, metadata: nextMeta }
+                        })
+
+                        addToast(`Ananda ${candidate.name} otomatis dipromosikan dari Waiting List!`, 'success')
+                    }
+                    fetchData()
+                }
+            }
+        } catch (err) {
+            console.error('[useEnrollmentCore] Waiting list promotion error:', err)
+        }
+    }, [addToast, fetchData])
+
     const confirmDelete = useCallback((enrollment) => {
         setEnrollmentToDelete(enrollment)
         setActiveModal('delete')
@@ -383,12 +476,17 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             if (error) throw error
 
             addToast(`Pendaftar "${enrollmentToDelete.name}" berhasil diarsipkan`, 'success')
-            
+
             await logAudit({
                 action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: enrollmentToDelete.id,
                 oldData: enrollmentToDelete,
                 newData: { ...enrollmentToDelete, metadata: nextMeta }
             })
+
+            const wasAccepted = (enrollmentToDelete.status === 'diterima' || enrollmentToDelete.status === 'daftar_ulang') && !enrollmentToDelete.metadata?.is_waiting_list
+            if (wasAccepted) {
+                await checkForWaitingListPromotion(enrollmentToDelete.wave_id)
+            }
 
             setActiveModal(null)
             setEnrollmentToDelete(null)
@@ -397,7 +495,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             console.error('[useEnrollmentCore] Archive error:', err)
             addToast('Gagal mengarsipkan data pendaftaran', 'error')
         }
-    }, [enrollmentToDelete, addToast, fetchData])
+    }, [enrollmentToDelete, addToast, fetchData, checkForWaitingListPromotion])
 
     // ── ARCHIVE FUNCTIONS ──
     const fetchArchivedEnrollments = useCallback(async () => {
@@ -516,7 +614,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         } else if (newStatus === 'tes') {
             msg = `Assalamualaikum Wr. Wb.\n\nYth. Wali dari *${name}*,\n\nPendaftaran *${reg}* dinyatakan lolos berkas. Tahap selanjutnya adalah Ujian Seleksi.\n\nTerima kasih.`
         } else if (newStatus === 'diterima') {
-            msg = `Assalamualaikum Wr. Wb.\n\nSelamat! Calon santri atas nama *${name}* (*${reg}*) dinyatakan *DITERIMA* di Pondok Pesantren Laporanmu.\n\nSilakan lakukan daftar ulang. Terima kasih.`
+            msg = `Assalamualaikum Wr. Wb.\n\nSelamat! Calon santri atas nama *${name}* (*${reg}*) dinyatakan *DITERIMA* di Muhammadiyah Boarding School Tanggul.\n\nSilakan lakukan daftar ulang. Terima kasih.`
         } else if (newStatus === 'ditolak') {
             msg = `Assalamualaikum Wr. Wb.\n\nYth. Wali dari *${name}*,\n\nKami menyampaikan permohonan maaf bahwa pendaftaran *${reg}* saat ini belum dapat diterima.\n\nTerima kasih.`
         }
@@ -638,31 +736,273 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         }
     }, [addToast, generateCode, fetchData])
 
-    // ── STATUS TRANSITIONS ──
-    const updateStatus = useCallback(async (enrollment, newStatus) => {
+    const updateNotes = useCallback(async (enrollment, notesText) => {
         try {
+            const meta = enrollment.metadata || {}
+            const nextMeta = { ...meta, notes: notesText }
+
+            // We update metadata.notes and also the notes column if it exists in the schema to ensure robustness
+            const updatePayload = { metadata: nextMeta }
+            if ('notes' in enrollment) {
+                updatePayload.notes = notesText
+            }
+
             const { error } = await supabase
                 .from('enrollments')
-                .update({ status: newStatus })
+                .update(updatePayload)
+                .eq('id', enrollment.id)
+            if (error) throw error
+
+            addToast(`Catatan internal ${enrollment.name} berhasil disimpan`, 'success')
+
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: enrollment.id,
+                oldData: enrollment,
+                newData: { ...enrollment, notes: notesText, metadata: nextMeta }
+            })
+
+            fetchData()
+
+            setSelectedEnrollment(prev => {
+                if (prev && prev.id === enrollment.id) {
+                    return { ...prev, notes: notesText, metadata: nextMeta }
+                }
+                return prev
+            })
+
+            return true
+        } catch (err) {
+            console.error('[useEnrollmentCore] Save notes error:', err)
+            addToast('Gagal menyimpan catatan internal', 'error')
+            return false
+        }
+    }, [addToast, fetchData])
+
+    const updatePaymentStatus = useCallback(async (enrollment, type, status, proofUrl = null) => {
+        try {
+            const meta = enrollment.metadata || {}
+            const currentPayment = meta.payment || {}
+
+            const nextTypePayment = {
+                ...(currentPayment[type] || {}),
+                status,
+                proof_url: proofUrl !== undefined ? proofUrl : (currentPayment[type]?.proof_url || null),
+                confirmed_at: status === 'lunas' ? new Date().toISOString() : (status === 'belum' ? null : (currentPayment[type]?.confirmed_at || null)),
+                confirmed_by: status === 'lunas' ? 'Panitia Pusat' : (status === 'belum' ? null : (currentPayment[type]?.confirmed_by || null))
+            }
+
+            const nextPayment = {
+                ...currentPayment,
+                [type]: nextTypePayment
+            }
+
+            const nextMeta = {
+                ...meta,
+                payment: nextPayment
+            }
+
+            const { error } = await supabase
+                .from('enrollments')
+                .update({ metadata: nextMeta })
+                .eq('id', enrollment.id)
+
+            if (error) throw error
+
+            const typeLabel = type === 'registration' ? 'Pendaftaran' : type === 'reregistration' ? 'Daftar Ulang' : 'Perlengkapan'
+            addToast(`Status pembayaran ${typeLabel} ${enrollment.name} diperbarui ke ${status.toUpperCase()}`, 'success')
+
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: enrollment.id,
+                oldData: enrollment,
+                newData: { ...enrollment, metadata: nextMeta }
+            })
+
+            fetchData()
+
+            setSelectedEnrollment(prev => {
+                if (prev && prev.id === enrollment.id) {
+                    return { ...prev, metadata: nextMeta }
+                }
+                return prev
+            })
+
+            return true
+        } catch (err) {
+            console.error('[useEnrollmentCore] Save payment status error:', err)
+            addToast('Gagal mengubah status pembayaran', 'error')
+            return false
+        }
+    }, [addToast, fetchData])
+
+    // ── STATUS TRANSITIONS ──
+    const updateStatus = useCallback(async (enrollment, newStatus) => {
+        // Intercept 'tes' -> 'diterima'
+        if (enrollment.status === 'tes' && newStatus === 'diterima') {
+            setAssessmentEnrollment(enrollment)
+            setIsAssessmentOpen(true)
+            return
+        }
+
+        try {
+            const wasAccepted = (enrollment.status === 'diterima' || enrollment.status === 'daftar_ulang') && !enrollment.metadata?.is_waiting_list
+            const waveId = enrollment.wave_id
+
+            let isWaitingList = false
+            if ((newStatus === 'diterima' || newStatus === 'daftar_ulang') && waveId) {
+                const { data: wave } = await supabase
+                    .from('enrollment_waves')
+                    .select('*')
+                    .eq('id', waveId)
+                    .single()
+
+                const quota = wave?.metadata?.quota || wave?.quota || 0
+                const { data: accepted } = await supabase
+                    .from('enrollments')
+                    .select('id, metadata')
+                    .in('status', ['diterima', 'daftar_ulang'])
+                    .eq('wave_id', waveId)
+                    .is('metadata->>deleted_at', null)
+
+                const activeAccepted = (accepted || []).filter(e => !e.metadata?.is_waiting_list && e.id !== enrollment.id)
+                const activeCount = activeAccepted.length
+                isWaitingList = activeCount >= quota
+            }
+
+            const meta = enrollment.metadata || {}
+            const currentHistory = meta.history || []
+            const newHistory = [...currentHistory, {
+                action: 'STATUS_CHANGE',
+                from: enrollment.status,
+                to: newStatus,
+                timestamp: new Date().toISOString(),
+                by: 'Panitia Pusat'
+            }]
+            const nextMeta = {
+                ...meta,
+                history: newHistory,
+                is_waiting_list: isWaitingList
+            }
+
+            const { error } = await supabase
+                .from('enrollments')
+                .update({ status: newStatus, metadata: nextMeta })
                 .eq('id', enrollment.id)
             if (error) throw error
 
             const cfg = getStatusConfig(newStatus)
-            addToast(`Status ${enrollment.name} berhasil diubah ke ${cfg.label}`, 'success')
-            
+            if (isWaitingList) {
+                addToast(`Status ${enrollment.name} diubah ke ${cfg.label} (Masuk Waiting List karena kuota penuh)`, 'warning')
+            } else {
+                addToast(`Status ${enrollment.name} berhasil diubah ke ${cfg.label}`, 'success')
+            }
+
             await logAudit({
                 action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: enrollment.id,
                 oldData: enrollment,
-                newData: { ...enrollment, status: newStatus }
+                newData: { ...enrollment, status: newStatus, metadata: nextMeta }
             })
 
+            if (wasAccepted && (newStatus !== 'diterima' && newStatus !== 'daftar_ulang')) {
+                await checkForWaitingListPromotion(waveId)
+            }
+
             fetchData()
-            triggerNotification(enrollment, newStatus)
+
+            const isForward = (STATUS_ORDER[newStatus] || 0) > (STATUS_ORDER[enrollment.status] || 0)
+            if (isForward) {
+                triggerNotification(enrollment, newStatus)
+            }
         } catch (err) {
             console.error('[useEnrollmentCore] Status transition error:', err)
             addToast('Gagal memperbarui status pendaftar', 'error')
         }
-    }, [addToast, fetchData, triggerNotification])
+    }, [addToast, fetchData, triggerNotification, checkForWaitingListPromotion])
+
+    const handleAssessmentSubmit = useCallback(async (formData) => {
+        if (!assessmentEnrollment) return
+        setSubmitting(true)
+        try {
+            const waveId = assessmentEnrollment.wave_id
+            let isWaitingList = false
+            if (waveId) {
+                const { data: wave } = await supabase
+                    .from('enrollment_waves')
+                    .select('*')
+                    .eq('id', waveId)
+                    .single()
+
+                const quota = wave?.metadata?.quota || wave?.quota || 0
+                const { data: accepted } = await supabase
+                    .from('enrollments')
+                    .select('id, metadata')
+                    .in('status', ['diterima', 'daftar_ulang'])
+                    .eq('wave_id', waveId)
+                    .is('metadata->>deleted_at', null)
+
+                const activeAccepted = (accepted || []).filter(e => !e.metadata?.is_waiting_list && e.id !== assessmentEnrollment.id)
+                const activeCount = activeAccepted.length
+                isWaitingList = activeCount >= quota
+            }
+
+            const meta = assessmentEnrollment.metadata || {}
+            const currentHistory = meta.history || []
+            const newHistory = [...currentHistory, {
+                action: 'STATUS_CHANGE',
+                from: assessmentEnrollment.status,
+                to: 'diterima',
+                timestamp: new Date().toISOString(),
+                by: 'Panitia Pusat (Penilaian Tes)'
+            }]
+            const nextMeta = {
+                ...meta,
+                history: newHistory,
+                test_score: formData.test_score,
+                interview: formData.interview || null,
+                is_waiting_list: isWaitingList
+            }
+
+            const { error } = await supabase
+                .from('enrollments')
+                .update({
+                    status: 'diterima',
+                    quran_level: formData.quran_level,
+                    hafalan_quran: formData.hafalan_quran,
+                    metadata: nextMeta
+                })
+                .eq('id', assessmentEnrollment.id)
+            if (error) throw error
+
+            const cfg = getStatusConfig('diterima')
+            if (isWaitingList) {
+                addToast(`Pendaftar ${assessmentEnrollment.name} lulus seleksi & status menjadi ${cfg.label} (Masuk Waiting List karena kuota penuh)`, 'warning')
+            } else {
+                addToast(`Pendaftar ${assessmentEnrollment.name} lulus tes & status menjadi ${cfg.label}`, 'success')
+            }
+
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: assessmentEnrollment.id,
+                oldData: assessmentEnrollment,
+                newData: {
+                    ...assessmentEnrollment,
+                    status: 'diterima',
+                    quran_level: formData.quran_level,
+                    hafalan_quran: formData.hafalan_quran,
+                    test_score: formData.test_score,
+                    metadata: nextMeta
+                }
+            })
+
+            fetchData()
+            triggerNotification(assessmentEnrollment, 'diterima')
+            setIsAssessmentOpen(false)
+            setAssessmentEnrollment(null)
+        } catch (err) {
+            console.error('[useEnrollmentCore] Assessment error:', err)
+            addToast(`Gagal: ${err.message || 'Terjadi kesalahan sistem'}`, 'error')
+        } finally {
+            setSubmitting(false)
+        }
+    }, [assessmentEnrollment, addToast, fetchData, triggerNotification])
 
     // ── BULK ACTIONS ──
     const toggleSelectAll = useCallback(() => {
@@ -682,13 +1022,63 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     const handleBulkApprove = useCallback(async () => {
         if (!selectedIds.length) return
         try {
-            const { error } = await supabase
-                .from('enrollments')
-                .update({ status: 'diterima' })
-                .in('id', selectedIds)
-            if (error) throw error
+            const firstId = selectedIds[0]
+            const firstEnroll = selectedEnrollments.find(e => e.id === firstId)
+            const waveId = firstEnroll?.wave_id
 
-            addToast(`${selectedIds.length} pendaftar berhasil diterima`, 'success')
+            if (waveId) {
+                const { data: wave } = await supabase
+                    .from('enrollment_waves')
+                    .select('*')
+                    .eq('id', waveId)
+                    .single()
+
+                const quota = wave?.metadata?.quota || wave?.quota || 0
+
+                const { data: accepted } = await supabase
+                    .from('enrollments')
+                    .select('id, metadata')
+                    .in('status', ['diterima', 'daftar_ulang'])
+                    .eq('wave_id', waveId)
+                    .is('metadata->>deleted_at', null)
+
+                const activeAccepted = (accepted || []).filter(e => !e.metadata?.is_waiting_list)
+                let activeCount = activeAccepted.length
+
+                for (const enrollId of selectedIds) {
+                    const e = selectedEnrollments.find(x => x.id === enrollId) || {}
+                    const isWaitingList = activeCount >= quota
+                    const meta = e.metadata || {}
+                    const nextMeta = {
+                        ...meta,
+                        is_waiting_list: isWaitingList,
+                        history: [...(meta.history || []), {
+                            action: 'STATUS_CHANGE',
+                            from: e.status || 'mendaftar',
+                            to: 'diterima',
+                            timestamp: new Date().toISOString(),
+                            by: 'Panitia Pusat (Massal)'
+                        }]
+                    }
+
+                    await supabase
+                        .from('enrollments')
+                        .update({ status: 'diterima', metadata: nextMeta })
+                        .eq('id', enrollId)
+
+                    if (!isWaitingList) activeCount++
+                }
+
+                addToast(`${selectedIds.length} pendaftar berhasil diproses (sebagian mungkin masuk Waiting List jika kuota penuh)`, 'success')
+            } else {
+                const { error } = await supabase
+                    .from('enrollments')
+                    .update({ status: 'diterima' })
+                    .in('id', selectedIds)
+                if (error) throw error
+                addToast(`${selectedIds.length} pendaftar berhasil diterima`, 'success')
+            }
+
             selectedEnrollments.forEach(e => triggerNotification(e, 'diterima'))
             setSelectedIds([])
             setActiveModal(null)
@@ -702,6 +1092,11 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     const handleBulkReject = useCallback(async () => {
         if (!selectedIds.length) return
         try {
+            const wavesToCheck = [...new Set(selectedEnrollments
+                .filter(e => (e.status === 'diterima' || e.status === 'daftar_ulang') && !e.metadata?.is_waiting_list)
+                .map(e => e.wave_id)
+                .filter(Boolean))]
+
             const { error } = await supabase
                 .from('enrollments')
                 .update({ status: 'ditolak' })
@@ -710,6 +1105,11 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
 
             addToast(`${selectedIds.length} pendaftar berhasil ditolak`, 'success')
             selectedEnrollments.forEach(e => triggerNotification(e, 'ditolak'))
+
+            for (const waveId of wavesToCheck) {
+                await checkForWaitingListPromotion(waveId)
+            }
+
             setSelectedIds([])
             setActiveModal(null)
             fetchData()
@@ -717,11 +1117,16 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             console.error('[useEnrollmentCore] Bulk reject error:', err)
             addToast('Gagal menolak pendaftar secara massal', 'error')
         }
-    }, [selectedIds, selectedEnrollments, addToast, fetchData, triggerNotification])
+    }, [selectedIds, selectedEnrollments, addToast, fetchData, triggerNotification, checkForWaitingListPromotion])
 
     const handleBulkArchive = useCallback(async () => {
         if (!selectedIds.length) return
         try {
+            const wavesToCheck = [...new Set(selectedEnrollments
+                .filter(e => (e.status === 'diterima' || e.status === 'daftar_ulang') && !e.metadata?.is_waiting_list)
+                .map(e => e.wave_id)
+                .filter(Boolean))]
+
             const { data, error: fetchErr } = await supabase
                 .from('enrollments')
                 .select('id, metadata')
@@ -739,6 +1144,11 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             await Promise.all(updates)
 
             addToast(`${selectedIds.length} pendaftar berhasil diarsipkan`, 'success')
+
+            for (const waveId of wavesToCheck) {
+                await checkForWaitingListPromotion(waveId)
+            }
+
             setSelectedIds([])
             setActiveModal(null)
             fetchData()
@@ -746,11 +1156,16 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             console.error('[useEnrollmentCore] Bulk archive error:', err)
             addToast('Gagal mengarsipkan pendaftar secara massal', 'error')
         }
-    }, [selectedIds, addToast, fetchData])
+    }, [selectedIds, selectedEnrollments, addToast, fetchData, checkForWaitingListPromotion])
 
     const handleBulkStatusChange = useCallback(async (newStatus) => {
         if (!selectedIds.length) return
         try {
+            const wavesToCheck = [...new Set(selectedEnrollments
+                .filter(e => (e.status === 'diterima' || e.status === 'daftar_ulang') && !e.metadata?.is_waiting_list)
+                .map(e => e.wave_id)
+                .filter(Boolean))]
+
             const { error } = await supabase
                 .from('enrollments')
                 .update({ status: newStatus })
@@ -759,7 +1174,19 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
 
             const cfg = getStatusConfig(newStatus)
             addToast(`${selectedIds.length} pendaftar diubah status menjadi ${cfg.label}`, 'success')
-            selectedEnrollments.forEach(e => triggerNotification(e, newStatus))
+            selectedEnrollments.forEach(e => {
+                const isForward = (STATUS_ORDER[newStatus] || 0) > (STATUS_ORDER[e.status] || 0)
+                if (isForward) {
+                    triggerNotification(e, newStatus)
+                }
+            })
+
+            if (newStatus !== 'diterima' && newStatus !== 'daftar_ulang') {
+                for (const waveId of wavesToCheck) {
+                    await checkForWaitingListPromotion(waveId)
+                }
+            }
+
             setSelectedIds([])
             setActiveModal(null)
             fetchData()
@@ -767,7 +1194,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             console.error('[useEnrollmentCore] Bulk status change error:', err)
             addToast('Gagal memperbarui status secara massal', 'error')
         }
-    }, [selectedIds, selectedEnrollments, addToast, fetchData, triggerNotification])
+    }, [selectedIds, selectedEnrollments, addToast, fetchData, triggerNotification, checkForWaitingListPromotion])
 
     // ── FILTER RESET ──
     const resetAllFilters = useCallback(() => {
@@ -813,6 +1240,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         activeModal, setActiveModal,
         isAnyModalOpen,
         isConvertOpen, setIsConvertOpen,
+        isAssessmentOpen, setIsAssessmentOpen,
+        assessmentEnrollment, setAssessmentEnrollment,
 
         // Actions
         selectedEnrollment, setSelectedEnrollment,
@@ -832,7 +1261,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         handleAdd, handleEdit, handleViewProfile,
         closeModal, closeForm, closeProfile,
         handleSubmit, confirmDelete, executeDelete,
-        updateStatus,
+        updateStatus, handleAssessmentSubmit, updateNotes, updatePaymentStatus,
         toggleSelectAll, toggleSelect,
         handleBulkApprove, handleBulkReject,
         fetchArchivedEnrollments,

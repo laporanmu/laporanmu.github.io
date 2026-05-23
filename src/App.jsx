@@ -66,6 +66,8 @@ const ClassesPage = lazyRetry(() => import('./pages/master/ClassesPage.jsx'))
 const PoinPage = lazyRetry(() => import('./pages/master/PoinPage.jsx'))
 const AcademicYearsPage = lazyRetry(() => import('./pages/master/AcademicYearsPage.jsx'))
 const EnrollmentPage = lazyRetry(() => import('./pages/master/EnrollmentPage.jsx'))
+const PublicEnrollmentPage = lazyRetry(() => import('./pages/PublicEnrollmentPage.jsx'))
+const PublicStatusCheckPage = lazyRetry(() => import('./pages/PublicStatusCheckPage.jsx'))
 
 // ─── Role Hierarchy ───────────────────────────────────────────────────────────
 // developer > admin > guru = satpam > viewer
@@ -434,6 +436,8 @@ function AppRoutes() {
 
         {/* ── Public ── */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/psb" element={<PublicEnrollmentPage />} />
+        <Route path="/psb/status" element={<PublicStatusCheckPage />} />
         <Route path="/check" element={<ParentCheckPage />} />
         <Route path="/login" element={
           <PublicRoute><LoginPage /></PublicRoute>
