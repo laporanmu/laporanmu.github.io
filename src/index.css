@@ -1,5 +1,5 @@
 /* Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap');
 
 @import "tailwindcss";
 
@@ -163,6 +163,7 @@ h6,
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.5);
   }
+
   .dark .glass {
     background: rgba(2, 6, 23, 0.45);
     backdrop-filter: blur(16px);
@@ -388,7 +389,7 @@ tr:hover td {
   ::view-transition-new(root) {
     animation-duration: var(--theme-transition);
   }
- 
+
   /* Note: Removed empty body ruleset to address linting. */
 
   /* Respect reduced motion preference */
@@ -661,16 +662,32 @@ tr:hover td {
 
   /* --- Enterprise UI Animations --- */
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-4px); }
-    40%, 80% { transform: translateX(4px); }
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    20%,
+    60% {
+      transform: translateX(-4px);
+    }
+
+    40%,
+    80% {
+      transform: translateX(4px);
+    }
   }
+
   .animate-shake {
     animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
   }
 
   @keyframes enter {
-    from { opacity: var(--tw-enter-opacity, 1); transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1)); }
+    from {
+      opacity: var(--tw-enter-opacity, 1);
+      transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1));
+    }
   }
 
   .animate-in {
@@ -682,18 +699,45 @@ tr:hover td {
     --tw-enter-translate-y: initial;
   }
 
-  .fade-in { --tw-enter-opacity: 0; }
-  .zoom-in { --tw-enter-scale: 0.95; }
-  .slide-in-from-top-4 { --tw-enter-translate-y: -1rem; }
-  .slide-in-from-bottom-4 { --tw-enter-translate-y: 1rem; }
-  .slide-in-from-bottom { --tw-enter-translate-y: 100%; }
+  .fade-in {
+    --tw-enter-opacity: 0;
+  }
 
-  .duration-300 { animation-duration: 300ms; }
-  .duration-500 { animation-duration: 500ms; }
-  .duration-700 { animation-duration: 700ms; }
-  .duration-1000 { animation-duration: 1000ms; }
+  .zoom-in {
+    --tw-enter-scale: 0.95;
+  }
 
-  .delay-300 { animation-delay: 300ms; }
+  .slide-in-from-top-4 {
+    --tw-enter-translate-y: -1rem;
+  }
+
+  .slide-in-from-bottom-4 {
+    --tw-enter-translate-y: 1rem;
+  }
+
+  .slide-in-from-bottom {
+    --tw-enter-translate-y: 100%;
+  }
+
+  .duration-300 {
+    animation-duration: 300ms;
+  }
+
+  .duration-500 {
+    animation-duration: 500ms;
+  }
+
+  .duration-700 {
+    animation-duration: 700ms;
+  }
+
+  .duration-1000 {
+    animation-duration: 1000ms;
+  }
+
+  .delay-300 {
+    animation-delay: 300ms;
+  }
 }
 
 /* ── Custom Utilities for Reports Dashboard ── */
@@ -712,15 +756,39 @@ input[type=number] {
 }
 
 /* ── PRINT STYLES (Professional Dashboard Export) ── */
+/* NOTE: @page rule is intentionally omitted here.
+   Components that need specific page sizes/margins (e.g. RaportPrintCard)
+   declare their own @page rules inline to avoid global conflicts. */
 @media print {
-  @page { size: A4; margin: 15mm; }
-  nav, aside, button, footer, .no-print, [data-html2canvas-ignore="true"] {
+
+  nav,
+  aside,
+  button,
+  footer,
+  .no-print,
+  [data-html2canvas-ignore="true"] {
     display: none !important;
   }
-  body { background: white !important; color: black !important; padding: 0 !important; }
-  .max-w-\[1800px\] { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  .glass, .card {
+
+  body {
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+  }
+
+  .max-w-\[1800px\] {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .glass,
+  .card {
     background: white !important;
     border: 1px solid #e2e8f0 !important;
     box-shadow: none !important;
@@ -755,4 +823,3 @@ input[type=number] {
   display: none !important;
   -webkit-appearance: none !important;
 }
-

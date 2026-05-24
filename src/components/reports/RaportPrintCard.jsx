@@ -73,41 +73,88 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             <style>{`
                 @media print {
                     @page {
-                        size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'};
-                        margin: 0;
+                        size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'} !important;
+                        margin: 0 !important;
                     }
-                    body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .raport-card { box-shadow: none !important; margin: 0 !important; width: ${pageW} !important; height: ${pageH} !important; maxWidth: none !important; }
-                    .school-name-ar { text-shadow: none !important; }
+                    body { margin: 0 !important; padding: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .raport-card {
+                        box-shadow: none !important;
+                        margin: 0 !important;
+                        padding: 8mm 12mm !important;
+                        width: ${pageW} !important;
+                        min-width: ${pageW} !important;
+                        height: ${pageH} !important;
+                        min-height: ${pageH} !important;
+                        max-width: none !important;
+                    }
+                    .raport-header-flex {
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: space-between !important;
+                        gap: 10px !important;
+                        padding-bottom: 8px !important;
+                    }
+                    .raport-logo-box {
+                        flex-shrink: 0 !important;
+                        width: 60pt !important;
+                        height: 60pt !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                    }
+                    .raport-logo-box img {
+                        width: 60pt !important;
+                        height: 60pt !important;
+                        object-fit: contain !important;
+                    }
+                    .raport-header-center {
+                        flex: 1 !important;
+                        text-align: center !important;
+                        min-width: 0 !important;
+                    }
+                    .school-name-ar {
+                        font-size: 26pt !important;
+                        line-height: 1.05 !important;
+                    }
+                    .school-subtitle-ar {
+                        font-size: 10.5pt !important;
+                        line-height: 1.3 !important;
+                    }
+                    .school-name-id {
+                        font-size: 11pt !important;
+                    }
+                    .school-address {
+                        font-size: 8pt !important;
+                    }
                     .divider-gradient { background: ${settings.report_color_primary || '#1a5c35'} !important; }
                 }
             `}</style>
             {/* Header Sekolah */}
             <div style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingBottom: 8 }}>
+                <div className="raport-header-flex" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingBottom: 8 }}>
                     {/* Logo Kiri (MBS) */}
-                    <div style={{ flexShrink: 0, width: 85, height: 85, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ width: 85, height: 85, objectFit: 'contain' }} />
+                    <div className="raport-logo-box" style={{ flexShrink: 0, width: '60pt', height: '60pt', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src={settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ width: '60pt', height: '60pt', objectFit: 'contain', display: 'block' }} />
                     </div>
                     {/* Tengah (Nama Sekolah) */}
-                    <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
+                    <div className="raport-header-center" style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
                         {settings.school_subtitle_ar && (
-                            <div style={{ fontSize: '11.5pt', color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Amiri', 'Traditional Arabic', serif", fontWeight: 700 }}>
+                            <div className="school-subtitle-ar" style={{ fontSize: '10.5pt', color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Traditional Arabic', serif", fontWeight: 700, lineHeight: 1.3 }}>
                                 {settings.school_subtitle_ar}
                             </div>
                         )}
                         <div className="school-name-ar" style={{
-                            fontSize: '28pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35',
-                            direction: 'rtl', fontFamily: "'Amiri', 'Traditional Arabic', serif", letterSpacing: 0.5,
-                            lineHeight: 0.9, marginBottom: 4,
+                            fontSize: '26pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35',
+                            direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5,
+                            lineHeight: 1.05, marginBottom: 4,
                             textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor'
                         }}>{settings.school_name_ar || ''}</div>
-                        <div style={{ fontSize: '11.5pt', fontWeight: 700, letterSpacing: 0.8, color: '#333', marginTop: 2 }}>{settings.school_name_id || ''}</div>
-                        <div style={{ fontSize: '8pt', color: '#666', marginTop: 3, lineHeight: 1.2 }}>{settings.school_address || ''}</div>
+                        <div className="school-name-id" style={{ fontSize: '11pt', fontWeight: 700, letterSpacing: 0.8, color: '#333', marginTop: 2 }}>{settings.school_name_id || ''}</div>
+                        <div className="school-address" style={{ fontSize: '8pt', color: '#666', marginTop: 3, lineHeight: 1.3 }}>{settings.school_address || ''}</div>
                     </div>
                     {/* Logo Kanan (Unit) */}
-                    <div style={{ flexShrink: 0, width: 85, height: 85, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={unitLogo || settings.logo_url || mbsLogo} alt="Logo unit" style={{ width: 85, height: 85, objectFit: 'contain' }} />
+                    <div className="raport-logo-box" style={{ flexShrink: 0, width: '60pt', height: '60pt', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src={unitLogo || settings.logo_url || mbsLogo} alt="Logo unit" style={{ width: '60pt', height: '60pt', objectFit: 'contain', display: 'block' }} />
                     </div>
                 </div>
                 <div className="divider-gradient" style={{ height: 3, background: `linear-gradient(90deg, ${settings.report_color_primary || '#1a5c35'}, ${settings.report_color_secondary || '#c8a400'}, ${settings.report_color_primary || '#1a5c35'})`, marginBottom: 0 }} />
@@ -148,10 +195,10 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                             <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', fontFamily: "'Traditional Arabic', serif", textAlign: 'center', fontWeight: 800, color: '#000', fontSize: '12pt' }}>{L.subject}</th>
                             <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '6%', fontFamily: "'Traditional Arabic', serif", textAlign: 'center', fontWeight: 800, color: '#000', fontSize: '12pt' }}>{L.num}</th>
                         </> : <>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '6%', textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.num}</th>
-                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.subject}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '10%', textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.score}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '15%', textAlign: 'center', fontWeight: 800, color: '#000' }}>{L.grade}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '6%', textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.num}</th>
+                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.subject}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', width: '10%', textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.score}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', width: '15%', textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.grade}</th>
                         </>}
                     </tr>
                 </thead>
@@ -274,7 +321,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                     <table style={{ borderCollapse: 'collapse', fontSize: '9pt', direction: isAr ? 'rtl' : 'ltr' }}>
                         <thead>
                             <tr>
-                                <th colSpan={2} style={{ border: '1px solid #999', padding: '3px 16px', background: '#f0f4f8', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isAr ? '12pt' : '9pt' }}>
+                                <th colSpan={2} style={{ border: '1px solid #999', padding: '3px 16px', background: '#f0f4f8', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isAr ? '12pt' : '9pt', textTransform: isAr ? 'none' : 'uppercase' }}>
                                     {L.gradeScale}
                                 </th>
                             </tr>

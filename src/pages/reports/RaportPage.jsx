@@ -1233,28 +1233,79 @@ export default function RaportPage() {
         const html = [...cards].map(c => c.outerHTML).join('')
         const titleStr = stuList.length === 1 ? `Raport ${stuList[0].name}_${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}` : `Raport Kelas ${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}`
         const win = window.open('', '_blank'); if (!win) { addToast('Popup diblokir browser.', 'error'); setPrintQueue([]); setPrintRenderedCount(0); return }
-        win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titleStr}</title>
-            <link rel="preconnect" href="https://fonts.googleapis.com">
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
-            <style>
-                @page { size: A4; margin: 0; }
-                body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background: white; }
-                * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .raport-card { page-break-after: always; position: relative; overflow: hidden; background: white !important; }
-                img { mix-blend-mode: multiply; max-width: 100%; height: auto; }
-                @media print {
-                    body { background: white; }
-                    .raport-card { box-shadow: none !important; border: none !important; margin: 0 !important; }
-                }
-            </style></head><body>${html}</body></html>`)
-        win.document.close(); win.focus(); setTimeout(() => {
-            win.print(); setPrintQueue([]); setPrintRenderedCount(0);
-            logAudit({
-                action: 'PRINT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                newData: { format: 'PDF_PRINT', count: stuList.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
-            })
-        }, 700)
+        win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>${titleStr}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=block" rel="stylesheet">
+    <style>
+        @page { size: A4; margin: 0; }
+        
+        /* CSS variables biar konsisten */
+        :root {
+            --color-primary: #4f46e5;
+            --color-text: #0f172a;
+            --color-border: #e2e8f0;
+        }
+        
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Inter', sans-serif; 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            background: white; 
+        }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        
+        /* Font Arab eksplisit */
+        [dir="rtl"], .font-arabic, h1[style*="Amiri"], h2[style*="Amiri"] {
+            font-family: 'Amiri', serif !important;
+        }
+        
+        .raport-card { page-break-after: always; position: relative; overflow: hidden; background: white !important; }
+        img { mix-blend-mode: multiply; max-width: 100%; height: auto; }
+        
+        @media print {
+            body { background: white; }
+            .raport-card { box-shadow: none !important; border: none !important; margin: 0 !important; }
+        }
+    </style>
+</head><body>${html}</body></html>`)
+        win.document.close();
+        win.focus();
+        if (win.document.fonts && win.document.fonts.ready) {
+            win.document.fonts.ready.then(async () => {
+                // Paksa load font Arab secara eksplisit
+                await Promise.all([
+                    win.document.fonts.load('400 16px Amiri'),
+                    win.document.fonts.load('700 16px Amiri'),
+                    win.document.fonts.load('700 16px Cairo'),
+                ]);
+                setTimeout(() => {
+                    win.print();
+                    setPrintQueue([]);
+                    setPrintRenderedCount(0);
+                    logAudit({
+                        action: 'PRINT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                        newData: { format: 'PDF_PRINT', count: stuList.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
+                    });
+                }, 500);
+            }).catch((err) => {
+                console.error("Font loading failed, printing anyway:", err);
+                setTimeout(() => {
+                    win.print();
+                    setPrintQueue([]);
+                    setPrintRenderedCount(0);
+                }, 500);
+            });
+        } else {
+            setTimeout(() => {
+                win.print();
+                setPrintQueue([]);
+                setPrintRenderedCount(0);
+            }, 800);
+        }
     }, [selectedClass, bulanObj, selectedYear, addToast, profile, selectedMonth])
 
     useEffect(() => {
@@ -1279,11 +1330,40 @@ export default function RaportPage() {
             win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Raport ${entry.class_name} ${BULAN.find(b => b.id === entry.month)?.id_str} ${entry.year}</title>
                 <link rel="preconnect" href="https://fonts.googleapis.com">
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
                 <style>
                     @page{size:A4;margin:0}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
                 </style></head><body>${html}</body></html>`)
-            win.document.close(); win.focus(); setTimeout(() => { win.print(); setPrintQueue([]); setPrintRenderedCount(0) }, 800)
+            win.document.close();
+            win.focus();
+            if (win.document.fonts && win.document.fonts.ready) {
+                win.document.fonts.ready.then(async () => {
+                    // Paksa load font Arab secara eksplisit
+                    await Promise.all([
+                        win.document.fonts.load('400 16px Amiri'),
+                        win.document.fonts.load('700 16px Amiri'),
+                        win.document.fonts.load('700 16px Cairo'),
+                    ]);
+                    setTimeout(() => {
+                        win.print();
+                        setPrintQueue([]);
+                        setPrintRenderedCount(0);
+                    }, 500);
+                }).catch((err) => {
+                    console.error("Font loading failed, printing anyway:", err);
+                    setTimeout(() => {
+                        win.print();
+                        setPrintQueue([]);
+                        setPrintRenderedCount(0);
+                    }, 500);
+                });
+            } else {
+                setTimeout(() => {
+                    win.print();
+                    setPrintQueue([]);
+                    setPrintRenderedCount(0);
+                }, 800);
+            }
         }
         setTimeout(() => tryExport(), 300)
     }, [pendingExport, archivePreview, addToast])
