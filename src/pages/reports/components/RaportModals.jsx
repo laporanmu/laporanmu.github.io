@@ -45,89 +45,6 @@ export const ShortcutModalContent = memo(() => {
     )
 })
 
-// ─── Tutorial Modal Content ──────────────────────────────────────────────────
-
-export const TutorialModalContent = memo(({ step, setStep, totalSteps, slides, onZoomImg, onFinish }) => {
-    const slide = slides[step]
-    const isLast = step === totalSteps - 1
-    const isFirst = step === 0
-
-    return (
-        <div className="flex flex-col h-full -m-6 h-[calc(100vh-250px)] max-h-[600px]">
-            {/* Dot Navigator - Fixed at Top */}
-            <div className="flex items-center justify-center gap-1.5 py-4 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
-                {slides.map((_, i) => (
-                    <button 
-                        key={i} 
-                        onClick={() => setStep(i)}
-                        className={`rounded-full transition-all ${i === step ? 'w-5 h-2 bg-amber-500' : 'w-2 h-2 bg-[var(--color-border)] hover:bg-amber-500/40'}`}
-                        aria-label={`Slide ${i + 1}`}
-                    />
-                ))}
-                <span className="ml-2 text-[9px] text-[var(--color-text-muted)] font-bold">{step + 1}/{totalSteps}</span>
-            </div>
-
-            {/* Scrollable Body area */}
-            <div className="px-6 py-5 flex-1 overflow-y-auto custom-scrollbar">
-                {slide.img ? (
-                    <div className="relative group mb-5 cursor-zoom-in" onClick={() => onZoomImg(slide.img)}>
-                        <img src={slide.img} alt={slide.title}
-                            className="w-full rounded-2xl border border-[var(--color-border)] object-contain max-h-64 transition-all group-hover:brightness-95" />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all pointer-events-none">
-                            <div className="bg-black/60 text-white text-[10px] font-black px-4 py-2 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
-                                <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[9px]" /> Klik untuk zoom
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="w-full rounded-2xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)] mb-5 flex items-center justify-center h-48 animate-pulse text-[var(--color-text-muted)] opacity-30">
-                         <div className="text-center">
-                            <FontAwesomeIcon icon={slide.icon} className="text-2xl mb-2" />
-                            <p className="text-[9px] font-black uppercase tracking-widest">Screenshot Slide {step + 1}</p>
-                         </div>
-                    </div>
-                )}
-                
-                <div className="mb-6">
-                    {slide.body}
-                </div>
-
-                {/* Tips Box inside scroll area */}
-                <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/15 flex items-start gap-3 mb-2">
-                    <FontAwesomeIcon icon={faLightbulb} className="text-amber-500 text-xs mt-0.5 shrink-0" />
-                    <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400 leading-normal">{slide.tips}</p>
-                </div>
-            </div>
-
-            {/* Fixed Footer Navigation */}
-            <div className="flex items-center gap-3 px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                <button 
-                    onClick={() => setStep(v => Math.max(0, v - 1))} 
-                    disabled={isFirst}
-                    className="h-10 px-4 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                    <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /> Sebelumnya
-                </button>
-                <div className="flex-1" />
-                {isLast ? (
-                    <button 
-                        onClick={onFinish}
-                        className="h-10 px-6 rounded-xl bg-amber-500 text-white text-[11px] font-black hover:bg-amber-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95"
-                    >
-                        <FontAwesomeIcon icon={faCheck} className="text-[10px]" /> Selesai
-                    </button>
-                ) : (
-                    <button 
-                        onClick={() => setStep(v => Math.min(totalSteps - 1, v + 1))}
-                        className="h-10 px-6 rounded-xl bg-amber-500 text-white text-[11px] font-black hover:bg-amber-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95"
-                    >
-                        Berikutnya <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
-                    </button>
-                )}
-            </div>
-        </div>
-    )
-})
 
 // ─── WA Blast Confirm Content ────────────────────────────────────────────────
 
@@ -185,6 +102,111 @@ export const WaBlastProgressContent = memo(({ progress, total, activeName, isFai
                 <div className="p-5 rounded-3xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] animate-pulse">
                     <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Sekarang:</p>
                     <p className="text-base font-black text-[var(--color-text)]">{activeName}</p>
+                </div>
+            )}
+        </div>
+    )
+})
+
+// ─── ZIP Blast Progress Content ──────────────────────────────────────────────
+
+export const ZipBlastProgressContent = memo(({ progress, total, done, failed, activeName, active, onCancel }) => {
+    const pct = total > 0 ? Math.round((progress / total) * 100) : 0
+    const isFinished = pct === 100 || !active
+
+    return (
+        <div className="space-y-6 py-4">
+            <style>{`
+                @keyframes zipShimmer {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+                .zip-shimmer-bar {
+                    animation: zipShimmer 1.8s ease-in-out infinite;
+                }
+            `}</style>
+
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                        isFinished 
+                            ? 'bg-emerald-500/10 text-emerald-500 shadow-lg shadow-emerald-500/5' 
+                            : 'bg-teal-500/10 text-teal-500 animate-pulse'
+                    }`}>
+                        {isFinished ? (
+                            <FontAwesomeIcon icon={faCheck} className="text-xl" />
+                        ) : (
+                            <div className="relative flex items-center justify-center">
+                                <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
+                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-teal-500 rounded-full border-2 border-white animate-ping" />
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <p className="text-base font-black text-[var(--color-text)] tracking-tight">
+                            {isFinished ? 'Ekspor Selesai!' : 'Mengekspor ke ZIP...'}
+                        </p>
+                        <p className="text-xs text-[var(--color-text-muted)] font-bold">
+                            {progress} dari {total} raport terproses
+                        </p>
+                    </div>
+                </div>
+                <span className="text-2xl font-black text-[var(--color-text)] tracking-tight tabular-nums">
+                    {pct}%
+                </span>
+            </div>
+
+            {/* Progress track */}
+            <div className="relative h-4 w-full rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] p-1 overflow-hidden">
+                <div 
+                    className={`h-full rounded-full transition-all duration-500 relative overflow-hidden ${
+                        isFinished ? 'bg-emerald-500' : 'bg-gradient-to-r from-teal-400 to-emerald-500'
+                    }`} 
+                    style={{ width: `${pct}%` }}
+                >
+                    {/* Pulsing highlight effect */}
+                    {!isFinished && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent zip-shimmer-bar" />
+                    )}
+                </div>
+            </div>
+
+            {/* Stats Breakdown */}
+            <div className="grid grid-cols-3 gap-2.5">
+                <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center">
+                    <span className="text-[9px] font-black uppercase text-emerald-600 tracking-wider">Sukses</span>
+                    <span className="text-base font-black text-emerald-500 mt-0.5 tabular-nums">{done}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/10 flex flex-col items-center">
+                    <span className="text-[9px] font-black uppercase text-rose-600 tracking-wider">Gagal</span>
+                    <span className="text-base font-black text-rose-500 mt-0.5 tabular-nums">{failed}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-500/5 border border-slate-500/10 flex flex-col items-center">
+                    <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Tersisa</span>
+                    <span className="text-base font-black text-slate-400 mt-0.5 tabular-nums">{Math.max(0, total - progress)}</span>
+                </div>
+            </div>
+
+            {/* Active processing element */}
+            {!isFinished && activeName && (
+                <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Sedang Memproses:</p>
+                        <p className="text-xs font-black text-[var(--color-text)] mt-0.5 truncate">{activeName}</p>
+                    </div>
+                    <div className="w-5 h-5 rounded-full border-2 border-teal-500/35 border-t-teal-500 animate-spin shrink-0" />
+                </div>
+            )}
+
+            {/* Actions */}
+            {active && (
+                <div className="flex justify-end pt-1">
+                    <button 
+                        onClick={onCancel}
+                        className="h-10 px-5 rounded-xl border border-red-500/20 bg-red-500/8 hover:bg-red-500/15 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                        Batal Ekspor
+                    </button>
                 </div>
             )}
         </div>

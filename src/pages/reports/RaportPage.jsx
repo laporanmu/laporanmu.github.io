@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
+﻿import { Fragment, useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -41,8 +41,13 @@ import { RadarChart, SparklineTrend } from './components/RaportCharts'
 import RaportPrintCard from './components/RaportPrintCard'
 import StudentRow, { ExtraInput, ExtraTextarea } from './components/RaportRecordRow'
 import BulkActionBar from './components/BulkActionBar'
-import { ShortcutModalContent, TutorialModalContent, WaBlastConfirmContent, WaBlastProgressContent } from './components/RaportModals'
-import StatsCarousel from '../../components/StatsCarousel'
+import { ShortcutModalContent, WaBlastConfirmContent, WaBlastProgressContent, ZipBlastProgressContent } from './components/RaportModals'
+import { RaportTutorialModal } from './components/RaportTutorialModal'
+import Skeleton from '../../components/ui/Skeleton'
+import { useRaportCore } from './hooks/useRaportCore'
+import { useRaportImportExport } from './hooks/useRaportImportExport'
+import RaportInputTable from './components/RaportInputTable'
+import RaportArchive from './components/RaportArchive'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -52,13 +57,13 @@ const OVERSCAN = 5
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 const ClassCardSkeleton = () => (
-    <div className="p-4 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface-alt)] animate-pulse">
+    <div className="p-4 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
         <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-[var(--color-border)]" />
-            <div className="w-16 h-5 rounded-lg bg-[var(--color-border)] opacity-60" />
+            <Skeleton className="w-12 h-12 rounded-2xl" />
+            <Skeleton className="w-16 h-5 rounded-lg opacity-60" />
         </div>
-        <div className="h-5 w-3/4 bg-[var(--color-border)] rounded-lg mb-2" />
-        <div className="h-3 w-1/2 bg-[var(--color-border)] rounded-md opacity-40" />
+        <Skeleton className="h-5 w-3/4 rounded-lg mb-2" />
+        <Skeleton className="h-3 w-1/2 rounded-md opacity-40" />
     </div>
 )
 
@@ -77,74 +82,47 @@ function getPortalContainer(id) {
 }
 
 export default function RaportPage() {
-    const { addToast } = useToast()
-    const { settings } = useSchoolSettings()
-    const { profile } = useAuth()
-    // FIX #10: now sebagai ref agar tidak berubah setiap render
-    const now = useRef(new Date()).current
+    const printContainerRef = useRef(null)
 
-    const ALLOWED_ROLES = ['admin', 'guru', 'developer']
-    const isAllowed = profile ? ALLOWED_ROLES.includes(profile.role?.toLowerCase()) : null
+    // ── Hooks integration ──
+    const core = useRaportCore()
+    const {
+        addToast, settings, profile, now, isAllowed, canEdit,
+        classesList, setClassesList, pageLoading, setPageLoading,
+        searchQuery, setSearchQuery, filterType, setFilterType,
+        isFilterOpen, setIsFilterOpen, stats, setStats,
+        classProgress, setClassProgress, showAllIncompleteBanner, setShowAllIncompleteBanner,
+        step, setStep, selectedClassId, setSelectedClassId,
+        homeroomTeacherName, setHomeroomTeacherName, selectedMonth, setSelectedMonth,
+        selectedYear, setSelectedYear, musyrif, setMusyrif, lang, setLang,
+        students, setStudents, loading, setLoading,
+        transliterating, setTransliterating, scores, setScores, setScoresRaw,
+        extras, setExtras, saving, setSaving, savedIds, setSavedIds,
+        existingReportIds, setExistingReportIds, savingAll, setSavingAll,
+        copyingLastMonth, setCopyingLastMonth, studentSearch, setStudentSearch,
+        draftAvailable, setDraftAvailable, isOnline, setIsOnline,
+        newMonthBanner, setNewMonthBanner, prevMonthScores, setPrevMonthScores,
+        studentTrend, setStudentTrend, catatanArabMap, setCatatanArabMap,
+        saveAllConfirm, setSaveAllConfirm, showNoPhoneOnly, setShowNoPhoneOnly,
+        showIncompleteOnly, setShowIncompleteOnly, lastSession, setLastSession,
+        autoSaveTimers, completedCount, progressPct, noPhoneCount, hasUnsavedMemo,
+        filteredClasses, step0Stats,
+        transliterateToArab, transliterateNames, loadStudents, loadDraft, clearDraft,
+        saveStudent, resetStudent, saveAll, _doSaveAll, copyFromLastMonth,
+        bulanObj, selectedClass
+    } = core
 
-    // access.teacher_raport flag — kalau off, guru jadi read-only
-    const { enabled: teacherRaportEnabled } = useFlag('access.teacher_raport')
-    const canEdit = profile?.role === 'guru' ? teacherRaportEnabled : true
-
-    // ── Page-level state
-    const [classesList, setClassesList] = useState([])
-    const [pageLoading, setPageLoading] = useState(true)
-    const [searchQuery, setSearchQuery] = useState('')
-    const [filterType, setFilterType] = useState('all') // all, boarding, regular
-    const [isFilterOpen, setIsFilterOpen] = useState(false)
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
-    const [isExportModalOpen, setIsExportModalOpen] = useState(false)
-    const [exporting, setExporting] = useState(false)
-    const [stats, setStats] = useState({ totalKelas: 0, totalSiswa: 0, totalRaport: 0, bulanIni: now.getMonth() + 1 })
-    const [classProgress, setClassProgress] = useState({})
-    const [showAllIncompleteBanner, setShowAllIncompleteBanner] = useState(false)
-
-    // ── Step state (0 = daftar kelas, 1 = setup, 2 = input, 3 = preview, 4 = arsip)
-    const [step, setStep] = useState(0)
-
-    // ── Setup state
-    const [selectedClassId, setSelectedClassId] = useState('')
-    const [homeroomTeacherName, setHomeroomTeacherName] = useState('')
-    const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1)
-    const [selectedYear, setSelectedYear] = useState(now.getFullYear())
-    const [musyrif, setMusyrif] = useState('')
-    const [lang, setLang] = useState('ar')
-
-    // ── Data state
-    const [students, setStudents] = useState([])
-    const [loading, setLoading] = useState(false)
-    const [transliterating, setTransliterating] = useState(false)
-    const [scores, setScoresRaw] = useState({})
-    // ── Undo-aware wrapper — push ke history setiap kali scores berubah dari user
-    // Ref mutations dijadwalkan via Promise.resolve() agar tidak ter-double di StrictMode
-    const setScores = useCallback((updater) => {
-        setScoresRaw(prev => {
-            const next = typeof updater === 'function' ? updater(prev) : updater
-            const hist = scoresHistoryRef.current
-            const idx = scoresHistoryIdxRef.current
-            // Potong redo-branch jika ada
-            const newHist = hist.slice(0, idx + 1)
-            newHist.push(JSON.parse(JSON.stringify(next)))
-            if (newHist.length > 30) newHist.shift()
-            // Jadwalkan setelah render commit — aman dari StrictMode double-invoke
-            Promise.resolve().then(() => {
-                scoresHistoryRef.current = newHist
-                scoresHistoryIdxRef.current = newHist.length - 1
-            })
-            return next
-        })
-    }, [])
-    const [extras, setExtras] = useState({})
-    const [saving, setSaving] = useState({})
-    const [savedIds, setSavedIds] = useState(new Set())
-    const [existingReportIds, setExistingReportIds] = useState({})
-    const [savingAll, setSavingAll] = useState(false)
-    const [copyingLastMonth, setCopyingLastMonth] = useState(false)
-    const [studentSearch, setStudentSearch] = useState('')
+    const importExport = useRaportImportExport(core, { printContainerRef })
+    const {
+        raportLinks, setRaportLinks, sendingWA, setSendingWA,
+        waBlastConfirm, setWaBlastConfirm, waBlast, setWaBlast,
+        zipBlast, setZipBlast, exporting, setExporting,
+        isImportModalOpen, setIsImportModalOpen, isExportModalOpen, setIsExportOpen,
+        waBlastAbortRef, zipAbortRef,
+        buildWaMessage, sendWATextOnly, generatePDFBlob, uploadToSupabase,
+        generateAndSendWA, runWaBlast, runZipBlast,
+        handleExportCSV, handleExportExcel, handleExportAllClasses
+    } = importExport
 
     // ── Archive state
     const [archiveLoading, setArchiveLoading] = useState(false)
@@ -152,10 +130,10 @@ export default function RaportPage() {
     const [archiveFilter, setArchiveFilter] = useState({ classId: '', year: '', month: '' })
     const [archiveSearch, setArchiveSearch] = useState('')
     const [archiveSort, setArchiveSort] = useState('newest')
+    const [archiveVisibleCount, setArchiveVisibleCount] = useState(12)
     const [archiveStatusFilter, setArchiveStatusFilter] = useState('all')
     const [archiveMinAvg, setArchiveMinAvg] = useState('')   // filter rata-rata < X
     const [archivePreview, setArchivePreview] = useState(null)
-    const [studentTrend, setStudentTrend] = useState({})
     const [trendModal, setTrendModal] = useState(null) // { student, trendData }
 
     // ── Archive inline edit state
@@ -167,52 +145,18 @@ export default function RaportPage() {
     // ── Archive tab (list | ringkasan)
     const [archiveTab, setArchiveTab] = useState('list')
 
-    // ── Mobile card — show one at a time with swipe nav
+    // ── Mobile card ──
     const [mobileActiveIdx, setMobileActiveIdx] = useState(0)
-    // FIX: mobileSwipeRef dihapus (dead code) — swipe pakai _touchStartX lokal di render
 
-    // ── Student detail drawer (full history timeline)
-    const [studentDetailDrawer, setStudentDetailDrawer] = useState(null) // null | { student, history: [{month,year,scores}] }
+    // ── Student detail drawer ──
+    const [studentDetailDrawer, setStudentDetailDrawer] = useState(null)
     const [studentDetailLoading, setStudentDetailLoading] = useState(false)
-
-    // ── Bulk ZIP export
-    const [zipBlast, setZipBlast] = useState(null) // null | { queue, idx, done, failed, active }
-
-    // ── Offline draft
-    const [draftAvailable, setDraftAvailable] = useState(false)
-    // FIX: guard navigator.onLine agar tidak throw di SSR / browser extension
-    const [isOnline, setIsOnline] = useState(() => typeof navigator !== 'undefined' ? navigator.onLine : true)
 
     // ── Modals
     const [showShortcutModal, setShowShortcutModal] = useState(false)
     const [shortcutRect, setShortcutRect] = useState(null)
     const shortcutBtnRef = useRef(null)
     const [showTutorialModal, setShowTutorialModal] = useState(false)
-    const [tutorialStep, setTutorialStep] = useState(0)
-    const [tutorialZoomImg, setTutorialZoomImg] = useState(null)
-    const [tutorialImgs, setTutorialImgs] = useState([null, null, null, null, null, null, null])
-
-    useEffect(() => {
-        if (!showTutorialModal) return
-        Promise.all([
-            import('../../assets/Tutorial_1.png'),
-            import('../../assets/Tutorial_2.png'),
-            import('../../assets/Tutorial_3.png'),
-            import('../../assets/Tutorial_4.png'),
-            import('../../assets/Tutorial_5.png'),
-            import('../../assets/Tutorial_6.png'),
-            import('../../assets/Tutorial_7.png'),
-        ]).then(mods => setTutorialImgs(mods.map(m => m.default)))
-    }, [showTutorialModal])
-    // FIX #11: State konfirmasi sebelum WA Blast dimulai
-    const [waBlastConfirm, setWaBlastConfirm] = useState(null) // null | { queue }
-    const [waBlast, setWaBlast] = useState(null)
-
-    // ── Banner
-    const [newMonthBanner, setNewMonthBanner] = useState(null)
-
-    // ── Preview
-    const [previewStudentId, setPreviewStudentId] = useState(null)
     const [pageSize, setPageSize] = useState('a4') // 'a4' | 'f4'
     const [previewZoom, setPreviewZoom] = useState(1) // 0.8 = 80% zoom out
     const [isFullScreenPreview, setIsFullScreenPreview] = useState(false)
@@ -226,6 +170,13 @@ export default function RaportPage() {
     const fullScreenLastTapRef = useRef(0)
     const bodyLockRef = useRef({ overflow: '', overscroll: '' })
     const manualZoomRef = useRef(false)
+    const fullScreenPinchDistRef = useRef(null)
+    const fullScreenPinchZoomRef = useRef(1)
+
+    // Reset archive visible count on search/filter changes
+    useEffect(() => {
+        setArchiveVisibleCount(12)
+    }, [archiveSearch, archiveFilter])
 
     // ── Auto-fit zoom: gunakan ResizeObserver agar akurat saat layout selesai render
     useEffect(() => {
@@ -309,34 +260,15 @@ export default function RaportPage() {
         }
     }, [isFullScreenPreview])
 
-    // ── WA/PDF
-    const [sendingWA, setSendingWA] = useState({})
-    const [raportLinks, setRaportLinks] = useState({})
-
     // ── Confirm modals
     const [confirmDelete, setConfirmDelete] = useState(null)
     const [confirmModal, setConfirmModal] = useState(null)
-    const [saveAllConfirm, setSaveAllConfirm] = useState(null) // IMPROVISASI: konfirmasi simpan semua saat ada yg kosong
 
     // ── Print
-    const [printQueue, setPrintQueue] = useState([])
-    const [printRenderedCount, setPrintRenderedCount] = useState(0)
-    const printContainerRef = useRef(null)
     const [pendingExport, setPendingExport] = useState(null)
-
-    // ── Prev month scores for delta comparison
-    const [prevMonthScores, setPrevMonthScores] = useState({})
-
-    // ── UX extras
-    const [showIncompleteOnly, setShowIncompleteOnly] = useState(false)
-    const [showNoPhoneOnly, setShowNoPhoneOnly] = useState(false)
-    const [bulkMode, setBulkMode] = useState(false)
     const [bulkValues, setBulkValues] = useState({})
-    const [bulkSelected, setBulkSelected] = useState(new Set())  // UIUX: bulk select state
-    const selectedStudentIds = useMemo(() => Array.from(bulkSelected), [bulkSelected])
     const [pendingNav, setPendingNav] = useState(null)
     const [templateOpenId, setTemplateOpenId] = useState(null) // FITUR 3: template catatan per santri
-    const [catatanArabMap, setCatatanArabMap] = useState({}) // map studentId → terjemahan Arab catatan
 
     // FIX 6: global auto-save indicator
     const [globalSaveIndicator, setGlobalSaveIndicator] = useState(null) // null | 'saving' | 'saved'
@@ -380,19 +312,9 @@ export default function RaportPage() {
 
     // ── Refs
     const cellRefs = useRef({})
-    const autoSaveTimers = useRef({})
-    // FIX MINOR: Bersihkan semua pending auto-save timer saat komponen unmount.
-    useEffect(() => () => Object.values(autoSaveTimers.current).forEach(clearTimeout), [])
-    const waBlastAbortRef = useRef(false) // flag abort untuk runWaBlast
-    // u2500u2500 Undo history (max 30 snapshots of scores state)
-    const scoresHistoryRef = useRef([])
-    const scoresHistoryIdxRef = useRef(-1)
     // PERF: Virtual scroll — hanya render baris yang visible + overscan
     const tableScrollRef = useRef(null)
     const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 })
-    // ROW_HEIGHT & OVERSCAN kini module-level constants (atas file) — tidak dideklarasi ulang di sini
-    const selectedClass = classesList.find(c => c.id === selectedClassId)
-    const bulanObj = BULAN.find(b => b.id === selectedMonth)
 
     // FIX 10: tab title dinamis — harus setelah selectedClass & bulanObj dideklarasi
     useEffect(() => {
@@ -436,68 +358,6 @@ export default function RaportPage() {
         filteredDebounceRef.current = setTimeout(() => setFilteredStudents(next), 1500)
         return () => { if (filteredDebounceRef.current) clearTimeout(filteredDebounceRef.current) }
     }, [baseFiltered, showIncompleteOnly, scores])
-
-    const completedCount = useMemo(() => students.filter(s => isComplete(scores[s.id] || {})).length, [students, scores])
-    const progressPct = useMemo(() => {
-        if (!students.length) return 0
-        const totalRatio = students.reduce((acc, s) => {
-            const sc = scores[s.id] || {}
-            const ex = extras[s.id] || {}
-            const progressFields = [
-                sc.nilai_akhlak,
-                sc.nilai_ibadah,
-                sc.nilai_kebersihan,
-                sc.nilai_quran,
-                sc.nilai_bahasa,
-                ex.berat_badan,
-                ex.tinggi_badan,
-                ex.hari_sakit,
-                ex.hari_izin,
-                ex.hari_alpa,
-                ex.hari_pulang,
-                ex.ziyadah,
-                ex.murojaah,
-                ex.catatan,
-            ]
-            const filled = progressFields.filter(v => v !== '' && v !== null && v !== undefined).length
-            return acc + (filled / progressFields.length)
-        }, 0)
-        return Math.round((totalRatio / students.length) * 100)
-    }, [students, scores, extras])
-    // FIX MINOR: useMemo agar tidak dihitung ulang tiap render
-    const noPhoneCount = useMemo(() => students.filter(s => !s.phone).length, [students])
-
-    const hasUnsavedMemo = useMemo(() => students.some(s => {
-        if (savedIds.has(s.id)) return false
-        const sc = scores[s.id] || {}, ex = extras[s.id] || {}
-        return KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined) ||
-            [ex.berat_badan, ex.tinggi_badan, ex.hari_sakit, ex.hari_izin, ex.hari_alpa, ex.hari_pulang, ex.catatan].some(v => v !== '' && v !== null && v !== undefined)
-    }), [students, scores, extras, savedIds])
-
-    const filteredClasses = useMemo(() => {
-        let list = classesList.filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        if (filterType === 'boarding') {
-            list = list.filter(c => (c.name || '').toLowerCase().includes('boarding') || (c.name || '').toLowerCase().includes('pondok'))
-        } else if (filterType === 'regular') {
-            list = list.filter(c => !((c.name || '').toLowerCase().includes('boarding') || (c.name || '').toLowerCase().includes('pondok')))
-        }
-        return list
-    }, [classesList, searchQuery, filterType])
-
-    const step0Stats = useMemo(() => {
-        const progressRows = Object.values(classProgress || {})
-        const totalTargets = progressRows.reduce((acc, row) => acc + (row.total || 0), 0)
-        const totalCompleted = progressRows.reduce((acc, row) => acc + (row.done || 0), 0)
-        const weightedInput = totalTargets
-            ? Math.round(progressRows.reduce((acc, row) => acc + ((row.pct || 0) * (row.total || 0)), 0) / totalTargets)
-            : 0
-        return {
-            totalKelas: stats.totalKelas,
-            totalSiswa: stats.totalSiswa,
-            raportLengkap: `${totalCompleted}/${totalTargets}`,
-            rataInput: `${weightedInput}%`,
-        }
-    }, [classProgress, stats.totalKelas, stats.totalSiswa])
 
     // ── Fetch page data
     useEffect(() => {
@@ -637,13 +497,6 @@ export default function RaportPage() {
     // ── Reset student search when class changes
     useEffect(() => { setStudentSearch(''); setMusyrif(''); setCatatanArabMap({}) }, [selectedClassId])
 
-    // ── FITUR 1: Pin sesi terakhir — baca dari localStorage saat mount
-    const [lastSession, setLastSession] = useState(() => {
-        try {
-            const raw = localStorage.getItem('raport_last_session')
-            return raw ? JSON.parse(raw) : null
-        } catch { return null }
-    })
 
     // ── Fetch homeroom teacher
     // FIX MINOR: dulu 2 query terpisah (N+1), sekarang 1 query dengan join
@@ -780,530 +633,24 @@ export default function RaportPage() {
         load('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => !!(window.jspdf?.jsPDF || window.jsPDF))
     }, [])
 
-    // PERF: transliterateToArab sekarang async — lazy load kamus dari translitData.js
-    // Kamus hanya di-load saat lang==='ar' pertama kali (≈ 15KB hemat parse awal)
-    const transliterateToArab = useCallback(async (name) => {
-        const { KATA_ARAB: KA, ASMAUL_HUSNA: AH, DIGRAPH: DG, SINGLE: SG } = await loadTranslitData()
-        const latinToArab = (word) => {
-            let res = '', i = 0
-            while (i < word.length) {
-                const two = word.slice(i, i + 2).toLowerCase()
-                const di = DG.find(([k]) => k === two)
-                if (di) { res += di[1]; i += 2; continue }
-                res += SG[word[i].toLowerCase()] || ''
-                i++
-            }
-            return res
-        }
-        const words = name.toLowerCase().trim().split(/\s+/)
-        const result = []
-        for (const w of words) {
-            if (KA[w]) { result.push(KA[w]); continue }
-            const abdulMatch = w.match(/^ab[du]u?l?[-_]?(.+)$/) || w.match(/^abdi[-_]?(.+)$/)
-            if (abdulMatch) {
-                const suffix = abdulMatch[1]
-                if (AH[suffix]) { result.push('عبد ' + AH[suffix]); continue }
-                if (suffix === 'llah' || suffix === 'lah' || suffix === 'illah') { result.push('عبد الله'); continue }
-            }
-            if (w === 'bin' || w === 'ibn' || w === 'ibnu') { result.push('بن'); continue }
-            if (w === 'binti' || w === 'bint') { result.push('بنت'); continue }
-            if (w.endsWith('uddin') || w.endsWith('udin') || w.endsWith('addin') || w.endsWith('iddin')) {
-                const base = w.replace(/(uddin|udin|addin|iddin)$/, '')
-                if (KA[base]) { result.push(KA[base] + ' الدين'); continue }
-            }
-            if (w.startsWith('nur') || w.startsWith('noor')) {
-                const suffix = w.replace(/^noo?r[-_]?/, '')
-                const sufArab = KA[suffix] || AH[suffix]
-                if (sufArab) { result.push('نور ' + sufArab.replace(/^ال/, '')); continue }
-            }
-            result.push(latinToArab(w))
-        }
-        return result.join(' ')
-    }, [])
-
-    const transliterateNames = useCallback(async (stuList) => {
-        const needsTranslit = stuList.filter(s => !s.metadata?.nama_arab)
-        if (!needsTranslit.length) return stuList
-        const updated = [...stuList]
-        const dbUpdates = []
-        for (const s of needsTranslit) {
-            const namaArab = await transliterateToArab(s.name)  // PERF: await async lazy-load
-            const newMeta = { ...(s.metadata || {}), nama_arab: namaArab }
-            dbUpdates.push(supabase.from('students').update({ metadata: newMeta }).eq('id', s.id))
-            const idx = updated.findIndex(x => x.id === s.id)
-            if (idx !== -1) updated[idx] = { ...updated[idx], metadata: newMeta }
-        }
-        await Promise.allSettled(dbUpdates)
-        return updated
-    }, [transliterateToArab])
-
-    // ── Load students
-    const loadStudents = useCallback(async (overrideClassId, overrideMonth, overrideYear, overrideLang) => {
-        const classId = overrideClassId ?? selectedClassId
-        const month = overrideMonth ?? selectedMonth
-        const year = overrideYear ?? selectedYear
-        const useLang = overrideLang ?? lang
-        if (!classId) return
-        setLoading(true)
-        try {
-            const { data: stuData, error: stuErr } = await supabase.from('students').select('id, name, registration_code, photo_url, gender, phone, metadata').eq('class_id', classId).is('deleted_at', null).order('name')
-            if (stuErr) throw stuErr
-            const ids = (stuData || []).map(s => s.id)
-            const prevM = month === 1 ? 12 : month - 1
-            const prevY = month === 1 ? year - 1 : year
-            const [{ data: repData }, { data: prevRepData }] = await Promise.all([
-                supabase.from('student_monthly_reports').select('*').in('student_id', ids).eq('month', month).eq('year', year),
-                supabase.from('student_monthly_reports').select('student_id,nilai_akhlak,nilai_ibadah,nilai_kebersihan,nilai_quran,nilai_bahasa').in('student_id', ids).eq('month', prevM).eq('year', prevY),
-            ])
-            // PERF #2: trend data di-fetch terpisah (non-blocking) setelah students render
-            // Sebelumnya masuk ke Promise.all — blok load utama 200-500ms ekstra
-            setTimeout(() => {
-                const trendMonths = []
-                for (let i = 5; i >= 0; i--) {
-                    let m = month - i, y = year
-                    if (m <= 0) { m += 12; y -= 1 }
-                    trendMonths.push({ m, y })
-                }
-                supabase.from('student_monthly_reports')
-                    .select('student_id,month,year,nilai_akhlak,nilai_ibadah,nilai_kebersihan,nilai_quran,nilai_bahasa')
-                    .in('student_id', ids)
-                    .or(trendMonths.map(t => `and(month.eq.${t.m},year.eq.${t.y})`).join(','))
-                    .order('year').order('month')
-                    .then(({ data: trendData }) => {
-                        const trendMap = {}
-                        for (const r of (trendData || [])) {
-                            if (!trendMap[r.student_id]) trendMap[r.student_id] = []
-                            trendMap[r.student_id].push({ month: r.month, year: r.year, scores: { nilai_akhlak: r.nilai_akhlak, nilai_ibadah: r.nilai_ibadah, nilai_kebersihan: r.nilai_kebersihan, nilai_quran: r.nilai_quran, nilai_bahasa: r.nilai_bahasa } })
-                        }
-                        setStudentTrend(trendMap)
-                    })
-            }, 0)
-            const prevScoreMap = {}
-            for (const r of (prevRepData || [])) {
-                prevScoreMap[r.student_id] = { nilai_akhlak: r.nilai_akhlak, nilai_ibadah: r.nilai_ibadah, nilai_kebersihan: r.nilai_kebersihan, nilai_quran: r.nilai_quran, nilai_bahasa: r.nilai_bahasa }
-            }
-            setPrevMonthScores(prevScoreMap)
-            const initScores = {}, initExtras = {}, initExisting = {}
-            // FIX MAJOR: kumpulkan semua savedId dulu, baru panggil setSavedIds satu kali
-            // — mencegah race condition akibat N setState berurutan dalam satu loop
-            const initSavedIds = new Set()
-            for (const s of (stuData || [])) {
-                const rep = repData?.find(r => r.student_id === s.id)
-                initScores[s.id] = { nilai_akhlak: rep?.nilai_akhlak ?? '', nilai_ibadah: rep?.nilai_ibadah ?? '', nilai_kebersihan: rep?.nilai_kebersihan ?? '', nilai_quran: rep?.nilai_quran ?? '', nilai_bahasa: rep?.nilai_bahasa ?? '' }
-                initExtras[s.id] = { berat_badan: rep?.berat_badan ?? '', tinggi_badan: rep?.tinggi_badan ?? '', ziyadah: rep?.ziyadah ?? '', murojaah: rep?.murojaah ?? '', hari_sakit: rep?.hari_sakit ?? '', hari_izin: rep?.hari_izin ?? '', hari_alpa: rep?.hari_alpa ?? '', hari_pulang: rep?.hari_pulang ?? '', catatan: rep?.catatan ?? '' }
-                if (rep) { initExisting[s.id] = rep.id; initSavedIds.add(s.id) }
-            }
-            let finalStudents = stuData || []
-            if (useLang === 'ar') {
-                const needs = finalStudents.filter(s => !s.metadata?.nama_arab)
-                if (needs.length) {
-                    setTransliterating(true)
-                    try { finalStudents = await transliterateNames(finalStudents) }
-                    finally { setTransliterating(false) }
-                }
-            }
-            // Reset undo history + filters saat load data baru
-            scoresHistoryRef.current = [JSON.parse(JSON.stringify(initScores))]
-            scoresHistoryIdxRef.current = 0
-            setShowNoPhoneOnly(false)
-            setShowIncompleteOnly(false)
-            // FIX: setScoresRaw (bukan setScores) saat init — history sudah di-reset
-            // manual 3 baris di atas, setScores wrapper akan push snapshot duplikat
-            setStudents(finalStudents); setScoresRaw(initScores); setExtras(initExtras); setExistingReportIds(initExisting)
-            setSavedIds(initSavedIds)
-            // FITUR 1: Simpan sesi terakhir ke localStorage
-            try {
-                const session = { classId, month, year, useLang, className: classesList.find(c => c.id === classId)?.name || '' }
-                localStorage.setItem('raport_last_session', JSON.stringify(session))
-                setLastSession(session)
-            } catch { }
-            return true
-        } catch (e) { addToast('Gagal memuat siswa: ' + e.message, 'error'); console.error('loadStudents error:', e); return false }
-        finally { setLoading(false) }
-    }, [selectedClassId, selectedMonth, selectedYear, lang, transliterateNames, addToast])
-
-    // ── Load offline draft
-    const loadDraft = useCallback(() => {
-        const key = `draft_raport_${selectedClassId}_${selectedMonth}_${selectedYear}`
-        try {
-            const raw = localStorage.getItem(key)
-            if (!raw) return
-            const { scores: dScores, extras: dExtras, savedAt } = JSON.parse(raw)
-            setScores(dScores)
-            setExtras(dExtras)
-            // FIX #5: Jangan reset savedIds sepenuhnya — hanya hapus id yang ada di draft
-            // agar record yang sudah tersimpan di DB tidak kehilangan status "tersimpan"
-            setSavedIds(prev => {
-                const next = new Set(prev)
-                Object.keys(dScores || {}).forEach(id => next.delete(id))
-                return next
-            })
-            const mins = Math.round((Date.now() - savedAt) / 60000)
-            addToast(`Draft dimuat (disimpan ${mins < 1 ? 'baru saja' : mins + ' menit lalu'})`, 'success')
-        } catch (e) { addToast('Gagal memuat draft', 'error'); console.error('loadDraft error:', e) }
-    }, [selectedClassId, selectedMonth, selectedYear, addToast, setScores, setExtras])
-
-    const clearDraft = useCallback(() => {
-        const key = `draft_raport_${selectedClassId}_${selectedMonth}_${selectedYear}`
-        try { localStorage.removeItem(key); setDraftAvailable(false); addToast('Draft dihapus', 'success') }
-        catch (e) { console.error('clearDraft error:', e) }
-    }, [selectedClassId, selectedMonth, selectedYear, addToast])
-
-    // ── Save single
-    const saveStudent = useCallback(async (studentId) => {
-        const sc = scores[studentId], ex = extras[studentId] ?? {}
-        if (!sc) return
-        setSaving(prev => ({ ...prev, [studentId]: true }))
-        try {
-            const payload = { student_id: studentId, month: selectedMonth, year: selectedYear, musyrif_name: musyrif, updated_by: profile?.id ?? null, updated_by_name: profile?.name ?? null, ...Object.fromEntries(Object.entries(sc).map(([k, v]) => [k, v === '' ? null : Number(v)])), berat_badan: ex.berat_badan !== '' ? Number(ex.berat_badan) : null, tinggi_badan: ex.tinggi_badan !== '' ? Number(ex.tinggi_badan) : null, ziyadah: ex.ziyadah || null, murojaah: ex.murojaah || null, hari_sakit: ex.hari_sakit !== '' ? Number(ex.hari_sakit) : 0, hari_izin: ex.hari_izin !== '' ? Number(ex.hari_izin) : 0, hari_alpa: ex.hari_alpa !== '' ? Number(ex.hari_alpa) : 0, hari_pulang: ex.hari_pulang !== '' ? Number(ex.hari_pulang) : 0, catatan: ex.catatan || null }
-            const existingId = existingReportIds[studentId]
-            let error
-            if (existingId) { ; ({ error } = await supabase.from('student_monthly_reports').update(payload).eq('id', existingId)) }
-            else { const { data, error: upsErr } = await supabase.from('student_monthly_reports').upsert(payload, { onConflict: 'student_id,month,year' }).select('id').single(); error = upsErr; if (!upsErr && data) setExistingReportIds(prev => ({ ...prev, [studentId]: data.id })) }
-            if (error) throw error
-            setSavedIds(prev => new Set([...prev, studentId]))
-            await logAudit({
-                action: existingId ? 'UPDATE' : 'INSERT',
-                source: 'OPERATIONAL',
-                tableName: 'student_monthly_reports',
-                recordId: existingId || null,
-                newData: payload,
-            })
-        } catch (e) { addToast(`Gagal menyimpan: ${e.message}`, 'error'); console.error('saveStudent error:', e) }
-        finally { setSaving(prev => ({ ...prev, [studentId]: false })) }
-    }, [scores, extras, selectedMonth, selectedYear, musyrif, existingReportIds, students, addToast])
-
-    // ── Reset student — kosongkan state lokal DAN hapus dari DB jika sudah tersimpan
-    const resetStudent = useCallback(async (studentId) => {
-        // FIX: cancel auto-save timer terlebih dahulu — timer pending bisa tembak
-        // saveStudent() setelah data dikosongkan dan menyimpan data kosong ke DB
-        if (autoSaveTimers.current[studentId]) {
-            clearTimeout(autoSaveTimers.current[studentId])
-            delete autoSaveTimers.current[studentId]
-        }
-        // 1. Kosongkan state lokal dulu (UI langsung responsif)
-        setScores(prev => ({ ...prev, [studentId]: { nilai_akhlak: '', nilai_ibadah: '', nilai_kebersihan: '', nilai_quran: '', nilai_bahasa: '' } }))
-        setExtras(prev => ({ ...prev, [studentId]: { berat_badan: '', tinggi_badan: '', ziyadah: '', murojaah: '', hari_sakit: '', hari_izin: '', hari_alpa: '', hari_pulang: '', catatan: '' } }))
-        setSavedIds(prev => { const n = new Set(prev); n.delete(studentId); return n })
-
-        // 2. Hapus dari DB hanya kalau record memang sudah ada
-        const existingId = existingReportIds[studentId]
-        if (!existingId) return
-        try {
-            const { error } = await supabase.from('student_monthly_reports').delete().eq('id', existingId)
-            if (error) throw error
-            setExistingReportIds(prev => { const n = { ...prev }; delete n[studentId]; return n })
-            const studentName = students.find(s => s.id === studentId)?.name
-            addToast(`Data ${studentName?.split(' ')[0] ?? ''} berhasil direset`, 'success')
-            await logAudit({
-                action: 'DELETE', source: 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: existingId,
-                oldData: { student_id: studentId, student_name: studentName, month: selectedMonth, year: selectedYear }
-            })
-        } catch (e) {
-            addToast(`Gagal hapus dari DB: ${e.message}`, 'error')
-            console.error('resetStudent error:', e)
-        }
-    }, [existingReportIds, students, addToast, setScores])
-
-    const savingAllRef = useRef(false)
-
-    // ── Save all (dengan konfirmasi jika ada nilai kosong)
-    const saveAll = useCallback(async () => {
-        if (savingAll || savingAllRef.current) return
-        savingAllRef.current = true
-        // IMPROVISASI: cek apakah ada santri yang belum lengkap, tampilkan konfirmasi
-        const hasAnyData = (sc, ex) =>
-            KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined) ||
-            [ex.berat_badan, ex.tinggi_badan, ex.ziyadah, ex.murojaah,
-            ex.hari_sakit, ex.hari_izin, ex.hari_alpa, ex.hari_pulang, ex.catatan
-            ].some(v => v !== '' && v !== null && v !== undefined)
-
-        const studentsToSave = students.filter(s => hasAnyData(scores[s.id] || {}, extras[s.id] || {}))
-        if (!studentsToSave.length) {
-            addToast('Belum ada data yang diisi untuk disimpan', 'warning')
-            savingAllRef.current = false
-            return
-        }
-        const incomplete = students.filter(s => !isComplete(scores[s.id] || {}))
-        if (incomplete.length > 0) {
-            setSaveAllConfirm({ completedCount: completedCount, totalCount: students.length, incompleteCount: incomplete.length })
-            savingAllRef.current = false
-            return
-        }
-        await _doSaveAll()
-    }, [savingAll, students, scores, extras, completedCount]) // eslint-disable-line
-
-    const _doSaveAll = useCallback(async () => {
-        setSaveAllConfirm(null)
-        setSavingAll(true)
-        try {
-            const hasAnyData = (sc, ex) =>
-                KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined) ||
-                [ex.berat_badan, ex.tinggi_badan, ex.ziyadah, ex.murojaah,
-                ex.hari_sakit, ex.hari_izin, ex.hari_alpa, ex.hari_pulang, ex.catatan
-                ].some(v => v !== '' && v !== null && v !== undefined)
-
-            const studentsToSave = students.filter(s => hasAnyData(scores[s.id] || {}, extras[s.id] || {}))
-            if (!studentsToSave.length) {
-                addToast('Belum ada data yang diisi untuk disimpan', 'warning')
-                return
-            }
-
-            const payloads = studentsToSave.map(s => { const sc = scores[s.id] || {}, ex = extras[s.id] || {}; return { student_id: s.id, month: selectedMonth, year: selectedYear, musyrif_name: musyrif, updated_by: profile?.id ?? null, updated_by_name: profile?.name ?? null, ...Object.fromEntries(Object.entries(sc).map(([k, v]) => [k, v === '' ? null : Number(v)])), berat_badan: ex.berat_badan !== '' ? Number(ex.berat_badan) : null, tinggi_badan: ex.tinggi_badan !== '' ? Number(ex.tinggi_badan) : null, ziyadah: ex.ziyadah || null, murojaah: ex.murojaah || null, hari_sakit: ex.hari_sakit !== '' ? Number(ex.hari_sakit) : 0, hari_izin: ex.hari_izin !== '' ? Number(ex.hari_izin) : 0, hari_alpa: ex.hari_alpa !== '' ? Number(ex.hari_alpa) : 0, hari_pulang: ex.hari_pulang !== '' ? Number(ex.hari_pulang) : 0, catatan: ex.catatan || null } })
-            // FIX: .select() agar IDs yang baru dibuat dikembalikan dan disimpan
-            // ke existingReportIds — tanpa ini saveStudent() berikutnya tidak tahu
-            // record sudah ada dan akan coba INSERT lagi (unique constraint error)
-            const { data: upserted, error } = await supabase
-                .from('student_monthly_reports')
-                .upsert(payloads, { onConflict: 'student_id,month,year' })
-                .select('id, student_id')
-            if (error) throw error
-            if (upserted?.length) {
-                setExistingReportIds(prev => {
-                    const next = { ...prev }
-                    for (const r of upserted) next[r.student_id] = r.id
-                    return next
-                })
-            }
-            setSavedIds(prev => {
-                const next = new Set(prev)
-                studentsToSave.forEach(s => next.add(s.id))
-                return next
-            })
-            const skipped = students.length - studentsToSave.length
-            addToast(
-                skipped > 0
-                    ? `${studentsToSave.length} raport disimpan (${skipped} santri dilewati karena belum diisi)`
-                    : `${studentsToSave.length} raport berhasil disimpan`,
-                'success'
-            )
-            try { const key = `draft_raport_${selectedClassId}_${selectedMonth}_${selectedYear}`; localStorage.removeItem(key); setDraftAvailable(false) } catch { }
-
-            // Forensic Audit Log
-            logAudit({
-                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                newData: { bulk_save_all: true, count: studentsToSave.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
-            })
-        } catch (e) { addToast(`Gagal menyimpan semua: ${e.message}`, 'error'); console.error('_doSaveAll error:', e) }
-        finally { setSavingAll(false); savingAllRef.current = false }
-    }, [students, scores, extras, selectedMonth, selectedYear, musyrif, selectedClassId, addToast])
-
-    // Sync ref setelah saveAll terdefinisi — dipakai Ctrl+S handler di atas
-    useEffect(() => { saveAllRef.current = saveAll }, [saveAll])
-
-    // Reset dismissed state setiap kali muncul perubahan baru
-    useEffect(() => { if (hasUnsavedMemo) setUnsavedBarDismissed(false) }, [hasUnsavedMemo])
-
-    // PERF-3: Virtual scroll handler — update visibleRange saat tabel di-scroll
-    // Hanya aktif di step 2 dan kalau jumlah siswa > 20 (tidak perlu untuk kelas kecil)
-    useEffect(() => {
-        if (step !== 2) return
-        const el = tableScrollRef.current
-        if (!el) return
-        const handleScroll = () => {
-            const scrollTop = el.scrollTop
-            const viewHeight = el.clientHeight
-            const start = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN)
-            const end = Math.min(
-                filteredStudents.length,
-                Math.ceil((scrollTop + viewHeight) / ROW_HEIGHT) + OVERSCAN
-            )
-            setVisibleRange(prev => (prev.start === start && prev.end === end) ? prev : { start, end })
-        }
-        el.addEventListener('scroll', handleScroll, { passive: true })
-        handleScroll() // initial calculation
-        return () => el.removeEventListener('scroll', handleScroll)
-    }, [step, filteredStudents.length]) // ROW_HEIGHT & OVERSCAN adalah module-level constants, tidak perlu di dep array
-
-    // Reset visible range setiap filter berubah
-    useEffect(() => { setVisibleRange({ start: 0, end: 30 }) }, [filteredStudents])
-    // Reset mobile card index juga saat filter/santri berubah
-    useEffect(() => { setMobileActiveIdx(0) }, [filteredStudents])
-
-    // ── Export CSV
+    // ── Export methods mapped from hooks ──
     const exportCSV = useCallback(() => {
-        const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
-        const rows = students.map((s, i) => {
-            const sc = scores[s.id] || {}, ex = extras[s.id] || {}
-            const avg = calcAvg(sc)
-            const predikat = avg ? GRADE(Number(avg)).id : ''
-            return [
-                i + 1, s.name,
-                sc.nilai_akhlak ?? '', sc.nilai_ibadah ?? '', sc.nilai_kebersihan ?? '', sc.nilai_quran ?? '', sc.nilai_bahasa ?? '',
-                avg ?? '', predikat,
-                ex.berat_badan ?? '', ex.tinggi_badan ?? '', ex.ziyadah ?? '', ex.murojaah ?? '',
-                ex.hari_sakit ?? '', ex.hari_izin ?? '', ex.hari_alpa ?? '', ex.hari_pulang ?? '',
-                // FIX #16: Gunakan escapeCsvCell yang proper untuk handle newline & quote
-                ex.catatan || '',
-            ]
+        handleExportCSV('all', {
+            columns: ['nama', 'nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa', 'avg', 'predikat', 'berat_badan', 'tinggi_badan', 'ziyadah', 'murojaah', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang', 'catatan'],
+            fileName: `Raport_${selectedClass?.name || ''}_${bulanObj?.id_str || ''}_${selectedYear}`
         })
-        // FIX #16: Semua cell di-escape dengan benar
-        const csv = [headers, ...rows].map(r => r.map(escapeCsvCell).join(',')).join('\n')
-        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url; a.download = `Raport_${selectedClass?.name || ''}_${bulanObj?.id_str || ''}_${selectedYear}.csv`
-        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
-        addToast(`CSV berhasil diexport (${students.length} santri)`, 'success')
+    }, [handleExportCSV, selectedClass, bulanObj, selectedYear])
 
-        // Forensic Audit Log
-        logAudit({
-            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-            newData: { format: 'CSV', count: students.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
+    const exportXLS = useCallback(() => {
+        handleExportExcel('all', {
+            columns: ['nama', 'nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa', 'avg', 'predikat', 'berat_badan', 'tinggi_badan', 'ziyadah', 'murojaah', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang', 'catatan'],
+            fileName: `Raport_${selectedClass?.name || ''}_${bulanObj?.id_str || ''}_${selectedYear}`
         })
-    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, profile])
+    }, [handleExportExcel, selectedClass, bulanObj, selectedYear])
 
-    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
-    const [headerMenuRect, setHeaderMenuRect] = useState(null)
-    const headerMenuBtnRef = useRef(null)
-
-    // ── Export XLS (XLSX via SheetJS — lazy load dari CDN)
-    const exportXLS = useCallback(async () => {
-        if (!window.XLSX) {
-            await new Promise((res, rej) => {
-                const s = document.createElement('script')
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
-                document.head.appendChild(s)
-            })
-        }
-        const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
-        const rows = students.map((s, i) => {
-            const sc = scores[s.id] || {}, ex = extras[s.id] || {}
-            const avg = calcAvg(sc)
-            const predikat = avg ? GRADE(Number(avg)).id : ''
-            return [
-                i + 1, s.name,
-                sc.nilai_akhlak !== '' ? Number(sc.nilai_akhlak) : '',
-                sc.nilai_ibadah !== '' ? Number(sc.nilai_ibadah) : '',
-                sc.nilai_kebersihan !== '' ? Number(sc.nilai_kebersihan) : '',
-                sc.nilai_quran !== '' ? Number(sc.nilai_quran) : '',
-                sc.nilai_bahasa !== '' ? Number(sc.nilai_bahasa) : '',
-                avg ? Number(avg) : '', predikat,
-                ex.berat_badan !== '' ? Number(ex.berat_badan) : '',
-                ex.tinggi_badan !== '' ? Number(ex.tinggi_badan) : '',
-                ex.ziyadah ?? '', ex.murojaah ?? '',
-                ex.hari_sakit !== '' ? Number(ex.hari_sakit) : '',
-                ex.hari_izin !== '' ? Number(ex.hari_izin) : '',
-                ex.hari_alpa !== '' ? Number(ex.hari_alpa) : '',
-                ex.hari_pulang !== '' ? Number(ex.hari_pulang) : '',
-                ex.catatan || '',
-            ]
-        })
-        const XLSX = window.XLSX
-        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-        // Styling lebar kolom
-        ws['!cols'] = [
-            { wch: 4 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 8 },
-            { wch: 10 }, { wch: 12 }, { wch: 7 }, { wch: 7 }, { wch: 12 }, { wch: 12 },
-            { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 10 }, { wch: 30 }
-        ]
-        const wb = XLSX.utils.book_new()
-        const sheetName = `${bulanObj?.id_str || ''} ${selectedYear}`.trim().slice(0, 31)
-        XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Raport')
-        XLSX.writeFile(wb, `Raport_${selectedClass?.name || ''}_${bulanObj?.id_str || ''}_${selectedYear}.xlsx`)
-        addToast(`XLS berhasil diexport (${students.length} santri)`, 'success')
-
-        // Forensic Audit Log
-        logAudit({
-            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-            newData: { format: 'XLSX', count: students.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
-        })
-    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, profile])
-
-    // ── Export ALL Classes XLS
-    const exportAllClassesXLS = useCallback(async () => {
-        if (!window.XLSX) {
-            await new Promise((res, rej) => {
-                const s = document.createElement('script')
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
-                document.head.appendChild(s)
-            })
-        }
-
-        setLoading(true) // Re-use global loading state
-        try {
-            // 1. Ambil semua kelas yang ada
-            const { data: allCls, error: clsErr } = await supabase.from('classes').select('id, name')
-            if (clsErr) throw clsErr
-
-            // 2. Ambil semua siswa aktif
-            const { data: allStu, error: stuErr } = await supabase.from('students').select('id, name, class_id').is('deleted_at', null).order('name')
-            if (stuErr) throw stuErr
-
-            // 3. Ambil seluruh raport di bulan dan tahun yang aktif saat ini
-            const { data: allRep, error: repErr } = await supabase.from('student_monthly_reports').select('*').eq('month', selectedMonth).eq('year', selectedYear)
-            if (repErr) throw repErr
-
-            const XLSX = window.XLSX
-            const wb = XLSX.utils.book_new()
-            const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
-
-            let sheetAdded = 0
-
-            for (const cls of allCls) {
-                const classStudents = allStu.filter(s => s.class_id === cls.id)
-                if (classStudents.length === 0) continue
-
-                const rows = classStudents.map((s, i) => {
-                    const rep = allRep.find(r => r.student_id === s.id) || {}
-                    // Format object for calcAvg
-                    const sc = { nilai_akhlak: rep.nilai_akhlak, nilai_ibadah: rep.nilai_ibadah, nilai_kebersihan: rep.nilai_kebersihan, nilai_quran: rep.nilai_quran, nilai_bahasa: rep.nilai_bahasa }
-                    const avg = calcAvg(sc)
-                    const predikat = avg ? GRADE(Number(avg)).id : ''
-
-                    return [
-                        i + 1, s.name,
-                        rep.nilai_akhlak !== null && rep.nilai_akhlak !== undefined ? Number(rep.nilai_akhlak) : '',
-                        rep.nilai_ibadah !== null && rep.nilai_ibadah !== undefined ? Number(rep.nilai_ibadah) : '',
-                        rep.nilai_kebersihan !== null && rep.nilai_kebersihan !== undefined ? Number(rep.nilai_kebersihan) : '',
-                        rep.nilai_quran !== null && rep.nilai_quran !== undefined ? Number(rep.nilai_quran) : '',
-                        rep.nilai_bahasa !== null && rep.nilai_bahasa !== undefined ? Number(rep.nilai_bahasa) : '',
-                        avg ? Number(avg) : '', predikat,
-                        rep.berat_badan !== null && rep.berat_badan !== undefined ? Number(rep.berat_badan) : '',
-                        rep.tinggi_badan !== null && rep.tinggi_badan !== undefined ? Number(rep.tinggi_badan) : '',
-                        rep.ziyadah ?? '', rep.murojaah ?? '',
-                        rep.hari_sakit !== null && rep.hari_sakit !== undefined ? Number(rep.hari_sakit) : '',
-                        rep.hari_izin !== null && rep.hari_izin !== undefined ? Number(rep.hari_izin) : '',
-                        rep.hari_alpa !== null && rep.hari_alpa !== undefined ? Number(rep.hari_alpa) : '',
-                        rep.hari_pulang !== null && rep.hari_pulang !== undefined ? Number(rep.hari_pulang) : '',
-                        rep.catatan || '',
-                    ]
-                })
-
-                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-                ws['!cols'] = [
-                    { wch: 4 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 8 },
-                    { wch: 10 }, { wch: 12 }, { wch: 7 }, { wch: 7 }, { wch: 12 }, { wch: 12 },
-                    { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 10 }, { wch: 30 }
-                ]
-
-                const sheetName = (cls.name || 'Kelas').replace(/[\\/?*\[\]]/g, '').substring(0, 31)
-                XLSX.utils.book_append_sheet(wb, ws, sheetName)
-                sheetAdded++
-            }
-
-            if (sheetAdded === 0) {
-                addToast('Tidak ada data siswa untuk diexport', 'warning')
-                return
-            }
-
-            XLSX.writeFile(wb, `Raport_Semua_Kelas_${bulanObj?.id_str || ''}_${selectedYear}.xlsx`)
-            addToast(`Berhasil export semua kelas (${sheetAdded} sheet)`, 'success')
-
-            logAudit({
-                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                newData: { format: 'XLSX_ALL_CLASSES', month: selectedMonth, year: selectedYear }
-            })
-
-        } catch (err) {
-            addToast('Gagal memproses export massal: ' + err.message, 'error')
-            console.error(err)
-        } finally {
-            setLoading(false)
-        }
-    }, [selectedMonth, selectedYear, bulanObj, addToast, profile])
+    const exportAllClassesXLS = useCallback(() => {
+        handleExportAllClasses(`Raport_Semua_Kelas_${bulanObj?.id_str || ''}_${selectedYear}`)
+    }, [handleExportAllClasses, bulanObj, selectedYear])
 
 
 
@@ -1538,32 +885,6 @@ export default function RaportPage() {
         })
     }, [resetStudent])
 
-    // ── Copy from last month
-    const copyFromLastMonth = useCallback(async () => {
-        if (!selectedClassId || !students.length) return
-        const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1
-        const prevYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear
-        setCopyingLastMonth(true)
-        try {
-            const ids = students.map(s => s.id)
-            const { data } = await supabase.from('student_monthly_reports').select('*').in('student_id', ids).eq('month', prevMonth).eq('year', prevYear)
-            if (!data?.length) { addToast('Tidak ada data bulan lalu', 'warning'); return }
-            // Hitung dulu di luar updater agar tidak double-count di StrictMode
-            const toCopy = data.filter(rep => {
-                const cur = scores[rep.student_id] || {}
-                return KRITERIA.every(k => cur[k.key] === '' || cur[k.key] === null || cur[k.key] === undefined)
-            })
-            const copied = toCopy.length
-            setScores(prev => { const next = { ...prev }; for (const rep of toCopy) { next[rep.student_id] = { nilai_akhlak: rep.nilai_akhlak ?? '', nilai_ibadah: rep.nilai_ibadah ?? '', nilai_kebersihan: rep.nilai_kebersihan ?? '', nilai_quran: rep.nilai_quran ?? '', nilai_bahasa: rep.nilai_bahasa ?? '' } }; return next })
-            setExtras(prev => { const next = { ...prev }; for (const rep of data) { const cur = next[rep.student_id] || {}; if (!cur.berat_badan && !cur.tinggi_badan) next[rep.student_id] = { ...cur, berat_badan: rep.berat_badan ?? '', tinggi_badan: rep.tinggi_badan ?? '' } }; return next })
-            // FIX: jangan wipe seluruh savedIds — hapus hanya ID santri yang
-            // benar-benar disalin agar santri lain tidak kehilangan status tersimpan
-            const copiedIds = new Set(data.map(rep => rep.student_id))
-            setSavedIds(prev => { const next = new Set(prev); for (const id of copiedIds) next.delete(id); return next })
-            addToast(`Disalin dari ${BULAN.find(b => b.id === prevMonth)?.id_str} ${prevYear} — ${copied} santri`, 'success')
-        } catch (e) { addToast('Gagal menyalin data bulan lalu', 'error'); console.error('copyFromLastMonth error:', e) }
-        finally { setCopyingLastMonth(false) }
-    }, [selectedClassId, students, selectedMonth, selectedYear, addToast])
 
     // ── Keyboard nav
     const handleKeyDown = useCallback((e, studentIdx, kriteriaIdx) => {
@@ -1652,7 +973,17 @@ export default function RaportPage() {
                     .every(k => row[k] !== '' && row[k] !== null && row[k] !== undefined)
                 if (hasAllMainScores) grouped[key].completed++
             }
-            setArchiveList(Object.values(grouped).sort((a, b) => b.year - a.year || b.month - a.month))
+            const list = Object.values(grouped).sort((a, b) => b.year - a.year || b.month - a.month)
+            setArchiveList(list)
+            if (list.length > 0) {
+                const latest = list[0]
+                setArchiveFilter(prev => {
+                    if (!prev.year && !prev.month) {
+                        return { ...prev, year: String(latest.year), month: String(latest.month) }
+                    }
+                    return prev
+                })
+            }
         } catch (e) { addToast('Gagal memuat arsip', 'error'); console.error('loadArchive error:', e) }
         finally { setArchiveLoading(false) }
     }, [addToast])
@@ -1855,495 +1186,6 @@ export default function RaportPage() {
         }
         setTimeout(() => tryExport(), 300)
     }, [pendingExport, archivePreview, addToast])
-
-    // ── WA
-    const buildWaMessage = useCallback((student, pdfUrl = null) => {
-        // FIX #17: Menggunakan helper buildWaLines yang lebih terstruktur
-        const lines = buildWaLines({
-            student,
-            sc: scores[student.id] || {},
-            extras: extras[student.id],
-            bulanObj,
-            selectedYear,
-            selectedClass,
-            musyrif,
-            pdfUrl,
-            waFooter: settings.wa_footer,
-        })
-        return encodeURIComponent(lines.join('\n'))
-    }, [scores, extras, bulanObj, selectedYear, selectedClass, musyrif, settings])
-
-    const sendWATextOnly = useCallback((student) => {
-        if (!student.phone) { addToast('Nomor WA tidak tersedia', 'warning'); return }
-        const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
-        const tab = window.open(`https://wa.me/${phone}?text=${buildWaMessage(student)}`, '_blank')
-        if (!tab) addToast('Popup diblokir.', 'warning')
-        else addToast(`📲 WA dibuka untuk ${student.name.split(' ')[0]}`, 'info')
-    }, [buildWaMessage, addToast])
-
-    const generatePDFBlob = useCallback(async (student, contextOverride = {}) => {
-        await Promise.all([
-            new Promise((res, rej) => { if (window.html2canvas) { res(); return }; const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s) }),
-            new Promise((res, rej) => { if (window.jspdf?.jsPDF || window.jsPDF) { res(); return }; const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s) }),
-        ])
-        const activeBulanObj = contextOverride.bulanObj ?? bulanObj
-        const activeYear = contextOverride.year ?? selectedYear
-        const bulanStr = activeBulanObj?.id_str || String(contextOverride.month ?? selectedMonth)
-        const safeName = student.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
-        const filename = `${safeName}_${bulanStr}_${activeYear}.pdf`
-        let cardEl = document.querySelector(`.raport-card[data-student-id="${student.id}"]`)
-        if (!cardEl) {
-            setPrintRenderedCount(0); setPrintQueue([student.id])
-            await new Promise(resolve => {
-                let t = 0
-                const timer = setInterval(() => {
-                    const card = printContainerRef.current?.querySelector(`.raport-card[data-student-id="${student.id}"]`)
-                    if (card) { cardEl = card; clearInterval(timer); resolve() }
-                    if (++t > 50) { clearInterval(timer); resolve() }
-                }, 100)
-            })
-            setPrintQueue([]); setPrintRenderedCount(0)
-        }
-        if (!cardEl) throw new Error('Gagal render raport card')
-        const rootStyles = getComputedStyle(document.documentElement)
-        const cssVars = ['--color-border', '--color-surface', '--color-surface-alt', '--color-text', '--color-text-muted'].map(v => `${v}: ${rootStyles.getPropertyValue(v).trim() || '#ccc'};`).join(' ')
-        const A4W = 794, A4H = 1123, wrapper = document.createElement('div')
-        wrapper.style.cssText = `position:fixed;left:-9999px;top:0;width:${A4W}px;height:${A4H}px;background:white;overflow:hidden;display:flex;align-items:flex-start;justify-content:center;font-family:'Times New Roman',serif;`
-        wrapper.innerHTML = `<style>:root{${cssVars}}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important}img{mix-blend-mode:multiply}.raport-card{width:${A4W}px!important;min-width:${A4W}px!important;height:${A4H}px!important;overflow:hidden!important;background:white!important;margin:0!important}</style>${cardEl.outerHTML}`
-        document.body.appendChild(wrapper)
-        await new Promise(r => setTimeout(r, 700))
-        try {
-            // FIX #9: withTimeout agar html2canvas tidak hang selamanya
-            const canvas = await withTimeout(
-                window.html2canvas(wrapper, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', width: A4W, height: A4H, scrollX: 0, scrollY: 0, logging: false }),
-                15000,
-                'Render PDF'
-            )
-            const jsPDF = window.jspdf?.jsPDF || window.jsPDF
-            const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297)
-            const blob = pdf.output('blob')
-            if (!blob || blob.size < 5000) throw new Error('PDF terlalu kecil')
-            return { blob, filename }
-        } finally {
-            if (document.body.contains(wrapper)) document.body.removeChild(wrapper)
-        }
-    }, [bulanObj, selectedMonth, selectedYear])
-
-    const uploadToSupabase = useCallback(async (blob, filename) => {
-        // FIX #14: Gunakan STORAGE_BUCKET konstanta
-        const path = `${selectedYear}/${bulanObj?.id_str || selectedMonth}/${filename}`
-        const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob, { contentType: 'application/pdf', upsert: true })
-        if (uploadError) throw new Error(`Upload gagal: ${uploadError.message}`)
-        const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path)
-        return data.publicUrl
-    }, [selectedYear, bulanObj, selectedMonth])
-
-    const generateAndSendWA = useCallback(async (student, autoNext = false) => {
-        if (!student.phone) { addToast('Nomor WA tidak tersedia', 'warning'); return }
-        const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
-        const openWATab = (url) => { const tab = window.open(url, '_blank'); if (!tab) addToast('Popup diblokir browser.', 'warning') }
-        if (raportLinks[student.id]) { openWATab(`https://wa.me/${phone}?text=${buildWaMessage(student, raportLinks[student.id])}`); return }
-        setPreviewStudentId(student.id); await new Promise(r => setTimeout(r, 300))
-        setSendingWA(prev => ({ ...prev, [student.id]: 'generating' }))
-        try {
-            const { blob, filename } = await generatePDFBlob(student)
-            setSendingWA(prev => ({ ...prev, [student.id]: 'uploading' }))
-            const url = await uploadToSupabase(blob, filename)
-            setRaportLinks(prev => ({ ...prev, [student.id]: url }))
-            setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
-            openWATab(`https://wa.me/${phone}?text=${buildWaMessage(student, url)}`)
-            addToast(`Terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
-
-            // Forensic Audit Log
-            logAudit({
-                action: 'SEND_WA', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                recordId: student.id,
-                newData: { student_name: student.name, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, url: raportLinks[student.id] }
-            })
-        } catch (err) { addToast(`Gagal: ${err.message}`, 'error'); setSendingWA(prev => ({ ...prev, [student.id]: null })); console.error('generateAndSendWA error:', err) }
-    }, [raportLinks, buildWaMessage, generatePDFBlob, uploadToSupabase, addToast, profile, selectedClass, selectedMonth, selectedYear])
-
-    // ── WA Blast runner
-    const runWaBlast = useCallback(async (queue) => {
-        setWaBlastConfirm(null)
-        waBlastAbortRef.current = false // reset flag setiap blast baru dimulai
-        setWaBlast({ queue, idx: 0, done: 0, failed: 0, active: true })
-        let done = 0, failed = 0
-        for (let i = 0; i < queue.length; i++) {
-            // Cek abort flag di setiap iterasi — set oleh tombol Batalkan
-            if (waBlastAbortRef.current) {
-                addToast(`WA Blast dibatalkan — ${done} terkirim, ${queue.length - done - failed} dibatalkan`, 'warning')
-                setWaBlast(prev => prev ? { ...prev, active: false, done, failed } : null)
-                return
-            }
-            const student = queue[i]
-            setWaBlast(prev => prev ? { ...prev, idx: i, active: true } : null)
-            try {
-                if (!student.phone) { failed++; continue }
-                const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
-                let url = raportLinks[student.id]
-                if (!url) {
-                    setPreviewStudentId(student.id)
-                    await new Promise(r => setTimeout(r, 400))
-                    const { blob, filename } = await generatePDFBlob(student)
-                    url = await uploadToSupabase(blob, filename)
-                    setRaportLinks(prev => ({ ...prev, [student.id]: url }))
-                    setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
-                }
-                window.open(`https://wa.me/${phone}?text=${buildWaMessage(student, url)}`, '_blank')
-                done++
-                await new Promise(r => setTimeout(r, 800))
-            } catch (e) { failed++; console.error('WA Blast item error:', e) }
-            setWaBlast(prev => prev ? { ...prev, done, failed } : null)
-        }
-        setWaBlast(prev => prev ? { ...prev, active: false, done, failed } : null)
-        addToast(`WA Blast selesai: ${done} terkirim, ${failed} gagal`, done > 0 ? 'success' : 'error')
-
-        // Forensic Audit Log
-        logAudit({
-            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-            newData: { format: 'WA_BLAST', count: done, failed_count: failed, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
-        })
-    }, [raportLinks, generatePDFBlob, uploadToSupabase, buildWaMessage, addToast, profile, selectedClass, selectedMonth, selectedYear])
-
-    // ── Bulk ZIP export (after generatePDFBlob so no TDZ)
-    const runZipBlast = useCallback(async (stuList, archEntry) => {
-        if (!window.JSZip) {
-            await new Promise((res, rej) => {
-                const s = document.createElement('script')
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
-                s.onload = res; s.onerror = rej
-                document.head.appendChild(s)
-            })
-        }
-        setZipBlast({ queue: stuList, idx: 0, done: 0, failed: 0, total: stuList.length, active: true })
-        const zip = new window.JSZip()
-        let done = 0, failed = 0
-        const bulanStr = archEntry ? (BULAN.find(b => b.id === archEntry.month)?.id_str || '') : (BULAN.find(b => b.id === selectedMonth)?.id_str || '')
-        const yearStr = archEntry ? archEntry.year : selectedYear
-        for (let i = 0; i < stuList.length; i++) {
-            const student = stuList[i]
-            setZipBlast(prev => prev ? { ...prev, idx: i } : null)
-            try {
-                setPreviewStudentId(student.id)
-                await new Promise(r => setTimeout(r, 350))
-                const archCtx = archEntry ? { bulanObj: BULAN.find(b => b.id === archEntry.month), year: archEntry.year, month: archEntry.month } : {}
-                const { blob, filename } = await generatePDFBlob(student, archCtx)
-                zip.file(filename, blob)
-                done++
-            } catch (e) { failed++; console.error('ZIP item error:', e) }
-            setZipBlast(prev => prev ? { ...prev, done, failed } : null)
-        }
-        try {
-            const zipBlob = await zip.generateAsync({ type: 'blob' })
-            const url = URL.createObjectURL(zipBlob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `Raport_${archEntry?.class_name || selectedClass?.name || 'Kelas'}_${bulanStr}_${yearStr}.zip`
-            a.click()
-            setTimeout(() => URL.revokeObjectURL(url), 5000)
-            setZipBlast(prev => prev ? { ...prev, active: false, done, failed } : null)
-            addToast(`ZIP berhasil: ${done} raport diunduh`, 'success')
-
-            // Forensic Audit Log
-            logAudit({
-                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                newData: { format: 'ZIP_ARCHIVE', count: done, failed_count: failed, class_name: archEntry?.class_name || selectedClass?.name, month: archEntry ? archEntry.month : selectedMonth, year: archEntry ? archEntry.year : selectedYear }
-            })
-        } catch (e) { addToast('Gagal membuat ZIP: ' + e.message, 'error'); setZipBlast(null) }
-    }, [generatePDFBlob, selectedMonth, selectedYear, selectedClass, addToast, profile])
-
-    const getSelectedOrActiveStudents = useCallback((scope) => {
-        if (scope === 'selected') {
-            return students.filter(s => selectedStudentIds.includes(s.id))
-        }
-        return students
-    }, [students, selectedStudentIds])
-
-    const handleExportCSVModal = useCallback((scope, options) => {
-        setExporting(true)
-        try {
-            const targetStudents = getSelectedOrActiveStudents(scope)
-            if (!targetStudents.length) {
-                addToast('Tidak ada data untuk diexport', 'warning')
-                return
-            }
-
-            const headerMap = {
-                nama: 'Nama',
-                nilai_akhlak: 'Akhlak',
-                nilai_ibadah: 'Ibadah',
-                nilai_kebersihan: 'Kebersihan',
-                nilai_quran: "Al-Qur'an",
-                nilai_bahasa: 'Bahasa',
-                avg: 'Rata-rata',
-                predikat: 'Predikat',
-                berat_badan: 'BB(kg)',
-                tinggi_badan: 'TB(cm)',
-                ziyadah: 'Ziyadah',
-                murojaah: "Muroja'ah",
-                hari_sakit: 'Sakit',
-                hari_izin: 'Izin',
-                hari_alpa: 'Alpa',
-                hari_pulang: 'Pulang',
-                catatan: 'Catatan'
-            }
-
-            const activeColumns = options.columns || []
-            const headers = options.includeHeader !== false ? ['No', ...activeColumns.map(col => headerMap[col] || col)] : []
-
-            const rows = targetStudents.map((s, i) => {
-                const sc = scores[s.id] || {}, ex = extras[s.id] || {}
-                const avg = calcAvg(sc)
-                const predikat = avg ? GRADE(Number(avg)).id : ''
-
-                const rowData = [i + 1]
-                activeColumns.forEach(col => {
-                    if (col === 'nama') rowData.push(s.name)
-                    else if (col === 'nilai_akhlak') rowData.push(sc.nilai_akhlak ?? '')
-                    else if (col === 'nilai_ibadah') rowData.push(sc.nilai_ibadah ?? '')
-                    else if (col === 'nilai_kebersihan') rowData.push(sc.nilai_kebersihan ?? '')
-                    else if (col === 'nilai_quran') rowData.push(sc.nilai_quran ?? '')
-                    else if (col === 'nilai_bahasa') rowData.push(sc.nilai_bahasa ?? '')
-                    else if (col === 'avg') rowData.push(avg ?? '')
-                    else if (col === 'predikat') rowData.push(predikat)
-                    else if (col === 'berat_badan') rowData.push(ex.berat_badan ?? '')
-                    else if (col === 'tinggi_badan') rowData.push(ex.tinggi_badan ?? '')
-                    else if (col === 'ziyadah') rowData.push(ex.ziyadah ?? '')
-                    else if (col === 'murojaah') rowData.push(ex.murojaah ?? '')
-                    else if (col === 'hari_sakit') rowData.push(ex.hari_sakit ?? '')
-                    else if (col === 'hari_izin') rowData.push(ex.hari_izin ?? '')
-                    else if (col === 'hari_alpa') rowData.push(ex.hari_alpa ?? '')
-                    else if (col === 'hari_pulang') rowData.push(ex.hari_pulang ?? '')
-                    else if (col === 'catatan') rowData.push(ex.catatan ?? '')
-                })
-                return rowData
-            })
-
-            const allRows = options.includeHeader !== false ? [headers, ...rows] : rows
-            const csv = allRows.map(r => r.map(escapeCsvCell).join(',')).join('\n')
-            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${options.fileName || 'export'}.csv`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
-
-            addToast(`CSV berhasil diexport (${targetStudents.length} santri)`, 'success')
-            logAudit({
-                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                newData: { format: 'CSV', count: targetStudents.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, scope }
-            })
-        } catch (e) {
-            console.error(e)
-            addToast('Gagal export CSV: ' + e.message, 'error')
-        } finally {
-            setExporting(false)
-        }
-    }, [students, scores, extras, selectedClass, selectedMonth, selectedYear, addToast, selectedStudentIds, getSelectedOrActiveStudents])
-
-    const handleExportExcelModal = useCallback(async (scope, options) => {
-        setExporting(true)
-        try {
-            const targetStudents = getSelectedOrActiveStudents(scope)
-            if (!targetStudents.length) {
-                addToast('Tidak ada data untuk diexport', 'warning')
-                return
-            }
-
-            if (!window.XLSX) {
-                await new Promise((res, rej) => {
-                    const s = document.createElement('script')
-                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                    s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
-                    document.head.appendChild(s)
-                })
-            }
-
-            const headerMap = {
-                nama: 'Nama',
-                nilai_akhlak: 'Akhlak',
-                nilai_ibadah: 'Ibadah',
-                nilai_kebersihan: 'Kebersihan',
-                nilai_quran: "Al-Qur'an",
-                nilai_bahasa: 'Bahasa',
-                avg: 'Rata-rata',
-                predikat: 'Predikat',
-                berat_badan: 'BB(kg)',
-                tinggi_badan: 'TB(cm)',
-                ziyadah: 'Ziyadah',
-                murojaah: "Muroja'ah",
-                hari_sakit: 'Sakit',
-                hari_izin: 'Izin',
-                hari_alpa: 'Alpa',
-                hari_pulang: 'Pulang',
-                catatan: 'Catatan'
-            }
-
-            const activeColumns = options.columns || []
-            const headers = options.includeHeader !== false ? ['No', ...activeColumns.map(col => headerMap[col] || col)] : []
-
-            const rows = targetStudents.map((s, i) => {
-                const sc = scores[s.id] || {}, ex = extras[s.id] || {}
-                const avg = calcAvg(sc)
-                const predikat = avg ? GRADE(Number(avg)).id : ''
-
-                const rowData = [i + 1]
-                activeColumns.forEach(col => {
-                    if (col === 'nama') rowData.push(s.name)
-                    else if (col === 'nilai_akhlak') rowData.push(sc.nilai_akhlak !== '' && sc.nilai_akhlak !== undefined ? Number(sc.nilai_akhlak) : '')
-                    else if (col === 'nilai_ibadah') rowData.push(sc.nilai_ibadah !== '' && sc.nilai_ibadah !== undefined ? Number(sc.nilai_ibadah) : '')
-                    else if (col === 'nilai_kebersihan') rowData.push(sc.nilai_kebersihan !== '' && sc.nilai_kebersihan !== undefined ? Number(sc.nilai_kebersihan) : '')
-                    else if (col === 'nilai_quran') rowData.push(sc.nilai_quran !== '' && sc.nilai_quran !== undefined ? Number(sc.nilai_quran) : '')
-                    else if (col === 'nilai_bahasa') rowData.push(sc.nilai_bahasa !== '' && sc.nilai_bahasa !== undefined ? Number(sc.nilai_bahasa) : '')
-                    else if (col === 'avg') rowData.push(avg ? Number(avg) : '')
-                    else if (col === 'predikat') rowData.push(predikat)
-                    else if (col === 'berat_badan') rowData.push(ex.berat_badan !== '' && ex.berat_badan !== undefined ? Number(ex.berat_badan) : '')
-                    else if (col === 'tinggi_badan') rowData.push(ex.tinggi_badan !== '' && ex.tinggi_badan !== undefined ? Number(ex.tinggi_badan) : '')
-                    else if (col === 'ziyadah') rowData.push(ex.ziyadah ?? '')
-                    else if (col === 'murojaah') rowData.push(ex.murojaah ?? '')
-                    else if (col === 'hari_sakit') rowData.push(ex.hari_sakit !== '' && ex.hari_sakit !== undefined ? Number(ex.hari_sakit) : '')
-                    else if (col === 'hari_izin') rowData.push(ex.hari_izin !== '' && ex.hari_izin !== undefined ? Number(ex.hari_izin) : '')
-                    else if (col === 'hari_alpa') rowData.push(ex.hari_alpa !== '' && ex.hari_alpa !== undefined ? Number(ex.hari_alpa) : '')
-                    else if (col === 'hari_pulang') rowData.push(ex.hari_pulang !== '' && ex.hari_pulang !== undefined ? Number(ex.hari_pulang) : '')
-                    else if (col === 'catatan') rowData.push(ex.catatan ?? '')
-                })
-                return rowData
-            })
-
-            const XLSX = window.XLSX
-            const allRows = options.includeHeader !== false ? [headers, ...rows] : rows
-            const ws = XLSX.utils.aoa_to_sheet(allRows)
-            ws['!cols'] = [{ wch: 4 }, ...activeColumns.map(col => ({ wch: col === 'nama' || col === 'catatan' ? 28 : 12 }))]
-
-            const wb = XLSX.utils.book_new()
-            const sheetName = `${bulanObj?.id_str || ''} ${selectedYear}`.trim().slice(0, 31)
-            XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Raport')
-            XLSX.writeFile(wb, `${options.fileName || 'export'}.xlsx`)
-
-            addToast(`XLSX berhasil diexport (${targetStudents.length} santri)`, 'success')
-            logAudit({
-                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                newData: { format: 'XLSX', count: targetStudents.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, scope }
-            })
-        } catch (e) {
-            console.error(e)
-            addToast('Gagal export XLSX: ' + e.message, 'error')
-        } finally {
-            setExporting(false)
-        }
-    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, selectedStudentIds, getSelectedOrActiveStudents])
-
-    const handleExportAllClassesModal = useCallback(async (customFileName) => {
-        setExporting(true)
-        try {
-            if (!window.XLSX) {
-                await new Promise((res, rej) => {
-                    const s = document.createElement('script')
-                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                    s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
-                    document.head.appendChild(s)
-                })
-            }
-
-            const { data: allCls, error: clsErr } = await supabase.from('classes').select('id, name')
-            if (clsErr) throw clsErr
-
-            const { data: allStu, error: stuErr } = await supabase.from('students').select('id, name, class_id').is('deleted_at', null).order('name')
-            if (stuErr) throw stuErr
-
-            const { data: allRep, error: repErr } = await supabase.from('student_monthly_reports').select('*').eq('month', selectedMonth).eq('year', selectedYear)
-            if (repErr) throw repErr
-
-            const XLSX = window.XLSX
-            const wb = XLSX.utils.book_new()
-            const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
-
-            let sheetAdded = 0
-
-            for (const cls of allCls) {
-                const classStudents = allStu.filter(s => s.class_id === cls.id)
-                if (classStudents.length === 0) continue
-
-                const rows = classStudents.map((s, i) => {
-                    const rep = allRep.find(r => r.student_id === s.id) || {}
-                    const sc = { nilai_akhlak: rep.nilai_akhlak, nilai_ibadah: rep.nilai_ibadah, nilai_kebersihan: rep.nilai_kebersihan, nilai_quran: rep.nilai_quran, nilai_bahasa: rep.nilai_bahasa }
-                    const avg = calcAvg(sc)
-                    const predikat = avg ? GRADE(Number(avg)).id : ''
-
-                    return [
-                        i + 1, s.name,
-                        rep.nilai_akhlak !== null && rep.nilai_akhlak !== undefined ? Number(rep.nilai_akhlak) : '',
-                        rep.nilai_ibadah !== null && rep.nilai_ibadah !== undefined ? Number(rep.nilai_ibadah) : '',
-                        rep.nilai_kebersihan !== null && rep.nilai_kebersihan !== undefined ? Number(rep.nilai_kebersihan) : '',
-                        rep.nilai_quran !== null && rep.nilai_quran !== undefined ? Number(rep.nilai_quran) : '',
-                        rep.nilai_bahasa !== null && rep.nilai_bahasa !== undefined ? Number(rep.nilai_bahasa) : '',
-                        avg ? Number(avg) : '', predikat,
-                        rep.berat_badan !== null && rep.berat_badan !== undefined ? Number(rep.berat_badan) : '',
-                        rep.tinggi_badan !== null && rep.tinggi_badan !== undefined ? Number(rep.tinggi_badan) : '',
-                        rep.ziyadah ?? '', rep.murojaah ?? '',
-                        rep.hari_sakit !== null && rep.hari_sakit !== undefined ? Number(rep.hari_sakit) : '',
-                        rep.hari_izin !== null && rep.hari_izin !== undefined ? Number(rep.hari_izin) : '',
-                        rep.hari_alpa !== null && rep.hari_alpa !== undefined ? Number(rep.hari_alpa) : '',
-                        rep.hari_pulang !== null && rep.hari_pulang !== undefined ? Number(rep.hari_pulang) : '',
-                        rep.catatan || '',
-                    ]
-                })
-
-                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-                ws['!cols'] = [
-                    { wch: 4 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 8 },
-                    { wch: 10 }, { wch: 12 }, { wch: 7 }, { wch: 7 }, { wch: 12 }, { wch: 12 },
-                    { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 10 }, { wch: 30 }
-                ]
-
-                const sheetName = (cls.name || 'Kelas').replace(/[\\/?*\[\]]/g, '').substring(0, 31)
-                XLSX.utils.book_append_sheet(wb, ws, sheetName)
-                sheetAdded++
-            }
-
-            if (sheetAdded === 0) {
-                addToast('Tidak ada data siswa untuk diexport', 'warning')
-                return
-            }
-
-            const finalFileName = customFileName || `Raport_Semua_Kelas_${bulanObj?.id_str || ''}_${selectedYear}`
-            XLSX.writeFile(wb, `${finalFileName}.xlsx`)
-            addToast(`Berhasil export semua kelas (${sheetAdded} sheet)`, 'success')
-
-            logAudit({
-                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                newData: { format: 'XLSX_ALL_CLASSES', month: selectedMonth, year: selectedYear, filename: finalFileName }
-            })
-        } catch (err) {
-            addToast('Gagal memproses export massal: ' + err.message, 'error')
-            console.error(err)
-        } finally {
-            setExporting(false)
-        }
-    }, [selectedMonth, selectedYear, bulanObj, addToast])
-
-    const handleExportZipModal = useCallback((scope) => {
-        const targetStudents = getSelectedOrActiveStudents(scope)
-        if (!targetStudents.length) {
-            addToast('Tidak ada data untuk diexport', 'warning')
-            return
-        }
-        runZipBlast(targetStudents, null)
-    }, [getSelectedOrActiveStudents, runZipBlast, addToast])
-
-    const handlePrintAllModal = useCallback((scope) => {
-        const targetStudents = getSelectedOrActiveStudents(scope)
-        if (!targetStudents.length) {
-            addToast('Tidak ada data untuk dicetak', 'warning')
-            return
-        }
-        openPrintWindow(targetStudents)
-    }, [getSelectedOrActiveStudents, openPrintWindow, addToast])
 
     // ─── Render helpers ───────────────────────────────────────────────────────
 
@@ -2799,524 +1641,76 @@ export default function RaportPage() {
 
     const renderStep2 = () => {
         return (
-            <div className="space-y-4">
-                {/* ── TOOLBAR CONTAINER ── */}
-                <div className="pt-2 pb-3 space-y-3 mb-2">
-                    {/* ── ROW 1: Context + Progress + Actions ── */}
-                    <div className="w-full flex flex-wrap items-center justify-between gap-3 gap-y-4">
-                        {/* Left: Context */}
-                        <div className="flex items-center gap-2 overflow-hidden">
-                            <button onClick={() => {
-                                if (hasUnsavedMemo) {
-                                    setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
-                                    return
-                                }
-                                setStep(0); setSelectedClassId('')
-                            }} className="h-9 w-9 md:h-10 md:w-auto md:px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center justify-center md:gap-1.5 shrink-0">
-                                <FontAwesomeIcon icon={faArrowLeft} className="text-[10px]" />
-                                <span className="hidden md:inline text-[10px] font-black uppercase tracking-wider">Ganti Kelas</span>
-                            </button>
-                            <div className="flex items-center gap-2 px-3 h-9 md:h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0 overflow-hidden">
-                                <FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-[10px] shrink-0" />
-                                <div className="flex items-center gap-1.5 truncate">
-                                    <span className="text-[10px] font-black text-[var(--color-text)] whitespace-nowrap">{selectedClass?.name}</span>
-                                    <span className="hidden sm:inline w-px h-3 bg-[var(--color-border)] mx-1" />
-                                    <span className="hidden sm:inline text-[9px] font-bold text-[var(--color-text-muted)] uppercase">{BULAN[selectedMonth - 1]?.id_str} {selectedYear}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Middle: Progress (Desktop only) */}
-                        <div className="flex-1 min-w-0 hidden lg:flex items-center gap-4 px-4">
-                            <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden relative">
-                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
-                            </div>
-                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase whitespace-nowrap">{Math.round(progressPct)}% Input</span>
-                        </div>
-
-                        {/* Right: Primary Actions */}
-                        <div className="flex items-center gap-2 shrink-0">
-                            {/* Salin Bin Lalu (Desktop only) */}
-                            <button onClick={() => setShowCopyModal(true)} className="hidden md:flex h-10 px-5 rounded-xl border border-sky-500/20 bg-sky-500/5 text-sky-600 text-[10px] font-black uppercase tracking-widest hover:bg-sky-500/10 transition-all items-center gap-2.5">
-                                <FontAwesomeIcon icon={faChevronLeft} className="text-[9px]" /><span>Salin Bin Lalu</span>
-                            </button>
-
-                            <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-9 px-4 md:h-10 md:px-6 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 relative disabled:opacity-70 shrink-0">
-                                <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin' : ''} />
-                                <span className="hidden md:inline">{savingAll ? 'Menyimpan...' : 'Simpan Semua'}</span>
-                                {!savingAll && hasUnsavedMemo && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
-                            </button>
-                            <button onClick={() => setStep(3)} className="h-9 w-9 md:h-10 md:w-auto md:px-6 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center md:gap-2.5 shrink-0">
-                                <FontAwesomeIcon icon={faPrint} />
-                                <span className="hidden md:inline text-[10px] uppercase font-black tracking-widest">Preview & Cetak</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* ── ROW 2: Search + Filters + Exports ── */}
-                    <div className="w-full max-w-full flex md:flex-row flex-col md:items-center gap-2">
-                        {/* Search & Nav (Compact Row) */}
-                        <div className="flex items-center gap-2 w-full md:w-auto">
-                            {/* Navigation Guide (Desktop Only) */}
-                            <div className="hidden md:flex items-center gap-2 px-3 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                                <FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[10px]" />
-                                <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Navigasi:</span>
-                                <div className="flex items-center gap-1.5 ml-1">
-                                    <span className="px-1.5 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px] font-bold">TAB/ENTER</span>
-                                    <span className="text-[9px] font-bold text-[var(--color-text-muted)]">-</span>
-                                    <div className="flex items-center gap-0.5">
-                                        <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">↑</span>
-                                        <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">↓</span>
-                                        <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">←</span>
-                                        <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">→</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Search Bar */}
-                            <div className="relative flex-1 md:w-93 shrink-0">
-                                <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" />
-                                <input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
-                                    className="h-9 md:h-10 w-full pl-8 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all" />
-                            </div>
-                        </div>
-
-                        {/* Tools & Exports */}
-                        <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-end gap-2">
-                            <div className="flex items-center gap-1.5 md:gap-2">
-
-                                <button onClick={() => { setBulkMode(v => !v); setBulkValues({}); setBulkSelected(new Set()) }} className={`h-9 px-4 w-full md:w-auto rounded-xl border text-[10px] font-black flex items-center justify-center md:justify-start gap-2 transition-all ${bulkMode ? 'bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-500/20' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                                    <FontAwesomeIcon icon={faFillDrip} className="text-[10px]" />
-                                    <span>Isi Massal</span>
-                                </button>
-
-                                {noPhoneCount > 0 && (
-                                    <button
-                                        onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
-                                        className={`h-10 px-4 rounded-xl border text-[10px] font-black hidden md:flex items-center gap-2 transition-all ${showNoPhoneOnly ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-600'}`}
-                                    >
-                                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
-                                        <span className="whitespace-nowrap">{noPhoneCount} Tanpa WA</span>
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="hidden md:block w-px h-4 bg-[var(--color-border)] mx-1" />
-
-                            {/* Export Group (Grid on mobile, flex on desktop) */}
-                            <div className="grid grid-cols-4 md:flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 md:pb-0">
-                                <button onClick={() => setIsExportModalOpen(true)} className="col-span-3 md:col-span-auto h-9 md:px-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-indigo-500/20">
-                                    <FontAwesomeIcon icon={faFileExport} className="text-[10px]" />
-                                    <span>Export</span>
-                                </button>
-                                <button onClick={() => {
-                                    const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
-                                    if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
-                                }} className="h-9 md:px-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-green-500/20">
-                                    <FontAwesomeIcon icon={faWhatsapp} className="text-[12px]" /> <span className="hidden md:inline">Blast WA</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* UIUX: Floating Bulk Action Bar */}
-                <BulkActionBar
-                    selectedCount={bulkSelected.size}
-                    onSave={async () => {
-                        const selected = students.filter(s => bulkSelected.has(s.id))
-                        if (!selected.length) return
-                        const hasAnyData = (sc, ex) =>
-                            KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined) ||
-                            [ex.berat_badan, ex.tinggi_badan, ex.ziyadah, ex.murojaah,
-                            ex.hari_sakit, ex.hari_izin, ex.hari_alpa, ex.hari_pulang, ex.catatan
-                            ].some(v => v !== '' && v !== null && v !== undefined)
-                        const toSave = selected.filter(s => hasAnyData(scores[s.id] || {}, extras[s.id] || {}))
-                        if (!toSave.length) { addToast('Santri yang dipilih belum ada yang diisi nilainya', 'warning'); return }
-                        setSavingAll(true)
-                        try {
-                            const payloads = toSave.map(s => {
-                                const sc = scores[s.id] || {}, ex = extras[s.id] || {}
-                                return {
-                                    student_id: s.id, month: selectedMonth, year: selectedYear,
-                                    musyrif_name: musyrif, updated_by: profile?.id ?? null,
-                                    updated_by_name: profile?.name ?? null,
-                                    ...Object.fromEntries(Object.entries(sc).map(([k, v]) => [k, v === '' ? null : Number(v)])),
-                                    berat_badan: ex.berat_badan !== '' ? Number(ex.berat_badan) : null,
-                                    tinggi_badan: ex.tinggi_badan !== '' ? Number(ex.tinggi_badan) : null,
-                                    ziyadah: ex.ziyadah || null, murojaah: ex.murojaah || null,
-                                    hari_sakit: ex.hari_sakit !== '' ? Number(ex.hari_sakit) : 0,
-                                    hari_izin: ex.hari_izin !== '' ? Number(ex.hari_izin) : 0,
-                                    hari_alpa: ex.hari_alpa !== '' ? Number(ex.hari_alpa) : 0,
-                                    hari_pulang: ex.hari_pulang !== '' ? Number(ex.hari_pulang) : 0,
-                                    catatan: ex.catatan || null
-                                }
-                            })
-                            const { data: upserted, error } = await supabase.from('student_monthly_reports').upsert(payloads, { onConflict: 'student_id,month,year' }).select('id, student_id')
-                            if (error) throw error
-                            if (upserted?.length) {
-                                setExistingReportIds(prev => {
-                                    const next = { ...prev }
-                                    for (const r of upserted) next[r.student_id] = r.id
-                                    return next
-                                })
-                            }
-                            setSavedIds(prev => { const n = new Set(prev); toSave.forEach(s => n.add(s.id)); return n })
-                            const skipped = selected.length - toSave.length
-                            addToast(skipped > 0 ? `${toSave.length} disimpan, ${skipped} dilewati (kosong)` : `${toSave.length} raport tersimpan`, 'success')
-                            setBulkSelected(new Set())
-                        } catch (e) { addToast('Gagal simpan: ' + e.message, 'error') }
-                        finally { setSavingAll(false) }
-                    }}
-                    onWA={() => {
-                        const withPhone = students.filter(s => bulkSelected.has(s.id) && s.phone && isComplete(scores[s.id] || {}))
-                        if (!withPhone.length) { addToast('Tidak ada santri terpilih dengan WA & nilai lengkap', 'warning'); return }
-                        setWaBlastConfirm({ queue: withPhone })
-                    }}
-                    onExport={() => {
-                        const toExport = students.filter(s => bulkSelected.has(s.id) && isComplete(scores[s.id] || {}))
-                        if (!toExport.length) { addToast('Tidak ada santri terpilih dengan nilai lengkap', 'warning'); return }
-                        runZipBlast(toExport, null)
-                    }}
-                    onCancel={() => {
-                        setBulkSelected(new Set())
-                        setBulkMode(false)
-                    }}
-                />
-                {bulkMode && (
-                    <div className="p-3 rounded-xl border border-violet-500/20 bg-violet-500/5 space-y-3">
-                        {/* Compact Header */}
-                        <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-lg bg-violet-500/20 flex items-center justify-center shrink-0">
-                                <FontAwesomeIcon icon={faFillDrip} className="text-violet-500 text-[10px]" />
-                            </div>
-                            <div className="flex flex-col gap-0">
-                                <span className="text-[10px] font-black text-violet-600 uppercase tracking-wider">Isi Massal Nilai</span>
-                                <span className="text-[9px] text-[var(--color-text-muted)] leading-tight">Berlaku hanya untuk kolom yang masih kosong.</span>
-                            </div>
-                        </div>
-
-                        {/* Input Grid: Slimmer & Faster */}
-                        <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-end gap-2 md:gap-3">
-                            {KRITERIA.map(k => (
-                                <div key={k.key} className="flex flex-col gap-1 flex-1 min-w-[70px]">
-                                    <span className="text-[9px] font-black uppercase tracking-tight truncate opacity-80" style={{ color: k.color }}>{k.id}</span>
-                                    <input type="number" min={0} max={MAX_SCORE} placeholder="—"
-                                        value={bulkValues[k.key] ?? ''}
-                                        onChange={e => setBulkValues(prev => ({ ...prev, [k.key]: e.target.value === '' ? '' : Math.min(MAX_SCORE, Math.max(0, Number(e.target.value))) }))}
-                                        className="w-full h-8 text-center text-[11px] font-black rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/10 transition-all appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    />
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Actions Row: Compact */}
-                        <div className="flex items-center gap-2 pt-0.5">
-                            <button onClick={() => {
-                                const keys = Object.keys(bulkValues).filter(k => bulkValues[k] !== '')
-                                if (!keys.length) { addToast('Isi minimal satu nilai', 'warning'); return }
-                                const changedIds = students
-                                    .filter(s => {
-                                        const cur = scores[s.id] || {}
-                                        return keys.some(k => cur[k] === '' || cur[k] === null || cur[k] === undefined)
-                                    })
-                                    .map(s => s.id)
-                                if (!changedIds.length) {
-                                    addToast('Semua kolom sudah memiliki nilai', 'warning')
-                                    return
-                                }
-                                setScores(prev => {
-                                    const next = { ...prev }
-                                    for (const s of students) {
-                                        const cur = next[s.id] || {}
-                                        const updated = { ...cur }
-                                        let changed = false
-                                        for (const k of keys) {
-                                            if (cur[k] === '' || cur[k] === null || cur[k] === undefined) {
-                                                updated[k] = bulkValues[k]; changed = true
-                                            }
-                                        }
-                                        if (changed) next[s.id] = updated
-                                    }
-                                    return next
-                                })
-                                changedIds.forEach(id => {
-                                    setSavedIds(p => { const n = new Set(p); n.delete(id); return n })
-                                    triggerAutoSave(id)
-                                })
-                                addToast(`Berhasil diterapkan ke ${changedIds.length} santri`, 'success')
-                                setBulkMode(false)
-                            }} className="flex-1 md:flex-none h-8 px-5 rounded-lg bg-violet-600 text-white text-[10px] font-black uppercase tracking-wider hover:bg-violet-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm">
-                                <FontAwesomeIcon icon={faCheck} className="text-[9px]" /> Terapkan
-                            </button>
-                            <button onClick={() => setBulkValues({})} className="h-8 px-3 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black hover:text-[var(--color-text)] transition-all">Reset</button>
-                        </div>
-                    </div>
-                )}
-                {/* UIUX: Desktop table (md+) */}
-                <div className="hidden md:block">
-                    <div
-                        ref={tableScrollRef}
-                        className="overflow-x-auto rounded-xl border border-[var(--color-border)]"
-                        style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto', overflowAnchor: 'none' }}
-                    >
-                        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 910, tableLayout: 'fixed' }}>
-                            <colgroup>
-                                {bulkMode && <col style={{ width: 36 }} />}
-                                <col style={{ width: 140 }} />{KRITERIA.map(k => <col key={k.key} style={{ width: 55 }} />)}<col style={{ width: 170 }} /><col style={{ width: 160 }} /><col style={{ width: 130 }} />
-                            </colgroup>
-                            <thead className="sticky top-0 z-20" style={{ boxShadow: '0 1px 0 var(--color-border)' }}>
-                                <tr style={{ background: 'none' }}>
-                                    {bulkMode && (
-                                        <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
-                                            <input type="checkbox"
-                                                checked={bulkSelected.size === filteredStudents.length && filteredStudents.length > 0}
-                                                onChange={e => setBulkSelected(e.target.checked ? new Set(filteredStudents.map(s => s.id)) : new Set())}
-                                                aria-label="Pilih semua"
-                                                className="w-3.5 h-3.5 accent-violet-500 cursor-pointer"
-                                            />
-                                        </th>
-                                    )}
-                                    <th className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 0', textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>Santri</th>
-                                    {KRITERIA.map(k => (<th key={k.key} style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ direction: 'rtl', fontSize: 14, fontWeight: 900, color: k.color, lineHeight: 1, whiteSpace: 'nowrap', fontFamily: 'serif' }}>{k.arShort}</span><span style={{ fontSize: 8, fontWeight: 800, color: 'var(--color-text-muted)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{k.id}</span></div></th>))}
-                                    <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Fisik</span><span style={{ fontSize: 8, color: 'var(--color-text-muted)', opacity: 0.55, fontWeight: 600 }}>BB · TB · Skt · Izin · Alpa · Plg</span></div></th>
-                                    <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Hafalan & Catatan</span></div></th>
-                                    <th className="sticky right-0 z-10" style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1, background: 'var(--color-surface-alt)', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {/* PERF-3: Virtual scroll — spacer atas */}
-                                {filteredStudents.length > 20 && visibleRange.start > 0 && (
-                                    <tr style={{ height: visibleRange.start * ROW_HEIGHT }}><td colSpan={99} /></tr>
-                                )}
-                                {/* Empty state */}
-                                {filteredStudents.length === 0 && (
-                                    <tr>
-                                        <td colSpan={99} className="py-20 text-center">
-                                            <EmptyState
-                                                icon={faUsers}
-                                                title={showIncompleteOnly ? 'Semua nilai sudah lengkap! 🎉' : 'Santri tidak ditemukan'}
-                                                subtitle={showIncompleteOnly ? 'Tidak ada santri yang nilainya belum diisi.' : 'Coba kata kunci lain atau hapus filter.'}
-                                            />
-                                            <button onClick={() => { setShowIncompleteOnly(false); setShowNoPhoneOnly(false); setStudentSearch('') }}
-                                                className="h-8 px-4 rounded-lg border border-[var(--color-border)] text-[11px] font-black hover:bg-[var(--color-surface-alt)] transition-all">
-                                                Tampilkan Semua
-                                            </button>
-                                        </td>
-                                    </tr>
-                                )}
-                                {/* Render rows */}
-                                {(filteredStudents.length > 20
-                                    ? filteredStudents.slice(visibleRange.start, visibleRange.end)
-                                    : filteredStudents
-                                ).map((student, _vi) => {
-                                    const si = filteredStudents.length > 20 ? visibleRange.start + _vi : _vi
-                                    const sc = scores[student.id] || {}, ex = extras[student.id] || {}
-                                    return (
-                                        <StudentRow key={student.id}
-                                            student={student} si={si} sc={sc} ex={ex}
-                                            isSaved={savedIds.has(student.id)}
-                                            isSaving={!!saving[student.id]}
-                                            isDirty={!savedIds.has(student.id) && (KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null) || Object.values(ex).some(v => v !== '' && v !== null))}
-                                            isChecked={bulkSelected.has(student.id)}
-                                            bulkMode={bulkMode} lang={lang}
-                                            trendData={studentTrend[student.id]}
-                                            prevScores={prevMonthScores[student.id]}
-                                            templateOpen={templateOpenId === student.id}
-                                            catatanArab={catatanArabMap[student.id]}
-                                            sendingWAStatus={sendingWA[student.id]}
-                                            onScoreChange={handleScoreChange}
-                                            onExtraChange={handleExtraChange}
-                                            onCatatanChange={handleCatatanChange}
-                                            onSave={saveStudent}
-                                            onWA={generateAndSendWA}
-                                            onPDF={handlePDF}
-                                            onReset={handleResetStudent}
-                                            onBulkToggle={handleBulkToggle}
-                                            onKeyDown={handleKeyDown}
-                                            onTemplateToggle={handleTemplateToggle}
-                                            onTemplateApply={handleTemplateApply}
-                                            onTranslitToggle={handleTranslitToggle}
-                                            cellRefs={cellRefs}
-                                        />
-                                    )
-                                })}
-                                {/* PERF-3: Virtual scroll — spacer bawah */}
-                                {filteredStudents.length > 20 && visibleRange.end < filteredStudents.length && (
-                                    <tr style={{ height: (filteredStudents.length - visibleRange.end) * ROW_HEIGHT }}><td colSpan={99} /></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* ── UIUX: Mobile card view (< md) ── */}
-                <div className="md:hidden">
-                    {filteredStudents.length === 0 ? (
-                        <div className="flex flex-col items-center gap-3 py-12 text-[var(--color-text-muted)]">
-                            <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center">
-                                <FontAwesomeIcon icon={showIncompleteOnly ? faCircleCheck : showNoPhoneOnly ? faCircleCheck : faMagnifyingGlass} className="text-xl opacity-30" />
-                            </div>
-                            <p className="text-[12px] font-black">{showIncompleteOnly ? 'Semua nilai sudah lengkap! 🎉' : showNoPhoneOnly ? 'Semua santri sudah ada nomor WA ✓' : 'Santri tidak ditemukan'}</p>
-                            <button onClick={() => { setShowIncompleteOnly(false); setShowNoPhoneOnly(false); setStudentSearch('') }} className="h-7 px-3 rounded-lg border border-[var(--color-border)] text-[10px] font-black hover:text-[var(--color-text)] transition-all">Tampilkan Semua</button>
-                        </div>
-                    ) : (() => {
-                        const safeIdx = Math.min(mobileActiveIdx, filteredStudents.length - 1)
-                        const student = filteredStudents[safeIdx]
-                        if (!student) return null
-                        const sc = scores[student.id] || {}, ex = extras[student.id] || {}
-                        const avg = calcAvg(sc), isSaved = savedIds.has(student.id), isSaving = saving[student.id]
-                        const isDirty = !isSaved && KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined)
-                        const complete = isComplete(sc)
-                        const goTo = (idx) => setMobileActiveIdx(Math.max(0, Math.min(filteredStudents.length - 1, idx)))
-                        let _touchStartX = 0
-                        const onTouchStart = (e) => { _touchStartX = e.touches[0].clientX }
-                        const onTouchEnd = (e) => { const dx = e.changedTouches[0].clientX - _touchStartX; if (dx < -50) goTo(safeIdx + 1); else if (dx > 50) goTo(safeIdx - 1) }
-                        return (
-                            <div>
-                                {/* Sticky nama + counter */}
-                                <div className="sticky top-0 z-20 flex items-center justify-between gap-2 px-3 py-2 mb-2 rounded-xl border bg-[var(--color-surface)] shadow-sm"
-                                    style={{ borderColor: complete ? '#10b98130' : isDirty ? '#f59e0b30' : 'var(--color-border)' }}>
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] shrink-0">{safeIdx + 1}/{filteredStudents.length}</span>
-                                        <p className="text-[12px] font-black text-[var(--color-text)] truncate">{student.name}</p>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                        {avg ? <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).uiColor }}>{avg}</span> : null}
-                                        {complete && <FontAwesomeIcon icon={faCircleCheck} className="text-[10px] text-emerald-500" />}
-                                        {isSaving && <FontAwesomeIcon icon={faSpinner} className="text-[9px] text-amber-500 animate-spin" />}
-                                        {!isSaving && isDirty && <span className="text-[8px] font-black text-amber-500">●</span>}
-                                        <button onClick={() => openStudentDetailDrawer(student)}
-                                            title="Histori semua raport santri ini"
-                                            className="h-7 w-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center hover:bg-indigo-500/20 transition-all">
-                                            <FontAwesomeIcon icon={faArrowTrendUp} className="text-[9px]" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Card dengan swipe gesture */}
-                                <div className="rounded-2xl border bg-[var(--color-surface)] overflow-hidden transition-all"
-                                    style={{ borderColor: complete ? '#10b98130' : isDirty ? '#f59e0b30' : 'var(--color-border)' }}
-                                    onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-                                    {/* Header */}
-                                    <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]"
-                                        style={{ background: complete ? '#10b98108' : 'var(--color-surface-alt)' }}>
-                                        {bulkMode && <input type="checkbox" checked={bulkSelected.has(student.id)}
-                                            onChange={e => setBulkSelected(prev => { const n = new Set(prev); e.target.checked ? n.add(student.id) : n.delete(student.id); return n })}
-                                            className="w-4 h-4 accent-violet-500" />}
-                                        <RadarChart scores={sc} size={38} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[13px] font-black text-[var(--color-text)] truncate">{student.name}</p>
-                                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                                {avg ? <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).uiColor }}>{avg} — {GRADE(Number(avg)).id}</span>
-                                                    : <span className="text-[9px] text-[var(--color-text-muted)]">Belum diisi</span>}
-                                                {isSaving && <FontAwesomeIcon icon={faSpinner} className="text-[9px] text-amber-500 animate-spin" />}
-                                                {!isSaving && isSaved && <FontAwesomeIcon icon={faCircleCheck} className="text-[9px] text-emerald-500" />}
-                                                {!isSaving && isDirty && <span className="text-[8px] font-black text-amber-500">● belum simpan</span>}
-                                            </div>
-                                        </div>
-                                        <button onClick={() => saveStudent(student.id)} disabled={isSaving || !canEdit}
-                                            className="h-8 px-2.5 rounded-xl text-[10px] font-black flex items-center gap-1 shrink-0 transition-all"
-                                            style={{ background: isSaved ? '#10b98115' : isDirty ? '#6366f115' : 'var(--color-surface-alt)', color: isSaved ? '#10b981' : isDirty ? '#6366f1' : 'var(--color-text-muted)', border: `1px solid ${isSaved ? '#10b98130' : isDirty ? '#6366f130' : 'var(--color-border)'}` }}>
-                                            <FontAwesomeIcon icon={isSaving ? faSpinner : isSaved ? faCircleCheck : faFloppyDisk} className={isSaving ? 'animate-spin' : ''} />
-                                        </button>
-                                    </div>
-                                    {/* Body */}
-                                    <div className="px-4 py-3 space-y-3">
-                                        <div>
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Nilai Kriteria</p>
-                                            <div className="grid grid-cols-5 gap-1.5">
-                                                {KRITERIA.map(k => (
-                                                    <div key={k.key} className="flex flex-col items-center gap-0.5">
-                                                        <span className="text-[7px] font-black uppercase tracking-wide" style={{ color: k.color }}>{k.id.slice(0, 3)}</span>
-                                                        <input type="number" inputMode="decimal" min={0} max={MAX_SCORE} placeholder="—"
-                                                            value={sc[k.key] ?? ''}
-                                                            onChange={e => { const v = e.target.value === '' ? '' : Math.min(MAX_SCORE, Math.max(0, Number(e.target.value))); setScores(prev => ({ ...prev, [student.id]: { ...prev[student.id], [k.key]: v } })); setSavedIds(prev => { const n = new Set(prev); n.delete(student.id); return n }); triggerAutoSave(student.id) }}
-                                                            className="w-full h-10 text-center text-base font-black rounded-xl outline-none transition-all appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                            style={{ background: sc[k.key] !== '' && sc[k.key] != null ? GRADE(Number(sc[k.key])).bg : 'var(--color-surface-alt)', color: sc[k.key] !== '' && sc[k.key] != null ? GRADE(Number(sc[k.key])).uiColor : 'var(--color-text-muted)', border: `2px solid ${sc[k.key] !== '' && sc[k.key] != null ? GRADE(Number(sc[k.key])).border : 'var(--color-border)'}` }} />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5 flex justify-between items-center">
-                                                <span>Fisik & Kehadiran</span>
-                                                <span className="text-[7px] opacity-40 font-medium uppercase">BB • TB • SAKIT • IZIN • ALPA • PULANG</span>
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                {[{ key: 'berat_badan', label: 'Berat Badan', icon: faWeightScale, color: '#6366f1', unit: 'kg' }, { key: 'tinggi_badan', label: 'Tinggi Badan', icon: faRulerVertical, color: '#06b6d4', unit: 'cm' }, { key: 'hari_sakit', label: 'Sakit', icon: faBandage, color: '#ef4444', unit: 'hr' }, { key: 'hari_izin', label: 'Izin', icon: faCircleExclamation, color: '#f59e0b', unit: 'hr' }, { key: 'hari_alpa', label: 'Alpa', icon: faTriangleExclamation, color: '#ef4444', unit: 'hr' }, { key: 'hari_pulang', label: 'Pulang', icon: faDoorOpen, color: '#8b5cf6', unit: 'x' }].map(f => (
-                                                    <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)]" style={{ height: 32 }}>
-                                                        <div className="w-7 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}><FontAwesomeIcon icon={f.icon} style={{ color: f.color, fontSize: 9 }} /></div>
-                                                        <ExtraInput type="text" inputMode="decimal" placeholder={f.label} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
-                                                            className="flex-1 w-0 h-full text-[11px] font-black text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none" />
-                                                        <span className="text-[7px] font-black text-[var(--color-text-muted)] pr-1.5 opacity-60 uppercase">{f.unit}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-1.5">
-                                            {[{ key: 'ziyadah', ph: 'Ziyadah', icon: faBookOpen, color: '#10b981' }, { key: 'murojaah', ph: "Muroja'ah", icon: faFileLines, color: '#8b5cf6' }].map(f => (
-                                                <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] overflow-hidden" style={{ height: 32 }}>
-                                                    <div className="w-7 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}><FontAwesomeIcon icon={f.icon} style={{ color: f.color, fontSize: 9 }} /></div>
-                                                    <ExtraInput placeholder={f.ph} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
-                                                        className="flex-1 w-0 h-full px-1.5 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
-                                            <div className="w-7 shrink-0 flex items-start justify-center pt-2" style={{ background: '#f59e0b18' }}><FontAwesomeIcon icon={faClipboardList} style={{ color: '#f59e0b', fontSize: 9 }} /></div>
-                                            <ExtraTextarea placeholder="Catatan musyrif..." value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={handleCatatanChange}
-                                                maxLength={200} rows={2} className="flex-1 w-0 px-2 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
-                                            <button
-                                                onClick={() => { const c = generateAutoComment(sc, student.id, studentTrend[student.id]); if (!c) return; setExtras(prev => ({ ...prev, [student.id]: { ...prev[student.id], catatan: c } })); setSavedIds(prev => { const n = new Set(prev); n.delete(student.id); return n }); triggerAutoSave(student.id) }}
-                                                title="Generate komentar otomatis" disabled={!avg}
-                                                className="shrink-0 w-8 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30" aria-label="Generate komentar otomatis">
-                                                <FontAwesomeIcon icon={faBolt} style={{ fontSize: 10 }} />
-                                            </button>
-                                        </div>
-                                        <div className="flex gap-2 pt-1">
-                                            <button onClick={() => { setPreviewStudentId(student.id); setStep(3) }} className="flex-1 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-[11px] font-black flex items-center justify-center gap-1.5 hover:bg-indigo-500/20 transition-all"><FontAwesomeIcon icon={faFilePdf} className="text-[10px]" /> PDF</button>
-                                            <button onClick={() => generateAndSendWA(student)} disabled={!student.phone}
-                                                className={`flex-1 h-9 rounded-xl border text-[11px] font-black flex items-center justify-center gap-1.5 transition-all ${!student.phone ? 'opacity-30 cursor-not-allowed bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]' : 'bg-green-500/10 border-green-500/20 text-green-600 hover:bg-green-500/20'}`}>
-                                                <FontAwesomeIcon icon={faWhatsapp} className="text-[10px]" /> WA
-                                            </button>
-                                            <button onClick={() => setConfirmModal({ title: 'Reset Nilai?', subtitle: `Semua data ${student.name.split(' ')[0]} akan dikosongkan`, body: 'Nilai akan dihapus permanen.', icon: 'danger', variant: 'red', confirmLabel: 'Ya, Reset', onConfirm: () => { setConfirmModal(null); resetStudent(student.id) } })}
-                                                className="h-9 w-9 rounded-xl border border-dashed border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center justify-center transition-all">
-                                                <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Prominent prev/next navigation */}
-                                <div className="flex gap-2 mt-3">
-                                    <button onClick={() => goTo(safeIdx - 1)} disabled={safeIdx === 0}
-                                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[11px] font-black flex items-center justify-center gap-2 hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] disabled:opacity-30 transition-all">
-                                        <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /> Sebelumnya
-                                    </button>
-                                    <div className="flex items-center gap-1 px-1">
-                                        {filteredStudents.length <= 9
-                                            ? filteredStudents.map((_, i) => (
-                                                <button key={i} onClick={() => goTo(i)} className="rounded-full transition-all"
-                                                    style={{ width: i === safeIdx ? 10 : 6, height: i === safeIdx ? 10 : 6, background: i === safeIdx ? 'var(--color-primary)' : 'var(--color-border)' }} />
-                                            ))
-                                            : <span className="text-[9px] font-black text-[var(--color-text-muted)] whitespace-nowrap">{safeIdx + 1}/{filteredStudents.length}</span>
-                                        }
-                                    </div>
-                                    <button onClick={() => goTo(safeIdx + 1)} disabled={safeIdx === filteredStudents.length - 1}
-                                        className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[11px] font-black flex items-center justify-center gap-2 hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] disabled:opacity-30 transition-all">
-                                        Berikutnya <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
-                                    </button>
-                                </div>
-                            </div>
-                        )
-                    })()}
-                </div>{/* end md:hidden */}
-
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {KRITERIA.map(k => { const vals = filteredStudents.map(s => scores[s.id]?.[k.key]).filter(v => v !== '' && v !== null && v !== undefined); const avg = vals.length ? (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1) : '—'; const g = avg !== '—' ? GRADE(Number(avg)) : null; return (<div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center"><div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>{k.id}</div><div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>{avg}</div><div className="text-[7px] font-bold text-[var(--color-text-muted)]">Rata - Rata Kelas</div></div>) })}
-                </div>
-            </div>
+            <RaportInputTable
+                students={students}
+                filteredStudents={filteredStudents}
+                scores={scores}
+                setScores={setScores}
+                extras={extras}
+                setExtras={setExtras}
+                savedIds={savedIds}
+                setSavedIds={setSavedIds}
+                saving={saving}
+                savingAll={savingAll}
+                setSavingAll={setSavingAll}
+                studentSearch={studentSearch}
+                setStudentSearch={setStudentSearch}
+                showIncompleteOnly={showIncompleteOnly}
+                setShowIncompleteOnly={setShowIncompleteOnly}
+                showNoPhoneOnly={showNoPhoneOnly}
+                setShowNoPhoneOnly={setShowNoPhoneOnly}
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+                musyrif={musyrif}
+                selectedClass={selectedClass}
+                progressPct={progressPct}
+                hasUnsavedMemo={hasUnsavedMemo}
+                noPhoneCount={noPhoneCount}
+                bulkMode={bulkMode}
+                setBulkMode={setBulkMode}
+                bulkValues={bulkValues}
+                setBulkValues={setBulkValues}
+                bulkSelected={bulkSelected}
+                setBulkSelected={setBulkSelected}
+                visibleRange={visibleRange}
+                setVisibleRange={setVisibleRange}
+                tableScrollRef={tableScrollRef}
+                mobileActiveIdx={mobileActiveIdx}
+                setMobileActiveIdx={setMobileActiveIdx}
+                templateOpenId={templateOpenId}
+                catatanArabMap={catatanArabMap}
+                prevMonthScores={prevMonthScores}
+                studentTrend={studentTrend}
+                sendingWA={sendingWA}
+                canEdit={canEdit}
+                lang={lang}
+                setStep={setStep}
+                setSelectedClassId={setSelectedClassId}
+                setPendingNav={setPendingNav}
+                saveAll={saveAll}
+                saveStudent={saveStudent}
+                resetStudent={resetStudent}
+                generateAndSendWA={generateAndSendWA}
+                handlePDF={handlePDF}
+                handleResetStudent={handleResetStudent}
+                handleBulkToggle={handleBulkToggle}
+                handleKeyDown={handleKeyDown}
+                handleTemplateToggle={handleTemplateToggle}
+                handleTemplateApply={handleTemplateApply}
+                handleTranslitToggle={handleTranslitToggle}
+                handleScoreChange={handleScoreChange}
+                handleExtraChange={handleExtraChange}
+                handleCatatanChange={handleCatatanChange}
+                triggerAutoSave={triggerAutoSave}
+                openStudentDetailDrawer={openStudentDetailDrawer}
+                setIsExportModalOpen={setIsExportOpen}
+                setWaBlastConfirm={setWaBlastConfirm}
+                addToast={addToast}
+                setConfirmModal={setConfirmModal}
+                runZipBlast={runZipBlast}
+                openPrintWindow={openPrintWindow}
+                cellRefs={cellRefs}
+            />
         )
     }
 
@@ -3579,7 +1973,7 @@ export default function RaportPage() {
                                     >
                                         {/* #4: Pulse ring animation untuk hint tap-to-fullscreen */}
                                         <div
-                                            className="relative shadow-2xl rounded-xl overflow-hidden cursor-pointer transition-all group"
+                                            className="relative shadow-2xl rounded-none overflow-hidden cursor-pointer transition-all group"
                                             style={{
                                                 width: pageSize === 'f4' ? '215mm' : '210mm',
                                                 transform: `scale(${previewZoom})`,
@@ -3588,8 +1982,8 @@ export default function RaportPage() {
                                             onClick={() => setIsFullScreenPreview(true)}
                                         >
                                             {/* Pulse ring hanya di mobile — muncul di atas kertas */}
-                                            <div className="lg:hidden absolute inset-0 rounded-xl ring-2 ring-indigo-400/40 animate-pulse pointer-events-none z-10" />
-                                            <div className="lg:hidden absolute inset-0 rounded-xl ring-4 ring-indigo-400/10 animate-pulse pointer-events-none z-10" style={{ animationDelay: '0.3s' }} />
+                                            <div className="lg:hidden absolute inset-0 rounded-none ring-2 ring-indigo-400/40 animate-pulse pointer-events-none z-10" />
+                                            <div className="lg:hidden absolute inset-0 rounded-none ring-4 ring-indigo-400/10 animate-pulse pointer-events-none z-10" style={{ animationDelay: '0.3s' }} />
                                             {previewStudent && (
                                                 <RaportPrintCard
                                                     student={previewStudent}
@@ -3614,207 +2008,7 @@ export default function RaportPage() {
                     </div>
                 </div>
 
-                {/* ── FULLSCREEN DIGITAL PREVIEW ── */}
-                {isFullScreenPreview && createPortal(
-                    <div
-                        className="fixed inset-0 z-[99999] bg-slate-400/80 p-2 sm:p-3"
-                        onClick={() => setIsFullScreenPreview(false)}
-                        onMouseMove={bumpFullScreenHud}
-                        onWheel={bumpFullScreenHud}
-                        onTouchStart={bumpFullScreenHud}
-                    >
-                        <div
-                            className="relative h-full w-full rounded-[24px] overflow-hidden border border-slate-200/80 bg-[#e9edf5] shadow-2xl"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <div
-                                className={`absolute left-3 right-3 z-20 h-12 px-2 sm:px-3 rounded-2xl flex items-center justify-between border border-slate-200/80 bg-white/92 shadow-sm transition-all duration-200 ${showFullScreenHud ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-                                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
-                            >
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <button
-                                        onClick={() => setIsFullScreenPreview(false)}
-                                        className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center shrink-0"
-                                        title="Tutup fullscreen"
-                                    >
-                                        <FontAwesomeIcon icon={faArrowLeft} className="text-[11px]" />
-                                    </button>
-                                    <div className="min-w-0">
-                                        <p className="text-slate-800 text-[11px] font-black truncate max-w-[140px] sm:max-w-xs">
-                                            {previewStudent?.name || 'Preview'}
-                                        </p>
-                                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-[0.14em]">
-                                            Digital Preview
-                                        </p>
-                                    </div>
-                                </div>
 
-                                <div className="flex items-center gap-2">
-                                    <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 border border-slate-200">
-                                        <span className="text-[9px] font-black text-slate-500">SIZE {pageSize.toUpperCase()}</span>
-                                        <span className="text-slate-300">|</span>
-                                        <span className="text-[9px] font-black text-slate-500">LANG {lang.toUpperCase()}</span>
-                                    </div>
-                                    <button
-                                        onClick={() => openPrintWindow([previewStudent].filter(Boolean))}
-                                        className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/30 flex items-center justify-center transition-all"
-                                        title="Cetak Raport"
-                                    >
-                                        <FontAwesomeIcon icon={faPrint} className="text-[11px]" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div
-                                ref={fullScreenScrollRef}
-                                className="h-full overflow-auto flex flex-col items-center px-3 sm:px-6 pt-20 pb-20"
-                                style={{
-                                    scrollbarWidth: 'none',
-                                    msOverflowStyle: 'none',
-                                    backgroundColor: 'transparent',
-                                }}
-                                onTouchStart={e => {
-                                    bumpFullScreenHud()
-                                    if (e.touches.length === 2) {
-                                        e.currentTarget._pinchDist = Math.hypot(
-                                            e.touches[0].clientX - e.touches[1].clientX,
-                                            e.touches[0].clientY - e.touches[1].clientY
-                                        )
-                                        e.currentTarget._pinchZoom = fullScreenZoom
-                                    }
-                                }}
-                                onTouchMove={e => {
-                                    bumpFullScreenHud()
-                                    if (e.touches.length === 2 && e.currentTarget._pinchDist) {
-                                        e.preventDefault()
-                                        const dist = Math.hypot(
-                                            e.touches[0].clientX - e.touches[1].clientX,
-                                            e.touches[0].clientY - e.touches[1].clientY
-                                        )
-                                        const ratio = dist / e.currentTarget._pinchDist
-                                        setFullScreenZoom(Math.min(2, Math.max(0.3, Math.floor(e.currentTarget._pinchZoom * ratio * 100) / 100)))
-                                    }
-                                }}
-                                onTouchEnd={e => { e.currentTarget._pinchDist = null }}
-                                onMouseMove={bumpFullScreenHud}
-                                onWheel={bumpFullScreenHud}
-                                onClick={bumpFullScreenHud}
-                                onTouchEndCapture={() => {
-                                    bumpFullScreenHud()
-                                    if (!isMobileViewport) return
-                                    const now = Date.now()
-                                    const since = now - fullScreenLastTapRef.current
-                                    fullScreenLastTapRef.current = now
-                                    if (since > 0 && since < 320) {
-                                        const fit = getFullScreenFitZoom(true)
-                                        setFullScreenZoom(prev => (Math.abs(prev - fit) < 0.04 ? 1 : fit))
-                                    }
-                                }}
-                            >
-                                {(() => {
-                                    const naturalW = pageSize === 'f4' ? 812.6 : 793.7
-                                    const naturalH = pageSize === 'f4' ? 1247 : 1122
-                                    const s = fullScreenZoom
-                                    return (
-                                        <div
-                                            className="shrink-0"
-                                            style={{
-                                                width: `${naturalW * s}px`,
-                                                height: `${naturalH * s}px`,
-                                                borderRadius: '20px',
-                                                overflow: 'hidden',
-                                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                                            }}
-                                        >
-                                            <div style={{ width: `${naturalW}px`, transformOrigin: 'top left', transform: `scale(${s})` }}>
-                                                {previewStudent && (
-                                                    <RaportPrintCard
-                                                        student={previewStudent}
-                                                        scores={scores[previewStudent.id]}
-                                                        extra={extras[previewStudent.id]}
-                                                        bulanObj={bulanObj}
-                                                        tahun={selectedYear}
-                                                        musyrif={musyrif}
-                                                        className={selectedClass?.name}
-                                                        lang={lang}
-                                                        settings={settings}
-                                                        pageSize={pageSize}
-                                                        catatanArab={catatanArabMap[previewStudent.id]}
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-                                    )
-                                })()}
-                            </div>
-
-                            <div
-                                className={`absolute left-3 right-3 z-20 flex items-center justify-center transition-all duration-200 ${showFullScreenHud ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}
-                                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
-                            >
-                                <div className="max-w-full overflow-x-auto no-scrollbar">
-                                    <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 sm:p-1 rounded-2xl bg-white/92 backdrop-blur border border-slate-200 shadow-sm w-max mx-auto">
-                                        <button
-                                            onClick={() => setFullScreenZoom(p => Math.round(Math.max(0.3, p - 0.1) * 100) / 100)}
-                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center"
-                                        >
-                                            <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
-                                            <span className="text-[10px] font-black leading-none ml-0.5">-</span>
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setFullScreenZoom(getFullScreenFitZoom(isMobileViewport))
-                                            }}
-                                            title="Fit ke lebar viewer"
-                                            className="min-w-[52px] h-9 sm:min-w-[56px] sm:h-10 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-indigo-500 hover:text-indigo-700 hover:bg-indigo-500/10 transition-all text-[10px] sm:text-[11px] font-black tabular-nums"
-                                        >
-                                            {Math.round(fullScreenZoom * 100)}%
-                                        </button>
-                                        <button
-                                            onClick={() => setFullScreenZoom(p => Math.round(Math.min(2.0, p + 0.1) * 100) / 100)}
-                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center"
-                                        >
-                                            <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
-                                            <span className="text-[10px] font-black leading-none ml-0.5">+</span>
-                                        </button>
-                                        <div className="w-px h-5 sm:h-6 bg-slate-300 mx-0.5 sm:mx-1" />
-                                        <button
-                                            onClick={() => {
-                                                const idx = students.findIndex(s => s.id === (previewStudent?.id))
-                                                if (idx > 0) setPreviewStudentId(students[idx - 1].id)
-                                            }}
-                                            disabled={!previewStudent || students.findIndex(s => s.id === previewStudent?.id) === 0}
-                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center disabled:opacity-30"
-                                        >
-                                            <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
-                                        </button>
-                                        <span className="min-w-[46px] sm:min-w-[54px] text-center text-[9px] sm:text-[10px] font-black text-slate-400 tabular-nums">
-                                            {(students.findIndex(s => s.id === previewStudent?.id) + 1)}/{students.length}
-                                        </span>
-                                        <button
-                                            onClick={() => {
-                                                const idx = students.findIndex(s => s.id === (previewStudent?.id))
-                                                if (idx < students.length - 1) setPreviewStudentId(students[idx + 1].id)
-                                            }}
-                                            disabled={!previewStudent || students.findIndex(s => s.id === previewStudent?.id) === students.length - 1}
-                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center disabled:opacity-30"
-                                        >
-                                            <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
-                                        </button>
-                                        <div className="w-px h-5 sm:h-6 bg-slate-300 mx-0.5 sm:mx-1" />
-                                        <button
-                                            onClick={() => setIsFullScreenPreview(false)}
-                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
-                                        >
-                                            <FontAwesomeIcon icon={faXmark} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>,
-                    document.body
-                )}
             </div>
         )
     }
@@ -3834,11 +2028,46 @@ export default function RaportPage() {
         else if (archiveSort === 'progress') filtered = [...filtered].sort((a, b) => (b.count ? b.completed / b.count : 0) - (a.count ? a.completed / a.count : 0))
         const uniqueYears = [...new Set(archiveList.map(e => e.year))].sort((a, b) => b - a)
 
+        const cardsToRender = filtered.slice(0, archiveVisibleCount)
+
         if (archivePreview) {
             const { students: pStu, scores: pSc, extras: pEx, bulanObj: pBulan, tahun: pTahun, musyrif: pMus, className: pClass, lang: pLang, entry } = archivePreview
             const editSc = (sid) => archiveEditMode ? { ...pSc[sid], ...(archiveEditScores[sid] || {}) } : pSc[sid]
             const editEx = (sid) => archiveEditMode ? { ...pEx[sid], ...(archiveEditExtras[sid] || {}) } : pEx[sid]
             const pStudent = previewStudentId ? pStu.find(s => s.id === previewStudentId) : pStu[0]
+
+            const handleScoreEdit = (key, val) => {
+                const raw = val.replace(/[^0-9]/g, '')
+                if (raw === '') {
+                    setArchiveEditScores(prev => ({
+                        ...prev,
+                        [pStudent.id]: {
+                            ...(prev[pStudent.id] || {}),
+                            [key]: ''
+                        }
+                    }))
+                    return
+                }
+                const num = Number(raw)
+                const checkedNum = Math.min(100, Math.max(0, num))
+                setArchiveEditScores(prev => ({
+                    ...prev,
+                    [pStudent.id]: {
+                        ...(prev[pStudent.id] || {}),
+                        [key]: checkedNum
+                    }
+                }))
+            }
+
+            const handleExtraEdit = (key, val) => {
+                setArchiveEditExtras(prev => ({
+                    ...prev,
+                    [pStudent.id]: {
+                        ...(prev[pStudent.id] || {}),
+                        [key]: val
+                    }
+                }))
+            }
 
             return (
                 <div className="space-y-6">
@@ -3865,43 +2094,45 @@ export default function RaportPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-1 space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-                                <FontAwesomeIcon icon={faUsers} className="opacity-50" /> Daftar Santri
-                            </p>
-                            {pStu.map(s => {
-                                const sc = editSc(s.id) || {}
-                                const complete = isComplete(sc)
-                                const active = previewStudentId === s.id
-                                return (
-                                    <button key={s.id} onClick={() => setPreviewStudentId(s.id)} className={`w-full p-3 rounded-2xl border text-left transition-all ${active ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] hover:border-indigo-500/30'}`}>
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-white/20' : 'bg-[var(--color-surface)] shadow-sm'}`}>
-                                                <span className={`text-[10px] font-black ${active ? 'text-white' : 'text-indigo-500'}`}>{s.name.charAt(0)}</span>
+                    <div className="flex flex-col lg:flex-row gap-6">
+                        {/* Left: Sidebar Navigation */}
+                        <div className="w-full lg:w-64 xl:w-72 p-4 lg:p-5 rounded-3xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm self-start lg:sticky lg:top-6">
+                            <div className="flex items-center justify-between mb-4 px-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pilih Santri</p>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 font-black">{pStu.length}</span>
+                            </div>
+                            <div className="flex flex-col gap-1.5 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                {pStu.map(s => {
+                                    const sc = editSc(s.id) || {}
+                                    const complete = isComplete(sc)
+                                    const active = previewStudentId === s.id
+                                    return (
+                                        <button
+                                            key={s.id}
+                                            onClick={() => setPreviewStudentId(s.id)}
+                                            className={`w-full p-2.5 rounded-xl border text-left transition-all ${active ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/15' : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-indigo-500/30'}`}
+                                        >
+                                            <div className="flex items-center gap-2.5">
+                                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-white/20' : 'bg-[var(--color-surface-alt)]'}`}>
+                                                    <span className={`text-[9px] font-black ${active ? 'text-white' : 'text-indigo-500'}`}>{s.name.charAt(0)}</span>
+                                                </div>
+                                                <span className="text-[11px] font-bold truncate flex-1">{s.name}</span>
+                                                {complete && <FontAwesomeIcon icon={faCircleCheck} className={`text-[10px] ${active ? 'text-white' : 'text-emerald-500'}`} />}
                                             </div>
-                                            <div className="min-w-0 pr-2">
-                                                <p className="text-xs font-black truncate">{s.name}</p>
-                                                <p className={`text-[10px] font-medium opacity-70 ${active ? 'text-white' : 'text-[var(--color-text-muted)]'}`}>
-                                                    {complete ? 'Raport Lengkap ✓' : 'Belum Lengkap !'}
-                                                </p>
-                                            </div>
-                                            {complete && (
-                                                <div className={`ml-auto w-1.5 h-1.5 rounded-full ${active ? 'bg-white' : 'bg-emerald-500'}`} />
-                                            )}
-                                        </div>
-                                    </button>
-                                )
-                            })}
+                                        </button>
+                                    )
+                                })}
+                            </div>
                         </div>
 
-                        <div className="lg:col-span-2">
+                        {/* Right: Preview Area */}
+                        <div className="flex-1 min-w-0">
                             {pStudent && (
                                 <div className="space-y-4">
                                     {archiveEditMode ? (
-                                        <div className="p-6 rounded-3xl border border-violet-500/20 bg-violet-500/5 animate-fade-in">
-                                            <div className="flex items-center gap-3 mb-6">
-                                                <div className="w-10 h-10 rounded-xl bg-violet-500 text-white flex items-center justify-center shadow-lg shadow-violet-500/20">
+                                        <div className="p-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-md animate-fade-in space-y-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-violet-500 text-white flex items-center justify-center shadow-lg shadow-violet-500/20 shrink-0">
                                                     <FontAwesomeIcon icon={faSliders} />
                                                 </div>
                                                 <div>
@@ -3909,27 +2140,241 @@ export default function RaportPage() {
                                                     <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Ubah nilai dan data tambahan untuk periode ini.</p>
                                                 </div>
                                             </div>
-                                            <p className="text-xs text-[var(--color-text-muted)] mb-4">Fitur edit arsip sedang diproses...</p>
-                                            <div className="flex gap-3">
-                                                <button onClick={saveArchiveEdit} disabled={archiveEditSaving} className="flex-1 h-11 rounded-xl bg-emerald-500 text-white text-sm font-black shadow-lg shadow-emerald-500/20 hover:brightness-110 disabled:opacity-60 transition-all">
+
+                                            {/* Nilai Kriteria */}
+                                            <div className="space-y-2">
+                                                <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
+                                                    <FontAwesomeIcon icon={faClipboardList} className="opacity-50" /> Nilai Kriteria
+                                                </h5>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                    {KRITERIA.map(k => {
+                                                        const val = editSc(pStudent.id)?.[k.key] ?? '';
+                                                        const g = val !== '' ? GRADE(Number(val)) : null;
+                                                        return (
+                                                            <div key={k.key} className="flex flex-col p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] shadow-sm">
+                                                                <span className="text-[9px] font-black" style={{ color: k.color }}>{k.id}</span>
+                                                                <span className="text-[7px] text-[var(--color-text-muted)] font-medium leading-none mb-1.5 truncate">{k.label}</span>
+                                                                <div className="flex items-center gap-1.5 mt-auto">
+                                                                    <input
+                                                                        type="text"
+                                                                        inputMode="numeric"
+                                                                        value={val}
+                                                                        onChange={(e) => handleScoreEdit(k.key, e.target.value)}
+                                                                        className="w-full h-8 text-center text-[12px] font-black rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-indigo-500 outline-none text-[var(--color-text)]"
+                                                                        placeholder="—"
+                                                                    />
+                                                                    {g && (
+                                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded shrink-0" style={{ background: g.bg, color: g.color }}>
+                                                                            {g.id}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Kondisi Fisik & Perkembangan Hafalan */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* Fisik */}
+                                                <div className="space-y-2">
+                                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kondisi Fisik</h5>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {FISIK_FIELDS.map(f => (
+                                                            <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
+                                                                <FontAwesomeIcon icon={f.icon} style={{ color: f.color }} className="text-xs shrink-0 opacity-80" />
+                                                                <input
+                                                                    type="number"
+                                                                    inputMode="decimal"
+                                                                    placeholder={f.label}
+                                                                    value={editEx(pStudent.id)?.[f.key] ?? ''}
+                                                                    onChange={(e) => handleExtraEdit(f.key, e.target.value)}
+                                                                    className="flex-1 w-0 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none"
+                                                                />
+                                                                <span className="text-[9px] text-[var(--color-text-muted)] font-black">{f.unit}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Hafalan */}
+                                                <div className="space-y-2">
+                                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Perkembangan Hafalan</h5>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {HAFALAN_FIELDS.map(f => (
+                                                            <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
+                                                                <FontAwesomeIcon icon={f.icon} style={{ color: f.color }} className="text-xs shrink-0 opacity-80" />
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder={f.ph}
+                                                                    value={editEx(pStudent.id)?.[f.key] ?? ''}
+                                                                    onChange={(e) => handleExtraEdit(f.key, e.target.value)}
+                                                                    className="flex-1 w-0 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none"
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Ketidakhadiran */}
+                                            <div className="space-y-2">
+                                                <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Ketidakhadiran</h5>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {[
+                                                        { key: 'hari_sakit', label: 'Sakit', color: '#ef4444' },
+                                                        { key: 'hari_izin', label: 'Izin', color: '#3b82f6' },
+                                                        { key: 'hari_alpa', label: 'Alpa', color: '#f59e0b' },
+                                                        { key: 'hari_pulang', label: 'Pulang', color: '#10b981' }
+                                                    ].map(item => (
+                                                        <div key={item.key} className="flex flex-col p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center">
+                                                            <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider mb-1">{item.label}</span>
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    value={editEx(pStudent.id)?.[item.key] ?? ''}
+                                                                    onChange={(e) => handleExtraEdit(item.key, e.target.value)}
+                                                                    className="w-10 h-7 text-center text-[11px] font-black rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none"
+                                                                    placeholder="0"
+                                                                />
+                                                                <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Hari</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Catatan Musyrif */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Catatan Musyrif</h5>
+                                                    <button
+                                                        onClick={() => {
+                                                            const c = generateAutoComment(editSc(pStudent.id), pStudent.id, []);
+                                                            if (c) handleExtraEdit('catatan', c);
+                                                        }}
+                                                        className="h-6 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 text-[8px] font-black flex items-center gap-1 transition-all active:scale-95"
+                                                    >
+                                                        <FontAwesomeIcon icon={faBolt} className="text-[7px]" />
+                                                        Generate Catatan
+                                                    </button>
+                                                </div>
+                                                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] overflow-hidden">
+                                                    <textarea
+                                                        placeholder="Tulis catatan perkembangan di sini..."
+                                                        value={editEx(pStudent.id)?.catatan ?? ''}
+                                                        onChange={(e) => handleExtraEdit('catatan', e.target.value)}
+                                                        maxLength={200}
+                                                        rows={3}
+                                                        className="w-full p-3 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-relaxed"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-3 pt-2">
+                                                <button onClick={saveArchiveEdit} disabled={archiveEditSaving} className="flex-1 h-10 rounded-xl bg-emerald-500 text-white text-xs font-black shadow-lg shadow-emerald-500/10 hover:bg-emerald-600 disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-2">
                                                     {archiveEditSaving ? 'Menyimpan...' : 'Simpan Semua Perubahan'}
                                                 </button>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="rounded-3xl border border-[var(--color-border)] bg-gray-50 dark:bg-slate-900/50 p-6 flex justify-center shadow-inner min-h-[500px]">
-                                            <div className="shadow-2xl h-fit">
-                                                <RaportPrintCard
-                                                    student={pStudent}
-                                                    scores={pSc[pStudent.id]}
-                                                    extra={pEx[pStudent.id]}
-                                                    bulanObj={pBulan}
-                                                    tahun={pTahun}
-                                                    musyrif={pMus}
-                                                    className={pClass}
-                                                    lang={pLang}
-                                                    settings={settings}
-                                                />
+                                        <div className="flex flex-col rounded-[32px] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
+                                            <div className="px-4 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                {/* Row 1: Title & Mobile Toggle */}
+                                                <div className="flex items-center justify-between w-full sm:w-auto">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                                            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500 text-[10px]" />
+                                                        </div>
+                                                        <h4 className="text-[11px] font-black text-[var(--color-text)] uppercase tracking-wider">Preview Raport</h4>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setIsFullScreenPreview(true)}
+                                                        className="h-8 w-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] flex items-center justify-center sm:hidden"
+                                                    >
+                                                        <FontAwesomeIcon icon={faExpand} className="scale-75" />
+                                                    </button>
+                                                </div>
+
+                                                {/* Row 2 & 3: Controls */}
+                                                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                                                    {/* Group: Format & Lang - Stretching on Mobile */}
+                                                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                        <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
+                                                            <button onClick={() => setPageSize('a4')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>A4</button>
+                                                            <button onClick={() => setPageSize('f4')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>F4</button>
+                                                        </div>
+                                                        <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
+                                                            <button onClick={() => setLang('ar')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>AR</button>
+                                                            <button onClick={() => setLang('id')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'id' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>ID</button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Group: Zoom & Actions - Stretching on Mobile */}
+                                                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                        {/* Zoom Control stretches on mobile */}
+                                                        <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
+                                                            <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />-</button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    manualZoomRef.current = false
+                                                                    const el = previewContainerRef.current
+                                                                    if (!el) return
+                                                                    const padding = window.innerWidth < 640 ? 24 : 80
+                                                                    const availW = el.clientWidth - padding
+                                                                    const docW = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
+                                                                    setPreviewZoom(Math.min(1, Math.max(0.3, Math.floor((availW / docW) * 100) / 100)))
+                                                                }}
+                                                                title="Fit ke lebar layar"
+                                                                className="text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
+                                                            >{Math.round(previewZoom * 100)}%</button>
+                                                            <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />+</button>
+                                                        </div>
+
+                                                        {pStudent?.phone && (
+                                                            <button onClick={() => sendWATextOnly(pStudent)} className="h-10 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial">
+                                                                <FontAwesomeIcon icon={faWhatsapp} className="text-xs" /> <span className="hidden xs:inline">Whatsapp</span>
+                                                            </button>
+                                                        )}
+
+                                                        <button onClick={() => openPrintWindow([pStudent].filter(Boolean))} className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial shadow-lg shadow-emerald-500/20">
+                                                            <FontAwesomeIcon icon={faPrint} className="text-xs" /> <span className="hidden xs:inline">Cetak</span>
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => setIsFullScreenPreview(true)}
+                                                            className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hidden sm:flex items-center justify-center hover:text-indigo-500 transition-all"
+                                                        >
+                                                            <FontAwesomeIcon icon={faExpand} className="scale-90" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Report Card Body with interactive Zoom */}
+                                            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-slate-900/50 flex flex-col items-center custom-scrollbar p-6 min-h-[500px]">
+                                                <div 
+                                                    style={{ transform: `scale(${previewZoom})`, transformOrigin: 'top center' }} 
+                                                    className="shadow-2xl h-fit cursor-pointer relative"
+                                                    onClick={() => setIsFullScreenPreview(true)}
+                                                >
+                                                    {/* Mobile pulse ring */}
+                                                    <div className="lg:hidden absolute inset-0 rounded-none ring-2 ring-indigo-400/40 animate-pulse pointer-events-none z-10" />
+                                                    <RaportPrintCard
+                                                        student={pStudent}
+                                                        scores={pSc[pStudent.id]}
+                                                        extra={pEx[pStudent.id]}
+                                                        bulanObj={pBulan}
+                                                        tahun={pTahun}
+                                                        musyrif={pMus}
+                                                        className={pClass}
+                                                        lang={lang}
+                                                        settings={settings}
+                                                        pageSize={pageSize}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -3942,228 +2387,54 @@ export default function RaportPage() {
         }
 
         return (
-            <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setStep(0)} className="w-10 h-10 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] flex items-center justify-center transition-all">
-                            <FontAwesomeIcon icon={faArrowLeft} className="text-sm" />
-                        </button>
-                        <div>
-                            <h3 className="text-base font-black text-[var(--color-text)]">Riwayat & Arsip</h3>
-                            <p className="text-[11px] text-[var(--color-text-muted)] font-medium">Lihat dan kelola database raport yang telah disimpan.</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
-                        {[{ id: 'list', label: 'Daftar Arsip', icon: faTableList }, { id: 'ringkasan', label: 'Statistik', icon: faChartPie }].map(tab => (
-                            <button key={tab.id} onClick={() => setArchiveTab(tab.id)}
-                                className={`h-9 px-4 rounded-xl text-[11px] font-black flex items-center gap-2 transition-all ${archiveTab === tab.id ? 'bg-[var(--color-surface)] text-indigo-500 shadow-md border border-[var(--color-border)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                                <FontAwesomeIcon icon={tab.icon} className="text-[10px]" /> {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap gap-3 p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
-                    <div className="relative flex-1 min-w-[200px]">
-                        <FontAwesomeIcon icon={faSearch} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[11px]" />
-                        <input type="text" placeholder="Cari kelas..." value={archiveSearch} onChange={e => setArchiveSearch(e.target.value)} className="w-full h-10 pl-10 pr-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all" />
-                    </div>
-                    <select value={archiveFilter.year} onChange={e => setArchiveFilter(p => ({ ...p, year: e.target.value }))} className="h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-bold text-[var(--color-text)] outline-none">
-                        <option value="">Semua Tahun</option>
-                        {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                    <select value={archiveFilter.month} onChange={e => setArchiveFilter(p => ({ ...p, month: e.target.value }))} className="h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-bold text-[var(--color-text)] outline-none">
-                        <option value="">Semua Bulan</option>
-                        {BULAN.map(b => <option key={b.id} value={b.id}>{b.id_str}</option>)}
-                    </select>
-                </div>
-
-                {archiveLoading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] animate-pulse">
-                                <div className="flex items-start justify-between mb-3"><div className="flex-1"><div className="h-3 w-2/3 bg-[var(--color-border)] rounded mb-2" /><div className="h-2.5 w-1/2 bg-[var(--color-border)] rounded" /></div><div className="h-4 w-12 bg-[var(--color-border)] rounded-full" /></div>
-                                <div className="h-1.5 w-full bg-[var(--color-border)] rounded-full mb-3" />
-                                <div className="flex gap-1.5"><div className="flex-1 h-8 bg-[var(--color-border)] rounded-lg" /><div className="flex-1 h-8 bg-[var(--color-border)] rounded-lg" /><div className="h-8 w-8 bg-[var(--color-border)] rounded-lg" /></div>
-                            </div>
-                        ))}
-                    </div>
-                ) : archiveTab === 'ringkasan' ? (() => {
-                    // ── TAB RINGKASAN: Bar chart per kelas + heatmap kriteria ──
-                    // Group archiveList by class_id, ambil bulan yang dipilih filter atau terbaru
-                    const targetMonth = archiveFilter.month ? Number(archiveFilter.month) : null
-                    const targetYear = archiveFilter.year ? Number(archiveFilter.year) : null
-                    // Kalau tidak ada filter bulan/tahun, pakai periode terbaru yang ada di archiveList
-                    const latestEntry = archiveList.length
-                        ? archiveList.reduce((a, b) => b.year > a.year || (b.year === a.year && b.month > a.month) ? b : a, archiveList[0])
-                        : null
-                    const useMonth = targetMonth ?? latestEntry?.month
-                    const useYear = targetYear ?? latestEntry?.year
-                    const bulanLabel = BULAN.find(b => b.id === useMonth)?.id_str ?? '—'
-
-                    // Filter archiveList sesuai periode
-                    const periodEntries = archiveList.filter(e =>
-                        e.month === useMonth && e.year === useYear &&
-                        (!archiveFilter.classId || e.class_id === archiveFilter.classId) &&
-                        (!archiveSearch || e.class_name.toLowerCase().includes(archiveSearch.toLowerCase()))
-                    )
-
-                    if (!periodEntries.length) return (
-                        <EmptyState
-                            variant="dashed"
-                            color="slate"
-                            icon={faChartPie}
-                            title="Tidak ada data statistik"
-                            description="Pilih filter bulan/tahun yang memiliki data arsip untuk melihat ringkasan performa kelas."
-                        />
-                    )
-
-                    // Hitung avg per kriteria per kelas dari archiveList (tidak ada nilai individual di sini,
-                    // hanya count & completed — tampilkan progress + bar chart dari data yang tersedia)
-                    // Kita tambahkan avg dari data yang sudah di-load di archiveList
-                    const BAR_W = 120, BAR_H = 60
-
-                    return (
-                        <div className="space-y-4">
-                            {/* Header ringkasan */}
-                            <div className="flex items-center gap-3 p-3 rounded-xl border border-[var(--color-border)] bg-gradient-to-r from-indigo-500/5 to-emerald-500/5">
-                                <div className="w-9 h-9 rounded-xl bg-indigo-500/15 flex items-center justify-center shrink-0">
-                                    <FontAwesomeIcon icon={faChartPie} className="text-indigo-500" />
-                                </div>
-                                <div>
-                                    <p className="text-[12px] font-black text-[var(--color-text)]">Ringkasan {bulanLabel} {useYear}</p>
-                                    <p className="text-[9px] text-[var(--color-text-muted)]">{periodEntries.length} kelas · {periodEntries.reduce((a, e) => a + e.count, 0)} santri · {periodEntries.reduce((a, e) => a + e.completed, 0)} raport lengkap</p>
-                                </div>
-                                <div className="flex-1" />
-                                <div className="text-right">
-                                    <p className="text-[9px] text-[var(--color-text-muted)]">Kelengkapan rata-rata</p>
-                                    <p className="text-[18px] font-black text-emerald-500">
-                                        {(() => { const total = periodEntries.reduce((a, e) => a + e.count, 0); const done = periodEntries.reduce((a, e) => a + e.completed, 0); return total ? Math.round(done / total * 100) : 0 })()}%
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Progress bar per kelas */}
-                            <div className="space-y-2">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Progress per Kelas</p>
-                                {[...periodEntries].sort((a, b) => (b.completed / (b.count || 1)) - (a.completed / (a.count || 1))).map(entry => {
-                                    const pct = entry.count ? Math.round(entry.completed / entry.count * 100) : 0
-                                    const barColor = pct === 100 ? '#10b981' : pct >= 70 ? '#6366f1' : pct >= 40 ? '#f59e0b' : '#ef4444'
-                                    return (
-                                        <div key={entry.key} className="flex items-center gap-3 p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-indigo-500/20 transition-all group cursor-pointer"
-                                            onClick={() => loadArchiveDetail(entry)}>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-[11px] font-black text-[var(--color-text)] truncate">{entry.class_name}</span>
-                                                    <span className="text-[10px] font-black shrink-0 ml-2" style={{ color: barColor }}>{pct}%</span>
-                                                </div>
-                                                <div className="h-2 rounded-full bg-[var(--color-surface-alt)] overflow-hidden">
-                                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: barColor }} />
-                                                </div>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-[8px] text-[var(--color-text-muted)]">{entry.completed}/{entry.count} santri lengkap</span>
-                                                    {entry.musyrif && <span className="text-[8px] text-[var(--color-text-muted)] opacity-60">· {entry.musyrif}</span>}
-                                                </div>
-                                            </div>
-                                            {/* SVG mini bar chart: progress vs target */}
-                                            <svg width="44" height="28" viewBox="0 0 44 28" className="shrink-0 opacity-60 group-hover:opacity-100 transition-all" aria-hidden="true">
-                                                <rect x="0" y="0" width="44" height="28" rx="5" fill="var(--color-surface-alt)" />
-                                                <rect x="4" y={28 - 4 - (pct / 100) * 20} width="16" height={(pct / 100) * 20 + 4} rx="3" fill={barColor} opacity="0.85" />
-                                                <rect x="24" y={28 - 4 - ((entry.count ? entry.completed / entry.count : 0) * 20)} width="16" height={((entry.count ? entry.completed / entry.count : 0) * 20) + 4} rx="3" fill={barColor} opacity="0.4" />
-                                            </svg>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-
-                            {/* Heatmap kriteria — tampilkan kalau ada data nilai per kelas */}
-                            <div className="space-y-2">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Heatmap Kriteria (dari arsip ter-load)</p>
-                                <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
-                                        <thead>
-                                            <tr style={{ background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
-                                                <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kelas</th>
-                                                {KRITERIA.map(k => (
-                                                    <th key={k.key} className="px-2 py-2 text-center text-[9px] font-black" style={{ color: k.color }}>{k.id}</th>
-                                                ))}
-                                                <th className="px-2 py-2 text-center text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Lengkap</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {periodEntries.map((entry, idx) => {
-                                                const pct = entry.count ? entry.completed / entry.count : 0
-                                                return (
-                                                    <tr key={entry.key} style={{ borderBottom: idx < periodEntries.length - 1 ? '1px solid var(--color-border)' : 'none' }}
-                                                        className="hover:bg-[var(--color-surface-alt)] transition-all cursor-pointer" onClick={() => loadArchiveDetail(entry)}>
-                                                        <td className="px-3 py-2">
-                                                            <span className="text-[10px] font-black text-[var(--color-text)]">{entry.class_name}</span>
-                                                        </td>
-                                                        {KRITERIA.map(k => (
-                                                            <td key={k.key} className="px-2 py-2 text-center">
-                                                                {/* Karena archiveList tidak menyimpan nilai per kriteria, tampilkan — tapi beri hint */}
-                                                                <div className="w-8 h-6 rounded-md mx-auto flex items-center justify-center text-[9px] font-black"
-                                                                    style={{ background: pct >= 0.9 ? k.color + '20' : pct >= 0.5 ? k.color + '10' : 'var(--color-surface-alt)', color: k.color, opacity: 0.5 + pct * 0.5 }}>
-                                                                    {pct >= 0.9 ? '✓' : pct >= 0.5 ? '…' : '—'}
-                                                                </div>
-                                                            </td>
-                                                        ))}
-                                                        <td className="px-2 py-2 text-center">
-                                                            <span className="text-[10px] font-black" style={{ color: pct === 1 ? '#10b981' : pct >= 0.5 ? '#f59e0b' : '#ef4444' }}>
-                                                                {Math.round(pct * 100)}%
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <p className="text-[8px] text-[var(--color-text-muted)] opacity-60">💡 Klik baris untuk buka detail kelas dan lihat nilai per santri.</p>
-                            </div>
-                        </div>
-                    )
-                })() : filtered.length === 0 ? (
-                    <EmptyState
-                        variant="dashed"
-                        color="slate"
-                        icon={faBoxArchive}
-                        title="Arsip tidak ditemukan"
-                        description={archiveSearch || archiveFilter.classId || archiveFilter.month
-                            ? 'Coba ubah filter atau hapus pencarian untuk menemukan arsip yang kamu cari.'
-                            : 'Belum ada raport yang tersimpan. Selesaikan input nilai di step 2, lalu simpan untuk membuat arsip.'}
-                        action={(archiveSearch || archiveFilter.classId || archiveFilter.month) && (
-                            <button onClick={() => { setArchiveSearch(''); setArchiveFilter({ classId: '', year: '', month: '' }) }}
-                                className="h-9 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-2 mx-auto active:scale-95 shadow-sm">
-                                <FontAwesomeIcon icon={faXmark} className="text-[10px]" /> Reset Filter
-                            </button>
-                        )}
-                    />
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {filtered.map(entry => {
-                            const bulan = BULAN.find(b => b.id === entry.month), pct = entry.count ? Math.round((entry.completed / entry.count) * 100) : 0
-                            return (
-                                <div key={entry.key} className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-emerald-500/30 transition-all">
-                                    <div className="flex items-start justify-between mb-3"><div><div className="text-[11px] font-black text-[var(--color-text)]">{entry.class_name}</div><div className="text-[10px] text-[var(--color-text-muted)] font-bold mt-0.5">{bulan?.id_str} {entry.year} · {entry.lang === 'ar' ? 'عربي' : 'Indonesia'}</div></div><span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${entry.lang === 'ar' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-indigo-500/10 text-indigo-600'}`}>{entry.lang === 'ar' ? 'Pondok' : 'Reguler'}</span></div>
-                                    <div className="mb-3"><div className="flex justify-between text-[9px] font-bold text-[var(--color-text-muted)] mb-1"><span>{entry.completed}/{entry.count} lengkap</span><span>{pct}%</span></div><div className="h-1.5 rounded-full bg-[var(--color-surface-alt)] overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct === 100 ? '#10b981' : pct > 50 ? '#6366f1' : '#f59e0b' }} /></div></div>
-                                    {entry.musyrif && <div className="text-[9px] text-[var(--color-text-muted)] mb-3 flex items-center gap-1"><FontAwesomeIcon icon={faUsers} className="opacity-50" /> {entry.musyrif}</div>}
-                                    <div className="flex gap-1.5">
-                                        <button onClick={() => loadArchiveDetail(entry)} className="flex-1 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-[10px] font-black flex items-center justify-center gap-1.5 hover:bg-indigo-500/20 transition-all"><FontAwesomeIcon icon={faMagnifyingGlass} /> Preview</button>
-                                        <button onClick={() => exportBulkPDF(entry)} className="flex-1 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[10px] font-black flex items-center justify-center gap-1.5 hover:bg-amber-500/20 transition-all"><FontAwesomeIcon icon={faFileZipper} /> Export PDF</button>
-                                        <button onClick={() => setConfirmDelete(entry)} aria-label={`Hapus arsip ${entry.class_name}`} className="h-8 w-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center hover:bg-red-500/20 transition-all"><FontAwesomeIcon icon={faXmark} className="text-xs" /></button>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
-            </div>
+            <RaportArchive
+                archiveList={archiveList}
+                archiveLoading={archiveLoading}
+                archiveFilter={archiveFilter}
+                setArchiveFilter={setArchiveFilter}
+                archiveSearch={archiveSearch}
+                setArchiveSearch={setArchiveSearch}
+                archiveSort={archiveSort}
+                archiveTab={archiveTab}
+                setArchiveTab={setArchiveTab}
+                archiveVisibleCount={archiveVisibleCount}
+                setArchiveVisibleCount={setArchiveVisibleCount}
+                archivePreview={archivePreview}
+                setArchivePreview={setArchivePreview}
+                previewStudentId={previewStudentId}
+                setPreviewStudentId={setPreviewStudentId}
+                archiveEditMode={archiveEditMode}
+                setArchiveEditMode={setArchiveEditMode}
+                archiveEditScores={archiveEditScores}
+                setArchiveEditScores={setArchiveEditScores}
+                archiveEditExtras={archiveEditExtras}
+                setArchiveEditExtras={setArchiveEditExtras}
+                archiveEditSaving={archiveEditSaving}
+                archiveStatusFilter={archiveStatusFilter}
+                archiveMinAvg={archiveMinAvg}
+                loadArchiveDetail={loadArchiveDetail}
+                saveArchiveEdit={saveArchiveEdit}
+                exportBulkPDF={exportBulkPDF}
+                setConfirmDelete={setConfirmDelete}
+                runZipBlast={runZipBlast}
+                openPrintWindow={openPrintWindow}
+                sendWATextOnly={sendWATextOnly}
+                pageSize={pageSize}
+                setPageSize={setPageSize}
+                lang={lang}
+                setLang={setLang}
+                previewZoom={previewZoom}
+                setPreviewZoom={setPreviewZoom}
+                setIsFullScreenPreview={setIsFullScreenPreview}
+                settings={settings}
+                setStep={setStep}
+                previewContainerRef={previewContainerRef}
+                manualZoomRef={manualZoomRef}
+            />
         )
     }
 
-    // ── Print hidden container
+
     const printStudents = archivePreview ? archivePreview.students : students
     const printScores = archivePreview ? archivePreview.scores : scores
     const printExtras = archivePreview ? archivePreview.extras : extras
@@ -4172,6 +2443,27 @@ export default function RaportPage() {
     const printMusyrif = archivePreview ? archivePreview.musyrif : musyrif
     const printClass = archivePreview ? archivePreview.className : selectedClass?.name
     const printLang = archivePreview ? archivePreview.lang : lang
+
+    // ── Fullscreen resolved preview variables
+    const isArchiveMode = step === 4 && archivePreview
+    const fsStudentsList = isArchiveMode ? archivePreview.students : students
+    const fsStudent = isArchiveMode
+        ? (archivePreview.students.find(s => s.id === previewStudentId) || archivePreview.students[0])
+        : (students.find(s => s.id === previewStudentId) || students[0])
+
+    const fsScores = isArchiveMode
+        ? archivePreview.scores[fsStudent?.id]
+        : scores[fsStudent?.id]
+
+    const fsExtra = isArchiveMode
+        ? archivePreview.extras[fsStudent?.id]
+        : extras[fsStudent?.id]
+
+    const fsBulan = isArchiveMode ? archivePreview.bulanObj : bulanObj
+    const fsTahun = isArchiveMode ? archivePreview.tahun : selectedYear
+    const fsMus = isArchiveMode ? archivePreview.musyrif : musyrif
+    const fsClass = isArchiveMode ? archivePreview.className : selectedClass?.name
+    const fsCatatanArab = isArchiveMode ? null : catatanArabMap[fsStudent?.id]
 
 
     const stepLabels = ['Setup', 'Input Nilai', 'Preview & Cetak']
@@ -4291,7 +2583,7 @@ export default function RaportPage() {
                                 <FontAwesomeIcon icon={faKeyboard} />
                             </button>
 
-                            <button onClick={() => { setTutorialStep(0); setShowTutorialModal(true) }} aria-label="Panduan penggunaan" className="h-9 px-3 gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center justify-center hover:bg-amber-500/15 transition-all" title="Panduan & Tutorial">
+                            <button onClick={() => setShowTutorialModal(true)} aria-label="Panduan penggunaan" className="h-9 px-3 gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center justify-center hover:bg-amber-500/15 transition-all" title="Panduan & Tutorial">
                                 <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
                                 Tutorial
                             </button>
@@ -4484,146 +2776,10 @@ export default function RaportPage() {
                 )}
 
                 {/* Tutorial Modal */}
-                {(() => {
-                    const [t1, t2, t3, t4, t5, t6, t7] = tutorialImgs
-                    const SLIDES = [
-                        {
-                            icon: faClipboardList,
-                            iconColor: 'text-emerald-500',
-                            iconBg: 'bg-emerald-500/15',
-                            title: 'Dua Cara Memulai Input Nilai',
-                            subtitle: 'Pilih jalur yang paling nyaman untukmu',
-                            body: (
-                                <div className="space-y-3 text-[11px] text-[var(--color-text)] leading-relaxed">
-                                    <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                                        <p className="font-black text-[var(--color-text)] mb-1 flex items-center gap-1.5">
-                                            <span className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">1</span>
-                                            Lewat tombol "＋ Buat Raport"
-                                        </p>
-                                        <p className="text-[var(--color-text-muted)] pl-6">Klik tombol di pojok kanan atas → pilih kelas → atur bulan & tahun → isi nama Musyrif → pilih template bahasa → klik <strong>"Mulai Input Nilai"</strong>.</p>
-                                    </div>
-                                    <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                                        <p className="font-black text-[var(--color-text)] mb-1 flex items-center gap-1.5">
-                                            <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center shrink-0">2</span>
-                                            Langsung klik kartu kelas
-                                        </p>
-                                        <p className="text-[var(--color-text-muted)] pl-6">Di halaman utama, klik langsung kartu kelas yang ingin diisi. Kamu akan langsung masuk ke halaman input nilai tanpa perlu mengatur periode.</p>
-                                    </div>
-                                </div>
-                            ),
-                            tips: 'Template bahasa otomatis: kelas Boarding → Arab, kelas Reguler → Indonesia. Nama Musyrif terisi otomatis jika sudah diset di data kelas.',
-                            img: t1,
-                        },
-                        {
-                            icon: faTableList,
-                            iconColor: 'text-indigo-500',
-                            iconBg: 'bg-indigo-500/15',
-                            title: 'Mengisi Nilai Santri',
-                            subtitle: 'Input 5 kriteria penilaian karakter',
-                            body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Setiap santri memiliki 5 kolom nilai: Akhlak, Ibadah, Kebersihan, Al-Quran, dan Bahasa. Nilai berkisar antara 0–9. Tekan <strong>Tab</strong> atau <strong>Enter</strong> untuk berpindah ke cell berikutnya dengan cepat.</p>,
-                            tips: 'Ketik angka 0–9 langsung saat cell aktif. Warna cell berubah otomatis sesuai grade — hijau untuk nilai tinggi, merah untuk nilai rendah.',
-                            img: t2,
-                        },
-                        {
-                            icon: faFloppyDisk,
-                            iconColor: 'text-sky-500',
-                            iconBg: 'bg-sky-500/15',
-                            title: 'Auto-Save & Status Simpan',
-                            subtitle: 'Data tersimpan otomatis ke server',
-                            body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Setiap perubahan nilai tersimpan otomatis ke database dalam 1.5 detik. Indikator berwarna hijau (✓) menandakan data sudah tersimpan. Tekan <strong>Ctrl+S</strong> atau klik "Simpan Semua" untuk menyimpan sekaligus.</p>,
-                            tips: 'Jika koneksi terputus, nilai tetap tersimpan sementara sebagai draft di browser. Saat online kembali, muat draft untuk melanjutkan.',
-                            img: t3,
-                        },
-                        {
-                            icon: faBoxArchive,
-                            iconColor: 'text-violet-500',
-                            iconBg: 'bg-violet-500/15',
-                            title: 'Data Tambahan per Santri',
-                            subtitle: 'Kesehatan, hafalan & catatan',
-                            body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Selain nilai karakter, isi juga data tambahan: berat & tinggi badan, jumlah hari sakit / izin / alpa, progress Ziyadah & Murojaah hafalan, serta catatan khusus yang akan tercetak di raport untuk orang tua.</p>,
-                            tips: 'Data tambahan ini opsional — raport tetap bisa dicetak meski tidak diisi. Namun semakin lengkap datanya, semakin informatif raport yang diterima orang tua.',
-                            img: t4,
-                        },
-                        {
-                            icon: faFillDrip,
-                            iconColor: 'text-rose-500',
-                            iconBg: 'bg-rose-500/15',
-                            title: 'Isi Massal & Copy Bulan Lalu',
-                            subtitle: 'Hemat waktu untuk nilai yang sama',
-                            body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Gunakan "Isi Massal" untuk mengisi nilai yang sama ke banyak santri sekaligus — centang santri yang ingin diisi, set nilai, klik Terapkan. Gunakan "Copy Bulan Lalu" untuk menyalin nilai dari periode sebelumnya sebagai titik awal.</p>,
-                            tips: 'Undo/Redo tersedia dengan Ctrl+Z dan Ctrl+Y jika ingin membatalkan perubahan nilai yang sudah diisi.',
-                            img: t5,
-                        },
-                        {
-                            icon: faFilePdf,
-                            iconColor: 'text-red-500',
-                            iconBg: 'bg-red-500/15',
-                            title: 'Cetak, ZIP & WA Blast',
-                            subtitle: 'Distribusikan raport ke orang tua',
-                            body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Klik ikon Print untuk mencetak raport dari browser. Klik ZIP untuk mengunduh semua raport dalam satu file. Klik ikon WhatsApp di tiap baris santri untuk kirim raport ke orang tua, atau gunakan "WA Blast" untuk kirim ke semua sekaligus.</p>,
-                            tips: 'Hanya santri yang nilainya sudah lengkap (semua 5 kriteria terisi) yang bisa diekspor ke PDF / ZIP / WA.',
-                            img: t6,
-                        },
-                        {
-                            icon: faBoxArchive,
-                            iconColor: 'text-teal-500',
-                            iconBg: 'bg-teal-500/15',
-                            title: 'Arsip & Riwayat',
-                            subtitle: 'Lihat dan edit raport bulan lalu',
-                            body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Semua raport yang pernah disimpan tersedia di tab "Riwayat". Kamu bisa melihat raport per kelas per bulan, mengedit nilai yang sudah tersimpan, menghapus arsip, hingga mencetak atau mengirim ulang via WA.</p>,
-                            tips: 'Filter arsip berdasarkan tahun, bulan, atau kelas. Gunakan "Edit Arsip" untuk memperbaiki nilai yang salah input bulan lalu.',
-                            img: t7,
-                        },
-                    ]
-                    const currentSlide = SLIDES[tutorialStep]
-
-                    return (
-                        <Modal
-                            isOpen={showTutorialModal}
-                            onClose={() => setShowTutorialModal(false)}
-                            title={currentSlide.title}
-                            description={currentSlide.subtitle}
-                            icon={currentSlide.icon}
-                            iconBg={currentSlide.iconBg}
-                            iconColor={currentSlide.iconColor}
-                            size="lg"
-                        >
-                            <TutorialModalContent
-                                step={tutorialStep}
-                                setStep={setTutorialStep}
-                                totalSteps={SLIDES.length}
-                                slides={SLIDES}
-                                onFinish={() => setShowTutorialModal(false)}
-                                onZoomImg={setTutorialZoomImg}
-                            />
-                        </Modal>
-                    )
-                })()}
-
-                {/* Tutorial Image Zoom (Lightbox) */}
-                <Modal
-                    isOpen={!!tutorialZoomImg}
-                    onClose={() => setTutorialZoomImg(null)}
-                    title="Detail Panduan"
-                    size="xl"
-                    showClose={true}
-                >
-                    <div className="flex items-center justify-center bg-black/5 rounded-2xl overflow-hidden">
-                        <img
-                            src={tutorialZoomImg}
-                            alt="Zoom Tutorial"
-                            className="max-w-full max-h-[80vh] object-contain shadow-2xl"
-                        />
-                    </div>
-                    <div className="mt-4 flex justify-center">
-                        <button
-                            onClick={() => setTutorialZoomImg(null)}
-                            className="px-8 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-xs font-black shadow-lg shadow-indigo-500/20 hover:brightness-110 transition-all"
-                        >
-                            Tutup Preview
-                        </button>
-                    </div>
-                </Modal>
+                <RaportTutorialModal
+                    isOpen={showTutorialModal}
+                    onClose={() => setShowTutorialModal(false)}
+                />
 
                 {/* WA Blast Confirm Modal */}
                 <Modal
@@ -4669,25 +2825,19 @@ export default function RaportPage() {
                     showClose={!zipBlast?.active}
                 >
                     {zipBlast && (
-                        <div className="space-y-6 py-4">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faFileZipper} className="text-lg" />
-                                    </div>
-                                    <p className="text-sm font-black text-[var(--color-text)]">Menyiapkan File ZIP...</p>
-                                </div>
-                                <span className="text-lg font-black text-[var(--color-text)]">
-                                    {zipBlast.total > 0 ? Math.round((zipBlast.done / zipBlast.total) * 100) : 0}%
-                                </span>
-                            </div>
-                            <div className="h-3 w-full rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden">
-                                <div className="h-full bg-teal-500 transition-all duration-700" style={{ width: `${zipBlast.total > 0 ? (zipBlast.done / zipBlast.total) * 100 : 0}%` }} />
-                            </div>
-                            <p className="text-center text-[10px] text-[var(--color-text-muted)] font-medium">
-                                {zipBlast.done} dari {zipBlast.total} raport diproses. Mohon tunggu...
-                            </p>
-                        </div>
+                        <ZipBlastProgressContent
+                            progress={zipBlast.done + zipBlast.failed}
+                            total={zipBlast.total}
+                            done={zipBlast.done}
+                            failed={zipBlast.failed}
+                            activeName={zipBlast.active && zipBlast.queue[zipBlast.idx]?.name}
+                            active={zipBlast.active}
+                            onCancel={() => {
+                                zipAbortRef.current = true
+                                setZipBlast(prev => prev ? { ...prev, active: false } : null)
+                                addToast('Membatalkan ekspor ZIP...', 'info')
+                            }}
+                        />
                     )}
                 </Modal>
 
@@ -4699,20 +2849,38 @@ export default function RaportPage() {
                         isOpen={true}
                         onClose={() => setConfirmDelete(null)}
                         title="Hapus Arsip Raport"
+                        description={<span className="text-red-500 font-black">Aksi ini tidak bisa dibatalkan!</span>}
                         icon={faTriangleExclamation}
-                        variant="red"
-                    >
-                        <div className="space-y-6">
-                            <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 space-y-2">
-                                <p className="text-sm font-black text-[var(--color-text)]">Aksi ini tidak bisa dibatalkan!</p>
-                                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                                    Anda akan menghapus arsip raport kelas <strong>{confirmDelete.class_name}</strong> untuk periode <strong>{BULAN.find(b => b.id === confirmDelete.month)?.id_str} {confirmDelete.year}</strong>.
-                                </p>
-                            </div>
+                        iconBg="bg-red-500/10"
+                        iconColor="text-red-500"
+                        size="md"
+                        footer={
                             <div className="flex gap-3">
-                                <button onClick={() => setConfirmDelete(null)} className="flex-1 h-11 rounded-xl border border-[var(--color-border)] text-sm font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Batal</button>
-                                <button onClick={() => executeDeleteArchive(confirmDelete)} className="flex-1 h-11 rounded-xl bg-red-500 text-white text-sm font-black shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all">Ya, Hapus Permanen</button>
+                                <button
+                                    onClick={() => setConfirmDelete(null)}
+                                    className="flex-1 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] active:scale-95 transition-all shadow-sm"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={() => executeDeleteArchive(confirmDelete)}
+                                    className="flex-1 h-10 rounded-xl bg-red-500 text-white text-[11px] font-black shadow-md shadow-red-500/10 hover:bg-red-600 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                                >
+                                    Ya, Hapus Permanen
+                                </button>
                             </div>
+                        }
+                    >
+                        <div className="py-2 text-[12px] font-bold text-[var(--color-text)] leading-relaxed">
+                            Anda akan menghapus arsip raport kelas{' '}
+                            <span className="bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black inline-block">
+                                {confirmDelete.class_name}
+                            </span>{' '}
+                            untuk periode{' '}
+                            <span className="bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black inline-block">
+                                {BULAN.find(b => b.id === confirmDelete.month)?.id_str} {confirmDelete.year}
+                            </span>{' '}
+                            secara permanen.
                         </div>
                     </Modal>
                 )}
@@ -4953,6 +3121,207 @@ export default function RaportPage() {
                         </div>
                     )}
                 </Modal>
+
+                {/* ── FULLSCREEN DIGITAL PREVIEW ── */}
+                {isFullScreenPreview && createPortal(
+                    <div
+                        className="fixed inset-0 z-[99999] bg-slate-400/80 p-2 sm:p-3"
+                        onClick={() => setIsFullScreenPreview(false)}
+                        onMouseMove={bumpFullScreenHud}
+                        onWheel={bumpFullScreenHud}
+                        onTouchStart={bumpFullScreenHud}
+                    >
+                        <div
+                            className="relative h-full w-full rounded-[24px] overflow-hidden border border-slate-200/80 bg-[#e9edf5] shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div
+                                className={`absolute left-3 right-3 z-20 h-12 px-2 sm:px-3 rounded-2xl flex items-center justify-between border border-slate-200/80 bg-white/92 shadow-sm transition-all duration-200 ${showFullScreenHud ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+                                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+                            >
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <button
+                                        onClick={() => setIsFullScreenPreview(false)}
+                                        className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center shrink-0"
+                                        title="Tutup fullscreen"
+                                    >
+                                        <FontAwesomeIcon icon={faArrowLeft} className="text-[11px]" />
+                                    </button>
+                                    <div className="min-w-0">
+                                        <p className="text-slate-800 text-[11px] font-black truncate max-w-[140px] sm:max-w-xs">
+                                            {fsStudent?.name || 'Preview'}
+                                        </p>
+                                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-[0.14em]">
+                                            Digital Preview
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 border border-slate-200">
+                                        <span className="text-[9px] font-black text-slate-500">SIZE {pageSize.toUpperCase()}</span>
+                                        <span className="text-slate-300">|</span>
+                                        <span className="text-[9px] font-black text-slate-500">LANG {lang.toUpperCase()}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => openPrintWindow([fsStudent].filter(Boolean))}
+                                        className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/30 flex items-center justify-center transition-all"
+                                        title="Cetak Raport"
+                                    >
+                                        <FontAwesomeIcon icon={faPrint} className="text-[11px]" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div
+                                ref={fullScreenScrollRef}
+                                className="h-full overflow-auto flex flex-col items-center px-3 sm:px-6 pt-20 pb-20"
+                                style={{
+                                    scrollbarWidth: 'none',
+                                    msOverflowStyle: 'none',
+                                    backgroundColor: 'transparent',
+                                }}
+                                onTouchStart={e => {
+                                    bumpFullScreenHud()
+                                    if (e.touches.length === 2) {
+                                        fullScreenPinchDistRef.current = Math.hypot(
+                                            e.touches[0].clientX - e.touches[1].clientX,
+                                            e.touches[0].clientY - e.touches[1].clientY
+                                        )
+                                        fullScreenPinchZoomRef.current = fullScreenZoom
+                                    }
+                                }}
+                                onTouchMove={e => {
+                                    bumpFullScreenHud()
+                                    if (e.touches.length === 2 && fullScreenPinchDistRef.current) {
+                                        const dist = Math.hypot(
+                                            e.touches[0].clientX - e.touches[1].clientX,
+                                            e.touches[0].clientY - e.touches[1].clientY
+                                        )
+                                        const ratio = dist / fullScreenPinchDistRef.current
+                                        setFullScreenZoom(Math.min(2, Math.max(0.3, Math.floor(fullScreenPinchZoomRef.current * ratio * 100) / 100)))
+                                    }
+                                }}
+                                onTouchEnd={() => { fullScreenPinchDistRef.current = null }}
+                                onMouseMove={bumpFullScreenHud}
+                                onWheel={bumpFullScreenHud}
+                                onClick={bumpFullScreenHud}
+                                onTouchEndCapture={() => {
+                                    bumpFullScreenHud()
+                                    if (!isMobileViewport) return
+                                    const now = Date.now()
+                                    const since = now - fullScreenLastTapRef.current
+                                    fullScreenLastTapRef.current = now
+                                    if (since > 0 && since < 320) {
+                                        const fit = getFullScreenFitZoom(true)
+                                        setFullScreenZoom(prev => (Math.abs(prev - fit) < 0.04 ? 1 : fit))
+                                    }
+                                }}
+                            >
+                                {(() => {
+                                    const naturalW = pageSize === 'f4' ? 812.6 : 793.7
+                                    const naturalH = pageSize === 'f4' ? 1247 : 1122
+                                    const s = fullScreenZoom
+                                    return (
+                                        <div
+                                            className="shrink-0"
+                                            style={{
+                                                width: `${naturalW * s}px`,
+                                                height: `${naturalH * s}px`,
+                                                borderRadius: '0px',
+                                                overflow: 'hidden',
+                                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                                            }}
+                                        >
+                                            <div style={{ width: `${naturalW}px`, transformOrigin: 'top left', transform: `scale(${s})` }}>
+                                                {fsStudent && (
+                                                    <RaportPrintCard
+                                                        student={fsStudent}
+                                                        scores={fsScores}
+                                                        extra={fsExtra}
+                                                        bulanObj={fsBulan}
+                                                        tahun={fsTahun}
+                                                        musyrif={fsMus}
+                                                        className={fsClass}
+                                                        lang={lang}
+                                                        settings={settings}
+                                                        pageSize={pageSize}
+                                                        catatanArab={fsCatatanArab}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })()}
+                            </div>
+
+                            <div
+                                className={`absolute left-3 right-3 z-20 flex items-center justify-center transition-all duration-200 ${showFullScreenHud ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}
+                                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+                            >
+                                <div className="max-w-full overflow-x-auto no-scrollbar">
+                                    <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 sm:p-1 rounded-2xl bg-white/92 backdrop-blur border border-slate-200 shadow-sm w-max mx-auto">
+                                        <button
+                                            onClick={() => setFullScreenZoom(p => Math.round(Math.max(0.3, p - 0.1) * 100) / 100)}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center"
+                                        >
+                                            <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
+                                            <span className="text-[10px] font-black leading-none ml-0.5">-</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setFullScreenZoom(getFullScreenFitZoom(isMobileViewport))
+                                            }}
+                                            title="Fit ke lebar viewer"
+                                            className="min-w-[52px] h-9 sm:min-w-[56px] sm:h-10 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-indigo-500 hover:text-indigo-700 hover:bg-indigo-500/10 transition-all text-[10px] sm:text-[11px] font-black tabular-nums"
+                                        >
+                                            {Math.round(fullScreenZoom * 100)}%
+                                        </button>
+                                        <button
+                                            onClick={() => setFullScreenZoom(p => Math.round(Math.min(2.0, p + 0.1) * 100) / 100)}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center"
+                                        >
+                                            <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
+                                            <span className="text-[10px] font-black leading-none ml-0.5">+</span>
+                                        </button>
+                                        <div className="w-px h-5 sm:h-6 bg-slate-300 mx-0.5 sm:mx-1" />
+                                        <button
+                                            onClick={() => {
+                                                const idx = fsStudentsList.findIndex(s => s.id === (fsStudent?.id))
+                                                if (idx > 0) setPreviewStudentId(fsStudentsList[idx - 1].id)
+                                            }}
+                                            disabled={!fsStudent || fsStudentsList.findIndex(s => s.id === fsStudent?.id) === 0}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center disabled:opacity-30"
+                                        >
+                                            <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
+                                        </button>
+                                        <span className="min-w-[46px] sm:min-w-[54px] text-center text-[9px] sm:text-[10px] font-black text-slate-400 tabular-nums">
+                                            {(fsStudentsList.findIndex(s => s.id === fsStudent?.id) + 1)}/{fsStudentsList.length}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                const idx = fsStudentsList.findIndex(s => s.id === (fsStudent?.id))
+                                                if (idx < fsStudentsList.length - 1) setPreviewStudentId(fsStudentsList[idx + 1].id)
+                                            }}
+                                            disabled={!fsStudent || fsStudentsList.findIndex(s => s.id === fsStudent?.id) === fsStudentsList.length - 1}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center disabled:opacity-30"
+                                        >
+                                            <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
+                                        </button>
+                                        <div className="w-px h-5 sm:h-6 bg-slate-300 mx-0.5 sm:mx-1" />
+                                        <button
+                                            onClick={() => setIsFullScreenPreview(false)}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
+                                        >
+                                            <FontAwesomeIcon icon={faXmark} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
             </div >
         </DashboardLayout >
     )
