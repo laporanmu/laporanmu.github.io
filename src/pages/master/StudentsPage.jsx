@@ -81,7 +81,7 @@ import {
     faClockRotateLeft
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import { LIST_KAMAR } from '../reports/utils/raportConstants'
+import { LIST_KAMAR } from '../../utils/reports/raportConstants'
 
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
@@ -144,7 +144,7 @@ import Pagination from '../../components/ui/Pagination'
 
 
 
-const MOBILE_BOTTOM_NAV_PX = 5
+
 
 function getPortalContainer(id) {
     let el = document.getElementById(id);
@@ -1733,8 +1733,8 @@ export default function StudentsPage() {
                                     style={{
                                         paddingBottom:
                                             selectedStudentIds.length > 0
-                                                ? `calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 96px)`
-                                                : `calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 16px)`,
+                                                ? `calc(var(--floating-bar-bottom, 16px) + 64px + env(safe-area-inset-bottom))`
+                                                : `calc(var(--floating-bar-bottom, 16px) + env(safe-area-inset-bottom))`,
                                     }}
                                 >
 
@@ -2953,10 +2953,10 @@ export default function StudentsPage() {
                 {/* FLOATING BULK ACTION BAR - SaaS STYLE */}
                 {/* ===================== */}
                 {
-                    selectedStudentIds.length > 0 && (
+                    selectedStudentIds.length > 0 && createPortal(
                         <div
                             className="fixed left-1/2 -translate-x-1/2 z-[250] w-[95%] md:w-max max-w-[95%] animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)"
-                            style={{ bottom: `max(96px, calc(${MOBILE_BOTTOM_NAV_PX}px + env(safe-area-inset-bottom) + 16px))` }}
+                            style={{ bottom: 'var(--floating-bar-bottom, 16px)' }}
                         >
                             <div className="relative">
                                 <div className="relative glass-morphism bg-gray-900/90 dark:bg-gray-800/95 backdrop-blur-3xl border border-white/20 rounded-2xl px-3 py-2 flex items-center gap-4 text-white overflow-hidden shadow-2xl">
@@ -3054,7 +3054,8 @@ export default function StudentsPage() {
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </div>,
+                        document.body
                     )
                 }
                 {/* ===================== */}

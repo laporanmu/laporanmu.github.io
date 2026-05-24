@@ -8,7 +8,7 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import {
     MAX_SCORE, KRITERIA, GRADE, FISIK_FIELDS, HAFALAN_FIELDS,
     CATATAN_TEMPLATES, calcAvg
-} from '../utils/raportConstants'
+} from '../../utils/reports/raportConstants'
 import { RadarChart, SparklineTrend } from './RaportCharts'
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -157,9 +157,14 @@ const StudentRow = memo(({
                 const prevVal = prevScores?.[k.key], curVal = sc[k.key], hasDelta = (prevVal != null && curVal !== '' && curVal != null), delta = hasDelta ? Number(curVal) - Number(prevVal) : 0
                 return (
                     <td key={k.key} className="py-2 text-center" style={{ verticalAlign: 'middle' }}>
-                        <ScoreCell value={sc[k.key]} onChange={v => onScoreChange(student.id, k.key, v)} onKeyDown={e => onKeyDown(e, si, ki)} inputRef={el => { cellRefs.current[`${si}-${ki}`] = el }} kriteria={k} />
-                        {hasDelta && delta !== 0 && (<div style={{ fontSize: 8, fontWeight: 900, color: delta > 0 ? '#10b981' : '#ef4444', lineHeight: 1, marginTop: 1 }} title={`Bulan lalu: ${prevVal}`}>{delta > 0 ? '▲' : '▼'}{Math.abs(delta)}</div>)}
-                        {hasDelta && delta === 0 && (<div style={{ fontSize: 8, color: 'var(--color-text-muted)', opacity: 0.4, lineHeight: 1, marginTop: 1 }}>—</div>)}
+                        <div className="flex flex-col items-center justify-center">
+                            <ScoreCell value={sc[k.key]} onChange={v => onScoreChange(student.id, k.key, v)} onKeyDown={e => onKeyDown(e, si, ki)} inputRef={el => { cellRefs.current[`${si}-${ki}`] = el }} kriteria={k} />
+                            <div style={{ height: 10, fontSize: 8, fontWeight: 900, lineHeight: 1, marginTop: 2 }} className="flex items-center justify-center">
+                                {hasDelta && delta > 0 && <span style={{ color: '#10b981' }} title={`Bulan lalu: ${prevVal}`}>▲{delta}</span>}
+                                {hasDelta && delta < 0 && <span style={{ color: '#ef4444' }} title={`Bulan lalu: ${prevVal}`}>▼{Math.abs(delta)}</span>}
+                                {hasDelta && delta === 0 && <span style={{ color: 'var(--color-text-muted)', opacity: 0.4 }}>—</span>}
+                            </div>
+                        </div>
                     </td>
                 )
             })}
@@ -183,7 +188,7 @@ const StudentRow = memo(({
                         </div>
                     ))}
                     <div className="flex rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', minHeight: 32 }}>
-                        <div className="w-6 shrink-0 flex items-start justify-center pt-[7px]" style={{ background: '#f59e0b18' }}><FontAwesomeIcon icon={faClipboardList} style={{ color: '#f59e0b', fontSize: 9 }} /></div>
+                        <div className="w-6 shrink-0 flex items-center justify-center" style={{ background: '#f59e0b18' }}><FontAwesomeIcon icon={faClipboardList} style={{ color: '#f59e0b', fontSize: 9 }} /></div>
                         <ExtraTextarea placeholder="Catatan untuk Santri..." value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={onCatatanChange} maxLength={200} rows={2} aria-label="Catatan musyrif" className="flex-1 w-0 px-1.5 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
                         <button onClick={() => { const c = generateAutoComment(sc, student.id, trendData); if (!c) return; onCatatanChange(student.id, 'catatan', c) }} title="Generate komentar otomatis dari nilai" disabled={!avg} className="shrink-0 w-6 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30"><FontAwesomeIcon icon={faBolt} style={{ fontSize: 9 }} /></button>
                     </div>
@@ -196,9 +201,6 @@ const StudentRow = memo(({
                             </div>
                         )}
                     </div>
-                    {lang === 'ar' && ex.catatan && (
-                        <button onClick={() => onTranslitToggle(student.id, ex.catatan, catatanArab)} title={catatanArab ? 'Kembali ke Indonesia' : 'Terjemahkan catatan ke huruf Arab'} className={`w-full h-6 rounded-md border text-[8px] font-black flex items-center justify-center gap-1 transition-all ${catatanArab ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}><FontAwesomeIcon icon={faLanguage} style={{ fontSize: 8 }} />{catatanArab ? 'Arab ✓' : 'Ke Arab'}</button>
-                    )}
                 </div>
             </td>
             <td className="px-2 py-3 sticky right-0 z-10" style={{ verticalAlign: 'middle', background: si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)' }}>

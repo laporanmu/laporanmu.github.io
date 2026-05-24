@@ -3,18 +3,18 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faArrowLeft, faSliders, faFileZipper, faPrint, faCircleCheck,
     faClipboardList, faUsers, faSearch, faChevronDown, faChevronLeft,
-    faChevronRight, faXmark, faExpand, faWhatsapp, faTableList,
+    faChevronRight, faXmark, faExpand, faTableList,
     faChartPie, faBoxArchive, faBolt, faMagnifyingGlass, faCircleExclamation
 } from '@fortawesome/free-solid-svg-icons'
-import { faWhatsapp as faWhatsappBrand } from '@fortawesome/free-brands-svg-icons'
-import { EmptyState } from '../../../components/ui/DataDisplay'
-import Skeleton from '../../../components/ui/Skeleton'
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
+import { EmptyState } from '../ui/DataDisplay'
+import Skeleton from '../ui/Skeleton'
 import RaportPrintCard from './RaportPrintCard'
 
 import {
     KRITERIA, GRADE, BULAN, FISIK_FIELDS, HAFALAN_FIELDS, LABEL
-} from '../utils/raportConstants'
-import { isComplete, generateAutoComment } from '../utils/raportHelpers'
+} from '../../utils/reports/raportConstants'
+import { isComplete, generateAutoComment } from '../../utils/reports/raportHelpers'
 
 export default function RaportArchive({
     archiveList,
@@ -378,7 +378,7 @@ export default function RaportArchive({
 
                                                     {pStudent?.phone && (
                                                         <button onClick={() => sendWATextOnly(pStudent)} className="h-10 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial">
-                                                            <FontAwesomeIcon icon={faWhatsappBrand} className="text-xs" /> <span className="hidden xs:inline">Whatsapp</span>
+                                                            <FontAwesomeIcon icon={faWhatsapp} className="text-xs" /> <span className="hidden xs:inline">Whatsapp</span>
                                                         </button>
                                                     )}
 
@@ -397,8 +397,8 @@ export default function RaportArchive({
                                         </div>
 
                                         <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-slate-900/50 flex flex-col items-center custom-scrollbar p-6 min-h-[500px]">
-                                            <div 
-                                                style={{ transform: `scale(${previewZoom})`, transformOrigin: 'top center' }} 
+                                            <div
+                                                style={{ transform: `scale(${previewZoom})`, transformOrigin: 'top center' }}
                                                 className="shadow-2xl h-fit cursor-pointer relative"
                                                 onClick={() => setIsFullScreenPreview(true)}
                                             >

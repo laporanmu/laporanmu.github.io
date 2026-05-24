@@ -1,9 +1,9 @@
 import React, { memo, useEffect } from 'react'
-import { KRITERIA, GRADE, LABEL, toArabicNum, LIST_KAMAR } from '../utils/raportConstants'
-import { translitToAr, translitClassToAr } from '../utils/translitData'
-import mbsLogo from '../../../assets/mbs.png'
-import smpLogo from '../../../assets/smp.png'
-import smaLogo from '../../../assets/sma.jpg'
+import { KRITERIA, GRADE, LABEL, toArabicNum, LIST_KAMAR } from '../../utils/reports/raportConstants'
+import { translitToAr, translitClassToAr } from '../../utils/reports/translitData'
+import mbsLogo from '../../assets/mbs.png'
+import smpLogo from '../../assets/smp.png'
+import smaLogo from '../../assets/sma.jpg'
 
 const printCardAreEqual = (prev, next) => {
     if (prev.lang !== next.lang) return false

@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { KRITERIA, MAX_SCORE, GRADE, calcAvg } from '../utils/raportConstants'
+import { KRITERIA, MAX_SCORE, GRADE, calcAvg } from '../../utils/reports/raportConstants'
 
 export const RadarChart = memo(({ scores, size = 80 }) => {
     const vals = KRITERIA.map(k => Number(scores?.[k.key]) || 0)

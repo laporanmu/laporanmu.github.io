@@ -12,9 +12,9 @@ import { useToast } from '../../context/ToastContext'
 import { useTheme } from '../../context/ThemeContext'
 import { supabase } from '../../lib/supabase'
 import mbsLogo from '../../assets/mbs.png'
-import { BULAN, KRITERIA, GRADE, LABEL, toArabicNum, calcAvg, MAX_SCORE } from '../reports/utils/raportConstants'
-import { translitToAr } from '../reports/utils/translitData'
-import RaportPrintCard from '../reports/components/RaportPrintCard'
+import { BULAN, KRITERIA, GRADE, LABEL, toArabicNum, calcAvg, MAX_SCORE } from '../../utils/reports/raportConstants'
+import { translitToAr } from '../../utils/reports/translitData'
+import RaportPrintCard from '../../components/reports/RaportPrintCard'
 
 // ─── Constants & Utils ───────────────────────────────────────────────────────
 

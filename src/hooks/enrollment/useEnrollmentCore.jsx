@@ -580,7 +580,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
 
     const sendFonnteMessage = async (target, message) => {
         const token = import.meta.env.VITE_FONNTE_TOKEN || ''
-        if (!token) return false
+        if (!token) return console.log('Fonnte token is not defined')
         try {
             const res = await fetch('https://api.fonnte.com/send', {
                 method: 'POST',

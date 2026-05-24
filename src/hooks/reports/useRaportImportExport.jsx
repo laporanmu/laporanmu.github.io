@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef } from 'react'
-import { supabase } from '../../../lib/supabase'
-import { logAudit } from '../../../lib/auditLogger'
-import { BULAN, KRITERIA, STORAGE_BUCKET, GRADE, calcAvg } from '../utils/raportConstants'
-import { buildWaLines, escapeCsvCell } from '../utils/raportHelpers'
+import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
+import { BULAN, KRITERIA, STORAGE_BUCKET, GRADE, calcAvg } from '../../utils/reports/raportConstants'
+import { buildWaLines, escapeCsvCell } from '../../utils/reports/raportHelpers'
 
 // Helper withTimeout agar html2canvas tidak hang selamanya
 const withTimeout = (promise, ms, label = 'Operasi') =>
@@ -11,7 +11,7 @@ const withTimeout = (promise, ms, label = 'Operasi') =>
         new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout setelah ${ms / 1000}s`)), ms)),
     ])
 
-export function useRaportImportExport(core, { printContainerRef }) {
+export function useRaportImportExport(core, { printContainerRef, silentPrintRef }) {
     const {
         addToast,
         selectedClass,
@@ -43,7 +43,54 @@ export function useRaportImportExport(core, { printContainerRef }) {
     const waBlastAbortRef = useRef(false)
     const zipAbortRef = useRef(false)
 
-    // ── WhatsApp message builder ──
+    // ── Fonnte API helper ──
+    const fonnteToken = import.meta.env.VITE_FONNTE_TOKEN || ''
+
+    // Kirim pesan teks via Fonnte
+    const sendFonnteMessage = useCallback(async (target, message) => {
+        if (!fonnteToken) return false
+        try {
+            const params = new URLSearchParams()
+            params.append('target', target)
+            params.append('message', message)
+            const res = await fetch('https://api.fonnte.com/send', {
+                method: 'POST',
+                headers: { 'Authorization': fonnteToken },
+                body: params
+            })
+            const data = await res.json()
+            return data.status === true
+        } catch (err) {
+            console.error('[Fonnte] Error sending text:', err)
+            return false
+        }
+    }, [fonnteToken])
+
+    // Kirim file PDF via Fonnte menggunakan URL publik Supabase
+    // Wajib menggunakan FormData agar Fonnte dapat memproses URL file dengan benar
+    const sendFonnteFile = useCallback(async (target, pdfUrl, filename) => {
+        if (!fonnteToken || !pdfUrl) return false
+        try {
+            const formData = new FormData()
+            formData.append('target', target)
+            formData.append('url', pdfUrl)
+            formData.append('message', filename || 'Raport PDF')
+            formData.append('filename', filename || 'raport.pdf')
+            const res = await fetch('https://api.fonnte.com/send', {
+                method: 'POST',
+                headers: { 'Authorization': fonnteToken },
+                body: formData
+            })
+            const data = await res.json()
+            console.log('[Fonnte] File send response:', data)
+            return data.status === true
+        } catch (err) {
+            console.error('[Fonnte] Error sending file:', err)
+            return false
+        }
+    }, [fonnteToken])
+
+    // ── WhatsApp message builder (returns raw text) ──
     const buildWaMessage = useCallback((student, pdfUrl = null) => {
         const lines = buildWaLines({
             student,
@@ -56,17 +103,26 @@ export function useRaportImportExport(core, { printContainerRef }) {
             pdfUrl,
             waFooter: settings.wa_footer,
         })
-        return encodeURIComponent(lines.join('\n'))
+        return lines.join('\n')
     }, [scores, extras, bulanObj, selectedYear, selectedClass, musyrif, settings])
 
     // ── Send text only ──
-    const sendWATextOnly = useCallback((student) => {
+    const sendWATextOnly = useCallback(async (student) => {
         if (!student.phone) { addToast('Nomor WA tidak tersedia', 'warning'); return }
         const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
-        const tab = window.open(`https://wa.me/${phone}?text=${buildWaMessage(student)}`, '_blank')
-        if (!tab) addToast('Popup diblokir.', 'warning')
-        else addToast(`📲 WA dibuka untuk ${student.name.split(' ')[0]}`, 'info')
-    }, [buildWaMessage, addToast])
+        const message = buildWaMessage(student)
+
+        // Try Fonnte first
+        const sent = await sendFonnteMessage(phone, message)
+        if (sent) {
+            addToast(`✅ WA terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
+        } else {
+            // Fallback to wa.me
+            const tab = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+            if (!tab) addToast('Popup diblokir.', 'warning')
+            else addToast(`📲 WA dibuka untuk ${student.name.split(' ')[0]}`, 'info')
+        }
+    }, [buildWaMessage, sendFonnteMessage, addToast])
 
     // ── Generate PDF Blob ──
     const generatePDFBlob = useCallback(async (student, contextOverride = {}) => {
@@ -79,9 +135,10 @@ export function useRaportImportExport(core, { printContainerRef }) {
         const bulanStr = activeBulanObj?.id_str || String(contextOverride.month ?? selectedMonth)
         const safeName = student.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
         const filename = `${safeName}_${bulanStr}_${activeYear}.pdf`
-        
+
         let cardEl = document.querySelector(`.raport-card[data-student-id="${student.id}"]`)
         if (!cardEl) {
+            if (silentPrintRef) silentPrintRef.current = true // jangan buka tab print
             setPrintRenderedCount(0); setPrintQueue([student.id])
             await new Promise(resolve => {
                 let t = 0
@@ -92,6 +149,7 @@ export function useRaportImportExport(core, { printContainerRef }) {
                 }, 100)
             })
             setPrintQueue([]); setPrintRenderedCount(0)
+            if (silentPrintRef) silentPrintRef.current = false // reset flag
         }
         if (!cardEl) throw new Error('Gagal render raport card')
         const rootStyles = getComputedStyle(document.documentElement)
@@ -131,8 +189,23 @@ export function useRaportImportExport(core, { printContainerRef }) {
     const generateAndSendWA = useCallback(async (student) => {
         if (!student.phone) { addToast('Nomor WA tidak tersedia', 'warning'); return }
         const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
-        const openWATab = (url) => { const tab = window.open(url, '_blank'); if (!tab) addToast('Popup diblokir browser.', 'warning') }
-        if (raportLinks[student.id]) { openWATab(`https://wa.me/${phone}?text=${buildWaMessage(student, raportLinks[student.id])}`); return }
+
+        // Jika PDF sudah di-cache, kirim langsung dengan URL di body teks
+        if (raportLinks[student.id]) {
+            const cachedUrl = raportLinks[student.id]
+            // URL selalu disertakan dalam teks agar berfungsi di semua paket Fonnte
+            const message = buildWaMessage(student, cachedUrl)
+            const textSent = await sendFonnteMessage(phone, message)
+            // Best-effort: coba kirim sebagai file attachment juga (butuh paket Super+)
+            sendFonnteFile(phone, cachedUrl, decodeURIComponent(cachedUrl.split('/').pop())).catch(() => {})
+            if (textSent) { addToast(`WA terkirim ke wali ${student.name.split(' ')[0]}`, 'success') }
+            else {
+                const tab = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                if (!tab) addToast('Popup diblokir browser.', 'warning')
+            }
+            return
+        }
+
         setPreviewStudentId(student.id); await new Promise(r => setTimeout(r, 300))
         setSendingWA(prev => ({ ...prev, [student.id]: 'generating' }))
         try {
@@ -141,8 +214,20 @@ export function useRaportImportExport(core, { printContainerRef }) {
             const url = await uploadToSupabase(blob, filename)
             setRaportLinks(prev => ({ ...prev, [student.id]: url }))
             setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
-            openWATab(`https://wa.me/${phone}?text=${buildWaMessage(student, url)}`)
-            addToast(`Terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
+
+            // URL selalu disertakan dalam teks agar berfungsi di semua paket Fonnte
+            const message = buildWaMessage(student, url)
+            const textSent = await sendFonnteMessage(phone, message)
+            // Best-effort: coba kirim sebagai file attachment juga (butuh paket Super+)
+            sendFonnteFile(phone, url, filename).catch(() => {})
+            if (textSent) {
+                addToast(`WA terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
+            } else {
+                // Fallback to wa.me
+                const tab = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                if (!tab) addToast('Popup diblokir browser.', 'warning')
+                else addToast(`WA dibuka untuk ${student.name.split(' ')[0]}`, 'info')
+            }
 
             logAudit({
                 action: 'SEND_WA', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
@@ -150,9 +235,9 @@ export function useRaportImportExport(core, { printContainerRef }) {
                 newData: { student_name: student.name, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, url }
             })
         } catch (err) { addToast(`Gagal: ${err.message}`, 'error'); setSendingWA(prev => ({ ...prev, [student.id]: null })); console.error('generateAndSendWA error:', err) }
-    }, [raportLinks, buildWaMessage, generatePDFBlob, uploadToSupabase, addToast, selectedClass, selectedMonth, selectedYear, setPreviewStudentId])
+    }, [raportLinks, buildWaMessage, sendFonnteMessage, sendFonnteFile, generatePDFBlob, uploadToSupabase, addToast, selectedClass, selectedMonth, selectedYear, setPreviewStudentId])
 
-    // ── Run WA Blast ──
+    // ── Run WA Blast (Fonnte-powered, no browser tabs) ──
     const runWaBlast = useCallback(async (queue) => {
         setWaBlastConfirm(null)
         waBlastAbortRef.current = false
@@ -178,9 +263,21 @@ export function useRaportImportExport(core, { printContainerRef }) {
                     setRaportLinks(prev => ({ ...prev, [student.id]: url }))
                     setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
                 }
-                window.open(`https://wa.me/${phone}?text=${buildWaMessage(student, url)}`, '_blank')
-                done++
-                await new Promise(r => setTimeout(r, 800))
+                const pdfFilename = decodeURIComponent(url.split('/').pop())
+                // URL selalu disertakan dalam teks agar berfungsi di semua paket Fonnte
+                const message = buildWaMessage(student, url)
+                const textSent = await sendFonnteMessage(phone, message)
+                // Best-effort: coba kirim sebagai file attachment juga (butuh paket Super+)
+                sendFonnteFile(phone, url, pdfFilename).catch(() => {})
+                if (textSent) {
+                    done++
+                } else {
+                    // Fallback: open wa.me tab
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                    done++
+                }
+                // Delay between messages to avoid rate limiting
+                await new Promise(r => setTimeout(r, 600))
             } catch (e) { failed++; console.error('WA Blast item error:', e) }
             setWaBlast(prev => prev ? { ...prev, done, failed } : null)
         }
@@ -191,7 +288,7 @@ export function useRaportImportExport(core, { printContainerRef }) {
             action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
             newData: { format: 'WA_BLAST', count: done, failed_count: failed, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
         })
-    }, [raportLinks, generatePDFBlob, uploadToSupabase, buildWaMessage, addToast, selectedClass, selectedMonth, selectedYear, setPreviewStudentId])
+    }, [raportLinks, generatePDFBlob, uploadToSupabase, buildWaMessage, sendFonnteMessage, sendFonnteFile, addToast, selectedClass, selectedMonth, selectedYear, setPreviewStudentId])
 
     // ── Run ZIP Blast ──
     const runZipBlast = useCallback(async (stuList, archEntry) => {
@@ -258,6 +355,27 @@ export function useRaportImportExport(core, { printContainerRef }) {
         }
         return students
     }, [students, selectedStudentIds])
+
+    // ── Handle Export ZIP ──
+    const handleExportZipModal = useCallback((scope) => {
+        const targetStudents = getSelectedOrActiveStudents(scope)
+        if (!targetStudents.length) {
+            addToast('Tidak ada data untuk diexport', 'warning')
+            return
+        }
+        runZipBlast(targetStudents, null)
+    }, [getSelectedOrActiveStudents, runZipBlast, addToast])
+
+    // ── Handle Print All ──
+    const handlePrintAllModal = useCallback((scope) => {
+        const targetStudents = getSelectedOrActiveStudents(scope)
+        if (!targetStudents.length) {
+            addToast('Tidak ada data untuk dicetak', 'warning')
+            return
+        }
+        setPrintRenderedCount(0)
+        setPrintQueue(targetStudents.map(s => s.id))
+    }, [getSelectedOrActiveStudents, setPrintQueue, setPrintRenderedCount, addToast])
 
     // ── Handle Export CSV ──
     const handleExportCSVModal = useCallback((scope, options) => {
@@ -536,6 +654,7 @@ export function useRaportImportExport(core, { printContainerRef }) {
         waBlastAbortRef, zipAbortRef,
         buildWaMessage, sendWATextOnly, generatePDFBlob, uploadToSupabase,
         generateAndSendWA, runWaBlast, runZipBlast,
-        handleExportCSV: handleExportCSVModal, handleExportExcel: handleExportExcelModal, handleExportAllClasses: handleExportAllClassesModal
+        handleExportCSV: handleExportCSVModal, handleExportExcel: handleExportExcelModal, handleExportAllClasses: handleExportAllClassesModal,
+        handleExportZip: handleExportZipModal, handlePrintAll: handlePrintAllModal
     }
 }

@@ -50,7 +50,7 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { supabase } from '../../lib/supabase'
 import Modal from '../ui/Modal'
 import RichSelect from '../ui/RichSelect'
-import { LIST_KAMAR } from '../../pages/reports/utils/raportConstants'
+import { LIST_KAMAR } from '../../utils/reports/raportConstants'
 import {
     EDUCATION_LEVELS,
     OCCUPATION_LIST,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, memo } from 'react'
 import { createPortal } from 'react-dom'
-import Modal from '../../../components/ui/Modal'
+import Modal from '../ui/Modal'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faChevronLeft, faChevronRight, faCheck, faMagnifyingGlass, faLightbulb,
@@ -8,12 +8,29 @@ import {
     faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
+import Tutorial_1 from '../../assets/Tutorial_1.png'
+import Tutorial_2 from '../../assets/Tutorial_2.png'
+import Tutorial_3 from '../../assets/Tutorial_3.png'
+import Tutorial_4 from '../../assets/Tutorial_4.png'
+import Tutorial_5 from '../../assets/Tutorial_5.png'
+import Tutorial_6 from '../../assets/Tutorial_6.png'
+import Tutorial_7 from '../../assets/Tutorial_7.png'
+
+const TUTORIAL_IMAGES = [
+    Tutorial_1,
+    Tutorial_2,
+    Tutorial_3,
+    Tutorial_4,
+    Tutorial_5,
+    Tutorial_6,
+    Tutorial_7
+]
+
 export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, onClose }) {
     const [step, setStep] = useState(0)
     const [zoomImg, setZoomImg] = useState(null)
     const [isZoomedIn, setIsZoomedIn] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
-    const [images, setImages] = useState([null, null, null, null, null, null, null])
 
     const containerRef = useRef(null)
     const dragRef = useRef({
@@ -115,24 +132,11 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [zoomImg])
 
-    // Load images on demand when open
+    // Reset step when reopening
     useEffect(() => {
-        if (!isOpen) return
-        
-        // Reset step when reopening
-        setStep(0)
-
-        Promise.all([
-            import('../../../assets/Tutorial_1.png'),
-            import('../../../assets/Tutorial_2.png'),
-            import('../../../assets/Tutorial_3.png'),
-            import('../../../assets/Tutorial_4.png'),
-            import('../../../assets/Tutorial_5.png'),
-            import('../../../assets/Tutorial_6.png'),
-            import('../../../assets/Tutorial_7.png'),
-        ])
-        .then(mods => setImages(mods.map(m => m.default)))
-        .catch(err => console.error("Failed to load tutorial images", err))
+        if (isOpen) {
+            setStep(0)
+        }
     }, [isOpen])
 
     if (!isOpen) return null
@@ -163,7 +167,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
                 </div>
             ),
             tips: 'Template bahasa otomatis: kelas Boarding → Arab, kelas Reguler → Indonesia. Nama Musyrif terisi otomatis jika sudah diset di data kelas.',
-            img: images[0],
+            img: TUTORIAL_IMAGES[0],
         },
         {
             icon: faTableList,
@@ -171,9 +175,9 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             iconBg: 'bg-indigo-500/15',
             title: 'Mengisi Nilai Santri',
             subtitle: 'Input 5 kriteria penilaian karakter',
-            body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Setiap santri memiliki 5 kolom nilai: Akhlak, Ibadah, Kebersihan, Al-Quran, dan Bahasa. Nilai berkisar antara 0–9. Tekan <strong>Tab</strong> atau <strong>Enter</strong> untuk berpindah ke cell berikutnya dengan cepat.</p>,
+            body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Setiap santri memiliki 5 kolom nilai: Akhlak, Ibadah, Kebersihan, Al-Quran, dan Bahasa. Nilai berkisar antara 0–9. Tekan <strong>Tab</strong> or <strong>Enter</strong> untuk berpindah ke cell berikutnya dengan cepat.</p>,
             tips: 'Ketik angka 0–9 langsung saat cell aktif. Warna cell berubah otomatis sesuai grade — hijau untuk nilai tinggi, merah untuk nilai rendah.',
-            img: images[1],
+            img: TUTORIAL_IMAGES[1],
         },
         {
             icon: faFloppyDisk,
@@ -183,7 +187,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             subtitle: 'Data tersimpan otomatis ke server',
             body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Setiap perubahan nilai tersimpan otomatis ke database dalam 1.5 detik. Indikator berwarna hijau (✓) menandakan data sudah tersimpan. Tekan <strong>Ctrl+S</strong> atau klik "Simpan Semua" untuk menyimpan sekaligus.</p>,
             tips: 'Jika koneksi terputus, nilai tetap tersimpan sementara sebagai draft di browser. Saat online kembali, muat draft untuk melanjutkan.',
-            img: images[2],
+            img: TUTORIAL_IMAGES[2],
         },
         {
             icon: faBoxArchive,
@@ -193,7 +197,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             subtitle: 'Kesehatan, hafalan & catatan',
             body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Selain nilai karakter, isi juga data tambahan: berat & tinggi badan, jumlah hari sakit / izin / alpa, progress Ziyadah & Murojaah hafalan, serta catatan khusus yang akan tercetak di raport untuk orang tua.</p>,
             tips: 'Data tambahan ini opsional — raport tetap bisa dicetak meski tidak diisi. Namun semakin lengkap datanya, semakin informatif raport yang diterima orang tua.',
-            img: images[3],
+            img: TUTORIAL_IMAGES[3],
         },
         {
             icon: faFillDrip,
@@ -203,7 +207,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             subtitle: 'Hemat waktu untuk nilai yang sama',
             body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Gunakan "Isi Massal" untuk mengisi nilai yang sama ke banyak santri sekaligus — centang santri yang ingin diisi, set nilai, klik Terapkan. Gunakan "Copy Bulan Lalu" untuk menyalin nilai dari periode sebelumnya sebagai titik awal.</p>,
             tips: 'Undo/Redo tersedia dengan Ctrl+Z dan Ctrl+Y jika ingin membatalkan perubahan nilai yang sudah diisi.',
-            img: images[4],
+            img: TUTORIAL_IMAGES[4],
         },
         {
             icon: faFilePdf,
@@ -213,7 +217,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             subtitle: 'Distribusikan raport ke orang tua',
             body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Klik ikon Print untuk mencetak raport dari browser. Klik ZIP untuk mengunduh semua raport dalam satu file. Klik ikon WhatsApp di tiap baris santri untuk kirim raport ke orang tua, atau gunakan "WA Blast" untuk kirim ke semua sekaligus.</p>,
             tips: 'Hanya santri yang nilainya sudah lengkap (semua 5 kriteria terisi) yang bisa diekspor ke PDF / ZIP / WA.',
-            img: images[5],
+            img: TUTORIAL_IMAGES[5],
         },
         {
             icon: faBoxArchive,
@@ -223,7 +227,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             subtitle: 'Lihat dan edit raport bulan lalu',
             body: <p className="text-[12px] text-[var(--color-text)] leading-relaxed">Semua raport yang pernah disimpan tersedia di tab "Riwayat". Kamu bisa melihat raport per kelas per bulan, mengedit nilai yang sudah tersimpan, menghapus arsip, hingga mencetak atau mengirim ulang via WA.</p>,
             tips: 'Filter arsip berdasarkan tahun, bulan, atau kelas. Gunakan "Edit Arsip" untuk memperbaiki nilai yang salah input bulan lalu.',
-            img: images[6],
+            img: TUTORIAL_IMAGES[6],
         },
     ]
 
@@ -281,18 +285,6 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
                 noPadding={true}
                 footer={modalFooter}
             >
-                {/* Dot Navigator - Sticky at Top */}
-                <div className="sticky top-0 z-10 flex items-center justify-center gap-1.5 py-4 bg-[var(--color-surface)] border-b border-[var(--color-border)]/50 backdrop-blur-md">
-                    {SLIDES.map((_, i) => (
-                        <button 
-                            key={i} 
-                            onClick={() => setStep(i)}
-                            className={`rounded-full transition-all duration-300 ${i === step ? 'w-5 h-2 bg-amber-500' : 'w-2 h-2 bg-[var(--color-border)] hover:bg-amber-500/40'}`}
-                            aria-label={`Slide ${i + 1}`}
-                        />
-                    ))}
-                </div>
-
                 {/* Content Area */}
                 <div className="px-6 md:px-8 py-6 space-y-6">
                     {currentSlide.img ? (

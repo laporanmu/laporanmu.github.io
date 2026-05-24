@@ -23,7 +23,7 @@ export const DEFAULT_SETTINGS = {
     report_color_secondary: '#c8a400',
 
     // WhatsApp
-    wa_footer: 'MBS Tanggul · Sistem Laporanmu',
+    wa_footer: 'Muhammadiyah Boarding School Tanggul · Laporanmu',
 }
 
 const SchoolSettingsContext = createContext({

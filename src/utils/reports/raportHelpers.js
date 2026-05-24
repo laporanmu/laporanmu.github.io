@@ -5,9 +5,9 @@ import { KRITERIA, MAX_SCORE, GRADE, calcAvg } from './raportConstants'
  */
 export const isComplete = (scores) => {
     if (!scores) return false
-    return KRITERIA.every(k => 
-        scores[k.key] !== '' && 
-        scores[k.key] !== null && 
+    return KRITERIA.every(k =>
+        scores[k.key] !== '' &&
+        scores[k.key] !== null &&
         scores[k.key] !== undefined
     )
 }
@@ -26,31 +26,92 @@ export const escapeCsvCell = (val) => {
 /**
  * Membangun baris pesan WhatsApp
  */
-export const buildWaLines = ({ 
-    student, sc, extras, bulanObj, selectedYear, selectedClass, musyrif, pdfUrl, waFooter 
+export const buildWaLines = ({
+    student, sc, extras, bulanObj, selectedYear, selectedClass, musyrif, pdfUrl, waFooter
 }) => {
     const avg = calcAvg(sc)
     const g = avg ? GRADE(Number(avg)) : null
+
     const header = [
         `Assalamu'alaikum Wr. Wb.`,
         ``,
         `Yth. Bapak/Ibu Wali dari Ananda *${student.name}*`,
         ``,
-        `Berikut hasil *Raport Bulanan ${bulanObj?.id_str || ''} ${selectedYear}*`,
-        `Kelas: ${selectedClass?.name || '—'} | Musyrif: ${musyrif || '—'}`,
-        ``,
+        `Berikut hasil *Raport Bulanan ${bulanObj?.id_str || ''} ${selectedYear}*:`,
+        `Kelas: *${selectedClass?.name || '—'}* | Musyrif: *${musyrif || '—'}*`,
+        `\n━ ASPEK AKADEMIK & KARAKTER`,
     ]
+
     const scoreLines = KRITERIA.map(k => {
         const v = sc[k.key]
-        const gr = (v !== '' && v !== null) ? GRADE(Number(v)) : null
-        return `• ${k.id}: *${v ?? '—'}* ${gr ? `(${gr.id})` : ''}`
+        const hasScore = v !== '' && v !== null && v !== undefined
+        const gr = hasScore ? GRADE(Number(v)) : null
+        return `- ${k.id}: *${hasScore ? v : '—'}*${gr ? ` (${gr.id})` : ''}`
     })
-    const avgLine = avg ? [``, `📊 Rata-rata: *${avg}/${MAX_SCORE}* (${Math.round((Number(avg) / MAX_SCORE) * 100)}/100) — ${g?.id}`] : []
-    const catatanLine = extras?.catatan ? [``, `📝 Catatan: ${extras.catatan}`] : []
-    const pdfLine = pdfUrl ? [``, `📄 *Unduh Raport PDF:*`, pdfUrl, `_Simpan PDF ini untuk arsip Bapak/Ibu._`, ``] : []
-    const footer = [``, `Wassalamu'alaikum Wr. Wb.`, `_${waFooter || 'Sistem Laporanmu'}_`]
-    
-    return [...header, ...scoreLines, ...avgLine, ...catatanLine, ...pdfLine, ...footer]
+
+    const avgLine = avg ? [
+        `Rata-rata: *${avg}/${MAX_SCORE}* (${Math.round((Number(avg) / MAX_SCORE) * 100)}/100) — *${g?.id || '—'}*`
+    ] : []
+
+    // Physical stats & Attendance & Hafalan
+    const devLines = []
+    if (extras) {
+        const hasFisik = extras.berat_badan || extras.tinggi_badan
+        const hasKehadiran = extras.hari_sakit || extras.hari_izin || extras.hari_alpa || extras.hari_pulang
+        const hasHafalan = extras.ziyadah || extras.murojaah
+
+        if (hasFisik || hasKehadiran || hasHafalan) {
+            devLines.push(`━ PERKEMBANGAN & KEHADIRAN`)
+
+            if (hasHafalan) {
+                if (extras.ziyadah) devLines.push(`- Ziyadah: *${extras.ziyadah}*`)
+                if (extras.murojaah) devLines.push(`- Muroja'ah: *${extras.murojaah}*`)
+            }
+
+            if (hasFisik) {
+                const parts = []
+                if (extras.berat_badan) parts.push(`Berat: *${extras.berat_badan} kg*`)
+                if (extras.tinggi_badan) parts.push(`Tinggi: *${extras.tinggi_badan} cm*`)
+                devLines.push(`- Fisik: ${parts.join(' / ')}`)
+            }
+
+            if (hasKehadiran) {
+                const parts = []
+                if (extras.hari_sakit) parts.push(`Sakit: *${extras.hari_sakit} hari*`)
+                if (extras.hari_izin) parts.push(`Izin: *${extras.hari_izin} hari*`)
+                if (extras.hari_alpa) parts.push(`Alpa: *${extras.hari_alpa} hari*`)
+                if (extras.hari_pulang) parts.push(`Pulang: *${extras.hari_pulang} kali*`)
+                devLines.push(`- Kehadiran: ${parts.join(' / ') || 'Nihil'}`)
+            }
+        }
+    }
+
+    const catatanLine = []
+    if (extras?.catatan) {
+        catatanLine.push(`━ CATATAN MUSYRIF`)
+        catatanLine.push(`_"${extras.catatan}"_`)
+    }
+
+    const pdfLine = pdfUrl ? [
+        `\n━ UNDUH RAPORT PDF`,
+        pdfUrl,
+        `_Simpan PDF ini untuk arsip Bapak/Ibu._`
+    ] : []
+
+    const footer = [
+        `\nWassalamu'alaikum Wr. Wb.`,
+        `_${waFooter || 'Muhammadiyah Boarding School Tanggul · LaporanMu'}_`
+    ]
+
+    return [
+        ...header,
+        ...scoreLines,
+        ...avgLine,
+        ...devLines,
+        ...catatanLine,
+        ...pdfLine,
+        ...footer
+    ]
 }
 
 /**
@@ -60,7 +121,7 @@ export const generateAutoComment = (sc, studentId = '', trendHistory = []) => {
     const vals = KRITERIA.map(k => ({ key: k.key, id: k.id, val: sc?.[k.key] }))
         .filter(k => k.val !== '' && k.val !== null && k.val !== undefined)
         .map(k => ({ ...k, val: Number(k.val) }))
-    
+
     if (!vals.length) return ''
 
     const avg = vals.reduce((a, b) => a + b.val, 0) / vals.length
@@ -72,7 +133,7 @@ export const generateAutoComment = (sc, studentId = '', trendHistory = []) => {
     const seed = (studentId || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0)
     const pick = (arr) => arr[seed % arr.length]
 
-    const history = (trendHistory || []).slice().sort((a, b) => 
+    const history = (trendHistory || []).slice().sort((a, b) =>
         a.year !== b.year ? a.year - b.year : a.month - b.month
     )
     const hasHistory = history.length >= 2
@@ -98,37 +159,37 @@ export const generateAutoComment = (sc, studentId = '', trendHistory = []) => {
     let parts = []
     if (hasHistory && streakUp >= 2) {
         parts.push(pick([
-            `Alhamdulillah, nilai rata-rata terus meningkat ${streakUp + 1} bulan berturut-turut`, 
+            `Alhamdulillah, nilai rata-rata terus meningkat ${streakUp + 1} bulan berturut-turut`,
             `Masya Allah, perkembangan konsisten naik selama ${streakUp + 1} bulan terakhir`
         ]))
     } else if (hasHistory && streakDown >= 2) {
         parts.push(pick([
-            `Nilai rata-rata mengalami penurunan ${streakDown + 1} bulan berturut-turut, perlu perhatian`, 
+            `Nilai rata-rata mengalami penurunan ${streakDown + 1} bulan berturut-turut, perlu perhatian`,
             `Tren menurun ${streakDown + 1} bulan berturut-turut memerlukan evaluasi segera`
         ]))
     } else if (hasHistory && isRising) {
         parts.push(pick([
-            `Alhamdulillah, terjadi peningkatan rata-rata dibanding bulan lalu`, 
+            `Alhamdulillah, terjadi peningkatan rata-rata dibanding bulan lalu`,
             `Ada kenaikan nilai yang menggembirakan dari bulan sebelumnya`
         ]))
     } else if (hasHistory && isFalling) {
         parts.push(pick([
-            `Nilai rata-rata turun dibanding bulan lalu, perlu evaluasi bersama`, 
+            `Nilai rata-rata turun dibanding bulan lalu, perlu evaluasi bersama`,
             `Terjadi penurunan dari bulan sebelumnya, mohon perhatian lebih`
         ]))
     } else if (allHigh) {
         parts.push(pick([
-            `Alhamdulillah, seluruh aspek penilaian sangat memuaskan bulan ini`, 
+            `Alhamdulillah, seluruh aspek penilaian sangat memuaskan bulan ini`,
             `Masya Allah, perkembangan di semua aspek sangat luar biasa`
         ]))
     } else if (avg >= 6) {
         parts.push(pick([
-            `Alhamdulillah, perkembangan ${best.id.toLowerCase()} cukup baik bulan ini`, 
+            `Alhamdulillah, perkembangan ${best.id.toLowerCase()} cukup baik bulan ini`,
             `Kemajuan pada aspek ${best.id.toLowerCase()} sudah terlihat nyata`
         ]))
     } else {
         parts.push(pick([
-            `Perlu perhatian lebih pada aspek ${worst.id.toLowerCase()} bulan ini`, 
+            `Perlu perhatian lebih pada aspek ${worst.id.toLowerCase()} bulan ini`,
             `Butuh pendampingan ekstra, khususnya di aspek ${worst.id.toLowerCase()}`
         ]))
     }

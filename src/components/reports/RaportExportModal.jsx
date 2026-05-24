@@ -125,57 +125,59 @@ export default function RaportExportModal({
         return active ? active.id : null
     }, [exportColumns])
 
+    const columnButtons = useMemo(() => {
+        return COLUMN_DEFS.map(({ key, label, icon }) => {
+            const orderIdx = exportColumns.indexOf(key) + 1
+            const isSelected = orderIdx > 0
+
+            const toggleColumn = () => {
+                if (key === 'nama') return // Nama must always be included
+                if (isSelected) {
+                    setExportColumns(prev => prev.filter(k => k !== key))
+                } else {
+                    setExportColumns(prev => [...prev, key])
+                }
+            }
+
+            return (
+                <button
+                    key={key}
+                    onClick={toggleColumn}
+                    disabled={key === 'nama'}
+                    className={`group relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl border text-left transition-all
+                        ${key === 'nama' ? 'opacity-90 cursor-not-allowed border-emerald-200/50 bg-emerald-500/5 text-emerald-600' : ''}
+                        ${isSelected && key !== 'nama'
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)] shadow-sm'
+                            : !isSelected && key !== 'nama' ? 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]' : ''}
+                    `}
+                >
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all 
+                        ${key === 'nama' ? 'bg-emerald-500 text-white shadow-sm' : ''}
+                        ${isSelected && key !== 'nama' ? 'bg-[var(--color-primary)] text-white shadow-sm' : ''}
+                        ${!isSelected && key !== 'nama' ? 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]' : ''}`}>
+                        <FontAwesomeIcon icon={icon} className="text-[9px]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className={`text-[9px] font-black uppercase tracking-tight truncate 
+                            ${key === 'nama' ? 'text-emerald-700 dark:text-emerald-500' : ''}
+                            ${isSelected && key !== 'nama' ? 'text-[var(--color-primary)]' : ''}
+                            ${!isSelected && key !== 'nama' ? 'text-[var(--color-text-muted)]' : ''}`}>{label}</div>
+                    </div>
+                    {isSelected && key !== 'nama' && (
+                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center shadow-md border border-white dark:border-[var(--color-surface)] animate-in zoom-in duration-200">
+                            {orderIdx}
+                        </div>
+                    )}
+                </button>
+            )
+        })
+    }, [exportColumns])
+
     if (!isOpen) return null
 
     const handlePresetClick = (cols) => {
         setExportColumns(cols)
     }
-
-    const columnButtons = COLUMN_DEFS.map(({ key, label, icon }) => {
-        const orderIdx = exportColumns.indexOf(key) + 1
-        const isSelected = orderIdx > 0
-
-        const toggleColumn = () => {
-            if (key === 'nama') return // Nama must always be included
-            if (isSelected) {
-                setExportColumns(prev => prev.filter(k => k !== key))
-            } else {
-                setExportColumns(prev => [...prev, key])
-            }
-        }
-
-        return (
-            <button
-                key={key}
-                onClick={toggleColumn}
-                disabled={key === 'nama'}
-                className={`group relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl border text-left transition-all
-                    ${key === 'nama' ? 'opacity-90 cursor-not-allowed border-emerald-200/50 bg-emerald-500/5 text-emerald-600' : ''}
-                    ${isSelected && key !== 'nama'
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)] shadow-sm'
-                        : !isSelected && key !== 'nama' ? 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]' : ''}
-                `}
-            >
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all 
-                    ${key === 'nama' ? 'bg-emerald-500 text-white shadow-sm' : ''}
-                    ${isSelected && key !== 'nama' ? 'bg-[var(--color-primary)] text-white shadow-sm' : ''}
-                    ${!isSelected && key !== 'nama' ? 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]' : ''}`}>
-                    <FontAwesomeIcon icon={icon} className="text-[9px]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className={`text-[9px] font-black uppercase tracking-tight truncate 
-                        ${key === 'nama' ? 'text-emerald-700 dark:text-emerald-500' : ''}
-                        ${isSelected && key !== 'nama' ? 'text-[var(--color-primary)]' : ''}
-                        ${!isSelected && key !== 'nama' ? 'text-[var(--color-text-muted)]' : ''}`}>{label}</div>
-                </div>
-                {isSelected && key !== 'nama' && (
-                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center shadow-md border border-white dark:border-[var(--color-surface)] animate-in zoom-in duration-200">
-                        {orderIdx}
-                    </div>
-                )}
-            </button>
-        )
-    })
 
     const exportOptions = {
         includeHeader,

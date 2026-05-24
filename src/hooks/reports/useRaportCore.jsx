@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { supabase } from '../../../lib/supabase'
-import { logAudit } from '../../../lib/auditLogger'
-import { useToast } from '../../../context/ToastContext'
-import { useSchoolSettings } from '../../../context/SchoolSettingsContext'
-import { useAuth } from '../../../context/AuthContext'
-import { useFlag } from '../../../context/FeatureFlagsContext'
-import { BULAN, KRITERIA } from '../utils/raportConstants'
-import { isComplete } from '../utils/raportHelpers'
-import { loadTranslitData } from '../utils/translitData'
+import { supabase } from '../../lib/supabase'
+import { logAudit } from '../../lib/auditLogger'
+import { useToast } from '../../context/ToastContext'
+import { useSchoolSettings } from '../../context/SchoolSettingsContext'
+import { useAuth } from '../../context/AuthContext'
+import { useFlag } from '../../context/FeatureFlagsContext'
+import { BULAN, KRITERIA } from '../../utils/reports/raportConstants'
+import { isComplete } from '../../utils/reports/raportHelpers'
+import { loadTranslitData } from '../../utils/reports/translitData'
 
 const ROW_HEIGHT = 188
 const OVERSCAN = 5
@@ -114,6 +114,67 @@ export function useRaportCore() {
     const selectedClass = useMemo(() => classesList.find(c => c.id === selectedClassId), [classesList, selectedClassId])
     const bulanObj = useMemo(() => BULAN.find(b => b.id === selectedMonth), [selectedMonth])
     const completedCount = useMemo(() => students.filter(s => isComplete(scores[s.id] || {})).length, [students, scores])
+
+    const progressPct = useMemo(() => {
+        if (!students.length) return 0
+        const totalRatio = students.reduce((acc, s) => {
+            const sc = scores[s.id] || {}
+            const ex = extras[s.id] || {}
+            const progressFields = [
+                sc.nilai_akhlak,
+                sc.nilai_ibadah,
+                sc.nilai_kebersihan,
+                sc.nilai_quran,
+                sc.nilai_bahasa,
+                ex.berat_badan,
+                ex.tinggi_badan,
+                ex.hari_sakit,
+                ex.hari_izin,
+                ex.hari_alpa,
+                ex.hari_pulang,
+                ex.ziyadah,
+                ex.murojaah,
+                ex.catatan,
+            ]
+            const filled = progressFields.filter(v => v !== '' && v !== null && v !== undefined).length
+            return acc + (filled / progressFields.length)
+        }, 0)
+        return Math.round((totalRatio / students.length) * 100)
+    }, [students, scores, extras])
+
+    const noPhoneCount = useMemo(() => students.filter(s => !s.phone).length, [students])
+
+    const hasUnsavedMemo = useMemo(() => students.some(s => {
+        if (savedIds.has(s.id)) return false
+        const sc = scores[s.id] || {}, ex = extras[s.id] || {}
+        return KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined) ||
+            [ex.berat_badan, ex.tinggi_badan, ex.hari_sakit, ex.hari_izin, ex.hari_alpa, ex.hari_pulang, ex.catatan].some(v => v !== '' && v !== null && v !== undefined)
+    }), [students, scores, extras, savedIds])
+
+    const filteredClasses = useMemo(() => {
+        let list = classesList.filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        if (filterType === 'boarding') {
+            list = list.filter(c => (c.name || '').toLowerCase().includes('boarding') || (c.name || '').toLowerCase().includes('pondok'))
+        } else if (filterType === 'regular') {
+            list = list.filter(c => !((c.name || '').toLowerCase().includes('boarding') || (c.name || '').toLowerCase().includes('pondok')))
+        }
+        return list
+    }, [classesList, searchQuery, filterType])
+
+    const step0Stats = useMemo(() => {
+        const progressRows = Object.values(classProgress || {})
+        const totalTargets = progressRows.reduce((acc, row) => acc + (row.total || 0), 0)
+        const totalCompleted = progressRows.reduce((acc, row) => acc + (row.done || 0), 0)
+        const weightedInput = totalTargets
+            ? Math.round(progressRows.reduce((acc, row) => acc + ((row.pct || 0) * (row.total || 0)), 0) / totalTargets)
+            : 0
+        return {
+            totalKelas: stats.totalKelas,
+            totalSiswa: stats.totalSiswa,
+            raportLengkap: `${totalCompleted}/${totalTargets}`,
+            rataInput: `${weightedInput}%`,
+        }
+    }, [classProgress, stats.totalKelas, stats.totalSiswa])
 
     // ── Pre-load/Transliterate names ──
     const transliterateToArab = useCallback(async (name) => {
@@ -421,6 +482,72 @@ export function useRaportCore() {
         finally { setCopyingLastMonth(false) }
     }, [selectedClassId, students, selectedMonth, selectedYear, scores, addToast, setScores])
 
+    // ── Reset Class (All Students) ──
+    const resetClass = useCallback(async () => {
+        if (!selectedClassId || !students.length) return
+        
+        // Clear all timers
+        for (const studentId of Object.keys(autoSaveTimers.current)) {
+            if (autoSaveTimers.current[studentId]) {
+                clearTimeout(autoSaveTimers.current[studentId])
+                delete autoSaveTimers.current[studentId]
+            }
+        }
+        
+        // Clear local states for all students in the class
+        const emptyScores = {}
+        const emptyExtras = {}
+        for (const s of students) {
+            emptyScores[s.id] = { nilai_akhlak: '', nilai_ibadah: '', nilai_kebersihan: '', nilai_quran: '', nilai_bahasa: '' }
+            emptyExtras[s.id] = { berat_badan: '', tinggi_badan: '', ziyadah: '', murojaah: '', hari_sakit: '', hari_izin: '', hari_alpa: '', hari_pulang: '', catatan: '' }
+        }
+        setScores(prev => ({ ...prev, ...emptyScores }))
+        setExtras(prev => ({ ...prev, ...emptyExtras }))
+        setSavedIds(prev => {
+            const next = new Set(prev)
+            for (const s of students) {
+                next.delete(s.id)
+            }
+            return next
+        })
+        
+        // Get database IDs to delete
+        const dbIdsToDelete = students
+            .map(s => existingReportIds[s.id])
+            .filter(Boolean)
+            
+        if (!dbIdsToDelete.length) {
+            addToast('Data kelas berhasil direset', 'success')
+            return
+        }
+        
+        setSavingAll(true)
+        try {
+            const { error } = await supabase.from('student_monthly_reports').delete().in('id', dbIdsToDelete)
+            if (error) throw error
+            
+            setExistingReportIds(prev => {
+                const next = { ...prev }
+                for (const s of students) {
+                    delete next[s.id]
+                }
+                return next
+            })
+            
+            addToast(`Data untuk ${students.length} santri berhasil direset`, 'success')
+            await logAudit({
+                action: 'DELETE', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                description: `Reset all reports for class ${selectedClass?.name || selectedClassId} for month ${selectedMonth} year ${selectedYear}`
+            })
+        } catch (e) {
+            addToast(`Gagal hapus dari DB: ${e.message}`, 'error')
+            console.error('resetClass error:', e)
+        } finally {
+            setSavingAll(false)
+        }
+    }, [selectedClassId, students, existingReportIds, selectedMonth, selectedYear, selectedClass, addToast, setScores, setExtras, setSavedIds, setExistingReportIds])
+
+
     return {
         // States & refs
         addToast, settings, profile, now, isAllowed, canEdit,
@@ -442,12 +569,13 @@ export function useRaportCore() {
         studentTrend, setStudentTrend, catatanArabMap, setCatatanArabMap,
         saveAllConfirm, setSaveAllConfirm, showNoPhoneOnly, setShowNoPhoneOnly,
         showIncompleteOnly, setShowIncompleteOnly, lastSession, setLastSession,
-        autoSaveTimers, completedCount, selectedClass, bulanObj,
+        autoSaveTimers, completedCount, progressPct, noPhoneCount, hasUnsavedMemo,
+        filteredClasses, step0Stats, selectedClass, bulanObj,
         bulkMode, setBulkMode, bulkSelected, setBulkSelected, selectedStudentIds,
         previewStudentId, setPreviewStudentId, printQueue, setPrintQueue,
         printRenderedCount, setPrintRenderedCount,
         // Helper actions
         transliterateToArab, transliterateNames, loadStudents,
-        loadDraft, clearDraft, saveStudent, resetStudent, saveAll, _doSaveAll, copyFromLastMonth
+        loadDraft, clearDraft, saveStudent, resetStudent, resetClass, saveAll, _doSaveAll, copyFromLastMonth
     }
 }

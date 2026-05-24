@@ -1,10 +1,10 @@
-﻿import { Fragment, useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
+import { Fragment, useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faLock, faCalendarAlt, faChevronLeft, faChevronRight,
     faPrint, faCheck, faSpinner, faFloppyDisk,
-    faChartPie, faTableList, faMagnifyingGlass, faArrowLeft, faDownload,
+    faChartPie, faTableList, faMagnifyingGlass, faArrowLeft, faArrowRight, faEye, faDownload,
     faCircleCheck, faCircleExclamation, faTriangleExclamation,
     faBolt, faXmark, faSchool, faClipboardList, faUsers,
     faMosque, faBookOpen, faBroom, faLanguage, faStar,
@@ -19,6 +19,8 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import PageHeader from '../../components/ui/PageHeader'
 import { StatCard, EmptyState } from '../../components/ui/DataDisplay'
 import Modal from '../../components/ui/Modal'
+import RichSelect from '../../components/ui/RichSelect'
+import StatsCarousel from '../../components/StatsCarousel'
 import RaportImportModal from '../../components/reports/RaportImportModal'
 import RaportExportModal from '../../components/reports/RaportExportModal'
 import { supabase } from '../../lib/supabase'
@@ -32,22 +34,22 @@ import { useFlag } from '../../context/FeatureFlagsContext'
 import {
     MAX_SCORE, STORAGE_BUCKET, KRITERIA, GRADE, calcAvg, LABEL, toArabicNum,
     FISIK_FIELDS, HAFALAN_FIELDS, BULAN, CATATAN_TEMPLATES
-} from './utils/raportConstants'
+} from '../../utils/reports/raportConstants'
 import {
     isComplete, buildWaLines, escapeCsvCell, generateAutoComment
-} from './utils/raportHelpers'
-import { translitToAr, translitClassToAr, loadTranslitData } from './utils/translitData'
-import { RadarChart, SparklineTrend } from './components/RaportCharts'
-import RaportPrintCard from './components/RaportPrintCard'
-import StudentRow, { ExtraInput, ExtraTextarea } from './components/RaportRecordRow'
-import BulkActionBar from './components/BulkActionBar'
-import { ShortcutModalContent, WaBlastConfirmContent, WaBlastProgressContent, ZipBlastProgressContent } from './components/RaportModals'
-import { RaportTutorialModal } from './components/RaportTutorialModal'
+} from '../../utils/reports/raportHelpers'
+import { translitToAr, translitClassToAr, loadTranslitData } from '../../utils/reports/translitData'
+import { RadarChart, SparklineTrend } from '../../components/reports/RaportCharts'
+import RaportPrintCard from '../../components/reports/RaportPrintCard'
+import StudentRow, { ExtraInput, ExtraTextarea } from '../../components/reports/RaportRecordRow'
+import BulkActionBar from '../../components/reports/BulkActionBar'
+import { ShortcutModalContent, WaBlastConfirmContent, WaBlastProgressContent, ZipBlastProgressContent } from '../../components/reports/RaportModals'
+import { RaportTutorialModal } from '../../components/reports/RaportTutorialModal'
 import Skeleton from '../../components/ui/Skeleton'
-import { useRaportCore } from './hooks/useRaportCore'
-import { useRaportImportExport } from './hooks/useRaportImportExport'
-import RaportInputTable from './components/RaportInputTable'
-import RaportArchive from './components/RaportArchive'
+import { useRaportCore } from '../../hooks/reports/useRaportCore'
+import { useRaportImportExport } from '../../hooks/reports/useRaportImportExport'
+import RaportInputTable from '../../components/reports/RaportInputTable'
+import RaportArchive from '../../components/reports/RaportArchive'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -83,6 +85,7 @@ function getPortalContainer(id) {
 
 export default function RaportPage() {
     const printContainerRef = useRef(null)
+    const silentPrintRef = useRef(false) // skip executePrint saat generate PDF untuk WA
 
     // ── Hooks integration ──
     const core = useRaportCore()
@@ -97,6 +100,10 @@ export default function RaportPage() {
         selectedYear, setSelectedYear, musyrif, setMusyrif, lang, setLang,
         students, setStudents, loading, setLoading,
         transliterating, setTransliterating, scores, setScores, setScoresRaw,
+        scoresHistoryRef, scoresHistoryIdxRef,
+        printQueue, setPrintQueue, printRenderedCount, setPrintRenderedCount,
+        bulkMode, setBulkMode, bulkSelected, setBulkSelected, selectedStudentIds,
+        previewStudentId, setPreviewStudentId,
         extras, setExtras, saving, setSaving, savedIds, setSavedIds,
         existingReportIds, setExistingReportIds, savingAll, setSavingAll,
         copyingLastMonth, setCopyingLastMonth, studentSearch, setStudentSearch,
@@ -108,20 +115,33 @@ export default function RaportPage() {
         autoSaveTimers, completedCount, progressPct, noPhoneCount, hasUnsavedMemo,
         filteredClasses, step0Stats,
         transliterateToArab, transliterateNames, loadStudents, loadDraft, clearDraft,
-        saveStudent, resetStudent, saveAll, _doSaveAll, copyFromLastMonth,
+        saveStudent, resetStudent, resetClass, saveAll, _doSaveAll, copyFromLastMonth,
         bulanObj, selectedClass
     } = core
 
-    const importExport = useRaportImportExport(core, { printContainerRef })
+    const years = useMemo(() => [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1], [now])
+
+    const monthOptions = useMemo(() => BULAN.map(b => ({
+        id: b.id,
+        name: `${b.id_str} — ${b.ar}`
+    })), [])
+
+    const yearOptions = useMemo(() => years.map(y => ({
+        id: y,
+        name: String(y)
+    })), [years])
+
+
+    const importExport = useRaportImportExport(core, { printContainerRef, silentPrintRef })
     const {
         raportLinks, setRaportLinks, sendingWA, setSendingWA,
         waBlastConfirm, setWaBlastConfirm, waBlast, setWaBlast,
         zipBlast, setZipBlast, exporting, setExporting,
-        isImportModalOpen, setIsImportModalOpen, isExportModalOpen, setIsExportOpen,
+        isImportModalOpen, setIsImportModalOpen, isExportModalOpen, setIsExportOpen: setIsExportModalOpen,
         waBlastAbortRef, zipAbortRef,
         buildWaMessage, sendWATextOnly, generatePDFBlob, uploadToSupabase,
         generateAndSendWA, runWaBlast, runZipBlast,
-        handleExportCSV, handleExportExcel, handleExportAllClasses
+        handleExportCSV, handleExportExcel, handleExportAllClasses, handleExportZip, handlePrintAll
     } = importExport
 
     // ── Archive state
@@ -144,6 +164,37 @@ export default function RaportPage() {
 
     // ── Archive tab (list | ringkasan)
     const [archiveTab, setArchiveTab] = useState('list')
+    const [tempSelectedClassId, setTempSelectedClassId] = useState('')
+    const [classSelectionType, setClassSelectionType] = useState('all')
+    const [classSelectionGrade, setClassSelectionGrade] = useState('all')
+
+    const pickerFilteredClasses = useMemo(() => {
+        let list = classesList
+
+        if (searchQuery.trim()) {
+            list = list.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        }
+
+        if (classSelectionType === 'boarding') {
+            list = list.filter(c => (c.name || '').toLowerCase().includes('boarding') || (c.name || '').toLowerCase().includes('pondok'))
+        } else if (classSelectionType === 'regular') {
+            list = list.filter(c => !((c.name || '').toLowerCase().includes('boarding') || (c.name || '').toLowerCase().includes('pondok')))
+        }
+
+        if (classSelectionGrade !== 'all') {
+            const g = classSelectionGrade
+            list = list.filter(c => {
+                const name = (c.name || '').toLowerCase()
+                if (g === '7') return name.includes('7') || (name.includes('vii') && !name.includes('viii'))
+                if (g === '8') return name.includes('8') || name.includes('viii')
+                if (g === '9') return name.includes('9') || name.includes('ix')
+                if (g === '10') return name.includes('10') || (name.includes('x') && !name.includes('ix'))
+                return true
+            })
+        }
+
+        return list
+    }, [classesList, searchQuery, classSelectionType, classSelectionGrade])
 
     // ── Mobile card ──
     const [mobileActiveIdx, setMobileActiveIdx] = useState(0)
@@ -153,10 +204,17 @@ export default function RaportPage() {
     const [studentDetailLoading, setStudentDetailLoading] = useState(false)
 
     // ── Modals
+    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
+    const [headerMenuRect, setHeaderMenuRect] = useState(null)
+    const headerMenuBtnRef = useRef(null)
+
     const [showShortcutModal, setShowShortcutModal] = useState(false)
     const [shortcutRect, setShortcutRect] = useState(null)
     const shortcutBtnRef = useRef(null)
+    const saveAllRef = useRef(null)
+    saveAllRef.current = saveAll
     const [showTutorialModal, setShowTutorialModal] = useState(false)
+    const [showTemplatePreviewModal, setShowTemplatePreviewModal] = useState(false)
     const [pageSize, setPageSize] = useState('a4') // 'a4' | 'f4'
     const [previewZoom, setPreviewZoom] = useState(1) // 0.8 = 80% zoom out
     const [isFullScreenPreview, setIsFullScreenPreview] = useState(false)
@@ -211,6 +269,19 @@ export default function RaportPage() {
         window.addEventListener('resize', onResize)
         return () => window.removeEventListener('resize', onResize)
     }, [])
+
+    // Safety unload block when there are unsaved drafts
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (hasUnsavedMemo) {
+                const msg = 'Anda memiliki perubahan nilai yang belum disimpan. Apakah Anda yakin ingin keluar?'
+                e.returnValue = msg
+                return msg
+            }
+        }
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [hasUnsavedMemo])
 
     const getFullScreenFitZoom = useCallback((mobile = false) => {
         if (typeof window === 'undefined') return 1
@@ -325,8 +396,6 @@ export default function RaportPage() {
         }
         return () => { document.title = 'Laporanmu' }
     }, [step, selectedClass, bulanObj, selectedYear])
-    // FIX #3: years dengan useMemo agar referensi stabil
-    const years = useMemo(() => [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1], [now])
 
     // FIX MINOR: filteredStudents dipecah menjadi dua useMemo agar tidak
     // recompute setiap kali guru mengetik nilai.
@@ -591,7 +660,6 @@ export default function RaportPage() {
     }, [showShortcutModal])
 
     // FIX #3: Ctrl+S — gunakan ref agar tidak ada TDZ (saveAll belum tersedia saat useEffect ini dibaca)
-    const saveAllRef = useRef(null)
     useEffect(() => {
         const handler = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's' && step === 2) { e.preventDefault(); saveAllRef.current?.() } }
         window.addEventListener('keydown', handler)
@@ -878,12 +946,43 @@ export default function RaportPage() {
     const handleResetStudent = useCallback((student) => {
         setConfirmModal({
             title: 'Reset Nilai?',
-            subtitle: `Semua data ${student.name} akan dikosongkan`,
-            body: 'Nilai akademik, hafalan, fisik, dan catatan santri ini akan dihapus permanen dari database.',
-            icon: 'danger', variant: 'red', confirmLabel: 'Ya, Reset Semua',
+            description: 'Nilai santri akan dikosongkan',
+            body: (
+                <>
+                    Siswa <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{student.name}</span> akan direset. Nilai akademik, hafalan, fisik, dan catatan santri ini akan dihapus secara permanen dari database.
+                </>
+            ),
+            icon: faTriangleExclamation,
+            iconBg: 'bg-red-500/10',
+            iconColor: 'text-red-500',
+            variant: 'red',
+            confirmLabel: 'Ya, Reset Semua',
+            confirmIcon: faTriangleExclamation,
             onConfirm: () => { setConfirmModal(null); resetStudent(student.id) }
         })
     }, [resetStudent])
+
+    const handleResetClass = useCallback(() => {
+        setConfirmModal({
+            title: 'Reset Nilai Satu Kelas?',
+            description: 'Nilai satu kelas akan dikosongkan',
+            body: (
+                <>
+                    Semua data nilai untuk kelas <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{selectedClass?.name || ''}</span> akan dikosongkan. Nilai akademik, hafalan, fisik, dan catatan seluruh santri di kelas ini akan dihapus secara permanen dari database.
+                </>
+            ),
+            icon: faTriangleExclamation,
+            iconBg: 'bg-red-500/10',
+            iconColor: 'text-red-500',
+            variant: 'red',
+            confirmLabel: 'Ya, Reset Kelas',
+            confirmIcon: faTriangleExclamation,
+            onConfirm: () => { setConfirmModal(null); resetClass() }
+        })
+    }, [resetClass, selectedClass])
+
+
+
 
 
     // ── Keyboard nav
@@ -1160,6 +1259,8 @@ export default function RaportPage() {
 
     useEffect(() => {
         if (!printQueue.length || printRenderedCount < printQueue.length) return
+        // Jika dipanggil dari generatePDFBlob untuk WA/PDF silent — skip print window
+        if (silentPrintRef.current) return
         const stuList = (archivePreview ? archivePreview.students : students).filter(s => printQueue.includes(s.id))
         executePrint(stuList)
     }, [printRenderedCount, printQueue, students, archivePreview, executePrint])
@@ -1451,7 +1552,7 @@ export default function RaportPage() {
     const renderStep1 = () => {
         if (!selectedClassId) {
             return (
-                <div className="space-y-6 animate-fade-in">
+                <div className="space-y-6 animate-fade-in pb-2">
                     <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center shrink-0">
@@ -1459,64 +1560,132 @@ export default function RaportPage() {
                             </div>
                             <div>
                                 <h3 className="text-sm font-black text-[var(--color-text)]">Pilih Kelas</h3>
-                                <p className="text-[11px] text-[var(--color-text-muted)] font-medium">Langkah awal: Pilih kelas yang ingin dibuatkan laporan raportnya.</p>
+                                <p className="text-[11px] text-[var(--color-text-muted)] font-medium">Langkah 1: Pilih kelas aktif untuk mulai mengisi atau mencetak raport bulanan.</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="relative">
-                            <FontAwesomeIcon icon={faSearch} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-xs" />
-                            <input
-                                type="text"
-                                placeholder="Cari nama kelas..."
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                className="w-full h-12 pl-11 pr-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-sm font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all shadow-sm"
-                            />
+                        {/* Search and Category Filter Row */}
+                        <div className="flex flex-col md:flex-row gap-3">
+                            <div className="relative flex-1">
+                                <FontAwesomeIcon icon={faSearch} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-xs" />
+                                <input
+                                    type="text"
+                                    placeholder="Cari nama kelas..."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="w-full h-12 pl-11 pr-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-sm font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all shadow-sm"
+                                />
+                            </div>
+
+                            {/* Class Type Segmented Switch */}
+                            <div className="flex items-center gap-1 p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl shadow-inner shrink-0 overflow-hidden">
+                                {[
+                                    { id: 'all', label: 'Semua Kategori', icon: faSchool },
+                                    { id: 'boarding', label: 'Boarding', icon: faMosque },
+                                    { id: 'regular', label: 'Reguler', icon: faSchool }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.id}
+                                        type="button"
+                                        onClick={() => setClassSelectionType(opt.id)}
+                                        className={`h-10 px-4 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-2 ${classSelectionType === opt.id ? 'bg-indigo-600 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white dark:hover:bg-slate-800'}`}
+                                    >
+                                        <FontAwesomeIcon icon={opt.icon} className="text-[9px] shrink-0" />
+                                        <span className="whitespace-nowrap">{opt.label}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        {filteredClasses.length === 0 ? (
+                        {/* Grade Filters */}
+                        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mr-2">Tingkat Kelas:</span>
+                            {[
+                                { id: 'all', label: 'Semua Tingkat' },
+                                { id: '7', label: 'Tingkat 7 / VII' },
+                                { id: '8', label: 'Tingkat 8 / VIII' },
+                                { id: '9', label: 'Tingkat 9 / IX' },
+                                { id: '10', label: 'Tingkat 10 / X' }
+                            ].map(opt => (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => setClassSelectionGrade(opt.id)}
+                                    className={`h-8 px-3.5 rounded-lg text-[9px] font-black border transition-all ${classSelectionGrade === opt.id ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-600 shadow-sm' : 'border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] hover:border-indigo-500/25 hover:text-indigo-600'}`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Card Grid */}
+                        {pickerFilteredClasses.length === 0 ? (
                             <EmptyState
                                 icon={faMagnifyingGlass}
                                 title="Kelas tidak ditemukan"
-                                subtitle="Coba kata kunci lain atau pastikan kelas sudah terdaftar."
+                                subtitle="Coba kata kunci pencarian lain atau pastikan kelas memiliki siswa terdaftar."
                                 variant="dashed"
                             />
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                {filteredClasses.map(cls => {
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {pickerFilteredClasses.map(cls => {
                                     const isBoarding = (cls.name || '').toLowerCase().includes('boarding') || (cls.name || '').toLowerCase().includes('pondok')
                                     const teacher = cls.teachers?.name || 'Wali Kelas -'
                                     const studentCount = classProgress[cls.id]?.total || 0
+                                    const isEmpty = studentCount === 0
+                                    const isSelected = tempSelectedClassId === cls.id
 
                                     return (
                                         <button
                                             key={cls.id}
+                                            type="button"
+                                            disabled={isEmpty}
                                             onClick={() => {
-                                                setSelectedClassId(cls.id)
-                                                setLang(isBoarding ? 'ar' : 'id')
-                                                if (cls.metadata?.homeroom_teacher) setMusyrif(cls.metadata.homeroom_teacher)
+                                                if (isEmpty) return
+                                                setTempSelectedClassId(cls.id)
                                             }}
-                                            className="p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all text-left group flex items-center gap-3 shadow-sm active:scale-[0.98]"
+                                            className={`p-4 rounded-2xl border transition-all text-left flex items-center gap-3.5 relative overflow-hidden group shadow-sm active:scale-[0.98]
+                                                ${isEmpty
+                                                    ? 'opacity-40 cursor-not-allowed bg-slate-100/50 dark:bg-slate-800/30 border-dashed border-[var(--color-border)]'
+                                                    : isSelected
+                                                        ? 'border-indigo-500 bg-indigo-500/10 ring-2 ring-indigo-500/20 shadow-md scale-[1.01]'
+                                                        : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:shadow-md'
+                                                }`}
                                         >
-                                            {/* Leading Initial */}
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-xs transition-all ${isBoarding ? 'bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white' : 'bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white'}`}>
-                                                {cls.name?.charAt(0)}
+                                            {/* Leading Circle with Initial / Checkmark */}
+                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-black text-xs transition-all
+                                                ${isEmpty
+                                                    ? 'bg-slate-200 text-slate-400'
+                                                    : isSelected
+                                                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
+                                                        : isBoarding
+                                                            ? 'bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white'
+                                                            : 'bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white'
+                                                }`}
+                                            >
+                                                {isSelected ? <FontAwesomeIcon icon={faCheck} className="text-xs animate-bounce" /> : cls.name?.charAt(0)}
                                             </div>
 
                                             {/* Core Info */}
                                             <div className="min-w-0 flex-1">
-                                                <div className="flex items-center justify-between gap-2 mb-0.5">
-                                                    <span className="text-[12px] font-black text-[var(--color-text)] group-hover:text-indigo-600 transition-colors truncate">{cls.name}</span>
-                                                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md border shrink-0 ${isBoarding ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20'}`}>
-                                                        {isBoarding ? 'Boarding' : 'Reguler'}
-                                                    </span>
+                                                <div className="flex items-center justify-between gap-2 mb-1">
+                                                    <span className={`text-[12px] font-black transition-colors truncate ${isSelected ? 'text-indigo-600' : 'text-[var(--color-text)]'}`}>{cls.name}</span>
+                                                    {isEmpty ? (
+                                                        <span className="text-[7px] font-black px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+                                                            Kosong
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md border shrink-0 ${isBoarding ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20'}`}>
+                                                            {isBoarding ? 'Boarding' : 'Reguler'}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-2 opacity-70">
-                                                    <p className="text-[9px] font-bold text-[var(--color-text-muted)] truncate">{teacher}</p>
+                                                    <p className="text-[9.5px] font-bold text-[var(--color-text-muted)] truncate">{teacher}</p>
                                                     <div className="w-1 h-1 rounded-full bg-[var(--color-border)] shrink-0" />
-                                                    <p className="text-[9px] font-bold text-indigo-500 shrink-0">{studentCount} Siswa</p>
+                                                    <p className={`text-[9.5px] font-black shrink-0 ${isEmpty ? 'text-rose-500 font-bold' : 'text-indigo-500'}`}>{studentCount} Siswa</p>
                                                 </div>
                                             </div>
                                         </button>
@@ -1526,9 +1695,29 @@ export default function RaportPage() {
                         )}
                     </div>
 
-                    <div className="flex pt-4 border-t border-[var(--color-border)]">
-                        <button onClick={() => setStep(0)} className="h-11 px-6 rounded-xl border border-[var(--color-border)] text-xs font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2">
-                            <FontAwesomeIcon icon={faArrowLeft} /> Kembali ke Beranda
+                    <div className="flex gap-2 sm:gap-4 pt-4 border-t border-[var(--color-border)]">
+                        <button onClick={() => setStep(0)} className="h-12 px-4 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0">
+                            <FontAwesomeIcon icon={faArrowLeft} /> <span className="hidden sm:inline">Kembali</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled={!tempSelectedClassId}
+                            onClick={() => {
+                                const cls = classesList.find(c => c.id === tempSelectedClassId)
+                                const isBoarding = (cls?.name || '').toLowerCase().includes('boarding') || (cls?.name || '').toLowerCase().includes('pondok')
+                                setSelectedClassId(tempSelectedClassId)
+                                setLang(isBoarding ? 'ar' : 'id')
+                                if (cls?.metadata?.homeroom_teacher) setMusyrif(cls.metadata.homeroom_teacher)
+                            }}
+                            className={`flex-1 h-12 rounded-2xl text-white text-xs sm:text-sm font-black shadow-lg transition-all flex items-center justify-center gap-2 overflow-hidden px-2
+                                ${!tempSelectedClassId
+                                    ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed shadow-none'
+                                    : 'bg-emerald-500 shadow-emerald-500/20 hover:brightness-110 active:scale-95'
+                                }`}
+                        >
+                            <span className="whitespace-nowrap">Lanjut ke Setup Periode</span>
+                            <FontAwesomeIcon icon={faArrowRight} className="text-[10px] opacity-70" />
                         </button>
                     </div>
                 </div>
@@ -1564,7 +1753,9 @@ export default function RaportPage() {
                                         <p className="text-[14px] font-black text-[var(--color-text)] truncate leading-tight">
                                             {selectedClass?.name || 'Memuat nama kelas...'}
                                         </p>
-                                        <p className="text-[10px] text-emerald-600/70 font-bold uppercase tracking-wider">Kelas Terpilih</p>
+                                        <p className="text-[10px] text-emerald-600/70 font-bold uppercase tracking-wider">
+                                            {(classProgress[selectedClass?.id]?.total || 0)} Siswa Terdaftar
+                                        </p>
                                     </div>
                                 </div>
                                 <button
@@ -1579,15 +1770,21 @@ export default function RaportPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Bulan</label>
-                                <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="w-full h-11 px-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-sm font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all">
-                                    {BULAN.map(b => <option key={b.id} value={b.id}>{b.id_str} — {b.ar}</option>)}
-                                </select>
+                                <RichSelect
+                                    value={selectedMonth}
+                                    onChange={val => setSelectedMonth(Number(val))}
+                                    options={monthOptions}
+                                    placeholder="Pilih Bulan"
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun</label>
-                                <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="w-full h-11 px-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-sm font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all">
-                                    {years.map(y => <option key={y} value={y}>{y}</option>)}
-                                </select>
+                                <RichSelect
+                                    value={selectedYear}
+                                    onChange={val => setSelectedYear(Number(val))}
+                                    options={yearOptions}
+                                    placeholder="Pilih Tahun"
+                                />
                             </div>
                         </div>
                     </div>
@@ -1604,13 +1801,25 @@ export default function RaportPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Template Bahasa</label>
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Template Bahasa</label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTemplatePreviewModal(true)}
+                                    className="text-[9px] font-black text-indigo-500 hover:underline flex items-center gap-1"
+                                >
+                                    <FontAwesomeIcon icon={faEye} /> Lihat Perbedaan Template
+                                </button>
+                            </div>
                             <div className="grid grid-cols-2 gap-3">
-                                {[{ v: 'ar', label: 'العربية', sub: 'Pondok / Boarding', icon: '☪️' }, { v: 'id', label: 'Indonesia', sub: 'Sekolah / Reguler', icon: '🇮🇩' }].map(opt => (
+                                {[
+                                    { v: 'ar', label: 'العربية', sub: 'Pondok / Boarding', icon: faMosque, color: 'text-emerald-500' },
+                                    { v: 'id', label: 'Indonesia', sub: 'Sekolah / Reguler', icon: faSchool, color: 'text-indigo-500' }
+                                ].map(opt => (
                                     <button key={opt.v} onClick={() => setLang(opt.v)} className={`p-4 rounded-2xl border text-left transition-all ${lang === opt.v ? 'bg-indigo-500/10 border-indigo-500/50 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] hover:border-indigo-500/20'}`}>
                                         <div className="flex items-center justify-between mb-1">
                                             <span className={`text-base font-black ${lang === opt.v ? 'text-indigo-600' : 'text-[var(--color-text)]'}`}>{opt.label}</span>
-                                            <span className="text-lg">{opt.icon}</span>
+                                            <FontAwesomeIcon icon={opt.icon} className={`text-base transition-colors ${lang === opt.v ? opt.color : 'text-[var(--color-text-muted)] opacity-60'}`} />
                                         </div>
                                         <p className="text-[10px] text-[var(--color-text-muted)] font-medium leading-tight">{opt.sub}</p>
                                     </button>
@@ -1642,6 +1851,7 @@ export default function RaportPage() {
     const renderStep2 = () => {
         return (
             <RaportInputTable
+                globalSaveIndicator={globalSaveIndicator}
                 students={students}
                 filteredStudents={filteredStudents}
                 scores={scores}
@@ -1684,6 +1894,9 @@ export default function RaportPage() {
                 sendingWA={sendingWA}
                 canEdit={canEdit}
                 lang={lang}
+                copyingLastMonth={copyingLastMonth}
+                copyFromLastMonth={copyFromLastMonth}
+                handleResetClass={handleResetClass}
                 setStep={setStep}
                 setSelectedClassId={setSelectedClassId}
                 setPendingNav={setPendingNav}
@@ -1703,7 +1916,7 @@ export default function RaportPage() {
                 handleCatatanChange={handleCatatanChange}
                 triggerAutoSave={triggerAutoSave}
                 openStudentDetailDrawer={openStudentDetailDrawer}
-                setIsExportModalOpen={setIsExportOpen}
+                setIsExportModalOpen={setIsExportModalOpen}
                 setWaBlastConfirm={setWaBlastConfirm}
                 addToast={addToast}
                 setConfirmModal={setConfirmModal}
@@ -2355,8 +2568,8 @@ export default function RaportPage() {
 
                                             {/* Report Card Body with interactive Zoom */}
                                             <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-slate-900/50 flex flex-col items-center custom-scrollbar p-6 min-h-[500px]">
-                                                <div 
-                                                    style={{ transform: `scale(${previewZoom})`, transformOrigin: 'top center' }} 
+                                                <div
+                                                    style={{ transform: `scale(${previewZoom})`, transformOrigin: 'top center' }}
                                                     className="shadow-2xl h-fit cursor-pointer relative"
                                                     onClick={() => setIsFullScreenPreview(true)}
                                                 >
@@ -2466,7 +2679,17 @@ export default function RaportPage() {
     const fsCatatanArab = isArchiveMode ? null : catatanArabMap[fsStudent?.id]
 
 
-    const stepLabels = ['Setup', 'Input Nilai', 'Preview & Cetak']
+    const stepLabels = ['Pilih Kelas', 'Setup Periode', 'Input Nilai', 'Preview & Cetak']
+
+    const activeStepIndex = useMemo(() => {
+        if (step === 0) return -1
+        if (step === 1) {
+            return selectedClassId ? 1 : 0
+        }
+        if (step === 2) return 2
+        if (step === 3) return 3
+        return -1
+    }, [step, selectedClassId])
 
     // ── Guards ─────────────────────────────────────────────────────────────────
 
@@ -2549,12 +2772,14 @@ export default function RaportPage() {
                     subtitle="نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas."
                     actions={
                         <>
-                            {step >= 1 && step <= 3 && (
-                                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] mr-2">
+                            {step >= 1 && step <= 3 && activeStepIndex !== -1 && (
+                                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] mr-2 shadow-sm">
                                     {stepLabels.map((label, i) => (
                                         <div key={i} className="flex items-center gap-1.5">
-                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${step === i + 1 ? 'bg-emerald-500 text-white' : step > i + 1 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'}`}>{step > i + 1 ? <FontAwesomeIcon icon={faCheck} className="text-[7px]" /> : i + 1}</div>
-                                            <span className={`text-[9px] font-bold ${step === i + 1 ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'}`}>{label}</span>
+                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${activeStepIndex === i ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20' : activeStepIndex > i ? 'bg-emerald-500/20 text-emerald-500' : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'}`}>
+                                                {activeStepIndex > i ? <FontAwesomeIcon icon={faCheck} className="text-[7px]" /> : i + 1}
+                                            </div>
+                                            <span className={`text-[9px] font-bold transition-all ${activeStepIndex === i ? 'text-indigo-600 font-extrabold' : activeStepIndex > i ? 'text-emerald-600' : 'text-[var(--color-text-muted)]'}`}>{label}</span>
                                             {i < stepLabels.length - 1 && <div className="w-4 h-px bg-[var(--color-border)]" />}
                                         </div>
                                     ))}
@@ -2735,11 +2960,11 @@ export default function RaportPage() {
                     selectedMonthName={bulanObj?.id_str}
                     selectedYear={selectedYear}
                     exporting={exporting}
-                    handleExportCSV={handleExportCSVModal}
-                    handleExportExcel={handleExportExcelModal}
-                    handleExportAllClasses={handleExportAllClassesModal}
-                    handleExportZip={handleExportZipModal}
-                    handlePrintAll={handlePrintAllModal}
+                    handleExportCSV={handleExportCSV}
+                    handleExportExcel={handleExportExcel}
+                    handleExportAllClasses={handleExportAllClasses}
+                    handleExportZip={handleExportZip}
+                    handlePrintAll={handlePrintAll}
                     addToast={addToast}
                 />
 
@@ -3036,38 +3261,42 @@ export default function RaportPage() {
                 <Modal
                     isOpen={!!saveAllConfirm}
                     onClose={() => setSaveAllConfirm(null)}
-                    title="Simpan Nilai"
-                    icon={faFloppyDisk}
-                    variant="amber"
+                    title="Simpan Nilai?"
+                    description="Beberapa data santri belum terisi lengkap"
+                    icon={faTriangleExclamation}
+                    iconBg="bg-emerald-500/10"
+                    iconColor="text-emerald-600"
+                    size="sm"
+                    mobileVariant="bottom-sheet"
+                    footer={saveAllConfirm && (
+                        <div className="flex items-center w-full gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setSaveAllConfirm(null)}
+                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
+                            >
+                                Batal
+                            </button>
+                            <div className="flex-1" />
+                            <button
+                                type="button"
+                                onClick={_doSaveAll}
+                                className="h-10 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 shrink-0"
+                            >
+                                <FontAwesomeIcon icon={faFloppyDisk} className="text-[11px] opacity-70" />
+                                Simpan yang Terisi
+                            </button>
+                        </div>
+                    )}
                 >
                     {saveAllConfirm && (
-                        <div className="space-y-6">
-                            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center shrink-0">
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-600 text-xl" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-black text-amber-900">Nilai Belum Lengkap</p>
-                                    <p className="text-xs text-amber-700 font-medium">Ada {saveAllConfirm.incompleteCount} santri yang belum terisi nilainya.</p>
-                                </div>
+                        <div className="space-y-4 px-1">
+                            <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[11px] text-amber-700 font-bold leading-relaxed">
+                                <span className="font-black text-amber-800">Perhatian:</span> Ada <span className="font-black text-amber-900">{saveAllConfirm.incompleteCount} santri</span> yang nilainya belum lengkap di bulan ini.
                             </div>
-                            <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-                                Anda tetap bisa menyimpan raport yang sudah terisi. Santri dengan nilai kosong akan tetap disimpan dengan status "Belum Lengkap".
+                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                Anda tetap bisa menyimpan raport yang sudah terisi. Santri dengan nilai kosong akan tetap disimpan dengan status "Belum Lengkap" di database.
                             </p>
-                            <div className="flex flex-col gap-2">
-                                <button
-                                    onClick={_doSaveAll}
-                                    className="h-11 rounded-xl bg-emerald-500 text-white text-sm font-black shadow-lg shadow-emerald-500/20"
-                                >
-                                    Simpan yang Sudah Terisi
-                                </button>
-                                <button
-                                    onClick={() => setSaveAllConfirm(null)}
-                                    className="h-10 text-[var(--color-text-muted)] text-xs font-black"
-                                >
-                                    Kembali & Lengkapi
-                                </button>
-                            </div>
                         </div>
                     )}
                 </Modal>
@@ -3077,47 +3306,44 @@ export default function RaportPage() {
                     isOpen={!!confirmModal}
                     onClose={() => setConfirmModal(null)}
                     title={confirmModal?.title ?? 'Konfirmasi'}
+                    description={confirmModal?.description}
+                    icon={confirmModal?.icon}
+                    iconBg={confirmModal?.iconBg}
+                    iconColor={confirmModal?.iconColor}
                     size="sm"
+                    mobileVariant="bottom-sheet"
+                    footer={confirmModal && (
+                        <div className="flex items-center w-full gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmModal(null)}
+                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
+                            >
+                                Batal
+                            </button>
+                            <div className="flex-1" />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    confirmModal.onConfirm()
+                                    setConfirmModal(null)
+                                }}
+                                className={`h-10 px-6 rounded-xl text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all flex items-center justify-center gap-2 shrink-0 ${confirmModal.variant === 'amber'
+                                    ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                                    : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
+                                    }`}
+                            >
+                                {confirmModal.confirmIcon && <FontAwesomeIcon icon={confirmModal.confirmIcon} className="text-[11px] opacity-70" />}
+                                {confirmModal.confirmLabel ?? 'Lanjutkan'}
+                            </button>
+                        </div>
+                    )}
                 >
                     {confirmModal && (
-                        <div className="space-y-5">
-                            <div className={`p-3.5 rounded-2xl flex items-center gap-3.5 border ${confirmModal.variant === 'amber' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
-                                }`}>
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg border ${confirmModal.variant === 'amber' ? 'bg-amber-500/20 border-amber-500/30' : 'bg-red-500/20 border-red-500/30'
-                                    }`}>
-                                    <FontAwesomeIcon icon={faTriangleExclamation} />
-                                </div>
-                                <div className="min-w-0">
-                                    <h3 className="text-[11px] font-black uppercase tracking-wider leading-tight">{confirmModal.title ?? 'Konfirmasi'}</h3>
-                                    {confirmModal.subtitle && (
-                                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-80 mt-1">{confirmModal.subtitle}</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="px-1">
-                                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                                    {confirmModal.body}
-                                </p>
-                            </div>
-
-                            <div className="flex gap-2.5 pt-1">
-                                <button
-                                    onClick={() => setConfirmModal(null)}
-                                    className="h-10 px-4 rounded-xl flex-1 bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest transition-all"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    onClick={() => { confirmModal.onConfirm(); setConfirmModal(null) }}
-                                    className={`h-10 px-5 rounded-xl flex-1 text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all flex items-center justify-center gap-2 ${confirmModal.variant === 'amber'
-                                        ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
-                                        : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
-                                        }`}
-                                >
-                                    {confirmModal.confirmLabel ?? 'Lanjutkan'}
-                                </button>
-                            </div>
+                        <div className="px-1">
+                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                {confirmModal.body}
+                            </p>
                         </div>
                     )}
                 </Modal>
@@ -3321,6 +3547,90 @@ export default function RaportPage() {
                         </div>
                     </div>,
                     document.body
+                )}
+                {showTemplatePreviewModal && (
+                    <Modal
+                        isOpen={showTemplatePreviewModal}
+                        onClose={() => setShowTemplatePreviewModal(false)}
+                        title="Perbandingan Template Bahasa Raport"
+                        icon={faLanguage}
+                        iconBg="bg-indigo-500/10"
+                        iconColor="text-indigo-500"
+                        description="Perbandingan hasil cetak PDF template bahasa Arab vs Indonesia."
+                        size="lg"
+                        footer={
+                            <div className="flex justify-end w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTemplatePreviewModal(false)}
+                                    className="h-10 px-6 rounded-xl bg-[var(--color-primary)] text-white text-xs font-black hover:opacity-90 transition-all shadow-md shadow-indigo-500/10"
+                                >
+                                    Pahami Perbedaan
+                                </button>
+                            </div>
+                        }
+                    >
+                        <div className="space-y-6 p-1">
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Boarding Arab */}
+                                <div className="p-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                            <FontAwesomeIcon icon={faMosque} className="text-sm" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-black text-emerald-700">العربية (Boarding / Pondok)</h4>
+                                            <p className="text-[9px] text-emerald-600/70 font-bold uppercase tracking-wider">Desain Khusus Kepesantrenan</p>
+                                        </div>
+                                    </div>
+
+                                    <ul className="space-y-2.5 text-[11px] text-[var(--color-text)]">
+                                        <li className="flex items-start gap-2">
+                                            <FontAwesomeIcon icon={faCheck} className="text-emerald-500 text-[10px] mt-0.5" />
+                                            <span><strong>Bahasa Pengantar:</strong> Seluruh nama kriteria, predikat, dan nilai dikonversi otomatis ke Bahasa Arab formal (Fusha).</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <FontAwesomeIcon icon={faCheck} className="text-emerald-500 text-[10px] mt-0.5" />
+                                            <span><strong>Skema Nilai Arab:</strong> Angka 1-100 otomatis diubah ke teks predikat Arab (ممتاز, جيد جداً, جيد, مقبول).</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <FontAwesomeIcon icon={faCheck} className="text-emerald-500 text-[10px] mt-0.5" />
+                                            <span><strong>Fokus Penilaian:</strong> Akhlak, kedisiplinan shalat jamaah, hafalan Al-Qur'an (Juz & Surah), serta kondisi fisik santri.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                {/* Reguler Indonesia */}
+                                <div className="p-5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                                            <FontAwesomeIcon icon={faSchool} className="text-sm" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-black text-indigo-700">Indonesia (Sekolah / Reguler)</h4>
+                                            <p className="text-[9px] text-indigo-600/70 font-bold uppercase tracking-wider">Desain Akademik Formal</p>
+                                        </div>
+                                    </div>
+
+                                    <ul className="space-y-2.5 text-[11px] text-[var(--color-text)]">
+                                        <li className="flex items-start gap-2">
+                                            <FontAwesomeIcon icon={faCheck} className="text-indigo-500 text-[10px] mt-0.5" />
+                                            <span><strong>Bahasa Pengantar:</strong> Seluruh kriteria, label, dan deskripsi menggunakan Bahasa Indonesia yang formal dan baku.</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <FontAwesomeIcon icon={faCheck} className="text-indigo-500 text-[10px] mt-0.5" />
+                                            <span><strong>Skema Nilai Numerik:</strong> Nilai ditampilkan sebagai angka numerik standar (85, 92, dst.) lengkap dengan skala huruf (A, B, C, D).</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <FontAwesomeIcon icon={faCheck} className="text-indigo-500 text-[10px] mt-0.5" />
+                                            <span><strong>Fokus Penilaian:</strong> Kinerja akademis mata pelajaran, perkembangan bakat umum, ekstra kurikuler, dan presensi kehadiran.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </Modal>
                 )}
             </div >
         </DashboardLayout >

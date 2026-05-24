@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faXmark, faSpinner } from '@fortawesome/free-solid-svg-icons'
-import { LIST_KAMAR } from '../../pages/reports/utils/raportConstants'
+import { LIST_KAMAR } from '../../utils/reports/raportConstants'
 import RichSelect from '../ui/RichSelect'
 
 export default function StudentInlineAddRow({
