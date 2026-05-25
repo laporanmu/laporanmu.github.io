@@ -89,14 +89,16 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
     const getVerificationUrl = () => {
         const origin = window.location.origin;
         const host = window.location.hostname;
+        const reportNo = getReportNumber();
+        const sId = student?.id || '';
         
         // Jika sedang running lokal (development), arahkan ke domain live github.io agar HP bisa men-scan link publik.
         if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.')) {
-            return `https://laporanmu.github.io/verify?no=${getReportNumber()}`;
+            return `https://laporanmu.github.io/verify?no=${reportNo}&s=${sId}`;
         }
         
         // Di production (laporanmu.github.io atau custom domain baru laporanmu.com), otomatis pakai domain yang aktif.
-        return `${origin}/verify?no=${getReportNumber()}`;
+        return `${origin}/verify?no=${reportNo}&s=${sId}`;
     }
 
     const getReportNumber = () => {

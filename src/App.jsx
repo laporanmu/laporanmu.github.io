@@ -37,6 +37,7 @@ const LandingPage = lazyRetry(() => import('./pages/LandingPage.jsx'))
 const LoginPage = lazyRetry(() => import('./pages/auth/LoginPage.jsx'))
 const ParentCheckPage = lazyRetry(() => import('./pages/auth/ParentCheckPage.jsx'))
 const InformationPage = lazyRetry(() => import('./pages/InformationPage.jsx'))
+const PublicVerifyPage = lazyRetry(() => import('./pages/PublicVerifyPage.jsx'))
 
 // Core
 const DashboardPage = lazyRetry(() => import('./pages/DashboardPage.jsx'))
@@ -99,6 +100,7 @@ const ROUTE_ALIASES = [
   { from: '/admin/task', to: '/admin/tasks' },
   { from: '/playground', to: '/admin/playground' },
   { from: '/master/psb', to: '/master/enrollment' },
+  { from: '/verify/raport', to: '/verify' },
 ]
 
 // ─── Loading Spinner ──────────────────────────────────────────────────────────
@@ -443,6 +445,7 @@ function AppRoutes() {
           <PublicRoute><LoginPage /></PublicRoute>
         } />
         <Route path="/informasi" element={<InformationPage />} />
+        <Route path="/verify" element={<PublicVerifyPage />} />
 
         {/* ── Protected ── */}
         <Route element={<ProtectedRoute />}>
