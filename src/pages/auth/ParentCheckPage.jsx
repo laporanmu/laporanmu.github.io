@@ -744,24 +744,6 @@ export default function ParentCheckPage() {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        {/* ── Sparkline 5 kriteria ── */}
-                                                        {allFilled && (
-                                                            <div className="flex items-end gap-1 mt-2 h-6">
-                                                                {KRITERIA_LIST.map(k => {
-                                                                    const v = Number(r[k.key]) || 0
-                                                                    return (
-                                                                        <div key={k.key} className="flex-1" title={`${k.label}: ${v}`}>
-                                                                            <div className="w-full rounded-sm"
-                                                                                style={{
-                                                                                    height: `${Math.max(3, Math.round(24 * v / 9))}px`,
-                                                                                    background: k.color,
-                                                                                    opacity: 0.65
-                                                                                }} />
-                                                                        </div>
-                                                                    )
-                                                                })}
-                                                            </div>
-                                                        )}
                                                     </div>
                                                     <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown}
                                                         className="text-[10px] text-[var(--color-text-muted)] shrink-0" />
@@ -901,7 +883,7 @@ export default function ParentCheckPage() {
                                 tahun={printRaportData.r.year}
                                 musyrif={printRaportData.r.musyrif}
                                 className={printRaportData.student.class}
-                                lang="ar"
+                                lang="id"
                                 settings={settings}
                                 onRendered={() => setPrintRenderedCount(c => c + 1)}
                             />
