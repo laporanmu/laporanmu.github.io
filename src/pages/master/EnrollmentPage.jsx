@@ -7,7 +7,7 @@ import {
     faSquareCheck, faCheckDouble, faBookQuran, faSearch, faSchool,
     faHourglassHalf, faArrowRight, faTrash, faBoxArchive, faChevronDown,
     faFileExport, faFileExcel, faFilePdf, faChartPie, faFileImport,
-    faClipboardCheck, faGraduationCap
+    faClipboardCheck, faGraduationCap, faBell, faSpinner
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
@@ -29,6 +29,8 @@ import EnrollmentExportModal from '../../components/enrollment/EnrollmentExportM
 import EnrollmentStatsModal from '../../components/enrollment/EnrollmentStatsModal'
 import EnrollmentAssessmentModal from '../../components/enrollment/EnrollmentAssessmentModal'
 import EnrollmentPaymentModal from '../../components/enrollment/EnrollmentPaymentModal'
+import RichSelect from '../../components/ui/RichSelect'
+import RichDatePicker from '../../components/ui/RichDatePicker'
 import { useEnrollmentImportExport } from '../../hooks/enrollment/useEnrollmentImportExport'
 import { STATUS_CONFIG, PROGRAM_OPTIONS, REQUIRED_DOCUMENTS } from '../../utils/enrollment/enrollmentConstants'
 
@@ -48,6 +50,7 @@ export default function EnrollmentPage() {
     const [validationModal, setValidationModal] = useState({ isOpen: false, type: '', missingDocs: [], enrollment: null, nextStatus: '' })
     const [isPaymentOpen, setIsPaymentOpen] = useState(false)
     const [paymentEnrollment, setPaymentEnrollment] = useState(null)
+    const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
 
     // Header menu dropdown
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
@@ -59,12 +62,16 @@ export default function EnrollmentPage() {
         enrollments, waves, loading, totalRows, globalStats, pipelineDistribution,
         searchQuery, setSearchQuery, filterWave, setFilterWave,
         filterStatus, setFilterStatus, filterGender, setFilterGender,
-        filterProgram, setFilterProgram, sortBy, setSortBy,
+        filterProgram, setFilterProgram,
+        filterDateFrom, setFilterDateFrom, filterDateTo, setFilterDateTo,
+        sortBy, setSortBy,
         activeFilterCount, resetAllFilters,
         page, setPage, pageSize, setPageSize,
         isFormOpen, isProfileOpen, isWaveModalOpen, setIsWaveModalOpen,
         activeModal, setActiveModal, selectedEnrollment,
         selectedIds, setSelectedIds, selectedIdSet, allSelected, submitting,
+        uploadingPhoto, handlePhotoUpload,
+        sendingReminders, handleSendDocumentReminders,
         handleAdd, handleEdit, handleViewProfile,
         closeForm, closeProfile, closeModal,
         handleSubmit, confirmDelete, executeDelete, enrollmentToDelete,
@@ -79,7 +86,7 @@ export default function EnrollmentPage() {
         convertingEnrollment, setConvertingEnrollment,
         converting, classes, handleConvertToStudent,
         generateCode, debouncedSearch, selectedEnrollments, allEnrollments,
-        updateNotes, updatePaymentStatus
+        updateNotes, updatePaymentStatus, updateOrientation, sendOrientationNotification
     } = core
 
     const activePaymentEnrollment = paymentEnrollment ? enrollments.find(e => e.id === paymentEnrollment.id) || paymentEnrollment : null
@@ -212,6 +219,23 @@ export default function EnrollmentPage() {
                                             <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data yang diarsipkan</p>
                                         </div>
                                     </button>
+                                    <button onClick={async () => { 
+                                        setIsHeaderMenuOpen(false); 
+                                        if (window.confirm("Kirim pengingat WhatsApp secara otomatis kepada pendaftar dengan dokumen persyaratan yang belum lengkap (< 100%)?")) {
+                                            await handleSendDocumentReminders();
+                                        }
+                                    }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group"
+                                        disabled={sendingReminders}
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <FontAwesomeIcon icon={sendingReminders ? faSpinner : faBell} className={`text-xs ${sendingReminders ? 'fa-spin' : ''}`} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-black leading-tight">Pengingat Berkas</p>
+                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Kirim auto-nudge kelengkapan dokumen via WA</p>
+                                        </div>
+                                    </button>
                                 </div>
                             </>,
                             getPortalContainer('portal-enrollment-header-menu')
@@ -245,17 +269,21 @@ export default function EnrollmentPage() {
                             <div className="h-4 w-px bg-[var(--color-border)] mx-1" />
                             {/* Status chips */}
                             <div className="flex items-center gap-1.5 shrink-0">
-                                {[{ id: '', label: 'Semua', icon: faUsers },
-                                { id: 'mendaftar', label: 'Mendaftar', icon: faClipboardList },
-                                { id: 'verifikasi', label: 'Verifikasi', icon: faHourglassHalf },
-                                { id: 'tes', label: 'Tes', icon: faBookQuran },
-                                { id: 'diterima', label: 'Diterima', icon: faCheckCircle },
-                                { id: 'ditolak', label: 'Ditolak', icon: faXmarkCircle },
+                                {[
+                                    { id: '', label: 'Semua', icon: faUsers },
+                                    { id: 'mendaftar', label: 'Mendaftar', icon: faClipboardList },
+                                    { id: 'verifikasi', label: 'Verifikasi', icon: faHourglassHalf },
+                                    { id: 'tes', label: 'Tes', icon: faBookQuran },
+                                    { id: 'diterima', label: 'Diterima', icon: faCheckCircle },
+                                    { id: 'ditolak', label: 'Ditolak', icon: faXmarkCircle },
                                 ].map(s => (
-                                    <button key={s.id} onClick={() => setFilterStatus(s.id)}
+                                    <button
+                                        key={s.id}
+                                        onClick={() => { setFilterStatus(s.id); setPage(1); }}
                                         className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${filterStatus === s.id
-                                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
-                                            : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5'}`}>
+                                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-sm shadow-[var(--color-primary)]/20'
+                                            : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5'}`}
+                                    >
                                         <FontAwesomeIcon icon={s.icon} className={`text-[10px] ${filterStatus === s.id ? 'opacity-100' : 'opacity-30'}`} />
                                         {s.label}
                                     </button>
@@ -264,13 +292,17 @@ export default function EnrollmentPage() {
                             <div className="h-4 w-px bg-[var(--color-border)] mx-1 shrink-0" />
                             {/* Gender */}
                             <div className="flex items-center gap-1.5 shrink-0">
-                                {[{ id: 'L', label: 'Putra', icon: faMars, cls: 'bg-blue-500 border-blue-500' },
-                                { id: 'P', label: 'Putri', icon: faVenus, cls: 'bg-pink-500 border-pink-500' }
+                                {[
+                                    { id: 'L', label: 'Putra', icon: faMars, cls: 'bg-blue-500 border-blue-500 hover:bg-blue-600' },
+                                    { id: 'P', label: 'Putri', icon: faVenus, cls: 'bg-pink-500 border-pink-500 hover:bg-pink-600' }
                                 ].map(g => (
-                                    <button key={g.id} onClick={() => setFilterGender(filterGender === g.id ? '' : g.id)}
+                                    <button
+                                        key={g.id}
+                                        onClick={() => { setFilterGender(filterGender === g.id ? '' : g.id); setPage(1); }}
                                         className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${filterGender === g.id
-                                            ? `${g.cls} text-white`
-                                            : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30'}`}>
+                                            ? `${g.cls} text-white shadow-sm shadow-black/10`
+                                            : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5'}`}
+                                    >
                                         <FontAwesomeIcon icon={g.icon} className={`text-[10px] ${filterGender === g.id ? 'opacity-100' : 'opacity-30'}`} />
                                         {g.label}
                                     </button>
@@ -278,10 +310,8 @@ export default function EnrollmentPage() {
                             </div>
                         </div>
 
-                        <div className="hidden lg:block w-px h-4 bg-[var(--color-border)] mx-2 shrink-0" />
-
                         {/* Action buttons */}
-                        <div className="flex items-center gap-2 shrink-0 lg:ml-auto">
+                        <div className="flex items-center gap-2 shrink-0 ml-auto">
                             <button onClick={toggleSelectAll}
                                 className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 ${selectedIds.length > 0
                                     ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/10'
@@ -289,6 +319,19 @@ export default function EnrollmentPage() {
                                 <FontAwesomeIcon icon={selectedIds.length > 0 ? faCheckDouble : faSquareCheck} />
                                 <span className="hidden xs:inline">{selectedIds.length > 0 ? 'Terpilih' : 'Pilih'}</span>
                                 {selectedIds.length > 0 && <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">{selectedIds.length}</span>}
+                            </button>
+
+                            <button
+                                onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
+                                className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${showAdvancedFilter || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
+                            >
+                                <FontAwesomeIcon icon={faSliders} />
+                                <span className="hidden xs:inline">Filter</span>
+                                {activeFilterCount > 0 && (
+                                    <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
+                                        {activeFilterCount}
+                                    </span>
+                                )}
                             </button>
                         </div>
                     </div>
@@ -310,6 +353,12 @@ export default function EnrollmentPage() {
                                         <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-[var(--color-primary)]/20 flex items-center justify-center opacity-70 group-hover:opacity-100"><FontAwesomeIcon icon={faXmark} className="text-[10px]" /></span>
                                     </button>
                                 )}
+                                {filterWave && (
+                                    <button onClick={() => setFilterWave('')} className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[10px] font-black text-[var(--color-primary)]">
+                                        Gelombang: {waves && waves.find(w => w.id === filterWave)?.name}
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-[var(--color-primary)]/20 flex items-center justify-center opacity-70 group-hover:opacity-100"><FontAwesomeIcon icon={faXmark} className="text-[10px]" /></span>
+                                    </button>
+                                )}
                                 {filterGender && (
                                     <button onClick={() => setFilterGender('')} className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]">
                                         <FontAwesomeIcon icon={filterGender === 'L' ? faMars : faVenus} className="opacity-70" /> {filterGender === 'L' ? 'Putra' : 'Putri'}
@@ -322,9 +371,126 @@ export default function EnrollmentPage() {
                                         <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-indigo-500/20 flex items-center justify-center opacity-70 group-hover:opacity-100"><FontAwesomeIcon icon={faXmark} className="text-[10px]" /></span>
                                     </button>
                                 )}
+                                {(filterDateFrom || filterDateTo) && (
+                                    <button onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); }} className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-teal-500/20 bg-teal-500/10 text-[10px] font-black text-teal-600">
+                                        Tanggal: {filterDateFrom ? new Date(filterDateFrom).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '...'} s/d {filterDateTo ? new Date(filterDateTo).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '...'}
+                                        <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-teal-500/20 flex items-center justify-center opacity-70 group-hover:opacity-100"><FontAwesomeIcon icon={faXmark} className="text-[10px]" /></span>
+                                    </button>
+                                )}
                                 <button onClick={resetAllFilters} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600">
                                     <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" /> Reset semua
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Expandable filter panel */}
+                    {showAdvancedFilter && (
+                        <div className="border-t border-[var(--color-border)] p-3.5 bg-[var(--color-surface-alt)]/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-1 h-3.5 bg-indigo-500 rounded-full" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 flex items-center gap-2">
+                                        <FontAwesomeIcon icon={faSliders} className="text-[9px] opacity-60" />
+                                        Filter Lanjutan
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={resetAllFilters}
+                                    className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-100"
+                                >
+                                    <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
+                                    Reset Semua Filter
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-3">
+                                {/* Status */}
+                                <div>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Status</label>
+                                    <RichSelect
+                                        value={filterStatus}
+                                        onChange={(val) => { setFilterStatus(val); setPage(1); }}
+                                        options={[
+                                            { id: '', name: 'Semua Status' },
+                                            { id: 'mendaftar', name: 'Mendaftar (Waiting List)' },
+                                            { id: 'verifikasi', name: 'Verifikasi Dokumen' },
+                                            { id: 'tes', name: 'Tahap Tes Seleksi' },
+                                            { id: 'diterima', name: 'Lulus / Diterima' },
+                                            { id: 'ditolak', name: 'Ditolak' }
+                                        ]}
+                                        placeholder="Semua Status"
+                                        small
+                                    />
+                                </div>
+
+                                {/* Gelombang */}
+                                <div>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Gelombang</label>
+                                    <RichSelect
+                                        value={filterWave}
+                                        onChange={(val) => { setFilterWave(val); setPage(1); }}
+                                        options={[
+                                            { id: '', name: 'Semua Gelombang' },
+                                            ...(waves ? waves.map(w => ({ id: w.id, name: w.name })) : [])
+                                        ]}
+                                        placeholder="Semua Gelombang"
+                                        small
+                                    />
+                                </div>
+
+                                {/* Program */}
+                                <div>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Program</label>
+                                    <RichSelect
+                                        value={filterProgram}
+                                        onChange={(val) => { setFilterProgram(val); setPage(1); }}
+                                        options={[
+                                            { id: '', name: 'Semua Program' },
+                                            ...PROGRAM_OPTIONS.map(p => ({ id: p.id, name: p.name }))
+                                        ]}
+                                        placeholder="Semua Program"
+                                        small
+                                    />
+                                </div>
+
+                                {/* Jenis Kelamin */}
+                                <div>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Jenis Kelamin</label>
+                                    <RichSelect
+                                        value={filterGender}
+                                        onChange={(val) => { setFilterGender(val); setPage(1); }}
+                                        options={[
+                                            { id: '', name: 'Semua Jenis Kelamin' },
+                                            { id: 'L', name: 'Putra (Laki-laki)' },
+                                            { id: 'P', name: 'Putri (Perempuan)' }
+                                        ]}
+                                        placeholder="Semua Jenis Kelamin"
+                                        small
+                                    />
+                                </div>
+
+                                {/* Rentang Tanggal */}
+                                <div className="sm:col-span-2 md:col-span-2 lg:col-span-2">
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Rentang Tanggal</label>
+                                    <div className="flex items-center gap-1.5 w-full">
+                                        <RichDatePicker
+                                            value={filterDateFrom}
+                                            onChange={(val) => { setFilterDateFrom(val); setPage(1); }}
+                                            placeholder="Dari"
+                                            small
+                                            className="w-full"
+                                        />
+                                        <span className="text-[10px] text-[var(--color-text-muted)] opacity-60 shrink-0">s/d</span>
+                                        <RichDatePicker
+                                            value={filterDateTo}
+                                            onChange={(val) => { setFilterDateTo(val); setPage(1); }}
+                                            placeholder="Sampai"
+                                            small
+                                            className="w-full"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -359,12 +525,32 @@ export default function EnrollmentPage() {
                                 {loading ? (
                                     Array.from({ length: 5 }).map((_, i) => <EnrollmentSkeletonRow key={i} />)
                                 ) : enrollments.length === 0 ? (
-                                    <tr><td colSpan={8} className="py-16 text-center">
-                                        <EmptyState icon={faUserPlus} title="Belum Ada Pendaftar" description="Tambah pendaftar baru atau ubah filter pencarian" action={
-                                            <button onClick={handleAdd} className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-wider shadow-md">
-                                                <FontAwesomeIcon icon={faUserPlus} className="mr-2" />Tambah Pendaftar
-                                            </button>
-                                        } variant="plain" />
+                                    <tr><td colSpan={8} className="py-16 text-center px-4">
+                                        {activeFilterCount > 0 || searchQuery ? (
+                                            <EmptyState
+                                                variant="plain"
+                                                icon={faSearch}
+                                                title="Pencarian Tidak Ditemukan"
+                                                description="Maaf, kami tidak menemukan data pendaftar dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                                action={
+                                                    <button onClick={resetAllFilters} className="px-5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text)] transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 mx-auto">
+                                                        <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" /> Reset Semua Filter
+                                                    </button>
+                                                }
+                                            />
+                                        ) : (
+                                            <EmptyState
+                                                variant="plain"
+                                                icon={faUserPlus}
+                                                title="Belum Ada Pendaftar"
+                                                description="Tambah pendaftar baru untuk memulai pendataan calon santri."
+                                                action={
+                                                    <button onClick={handleAdd} className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 mx-auto">
+                                                        <FontAwesomeIcon icon={faUserPlus} className="text-[10px]" /> Tambah Pendaftar
+                                                    </button>
+                                                }
+                                            />
+                                        )}
                                     </td></tr>
                                 ) : enrollments.map(e => (
                                     <EnrollmentRow key={e.id} enrollment={e} isSelected={selectedIdSet.has(e.id)}
@@ -380,7 +566,31 @@ export default function EnrollmentPage() {
                         {loading ? (
                             Array.from({ length: 3 }).map((_, i) => <EnrollmentSkeletonCard key={i} />)
                         ) : enrollments.length === 0 ? (
-                            <EmptyState icon={faUserPlus} title="Belum Ada Pendaftar" description="Tambah pendaftar baru" variant="dashed" />
+                            activeFilterCount > 0 || searchQuery ? (
+                                <EmptyState
+                                    icon={faSearch}
+                                    title="Pencarian Tidak Ditemukan"
+                                    description="Ubah kata kunci atau reset filter"
+                                    action={
+                                        <button onClick={resetAllFilters} className="px-4 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text)] transition-all">
+                                            Reset Filter
+                                        </button>
+                                    }
+                                    variant="dashed"
+                                />
+                            ) : (
+                                <EmptyState
+                                    icon={faUserPlus}
+                                    title="Belum Ada Pendaftar"
+                                    description="Tambah pendaftar baru"
+                                    action={
+                                        <button onClick={handleAdd} className="px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest">
+                                            Tambah Pendaftar
+                                        </button>
+                                    }
+                                    variant="dashed"
+                                />
+                            )
                         ) : enrollments.map(e => (
                             <EnrollmentMobileCard key={e.id} enrollment={e} isSelected={selectedIdSet.has(e.id)}
                                 onToggleSelect={toggleSelect} onView={handleViewProfile} onEdit={handleEdit}
@@ -399,7 +609,8 @@ export default function EnrollmentPage() {
 
             {/* Modals */}
             <EnrollmentFormModal isOpen={isFormOpen} onClose={closeForm} onSubmit={handleSubmit}
-                enrollment={selectedEnrollment} submitting={submitting} waves={waves} />
+                enrollment={selectedEnrollment} submitting={submitting} waves={waves}
+                onPhotoUpload={handlePhotoUpload} uploadingPhoto={uploadingPhoto} />
             <EnrollmentProfileModal isOpen={isProfileOpen} onClose={closeProfile}
                 enrollment={selectedEnrollment} onEdit={(e) => { closeProfile(); handleEdit(e) }}
                 onDelete={(e) => { closeProfile(); confirmDelete(e) }} onStatusChange={(e, s) => { closeProfile(); handleStatusChangeWithValidation(e, s) }}
@@ -409,6 +620,8 @@ export default function EnrollmentPage() {
                 }}
                 onUpdateNotes={updateNotes}
                 onUpdatePaymentStatus={updatePaymentStatus}
+                onUpdateOrientation={updateOrientation}
+                onSendOrientationNotification={sendOrientationNotification}
                 onManagePayment={(e) => {
                     setPaymentEnrollment(e);
                     setIsPaymentOpen(true);

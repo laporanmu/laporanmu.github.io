@@ -34,12 +34,38 @@ const INITIAL_FORM = {
     wave_id: '',
 }
 
-function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting }) {
+function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting, onPhotoUpload, uploadingPhoto }) {
     const [step, setStep] = useState(0)
     const [form, setForm] = useState({ ...INITIAL_FORM })
     const [touched, setTouched] = useState({})
     const [attemptedSubmit, setAttemptedSubmit] = useState(false)
     const photoRef = useRef(null)
+
+    // Cropping states
+    const [cropSrc, setCropSrc] = useState(null)
+    const [cropZoom, setCropZoom] = useState(1)
+    const [cropPos, setCropPos] = useState({ x: 0, y: 0 })
+    const [isDragging, setIsDragging] = useState(false)
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+    const [isCropperOpen, setIsCropperOpen] = useState(false)
+
+    const handleDragStart = (e) => {
+        setIsDragging(true)
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY
+        setDragStart({ x: clientX - cropPos.x, y: clientY - cropPos.y })
+    }
+
+    const handleDragMove = (e) => {
+        if (!isDragging) return
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY
+        setCropPos({ x: clientX - dragStart.x, y: clientY - dragStart.y })
+    }
+
+    const handleDragEnd = () => {
+        setIsDragging(false)
+    }
 
     // Reset or load data
     useEffect(() => {
@@ -55,6 +81,10 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
             setStep(0)
             setTouched({})
             setAttemptedSubmit(false)
+            setCropSrc(null)
+            setCropZoom(1)
+            setCropPos({ x: 0, y: 0 })
+            setIsCropperOpen(false)
         }
     }, [enrollment, isOpen])
 
@@ -248,7 +278,12 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                                     className={`w-[88px] h-[88px] rounded-2xl bg-[var(--color-surface-alt)] border flex items-center justify-center overflow-hidden transition-all cursor-pointer ${form.photo_url ? 'border-emerald-500/50' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'}`}
                                     onClick={() => photoRef.current?.click()}
                                 >
-                                    {form.photo_url ? (
+                                    {uploadingPhoto ? (
+                                        <div className="flex flex-col items-center justify-center gap-1.5 text-[var(--color-primary)]">
+                                            <FontAwesomeIcon icon={faSpinner} className="fa-spin text-lg" />
+                                            <span className="text-[7px] font-black uppercase tracking-wider">Mengunggah...</span>
+                                        </div>
+                                    ) : form.photo_url ? (
                                         <img
                                             src={form.photo_url}
                                             alt="Preview"
@@ -261,6 +296,27 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                                         </div>
                                     )}
                                 </div>
+                                <input
+                                    type="file"
+                                    ref={photoRef}
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0]
+                                        if (file) {
+                                            const reader = new FileReader()
+                                            reader.onload = () => {
+                                                setCropSrc(reader.result)
+                                                setCropZoom(1)
+                                                setCropPos({ x: 0, y: 0 })
+                                                setIsCropperOpen(true)
+                                            }
+                                            reader.readAsDataURL(file)
+                                        }
+                                        // Reset value to allow picking same image
+                                        e.target.value = ''
+                                    }}
+                                    className="hidden"
+                                    accept="image/*"
+                                />
                             </div>
                             <div className="flex-1 w-full space-y-3">
                                 <div className="relative group">
@@ -825,17 +881,118 @@ function EnrollmentFormModal({ isOpen, onClose, onSubmit, enrollment, submitting
                     </div>
                 )}
             </form>
-            <input
-                type="file" ref={photoRef}
-                onChange={async (e) => {
-                    const file = e.target.files[0]
-                    if (file) {
-                        const url = URL.createObjectURL(file)
-                        setField('photo_url', url)
-                    }
-                }}
-                className="hidden" accept="image/*"
-            />
+            {isCropperOpen && (
+                <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl w-full max-w-md p-6 space-y-6 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="text-center space-y-1">
+                            <h3 className="text-sm font-black uppercase tracking-wider text-[var(--color-text)]">Sesuaikan Pas Foto</h3>
+                            <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Geser dan perbesar foto untuk posisi terbaik</p>
+                        </div>
+
+                        {/* Visual crop container */}
+                        <div className="w-64 h-64 mx-auto bg-black relative overflow-hidden rounded-2xl border border-[var(--color-border)] shadow-inner flex items-center justify-center">
+                            {/* Inner circle or square overlay guidelines */}
+                            <div className="absolute inset-0 border-2 border-white/20 rounded-full z-10 pointer-events-none" />
+                            <div className="absolute inset-0 bg-black/40 z-5 pointer-events-none" />
+                            
+                            <img
+                                src={cropSrc}
+                                alt="To Crop"
+                                draggable={false}
+                                style={{
+                                    transform: `translate(${cropPos.x}px, ${cropPos.y}px) scale(${cropZoom})`,
+                                    cursor: isDragging ? 'grabbing' : 'grab'
+                                }}
+                                className="absolute max-w-none max-h-none transition-transform duration-75 select-none"
+                                onMouseDown={handleDragStart}
+                                onMouseMove={handleDragMove}
+                                onMouseUp={handleDragEnd}
+                                onMouseLeave={handleDragEnd}
+                                onTouchStart={handleDragStart}
+                                onTouchMove={handleDragMove}
+                                onTouchEnd={handleDragEnd}
+                            />
+                        </div>
+
+                        {/* Slider zoom */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-wider">
+                                <span>Perkecil</span>
+                                <span>Perbesar ({cropZoom.toFixed(1)}x)</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="1"
+                                max="3"
+                                step="0.1"
+                                value={cropZoom}
+                                onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                                className="w-full h-1.5 bg-[var(--color-border)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
+                            />
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsCropperOpen(false)
+                                    setCropSrc(null)
+                                }}
+                                className="flex-1 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    if (onPhotoUpload) {
+                                        // Draw canvas crop
+                                        const blob = await new Promise((resolve) => {
+                                            const img = new Image()
+                                            img.onload = () => {
+                                                const canvas = document.createElement('canvas')
+                                                canvas.width = 400
+                                                canvas.height = 400
+                                                const ctx = canvas.getContext('2d')
+                                                
+                                                ctx.fillStyle = '#FFFFFF'
+                                                ctx.fillRect(0, 0, 400, 400)
+                                                
+                                                const minDim = Math.min(img.width, img.height)
+                                                const scaleFactor = 400 / minDim
+                                                const finalScale = scaleFactor * cropZoom
+                                                
+                                                const w = img.width * finalScale
+                                                const h = img.height * finalScale
+                                                const x = 200 + cropPos.x - w / 2
+                                                const y = 200 + cropPos.y - h / 2
+                                                
+                                                ctx.drawImage(img, x, y, w, h)
+                                                canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.85)
+                                            }
+                                            img.src = cropSrc
+                                        })
+                                        
+                                        if (blob) {
+                                            const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' })
+                                            const url = await onPhotoUpload(file)
+                                            if (url) {
+                                                setField('photo_url', url)
+                                            }
+                                        }
+                                    }
+                                    setIsCropperOpen(false)
+                                    setCropSrc(null)
+                                }}
+                                className="flex-1 h-10 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-primary)]/20"
+                            >
+                                Selesai
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Modal>
     )
 }

@@ -6,7 +6,7 @@ import {
     faPhone, faMapMarkerAlt, faHeart, faCheckCircle,
     faXmarkCircle, faClipboardList, faGraduationCap,
     faTShirt, faCalendarDay, faUsers, faBoxArchive,
-    faUserGraduate, faHistory, faClock, faSpinner, faStar, faMoneyBillWave
+    faUserGraduate, faHistory, faClock, faSpinner, faStar, faMoneyBillWave, faBell
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { supabase } from '../../lib/supabase'
@@ -29,7 +29,7 @@ function InfoRow({ icon, label, value, color = '' }) {
     )
 }
 
-function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete, onStatusChange, onConvertToStudent, onUpdateNotes, onManagePayment, canEdit = true }) {
+function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete, onStatusChange, onConvertToStudent, onUpdateNotes, onManagePayment, onUpdateOrientation, onSendOrientationNotification, canEdit = true }) {
     if (!enrollment) return null
 
     const {
@@ -39,6 +39,32 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
         father_name, mother_name, father_phone, mother_phone, father_occupation,
         mother_occupation, address, created_at, wave_id, notes, documents
     } = enrollment
+
+    // Orientation Schedule states
+    const [isEditingOrientation, setIsEditingOrientation] = useState(false)
+    const [orientationForm, setOrientationForm] = useState({
+        date: '',
+        time: '',
+        location: '',
+        notes: ''
+    })
+    const [savingOrientation, setSavingOrientation] = useState(false)
+    const [sendingOrientationWa, setSendingOrientationWa] = useState(false)
+
+    // Reset orientation form when enrollment changes
+    useEffect(() => {
+        setIsEditingOrientation(false)
+        if (enrollment?.metadata?.orientation) {
+            setOrientationForm({
+                date: enrollment.metadata.orientation.date || '',
+                time: enrollment.metadata.orientation.time || '',
+                location: enrollment.metadata.orientation.location || '',
+                notes: enrollment.metadata.orientation.notes || ''
+            })
+        } else {
+            setOrientationForm({ date: '', time: '', location: '', notes: '' })
+        }
+    }, [enrollment?.id, isOpen])
 
     const statusCfg = getStatusConfig(status)
     const quranCfg = getQuranLevelConfig(quran_level)
@@ -441,6 +467,180 @@ function EnrollmentProfileModal({ isOpen, onClose, enrollment, onEdit, onDelete,
                             </div>
                         </div>
                     </div>
+
+                    {/* Jadwal Orientasi / MOS (Khusus Diterima / Daftar Ulang) */}
+                    {(status === 'diterima' || status === 'daftar_ulang' || enrollment.metadata?.orientation) && (
+                        <div className="bg-[var(--color-surface)] border border-indigo-500/10 bg-indigo-500/[0.01] shadow-sm rounded-2xl p-4 mt-4">
+                            <div className="flex items-center justify-between pt-1 mb-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-1 h-4 bg-indigo-500 rounded-full" />
+                                    <FontAwesomeIcon icon={faCalendarDay} className="text-indigo-500 text-[10px] opacity-70" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Jadwal Orientasi / MOS</span>
+                                </div>
+                                {canEdit && !isEditingOrientation && (
+                                    <button
+                                        onClick={() => {
+                                            setOrientationForm({
+                                                date: enrollment.metadata?.orientation?.date || '',
+                                                time: enrollment.metadata?.orientation?.time || '',
+                                                location: enrollment.metadata?.orientation?.location || '',
+                                                notes: enrollment.metadata?.orientation?.notes || ''
+                                            })
+                                            setIsEditingOrientation(true)
+                                        }}
+                                        className="px-2.5 py-1 rounded-lg border border-indigo-500/20 text-[9px] font-bold text-indigo-600 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors flex items-center gap-1"
+                                    >
+                                        <FontAwesomeIcon icon={faPen} className="text-[8px]" /> {enrollment.metadata?.orientation ? 'Edit Jadwal' : 'Atur Jadwal'}
+                                    </button>
+                                )}
+                            </div>
+
+                            {isEditingOrientation ? (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Tanggal Orientasi</label>
+                                            <input
+                                                type="date"
+                                                value={orientationForm.date}
+                                                onChange={(e) => setOrientationForm(prev => ({ ...prev, date: e.target.value }))}
+                                                className="w-full mt-1 px-3 py-2 text-xs font-semibold text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl focus:border-indigo-500 outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Waktu / Jam</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. 08:00 - Selesai"
+                                                value={orientationForm.time}
+                                                onChange={(e) => setOrientationForm(prev => ({ ...prev, time: e.target.value }))}
+                                                className="w-full mt-1 px-3 py-2 text-xs font-semibold text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl focus:border-indigo-500 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Lokasi / Tempat</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Aula Utama MBS Tanggul"
+                                            value={orientationForm.location}
+                                            onChange={(e) => setOrientationForm(prev => ({ ...prev, location: e.target.value }))}
+                                            className="w-full mt-1 px-3 py-2 text-xs font-semibold text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl focus:border-indigo-500 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Catatan Tambahan / Perlengkapan</label>
+                                        <textarea
+                                            placeholder="e.g. Membawa alat tulis, memakai seragam sekolah asal..."
+                                            value={orientationForm.notes}
+                                            onChange={(e) => setOrientationForm(prev => ({ ...prev, notes: e.target.value }))}
+                                            rows={2}
+                                            className="w-full mt-1 px-3 py-2 text-xs font-semibold text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl focus:border-indigo-500 outline-none resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditingOrientation(false)}
+                                            disabled={savingOrientation}
+                                            className="h-8 px-4 rounded-lg text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all"
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                setSavingOrientation(true)
+                                                const success = await onUpdateOrientation?.(enrollment, orientationForm)
+                                                if (success) {
+                                                    setIsEditingOrientation(false)
+                                                }
+                                                setSavingOrientation(false)
+                                            }}
+                                            disabled={savingOrientation}
+                                            className="h-8 px-4 rounded-lg bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                                        >
+                                            {savingOrientation ? (
+                                                <>
+                                                    <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                                                    <span>Menyimpan...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FontAwesomeIcon icon={faCheckCircle} />
+                                                    <span>Simpan</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : enrollment.metadata?.orientation ? (
+                                <div className="space-y-2.5">
+                                    <div className="grid grid-cols-2 gap-4 bg-[var(--color-surface-alt)]/40 p-3 rounded-xl border border-[var(--color-border)]/50">
+                                        <div>
+                                            <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Tanggal & Waktu</p>
+                                            <p className="text-xs font-black text-[var(--color-text)] mt-1">
+                                                {enrollment.metadata.orientation.date ? new Date(enrollment.metadata.orientation.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-indigo-600 mt-0.5">{enrollment.metadata.orientation.time || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Lokasi / Tempat</p>
+                                            <p className="text-xs font-black text-[var(--color-text)] mt-1 truncate" title={enrollment.metadata.orientation.location}>
+                                                {enrollment.metadata.orientation.location || '-'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {enrollment.metadata.orientation.notes && (
+                                        <div className="text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+                                            <span className="font-bold text-[var(--color-text)]">Catatan/Perlengkapan:</span> {enrollment.metadata.orientation.notes}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Action Buttons */}
+                                    <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-border)]/40">
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                setSendingOrientationWa(true)
+                                                await onSendOrientationNotification?.(enrollment)
+                                                setSendingOrientationWa(false)
+                                            }}
+                                            disabled={sendingOrientationWa}
+                                            className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest shadow-sm shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-1.5"
+                                        >
+                                            {sendingOrientationWa ? (
+                                                <>
+                                                    <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                                                    <span>Mengirim...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FontAwesomeIcon icon={faBell} />
+                                                    <span>Kirim Jadwal via WA</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-4">
+                                    <p className="text-[11px] text-[var(--color-text-muted)] opacity-60 mb-2.5">Belum ada jadwal Orientasi / MOS yang diatur.</p>
+                                    {canEdit && (
+                                        <button
+                                            onClick={() => {
+                                                setOrientationForm({ date: '', time: '', location: '', notes: '' })
+                                                setIsEditingOrientation(true)
+                                            }}
+                                            className="px-4 py-2 rounded-xl border border-dashed border-indigo-500/40 text-[10px] font-bold text-indigo-600 bg-indigo-500/[0.02] hover:bg-indigo-500/[0.06] hover:border-indigo-500/60 transition-all inline-flex items-center gap-1.5"
+                                        >
+                                            <FontAwesomeIcon icon={faCalendarDay} className="text-[9px]" /> Buat Jadwal Orientasi
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Wawancara & Seleksi */}
                     {enrollment.interview && (

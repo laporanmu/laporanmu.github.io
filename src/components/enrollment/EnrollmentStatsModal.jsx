@@ -5,7 +5,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faChartPie, faUsers, faVenusMars, faGraduationCap, faSchool, faWaveSquare, faCheckCircle, faFilter, faCalendarDays, faPercent,
-    faChevronRight, faPrint, faInbox
+    faChevronRight, faPrint, faInbox, faFileExcel, faMapMarkerAlt
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import RichSelect from '../ui/RichSelect'
@@ -39,7 +39,10 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
                 statusData: [],
                 waveQuotaData: [],
                 schoolData: [],
-                dailyData: []
+                dailyData: [],
+                cityData: [],
+                uniqueCitiesCount: 0,
+                uniqueSchoolsCount: 0
             }
         }
 
@@ -156,6 +159,38 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
 
         const uniqueSchoolsCount = new Set(filteredEnrollments.map(e => e.school_origin).filter(Boolean)).size
 
+        // 5. Sebaran Wilayah parsing (Treemap or horizontal bar chart data)
+        const citiesList = ['jember', 'banyuwangi', 'lumajang', 'bondowoso', 'situbondo', 'probolinggo', 'malang', 'surabaya', 'sidoarjo', 'pasuruan', 'jombang', 'nanjuk', 'kediri', 'blitar', 'madiun']
+        const cityMap = {}
+        filteredEnrollments.forEach(e => {
+            const addr = (e.address || '').toLowerCase()
+            const school = (e.school_origin || '').toLowerCase()
+            let matchedCity = 'Lainnya'
+            for (const city of citiesList) {
+                if (addr.includes(city) || school.includes(city)) {
+                    matchedCity = city.charAt(0).toUpperCase() + city.slice(1)
+                    break
+                }
+            }
+            if (matchedCity === 'Lainnya' && (addr.includes('tanggul') || school.includes('tanggul'))) {
+                matchedCity = 'Jember'
+            }
+            cityMap[matchedCity] = (cityMap[matchedCity] || 0) + 1
+        })
+        
+        // Define color schemes for cities
+        const cityColors = ['#4f46e5', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#64748b']
+        const cityData = Object.keys(cityMap)
+            .map((name, index) => ({
+                name,
+                value: cityMap[name],
+                color: cityColors[index % cityColors.length]
+            }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5) // Limit top 5 cities for display
+
+        const uniqueCitiesCount = Object.keys(cityMap).length
+
         return {
             total,
             funnel,
@@ -164,12 +199,77 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
             waveQuotaData,
             schoolData,
             dailyData,
-            uniqueSchoolsCount
+            uniqueSchoolsCount,
+            cityData,
+            uniqueCitiesCount
         }
     }, [filteredEnrollments, enrollments, waves, selectedWave])
 
     const handlePrint = () => {
         window.print()
+    }
+
+    const handleExportExcel = async () => {
+        try {
+            const XLSX = await import('xlsx')
+            
+            // 1. Prepare Summary Sheet Data
+            const summaryRows = [
+                ['RINGKASAN STATISTIK PENDAFTARAN (PSB)'],
+                ['Gelombang:', selectedWave === 'all' ? 'Semua Gelombang' : (waves.find(w => String(w.id) === String(selectedWave))?.name || selectedWave)],
+                ['Tanggal Cetak:', new Date().toLocaleString('id-ID')],
+                [],
+                ['METRIK UTAMA', 'JUMLAH'],
+                ['Total Pendaftar', stats.total],
+                ['Pendaftar Terverifikasi', stats.funnel.verified],
+                ['Mengikuti Tes Seleksi', stats.funnel.test],
+                ['Diterima', stats.funnel.accepted],
+                [],
+                ['DISTRIBUSI STATUS', 'JUMLAH'],
+                ...stats.statusData.map(s => [s.name, s.value]),
+                [],
+                ['SEKOLAH ASAL TERPOPULER', 'JUMLAH'],
+                ...stats.schoolData.map(s => [s.name, s['Jumlah']]),
+                [],
+                ['SEBARAN WILAYAH (KOTA ASAL)', 'JUMLAH'],
+                ...stats.cityData.map(c => [c.name, c.value]),
+            ]
+            
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows)
+            
+            // 2. Prepare Detailed Enrollment List Sheet
+            const detailHeaders = [
+                'No. Registrasi', 'Nama Lengkap', 'Jenis Kelamin', 'NISN', 
+                'Sekolah Asal', 'No. HP', 'Program Pilihan', 'Tingkat Quran', 
+                'Hafalan (Juz)', 'Skor Tes', 'Status Pendaftaran', 'Gelombang'
+            ]
+            const detailRows = filteredEnrollments.map(e => [
+                e.registration_number,
+                e.name,
+                e.gender === 'L' ? 'Putra' : 'Putri',
+                e.nisn || '-',
+                e.school_origin || '-',
+                e.phone || '-',
+                e.program === 'boarding' ? 'Boarding' : 'Reguler',
+                e.quran_level || '-',
+                e.hafalan_quran || 0,
+                e.test_score || '-',
+                e.status,
+                e.waveName || '-'
+            ])
+            const wsDetail = XLSX.utils.aoa_to_sheet([detailHeaders, ...detailRows])
+            
+            // Create workbook and append sheets
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Ringkasan Statistik')
+            XLSX.utils.book_append_sheet(wb, wsDetail, 'Daftar Calon Santri')
+            
+            // Write file
+            const waveSlug = selectedWave === 'all' ? 'semua' : selectedWave
+            XLSX.writeFile(wb, `Laporan_Statistik_PSB_${waveSlug}_${Date.now()}.xlsx`)
+        } catch (err) {
+            console.error('Failed to export Excel:', err)
+        }
     }
 
     if (!isOpen) return null
@@ -189,13 +289,22 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
             mobileVariant="bottom-sheet"
             footer={
                 <div className="flex justify-between items-center w-full print:hidden">
-                    <button
-                        onClick={handlePrint}
-                        className="h-10 px-4 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-2"
-                    >
-                        <FontAwesomeIcon icon={faPrint} />
-                        Cetak Laporan
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handlePrint}
+                            className="h-10 px-4 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-2"
+                        >
+                            <FontAwesomeIcon icon={faPrint} />
+                            Cetak Laporan
+                        </button>
+                        <button
+                            onClick={handleExportExcel}
+                            className="h-10 px-4 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all flex items-center gap-2"
+                        >
+                            <FontAwesomeIcon icon={faFileExcel} />
+                            Ekspor Excel
+                        </button>
+                    </div>
                     <button
                         onClick={onClose}
                         className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-border)] transition-all"
@@ -614,6 +723,35 @@ export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, wav
                                             <Bar dataKey="Jumlah" fill="#3b82f6" radius={[8, 8, 0, 0]} maxBarSize={32}>
                                                 {stats.schoolData.map((entry, idx) => (
                                                     <Cell key={`cell-${idx}`} fill={idx === 0 ? '#4f46e5' : '#3b82f6'} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 5. Sebaran Wilayah Asal Santri (Horizontal Bar Chart) */}
+                        <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm flex flex-col">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                    Sebaran Wilayah (Top Kota/Kab) <span className="text-[9px] text-indigo-600 font-extrabold normal-case ml-1.5">(Dari Total {stats.uniqueCitiesCount || 0} Daerah)</span>
+                                </span>
+                                <FontAwesomeIcon icon={faMapMarkerAlt} className="text-rose-500 text-xs" />
+                            </div>
+                            <div className="h-44 relative">
+                                {!stats.cityData || stats.cityData.length === 0 ? (
+                                    <div className="h-full flex items-center justify-center text-[10px] text-[var(--color-text-muted)] italic">Belum ada data wilayah</div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={stats.cityData} layout="vertical" margin={{ left: -10, right: 10, top: 5, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.2} horizontal={false} />
+                                            <XAxis type="number" stroke="var(--color-text-muted)" fontSize={8.5} fontWeight="bold" tickLine={false} />
+                                            <YAxis dataKey="name" type="category" stroke="var(--color-text)" fontSize={8.5} fontWeight="extrabold" tickLine={false} width={80} />
+                                            <Tooltip contentStyle={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', fontSize: 10 }} />
+                                            <Bar dataKey="value" fill="#4f46e5" radius={[0, 8, 8, 0]} maxBarSize={20}>
+                                                {stats.cityData.map((entry, idx) => (
+                                                    <Cell key={`cell-${idx}`} fill={entry.color} />
                                                 ))}
                                             </Bar>
                                         </BarChart>

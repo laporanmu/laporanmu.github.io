@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
 import {
-    ENROLLMENT_STATUS, getStatusConfig
+    ENROLLMENT_STATUS, getStatusConfig, REQUIRED_DOCUMENTS
 } from '../../utils/enrollment/enrollmentConstants'
 
 const STATUS_ORDER = {
@@ -33,6 +33,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     const [filterStatus, setFilterStatus] = useState('')
     const [filterGender, setFilterGender] = useState('')
     const [filterProgram, setFilterProgram] = useState('')
+    const [filterDateFrom, setFilterDateFrom] = useState('')
+    const [filterDateTo, setFilterDateTo] = useState('')
     const [sortBy, setSortBy] = useState('date_desc')
 
     // ── PAGINATION ──
@@ -53,6 +55,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     const [enrollmentToDelete, setEnrollmentToDelete] = useState(null)
     const [selectedIds, setSelectedIds] = useState([])
     const [submitting, setSubmitting] = useState(false)
+    const [uploadingPhoto, setUploadingPhoto] = useState(false)
+    const [sendingReminders, setSendingReminders] = useState(false)
     const [convertingEnrollment, setConvertingEnrollment] = useState(null)
     const [converting, setConverting] = useState(false)
 
@@ -69,7 +73,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     }, [searchQuery])
 
     // Reset page on filter change
-    useEffect(() => { setPage(1) }, [debouncedSearch, filterWave, filterStatus, filterGender, filterProgram, sortBy])
+    useEffect(() => { setPage(1) }, [debouncedSearch, filterWave, filterStatus, filterGender, filterProgram, sortBy, filterDateFrom, filterDateTo])
 
     // ── GLOBAL STATS & PIPELINE ──
     const [globalStats, setGlobalStats] = useState({
@@ -89,8 +93,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
     }, [globalStats])
 
     const activeFilterCount = useMemo(() =>
-        [filterWave, filterStatus, filterGender, filterProgram, debouncedSearch].filter(Boolean).length
-        , [filterWave, filterStatus, filterGender, filterProgram, debouncedSearch])
+        [filterWave, filterStatus, filterGender, filterProgram, debouncedSearch, filterDateFrom, filterDateTo].filter(Boolean).length
+        , [filterWave, filterStatus, filterGender, filterProgram, debouncedSearch, filterDateFrom, filterDateTo])
 
     const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds])
     const selectedEnrollments = useMemo(() =>
@@ -168,6 +172,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             if (filterStatus) q = q.eq('status', filterStatus)
             if (filterGender) q = q.eq('gender', filterGender)
             if (filterProgram) q = q.eq('program', filterProgram)
+            if (filterDateFrom) q = q.gte('created_at', filterDateFrom)
+            if (filterDateTo) q = q.lte('created_at', filterDateTo + 'T23:59:59')
 
             if (debouncedSearch) {
                 const s = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')
@@ -242,7 +248,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         } finally {
             setLoading(false)
         }
-    }, [page, pageSize, filterWave, filterStatus, filterGender, filterProgram, sortBy, debouncedSearch, fetchWaves, addToast])
+    }, [page, pageSize, filterWave, filterStatus, filterGender, filterProgram, filterDateFrom, filterDateTo, sortBy, debouncedSearch, fetchWaves, addToast])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -601,6 +607,88 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         }
     }
 
+    const handleSendDocumentReminders = useCallback(async () => {
+        setSendingReminders(true)
+        try {
+            // Fetch all active enrollments in 'mendaftar' status
+            const { data, error } = await supabase
+                .from('enrollments')
+                .select('*')
+                .eq('status', 'mendaftar')
+                .is('metadata->>deleted_at', null)
+            
+            if (error) throw error
+            
+            // Filter ones with incomplete documents (< 100%)
+            const targets = (data || []).filter(e => {
+                const meta = e.metadata || {}
+                const docs = meta.documents || {}
+                const presentCount = REQUIRED_DOCUMENTS.filter(d => docs[d.id]).length
+                return presentCount < REQUIRED_DOCUMENTS.length
+            })
+            
+            if (targets.length === 0) {
+                addToast('Tidak ada pendaftar berstatus "Mendaftar" dengan dokumen belum lengkap.', 'info')
+                return { count: 0, sent: 0 }
+            }
+            
+            let sentCount = 0
+            for (const t of targets) {
+                const phone = t.phone || t.metadata?.father_phone || t.metadata?.mother_phone
+                if (!phone) continue
+                
+                const missingDocs = REQUIRED_DOCUMENTS
+                    .filter(d => !t.metadata?.documents?.[d.id])
+                    .map(d => `- ${d.name}`)
+                    .join('\n')
+                
+                const reg = t.registration_number || `PSB-${new Date(t.created_at).getFullYear()}-${String(t.id).slice(0, 4).toUpperCase()}`
+                const msg = `Assalamualaikum Wr. Wb.\n\nYth. Wali dari *${t.name}*,\n\nKami menginfokan bahwa dokumen pendaftaran untuk nomor pendaftaran *${reg}* belum lengkap.\n\n*Dokumen yang kurang:*\n${missingDocs}\n\nMohon segera melengkapi dokumen di atas untuk melanjutkan proses verifikasi.\n\nTerima kasih.`
+                
+                let cleanPhone = phone.replace(/[^0-9]/g, '')
+                if (cleanPhone.startsWith('0')) {
+                    cleanPhone = '62' + cleanPhone.slice(1)
+                }
+                
+                const sent = await sendFonnteMessage(cleanPhone, msg)
+                if (sent) sentCount++
+                
+                // Add log audit trail to each targeted student
+                const oldMeta = t.metadata || {}
+                const oldHistory = oldMeta.history || []
+                const newHistory = [
+                    ...oldHistory,
+                    {
+                        date: new Date().toISOString(),
+                        action: 'Kirim Pengingat Berkas',
+                        user: 'System Scheduler',
+                        notes: 'Pengingat dokumen kurang dikirim via WhatsApp Fonnte'
+                    }
+                ]
+                
+                await supabase
+                    .from('enrollments')
+                    .update({
+                        metadata: {
+                            ...oldMeta,
+                            history: newHistory
+                        }
+                    })
+                    .eq('id', t.id)
+            }
+            
+            addToast(`Berhasil mengirimkan ${sentCount} pengingat dokumen kurang via WhatsApp.`, 'success')
+            fetchData()
+            return { count: targets.length, sent: sentCount }
+        } catch (err) {
+            console.error('[useEnrollmentCore] Send document reminders error:', err)
+            addToast('Gagal mengirimkan pengingat dokumen', 'error')
+            return { count: 0, sent: 0 }
+        } finally {
+            setSendingReminders(false)
+        }
+    }, [addToast, fetchData])
+
     const triggerNotification = useCallback(async (enrollment, newStatus) => {
         const phone = enrollment.phone || enrollment.father_phone || enrollment.mother_phone
         if (!phone) return
@@ -777,6 +865,105 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
             return false
         }
     }, [addToast, fetchData])
+
+    const updateOrientation = useCallback(async (enrollment, orientationData) => {
+        try {
+            const meta = enrollment.metadata || {}
+            const nextMeta = { ...meta, orientation: orientationData }
+
+            const { error } = await supabase
+                .from('enrollments')
+                .update({ metadata: nextMeta })
+                .eq('id', enrollment.id)
+            if (error) throw error
+
+            addToast(`Jadwal Orientasi ${enrollment.name} berhasil disimpan`, 'success')
+
+            await logAudit({
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'enrollments', recordId: enrollment.id,
+                oldData: enrollment,
+                newData: { ...enrollment, metadata: nextMeta }
+            })
+
+            fetchData()
+
+            setSelectedEnrollment(prev => {
+                if (prev && prev.id === enrollment.id) {
+                    return { ...prev, metadata: nextMeta }
+                }
+                return prev
+            })
+
+            return true
+        } catch (err) {
+            console.error('[useEnrollmentCore] Save orientation error:', err)
+            addToast('Gagal menyimpan jadwal orientasi', 'error')
+            return false
+        }
+    }, [addToast, fetchData])
+
+    const sendOrientationNotification = useCallback(async (enrollment) => {
+        const phone = enrollment.phone || enrollment.metadata?.father_phone || enrollment.metadata?.mother_phone
+        if (!phone) {
+            addToast('Nomor HP wali santri tidak tersedia', 'warning')
+            return false
+        }
+
+        const orient = enrollment.metadata?.orientation || {}
+        if (!orient.date) {
+            addToast('Jadwal orientasi belum diset', 'warning')
+            return false
+        }
+
+        const dateFormatted = new Date(orient.date).toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        })
+
+        const reg = enrollment.registration_number || ''
+        const msg = `Assalamualaikum Wr. Wb.\n\nYth. Wali dari *${enrollment.name}*,\n\nBerikut adalah jadwal Orientasi / Masa Pengenalan Sekolah (MOS) untuk nomor pendaftaran *${reg}*:\n\n📅 *Hari/Tanggal:* ${dateFormatted}\n⏰ *Waktu:* ${orient.time || '-'}\n📍 *Tempat/Lokasi:* ${orient.location || '-'}\n📝 *Keperluan/Catatan:* ${orient.notes || '-'}\n\nMohon hadir tepat waktu sesuai jadwal di atas. Terima kasih.`
+
+        let cleanPhone = phone.replace(/[^0-9]/g, '')
+        if (cleanPhone.startsWith('0')) {
+            cleanPhone = '62' + cleanPhone.slice(1)
+        }
+
+        // Try Fonnte
+        const sent = await sendFonnteMessage(cleanPhone, msg)
+        if (sent) {
+            addToast('Jadwal Orientasi berhasil dikirim via WhatsApp Fonnte', 'success')
+            
+            // Add audit log for reminder sent
+            const oldMeta = enrollment.metadata || {}
+            const oldHistory = oldMeta.history || []
+            const newHistory = [
+                ...oldHistory,
+                {
+                    date: new Date().toISOString(),
+                    action: 'Kirim Jadwal Orientasi',
+                    user: 'Panitia Pusat',
+                    notes: `Jadwal orientasi dikirim via WhatsApp: ${orient.date} ${orient.time}`
+                }
+            ]
+            await supabase
+                .from('enrollments')
+                .update({ metadata: { ...oldMeta, history: newHistory } })
+                .eq('id', enrollment.id)
+                
+            fetchData()
+            setSelectedEnrollment(prev => prev ? { ...prev, metadata: { ...oldMeta, history: newHistory } } : prev)
+            return true
+        } else {
+            // Fallback to WhatsApp Web
+            const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`
+            window.open(url, '_blank')
+            addToast('Membuka WhatsApp Web untuk mengirim Jadwal Orientasi', 'info')
+            return true
+        }
+    }, [addToast, fetchData])
+
 
     const updatePaymentStatus = useCallback(async (enrollment, type, status, proofUrl = null) => {
         try {
@@ -1200,6 +1387,34 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         }
     }, [selectedIds, selectedEnrollments, addToast, fetchData, triggerNotification, checkForWaitingListPromotion])
 
+    // ── PHOTO UPLOAD ──
+    const handlePhotoUpload = useCallback(async (file) => {
+        if (!file) return null
+        setUploadingPhoto(true)
+        try {
+            const fileName = `enrollment_${Date.now()}.${file.name?.split('.').pop() || 'jpg'}`
+            const { error } = await supabase.storage.from('enrollment-photos').upload(fileName, file)
+            if (error) throw error
+            const { data } = supabase.storage.from('enrollment-photos').getPublicUrl(fileName)
+            return data.publicUrl
+        } catch (err) {
+            console.error('[useEnrollmentCore] Photo upload error:', err)
+            // Fallback to student-photo if bucket not found or failed
+            try {
+                const fileName = `enrollment_${Date.now()}.${file.name?.split('.').pop() || 'jpg'}`
+                const { error } = await supabase.storage.from('student-photo').upload(fileName, file)
+                if (error) throw error
+                const { data } = supabase.storage.from('student-photo').getPublicUrl(fileName)
+                return data.publicUrl
+            } catch (fallbackErr) {
+                console.error('[useEnrollmentCore] Fallback photo upload error:', fallbackErr)
+                return null
+            }
+        } finally {
+            setUploadingPhoto(false)
+        }
+    }, [])
+
     // ── FILTER RESET ──
     const resetAllFilters = useCallback(() => {
         setSearchQuery('')
@@ -1207,6 +1422,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         setFilterStatus('')
         setFilterGender('')
         setFilterProgram('')
+        setFilterDateFrom('')
+        setFilterDateTo('')
         setSortBy('date_desc')
         setPage(1)
     }, [])
@@ -1229,6 +1446,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         filterStatus, setFilterStatus,
         filterGender, setFilterGender,
         filterProgram, setFilterProgram,
+        filterDateFrom, setFilterDateFrom,
+        filterDateTo, setFilterDateTo,
         sortBy, setSortBy,
         activeFilterCount,
         resetAllFilters,
@@ -1255,6 +1474,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         selectedEnrollments,
         allSelected,
         submitting,
+        uploadingPhoto,
+        sendingReminders,
         convertingEnrollment, setConvertingEnrollment,
         converting,
         classes,
@@ -1265,7 +1486,7 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         handleAdd, handleEdit, handleViewProfile,
         closeModal, closeForm, closeProfile,
         handleSubmit, confirmDelete, executeDelete,
-        updateStatus, handleAssessmentSubmit, updateNotes, updatePaymentStatus,
+        updateStatus, handleAssessmentSubmit, updateNotes, updatePaymentStatus, updateOrientation, sendOrientationNotification,
         toggleSelectAll, toggleSelect,
         handleBulkApprove, handleBulkReject,
         fetchArchivedEnrollments,
@@ -1275,6 +1496,8 @@ export function useEnrollmentCore({ addToast, addUndoToast }) {
         handleBulkStatusChange,
         handleConvertToStudent,
         generateCode,
+        handlePhotoUpload,
+        handleSendDocumentReminders,
 
         // Refs
         searchInputRef,
