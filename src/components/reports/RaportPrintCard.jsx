@@ -86,6 +86,19 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
         }
     }
 
+    const getVerificationUrl = () => {
+        const origin = window.location.origin;
+        const host = window.location.hostname;
+        
+        // Jika sedang running lokal (development), arahkan ke domain live github.io agar HP bisa men-scan link publik.
+        if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.')) {
+            return `https://laporanmu.github.io/verify?no=${getReportNumber()}`;
+        }
+        
+        // Di production (laporanmu.github.io atau custom domain baru laporanmu.com), otomatis pakai domain yang aktif.
+        return `${origin}/verify?no=${getReportNumber()}`;
+    }
+
     const getReportNumber = () => {
         if (student?.metadata?.nomor_raport) return student.metadata.nomor_raport;
         if (extra?.nomor_raport) return extra.nomor_raport;
@@ -505,9 +518,9 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&format=svg&ecc=L&qzone=1&data=${encodeURIComponent(`${window.location.origin}/verify/raport?student=${student?.id}&no=${getReportNumber()}`)}`}
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&format=svg&ecc=L&qzone=1&data=${encodeURIComponent(getVerificationUrl())}`}
                         alt="Verification QR"
-                        style={{ width: '42px', height: '42px', display: 'block', mixBlendMode: 'multiply' }}
+                        style={{ width: '42px', height: '42px', display: 'block', backgroundColor: '#fff', padding: '2px', border: '1px solid #eee', borderRadius: '4px' }}
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', textAlign: isAr ? 'right' : 'left', lineHeight: 1.2 }}>
                         <span style={{ fontWeight: 700, color: '#555' }}>{isAr ? 'بوابة LaporanMu الأكاديمية' : 'LaporanMu Academic Portal'}</span>
