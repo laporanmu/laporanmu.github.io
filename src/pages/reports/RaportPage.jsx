@@ -215,7 +215,7 @@ export default function RaportPage() {
     saveAllRef.current = saveAll
     const [showTutorialModal, setShowTutorialModal] = useState(false)
     const [showTemplatePreviewModal, setShowTemplatePreviewModal] = useState(false)
-    const [pageSize, setPageSize] = useState('a4') // 'a4' | 'f4'
+    const [pageSize, setPageSize] = useState('f4') // 'a4' | 'f4'
     const [previewZoom, setPreviewZoom] = useState(1) // 0.8 = 80% zoom out
     const [isFullScreenPreview, setIsFullScreenPreview] = useState(false)
     const [fullScreenZoom, setFullScreenZoom] = useState(1) // zoom khusus fullscreen
@@ -1066,7 +1066,7 @@ export default function RaportPage() {
                 const cls = clsMap[stu.class_id]; if (!cls) continue
                 const isBoarding = (cls.name || '').toLowerCase().includes('boarding') || (cls.name || '').toLowerCase().includes('pondok') || (cls.major || '').toLowerCase().includes('boarding')
                 const key = `${cls.id}__${row.month}__${row.year}`
-                if (!grouped[key]) grouped[key] = { key, class_id: cls.id, class_name: cls.name, month: row.month, year: row.year, musyrif: row.musyrif_name, count: 0, completed: 0, lang: isBoarding ? 'ar' : 'id' }
+                if (!grouped[key]) grouped[key] = { key, class_id: cls.id, class_name: cls.name, month: row.month, year: row.year, musyrif: row.musyrif_name, count: 0, completed: 0, lang: 'id' }
                 grouped[key].count++
                 const hasAllMainScores = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
                     .every(k => row[k] !== '' && row[k] !== null && row[k] !== undefined)
@@ -1602,7 +1602,7 @@ export default function RaportPage() {
                                     <div className="flex items-center gap-1 shrink-0 ml-1 h-full pl-2 border-l border-[var(--color-border)]/50">
                                         <button
                                             onClick={async () => {
-                                                const m = now.getMonth() + 1, y = now.getFullYear(), l = isBoarding ? 'ar' : 'id'
+                                                const m = now.getMonth() + 1, y = now.getFullYear(), l = 'id'
                                                 setSelectedClassId(cls.id); setSelectedMonth(m); setSelectedYear(y); setLang(l)
                                                 const ok = await loadStudents(cls.id, m, y, l); if (ok) setStep(2)
                                             }}
@@ -1787,7 +1787,7 @@ export default function RaportPage() {
                                 const cls = classesList.find(c => c.id === tempSelectedClassId)
                                 const isBoarding = (cls?.name || '').toLowerCase().includes('boarding') || (cls?.name || '').toLowerCase().includes('pondok')
                                 setSelectedClassId(tempSelectedClassId)
-                                setLang(isBoarding ? 'ar' : 'id')
+                                setLang('id')
                                 if (cls?.metadata?.homeroom_teacher) setMusyrif(cls.metadata.homeroom_teacher)
                             }}
                             className={`flex-1 h-12 rounded-2xl text-white text-xs sm:text-sm font-black shadow-lg transition-all flex items-center justify-center gap-2 overflow-hidden px-2
@@ -3052,7 +3052,7 @@ export default function RaportPage() {
                 {printQueue.length > 0 && (
                     <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
                         {printStudents.filter(s => printQueue.includes(s.id)).map(s => (
-                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} onRendered={() => setPrintRenderedCount(c => c + 1)} />
+                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} studentIndex={printStudents.findIndex(x => x.id === s.id) + 1} onRendered={() => setPrintRenderedCount(c => c + 1)} />
                         ))}
                     </div>
                 )}
@@ -3553,6 +3553,7 @@ export default function RaportPage() {
                                                         settings={settings}
                                                         pageSize={pageSize}
                                                         catatanArab={fsCatatanArab}
+                                                         studentIndex={fsStudentsList.findIndex(s => s.id === fsStudent?.id) + 1}
                                                     />
                                                 )}
                                             </div>

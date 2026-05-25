@@ -141,22 +141,202 @@ export default function RaportInputTable({
     return (
         <div className="space-y-4">
             {/* ── TOOLBAR CONTAINER ── */}
-            <div className="pt-2 pb-3 space-y-3 mb-2">
-                {/* ── ROW 1: Context + Progress + Actions ── */}
-                <div className="w-full flex flex-wrap items-center justify-between gap-3 gap-y-4">
-                    {/* Left: Context */}
-                    <div className="flex-1 flex flex-wrap items-center gap-2">
+            {/* ── MOBILE TOOLBAR (md:hidden) ── */}
+            <div className="md:hidden space-y-2">
+                {/* Row 1: Header (Back + Class Title + Mobile Actions) */}
+                <div className="flex items-center gap-1.5 w-full">
+                    <button onClick={() => {
+                        if (hasUnsavedMemo) {
+                            setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
+                            return
+                        }
+                        setStep(0); setSelectedClassId('')
+                    }} className="h-8 w-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center justify-center shrink-0">
+                        <FontAwesomeIcon icon={faArrowLeft} className="text-[10px]" />
+                    </button>
+                    <div className="flex-1 flex items-center gap-1 px-2 h-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden min-w-0">
+                        <FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-[9px] shrink-0" />
+                        <span className="text-[9px] font-black text-[var(--color-text)] truncate">{selectedClass?.name}</span>
+                        <span className="w-px h-2.5 bg-[var(--color-border)] mx-0.5 shrink-0" />
+                        <span className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase whitespace-nowrap shrink-0">
+                            {BULAN[selectedMonth - 1]?.id_str} {selectedYear} ({classStats.completed}/{classStats.total})
+                        </span>
+                    </div>
+                    <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-8 w-8 rounded-xl bg-emerald-500 text-white text-[10px] font-black hover:bg-emerald-600 flex items-center justify-center relative disabled:opacity-70 shrink-0">
+                        <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin' : ''} />
+                        {!savingAll && hasUnsavedMemo && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
+                    </button>
+                    <button onClick={() => setStep(3)} className="h-8 w-8 rounded-xl bg-indigo-500 text-white text-[10px] font-black hover:bg-indigo-600 flex items-center justify-center shrink-0">
+                        <FontAwesomeIcon icon={faPrint} />
+                    </button>
+                </div>
+
+                {/* Row 4: Search & Incomplete/WA filters */}
+                <div className="flex gap-1.5 w-full">
+                    <div className="relative flex-1 min-w-0">
+                        <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" />
+                        <input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
+                            className="h-8 w-full pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all" />
+                    </div>
+
+                    {classStats.incomplete > 0 && (
+                        <button
+                            onClick={() => { setShowIncompleteOnly(v => !v); setShowNoPhoneOnly(false) }}
+                            className={`h-8 px-3 rounded-xl border text-[10px] font-black flex items-center justify-center gap-1.5 transition-all shrink-0 ${showIncompleteOnly
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/10'
+                                : 'bg-amber-500/10 border-amber-500/20 text-amber-600'
+                                }`}
+                            title="Belum Lengkap"
+                        >
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
+                            <span>{classStats.incomplete}</span>
+                        </button>
+                    )}
+
+                    {noPhoneCount > 0 && (
+                        <button
+                            onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
+                            className={`h-8 px-3 rounded-xl border text-[10px] font-black flex items-center justify-center gap-1.5 transition-all shrink-0 ${showNoPhoneOnly
+                                ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-500/10'
+                                : 'bg-rose-500/10 border-rose-500/20 text-rose-600'
+                                }`}
+                            title="Tanpa WA"
+                        >
+                            <FontAwesomeIcon icon={faExclamation} className="text-[10px]" />
+                            <span>{noPhoneCount}</span>
+                        </button>
+                    )}
+                </div>
+
+                {/* Row 5: Actions Row (Consolidated & auto-fitted to width with icon-only buttons) */}
+                <div className="grid grid-cols-5 gap-1.5 w-full">
+                    <button
+                        onClick={() => {
+                            setBulkValues({})
+                            setIsBulkModalOpen(true)
+                        }}
+                        className="h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-600 flex items-center justify-center transition-all hover:bg-violet-500/20"
+                        title="Isi Massal"
+                    >
+                        <FontAwesomeIcon icon={faFillDrip} className="text-[11px]" />
+                    </button>
+
+                    <button 
+                        onClick={() => setIsExportModalOpen(true)} 
+                        className="h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 flex items-center justify-center transition-all hover:bg-indigo-500/20"
+                        title="Export Data"
+                    >
+                        <FontAwesomeIcon icon={faFileExport} className="text-[11px]" />
+                    </button>
+
+                    <button 
+                        onClick={() => {
+                            const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
+                            if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
+                        }} 
+                        className="h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center transition-all hover:bg-emerald-500/20"
+                        title="Blast WA"
+                    >
+                        <FontAwesomeIcon icon={faWhatsapp} className="text-[12px]" />
+                    </button>
+
+                    <button 
+                        onClick={() => {
+                            const hasCurrentScores = (studentId) => {
+                                const sc = scores[studentId];
+                                const ex = extras[studentId];
+                                const hasSc = sc && Object.values(sc).some(v => v !== null && v !== undefined && v !== '');
+                                const hasEx = ex && Object.values(ex).some(v => v !== null && v !== undefined && v !== '');
+                                return !!(hasSc || hasEx);
+                            };
+
+                            const hasPrevScores = (studentId) => {
+                                const s = prevMonthScores?.[studentId];
+                                if (!s) return false;
+                                return Object.values(s).some(v => v !== null && v !== undefined && v !== '');
+                            };
+
+                            const prevCount = students.filter(s => hasPrevScores(s.id)).length;
+                            const overwrittenStudents = students.filter(s => hasCurrentScores(s.id));
+                            const currentOverwriteCount = overwrittenStudents.length;
+
+                            setConfirmModal({
+                                title: 'Salin Data Bulan Lalu?',
+                                description: 'Data nilai bulan lalu akan disalin',
+                                body: (
+                                    <div className="space-y-3">
+                                        <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                            Nilai akademik, hafalan, fisik, dan catatan santri akan disalin dari bulan sebelumnya.
+                                        </p>
+                                        <div className="p-3 rounded-xl bg-slate-500/5 border border-[var(--color-border)]/50 text-[10px] text-[var(--color-text-muted)] font-bold">
+                                            Ditemukan data bulan lalu untuk <span className="font-black text-[var(--color-text)]">{prevCount}</span> dari <span className="font-black text-[var(--color-text)]">{students.length}</span> santri di kelas ini.
+                                        </div>
+                                        {prevCount === 0 && (
+                                            <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20 text-[10px] text-red-700 font-bold">
+                                                <span className="font-black text-red-800">Peringatan:</span> Tidak ditemukan data nilai bulan lalu untuk santri di kelas ini.
+                                            </div>
+                                        )}
+                                        {currentOverwriteCount > 0 && (
+                                            <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[10px] text-amber-700 font-bold">
+                                                <span className="font-black text-amber-800">Perhatian:</span> Ada <span className="font-black">{currentOverwriteCount} santri</span> yang nilainya sudah terisi di bulan ini dan akan <span className="font-black text-amber-800 uppercase tracking-wider">tertimpa</span>:
+                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                    {overwrittenStudents.map(s => (
+                                                        <span key={s.id} className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-800 text-[9px] font-black border border-amber-500/15">
+                                                            {s.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ),
+                                icon: faBolt,
+                                iconBg: 'bg-amber-500/10',
+                                iconColor: 'text-amber-600',
+                                variant: 'amber',
+                                confirmLabel: 'Ya, Salin Data',
+                                confirmIcon: faBolt,
+                                onConfirm: () => {
+                                    setConfirmModal(null)
+                                    copyFromLastMonth()
+                                }
+                            })
+                        }} 
+                        disabled={copyingLastMonth || !canEdit} 
+                        className="h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center transition-all hover:bg-amber-500/20 disabled:opacity-50"
+                        title="Salin Bulan Lalu"
+                    >
+                        <FontAwesomeIcon icon={copyingLastMonth ? faSpinner : faCopy} className={copyingLastMonth ? 'animate-spin' : ''} />
+                    </button>
+
+                    <button 
+                        onClick={handleResetClass} 
+                        disabled={!canEdit} 
+                        className="h-8 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 flex items-center justify-center transition-all hover:bg-red-500/20 disabled:opacity-50"
+                        title="Reset Kelas"
+                    >
+                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-[11px]" />
+                    </button>
+                </div>
+            </div>
+
+            {/* ── DESKTOP TOOLBAR (hidden md:block) ── */}
+            <div className="hidden md:block space-y-3">
+                {/* ROW 1: Context + Progress + Actions */}
+                <div className="w-full flex items-center gap-3">
+                    {/* Left Context: Back & Class Title */}
+                    <div className="flex items-center gap-2 min-w-0">
                         <button onClick={() => {
                             if (hasUnsavedMemo) {
                                 setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
                                 return
                             }
                             setStep(0); setSelectedClassId('')
-                        }} className="h-9 w-9 md:h-10 md:w-auto md:px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center justify-center md:gap-1.5 shrink-0">
+                        }} className="h-10 px-4 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-1.5 shrink-0">
                             <FontAwesomeIcon icon={faArrowLeft} className="text-[10px]" />
-                            <span className="hidden md:inline text-[10px] font-black uppercase tracking-wider">Ganti Kelas</span>
+                            <span className="text-[10px] font-black uppercase tracking-wider">Ganti Kelas</span>
                         </button>
-                        <div className="flex items-center gap-2 px-3 h-9 md:h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0 overflow-hidden">
+                        <div className="flex items-center gap-2 px-3 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0 overflow-hidden">
                             <FontAwesomeIcon icon={faSchool} className="text-emerald-500 text-[10px] shrink-0" />
                             <div className="flex items-center gap-1.5 truncate">
                                 <span className="text-[10px] font-black text-[var(--color-text)] whitespace-nowrap">{selectedClass?.name}</span>
@@ -164,17 +344,18 @@ export default function RaportInputTable({
                                 <span className="hidden sm:inline text-[9px] font-bold text-[var(--color-text-muted)] uppercase">{BULAN[selectedMonth - 1]?.id_str} {selectedYear}</span>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Wali Kelas / Musyrif Badge */}
+                    {/* Middle Stats Badges (stretches using flex-1 to fill horizontal space) */}
+                    <div className="flex-1 flex items-center gap-1.5 min-w-0">
                         {musyrif && (
-                            <div className="hidden sm:flex items-center gap-1.5 px-3 h-9 md:h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0">
+                            <div className="flex items-center gap-1.5 px-3 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0">
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                                 <span>Wali: <span className="text-[var(--color-text)] text-[10px] font-black">{musyrif}</span></span>
                             </div>
                         )}
 
-                        {/* Auto-save status indicator in toolbar */}
-                        <div className={`flex items-center gap-1.5 px-3 h-9 md:h-10 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all duration-300 shrink-0 ${globalSaveIndicator === 'saving'
+                        <div className={`flex items-center gap-1.5 px-3 h-10 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all duration-300 shrink-0 ${globalSaveIndicator === 'saving'
                             ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 shadow-sm animate-pulse'
                             : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-600'
                             }`}>
@@ -185,199 +366,181 @@ export default function RaportInputTable({
                             <span>{globalSaveIndicator === 'saving' ? 'Menyimpan...' : 'Autosave Aktif'}</span>
                         </div>
 
-                        {/* Progress (Desktop only) - Dynamic stretch to fill space */}
-                        <div className="hidden lg:flex flex-grow max-w-[320px] items-center gap-3 px-3 h-9 md:h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0">
+                        {/* Progress Bar (autofit flex element) */}
+                        <div className="hidden lg:flex flex-1 max-w-md items-center gap-3 px-3 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] min-w-0">
                             <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] overflow-hidden relative">
                                 <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
                             </div>
                             <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase whitespace-nowrap">{Math.round(progressPct)}%</span>
                         </div>
 
-                        {/* Rata-rata Kelas Badge */}
-                        <div className="hidden lg:flex items-center gap-1.5 px-3 h-9 md:h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
-                            <span>Rata-rata: <span className="text-[var(--color-primary)] text-[11px] font-black">{classStats.overallAverage}</span></span>
-                        </div>
-
-                        {/* Tuntas Badge */}
-                        <div className="hidden lg:flex items-center gap-1.5 px-3 h-9 md:h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0">
+                        <div className="flex items-center gap-1.5 px-3 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                             <span>Tuntas: <span className="text-emerald-500 text-[11px] font-black">{classStats.completed}/{classStats.total}</span></span>
                         </div>
                     </div>
 
-                    {/* Right: Primary Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-9 px-4 md:h-10 md:px-6 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 relative disabled:opacity-70 shrink-0">
+                    {/* Right Action buttons (pushed to end) */}
+                    <div className="flex items-center gap-2 shrink-0 ml-auto">
+                        <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-10 px-6 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 relative disabled:opacity-70 shrink-0">
                             <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin' : ''} />
-                            <span className="hidden md:inline">{savingAll ? 'Menyimpan...' : 'Simpan Semua'}</span>
+                            <span>{savingAll ? 'Menyimpan...' : 'Simpan Semua'}</span>
                             {!savingAll && hasUnsavedMemo && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
                         </button>
-                        <button onClick={() => setStep(3)} className="h-9 w-9 md:h-10 md:w-auto md:px-6 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center md:gap-2.5 shrink-0">
+                        <button onClick={() => setStep(3)} className="h-10 px-6 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center gap-2.5 shrink-0">
                             <FontAwesomeIcon icon={faPrint} />
-                            <span className="hidden md:inline text-[10px] uppercase font-black tracking-widest">Preview & Cetak</span>
+                            <span className="text-[10px] uppercase font-black tracking-widest">Preview & Cetak</span>
                         </button>
                     </div>
                 </div>
 
-                {/* ── ROW 2: Search + Filters + Exports ── */}
-                <div className="w-full max-w-full flex md:flex-row flex-col md:items-center gap-2">
-                    {/* Search & Nav (Compact Row) */}
-                    <div className="flex-1 flex items-center gap-2 w-full overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-                        {/* Navigation Guide (Desktop Only) */}
-                        <div className="hidden md:flex items-center gap-2 px-3 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                            <FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[10px]" />
-                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Navigasi:</span>
-                            <div className="flex items-center gap-1.5 ml-1">
-                                <span className="px-1.5 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px] font-bold">TAB/ENTER</span>
-                                <span className="text-[9px] font-bold text-[var(--color-text-muted)]">-</span>
-                                <div className="flex items-center gap-0.5">
-                                    <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">↑</span>
-                                    <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">↓</span>
-                                    <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">←</span>
-                                    <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">→</span>
-                                </div>
+                {/* ROW 2: Search + Filters + Exports */}
+                <div className="w-full flex items-center gap-3">
+                    {/* Left: Navigation Guide */}
+                    <div className="hidden md:flex items-center gap-2 px-3 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] shrink-0">
+                        <FontAwesomeIcon icon={faBolt} className="text-amber-500 text-[10px]" />
+                        <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Navigasi:</span>
+                        <div className="flex items-center gap-1.5 ml-1">
+                            <span className="px-1.5 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px] font-bold">TAB/ENTER</span>
+                            <span className="text-[9px] font-bold text-[var(--color-text-muted)]">-</span>
+                            <div className="flex items-center gap-0.5">
+                                <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">↑</span>
+                                <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">↓</span>
+                                <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">←</span>
+                                <span className="px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[8px]">→</span>
                             </div>
                         </div>
-
-                        {/* Search Bar */}
-                        <div className="relative flex-1 min-w-[200px]">
-                            <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" />
-                            <input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
-                                className="h-9 md:h-10 w-full pl-8 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all" />
-                        </div>
-
-                        {/* Filters (Incomplete & No WA) */}
-                        {classStats.incomplete > 0 && (
-                            <button
-                                onClick={() => { setShowIncompleteOnly(v => !v); setShowNoPhoneOnly(false) }}
-                                className={`h-9 md:h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0 ${showIncompleteOnly
-                                    ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/10'
-                                    : 'bg-amber-500/10 border-amber-500/20 text-amber-600 hover:bg-amber-500/20'
-                                    }`}
-                                title="Tampilkan santri yang nilainya belum lengkap"
-                            >
-                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
-                                <span className="hidden sm:inline">{classStats.incomplete} Belum Lengkap</span>
-                                <span className="sm:hidden">{classStats.incomplete}</span>
-                            </button>
-                        )}
-
-                        {noPhoneCount > 0 && (
-                            <button
-                                onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
-                                className={`h-9 md:h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0 ${showNoPhoneOnly
-                                    ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-500/10'
-                                    : 'bg-rose-500/10 border-rose-500/20 text-rose-600 hover:bg-rose-500/20'
-                                    }`}
-                                title="Tampilkan santri tanpa nomor WA"
-                            >
-                                <FontAwesomeIcon icon={faExclamation} className="text-[10px]" />
-                                <span className="hidden sm:inline">{noPhoneCount} Tanpa WA</span>
-                                <span className="sm:hidden">{noPhoneCount}</span>
-                            </button>
-                        )}
                     </div>
 
-                    {/* Tools & Exports */}
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-end gap-2 shrink-0">
-                        <div className="flex items-center gap-1.5 md:gap-2">
-                            <button
-                                onClick={() => {
-                                    setBulkValues({})
-                                    setIsBulkModalOpen(true)
-                                }}
-                                className="h-9 px-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-violet-500/25 shrink-0"
-                            >
-                                <FontAwesomeIcon icon={faFillDrip} className="text-[10px]" />
-                                <span>Isi Massal</span>
-                            </button>
-                        </div>
+                    {/* Search Bar */}
+                    <div className="relative flex-grow min-w-[200px] max-w-xl">
+                        <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[10px] pointer-events-none" />
+                        <input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
+                            className="h-10 w-full pl-8 pr-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all" />
+                    </div>
 
-                        <div className="hidden md:block w-px h-4 bg-[var(--color-border)] mx-1" />
+                    {/* Filters */}
+                    {classStats.incomplete > 0 && (
+                        <button
+                            onClick={() => { setShowIncompleteOnly(v => !v); setShowNoPhoneOnly(false) }}
+                            className={`h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0 ${showIncompleteOnly
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/10'
+                                : 'bg-amber-500/10 border-amber-500/20 text-amber-600 hover:bg-amber-500/20'
+                                }`}
+                            title="Tampilkan santri yang nilainya belum lengkap"
+                        >
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
+                            <span>{classStats.incomplete} Belum Lengkap</span>
+                        </button>
+                    )}
 
-                        {/* Export & Action Group */}
-                        <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto scrollbar-thin">
-                            <button onClick={() => setIsExportModalOpen(true)} className="h-9 px-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-indigo-500/20 shrink-0">
-                                <FontAwesomeIcon icon={faFileExport} className="text-[10px]" />
-                                <span>Export</span>
-                            </button>
-                            <button onClick={() => {
-                                const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
-                                if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
-                            }} className="h-9 px-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-green-500/20 shrink-0">
-                                <FontAwesomeIcon icon={faWhatsapp} className="text-[12px]" /> <span>Blast WA</span>
-                            </button>
-                            <button onClick={() => {
-                                const hasCurrentScores = (studentId) => {
-                                    const sc = scores[studentId];
-                                    const ex = extras[studentId];
-                                    const hasSc = sc && Object.values(sc).some(v => v !== null && v !== undefined && v !== '');
-                                    const hasEx = ex && Object.values(ex).some(v => v !== null && v !== undefined && v !== '');
-                                    return !!(hasSc || hasEx);
-                                };
+                    {noPhoneCount > 0 && (
+                        <button
+                            onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
+                            className={`h-10 px-3 rounded-xl border text-[10px] font-black flex items-center gap-1.5 transition-all shrink-0 ${showNoPhoneOnly
+                                ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-500/10'
+                                : 'bg-rose-500/10 border-rose-500/20 text-rose-600 hover:bg-rose-500/20'
+                                }`}
+                            title="Tampilkan santri tanpa nomor WA"
+                        >
+                            <FontAwesomeIcon icon={faExclamation} className="text-[10px]" />
+                            <span>{noPhoneCount} Tanpa WA</span>
+                        </button>
+                    )}
 
-                                const hasPrevScores = (studentId) => {
-                                    const s = prevMonthScores?.[studentId];
-                                    if (!s) return false;
-                                    return Object.values(s).some(v => v !== null && v !== undefined && v !== '');
-                                };
+                    {/* Divider */}
+                    <div className="w-px h-4 bg-[var(--color-border)] mx-1 shrink-0 ml-auto" />
 
-                                const prevCount = students.filter(s => hasPrevScores(s.id)).length;
-                                const overwrittenStudents = students.filter(s => hasCurrentScores(s.id));
-                                const currentOverwriteCount = overwrittenStudents.length;
+                    {/* Tools */}
+                    <button
+                        onClick={() => {
+                            setBulkValues({})
+                            setIsBulkModalOpen(true)
+                        }}
+                        className="h-9 px-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-violet-500/25 shrink-0"
+                    >
+                        <FontAwesomeIcon icon={faFillDrip} className="text-[10px]" />
+                        <span>Isi Massal</span>
+                    </button>
 
-                                setConfirmModal({
-                                    title: 'Salin Data Bulan Lalu?',
-                                    description: 'Data nilai bulan lalu akan disalin',
-                                    body: (
-                                        <div className="space-y-3">
-                                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                                                Nilai akademik, hafalan, fisik, dan catatan santri akan disalin dari bulan sebelumnya.
-                                            </p>
-                                            <div className="p-3 rounded-xl bg-slate-500/5 border border-[var(--color-border)]/50 text-[10px] text-[var(--color-text-muted)] font-bold">
-                                                Ditemukan data bulan lalu untuk <span className="font-black text-[var(--color-text)]">{prevCount}</span> dari <span className="font-black text-[var(--color-text)]">{students.length}</span> santri di kelas ini.
-                                            </div>
-                                            {prevCount === 0 && (
-                                                <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20 text-[10px] text-red-700 font-bold">
-                                                    <span className="font-black text-red-800">Peringatan:</span> Tidak ditemukan data nilai bulan lalu untuk santri di kelas ini.
-                                                </div>
-                                            )}
-                                            {currentOverwriteCount > 0 && (
-                                                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[10px] text-amber-700 font-bold">
-                                                    <span className="font-black text-amber-800">Perhatian:</span> Ada <span className="font-black">{currentOverwriteCount} santri</span> yang nilainya sudah terisi di bulan ini dan akan <span className="font-black text-amber-800 uppercase tracking-wider">tertimpa</span>:
-                                                    <div className="mt-2 flex flex-wrap gap-1">
-                                                        {overwrittenStudents.map(s => (
-                                                            <span key={s.id} className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-800 text-[9px] font-black border border-amber-500/15">
-                                                                {s.name}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
+                    <button onClick={() => setIsExportModalOpen(true)} className="h-9 px-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-indigo-500/20 shrink-0">
+                        <FontAwesomeIcon icon={faFileExport} className="text-[10px]" />
+                        <span>Export</span>
+                    </button>
+                    <button onClick={() => {
+                        const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
+                        if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
+                    }} className="h-9 px-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-green-500/20 shrink-0">
+                        <FontAwesomeIcon icon={faWhatsapp} className="text-[12px]" /> <span>Blast WA</span>
+                    </button>
+                    <button onClick={() => {
+                        const hasCurrentScores = (studentId) => {
+                            const sc = scores[studentId];
+                            const ex = extras[studentId];
+                            const hasSc = sc && Object.values(sc).some(v => v !== null && v !== undefined && v !== '');
+                            const hasEx = ex && Object.values(ex).some(v => v !== null && v !== undefined && v !== '');
+                            return !!(hasSc || hasEx);
+                        };
+
+                        const hasPrevScores = (studentId) => {
+                            const s = prevMonthScores?.[studentId];
+                            if (!s) return false;
+                            return Object.values(s).some(v => v !== null && v !== undefined && v !== '');
+                        };
+
+                        const prevCount = students.filter(s => hasPrevScores(s.id)).length;
+                        const overwrittenStudents = students.filter(s => hasCurrentScores(s.id));
+                        const currentOverwriteCount = overwrittenStudents.length;
+
+                        setConfirmModal({
+                            title: 'Salin Data Bulan Lalu?',
+                            description: 'Data nilai bulan lalu akan disalin',
+                            body: (
+                                <div className="space-y-3">
+                                    <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                        Nilai akademik, hafalan, fisik, dan catatan santri akan disalin dari bulan sebelumnya.
+                                    </p>
+                                    <div className="p-3 rounded-xl bg-slate-500/5 border border-[var(--color-border)]/50 text-[10px] text-[var(--color-text-muted)] font-bold">
+                                        Ditemukan data bulan lalu untuk <span className="font-black text-[var(--color-text)]">{prevCount}</span> dari <span className="font-black text-[var(--color-text)]">{students.length}</span> santri di kelas ini.
+                                    </div>
+                                    {prevCount === 0 && (
+                                        <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20 text-[10px] text-red-700 font-bold">
+                                            <span className="font-black text-red-800">Peringatan:</span> Tidak ditemukan data nilai bulan lalu untuk santri di kelas ini.
                                         </div>
-                                    ),
-                                    icon: faBolt,
-                                    iconBg: 'bg-amber-500/10',
-                                    iconColor: 'text-amber-600',
-                                    variant: 'amber',
-                                    confirmLabel: 'Ya, Salin Data',
-                                    confirmIcon: faBolt,
-                                    onConfirm: () => {
-                                        setConfirmModal(null)
-                                        copyFromLastMonth()
-                                    }
-                                })
-                            }} disabled={copyingLastMonth || !canEdit} className="h-9 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-amber-500/20 disabled:opacity-50 shrink-0">
-                                <FontAwesomeIcon icon={copyingLastMonth ? faSpinner : faCopy} className={copyingLastMonth ? 'animate-spin' : ''} />
-                                <span>Salin Bulan Lalu</span>
-                            </button>
-                            <button onClick={handleResetClass} disabled={!canEdit} className="h-9 px-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-red-500/20 disabled:opacity-50 shrink-0">
-                                <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
-                                <span>Reset Kelas</span>
-                            </button>
-                        </div>
-                    </div>
+                                    )}
+                                    {currentOverwriteCount > 0 && (
+                                        <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[10px] text-amber-700 font-bold">
+                                            <span className="font-black text-amber-800">Perhatian:</span> Ada <span className="font-black">{currentOverwriteCount} santri</span> yang nilainya sudah terisi di bulan ini dan akan <span className="font-black text-amber-800 uppercase tracking-wider">tertimpa</span>:
+                                            <div className="mt-2 flex flex-wrap gap-1">
+                                                {overwrittenStudents.map(s => (
+                                                    <span key={s.id} className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-800 text-[9px] font-black border border-amber-500/15">
+                                                        {s.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ),
+                            icon: faBolt,
+                            iconBg: 'bg-amber-500/10',
+                            iconColor: 'text-amber-600',
+                            variant: 'amber',
+                            confirmLabel: 'Ya, Salin Data',
+                            confirmIcon: faBolt,
+                            onConfirm: () => {
+                                setConfirmModal(null)
+                                copyFromLastMonth()
+                            }
+                        })
+                    }} disabled={copyingLastMonth || !canEdit} className="h-9 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-amber-500/20 disabled:opacity-50 shrink-0">
+                        <FontAwesomeIcon icon={copyingLastMonth ? faSpinner : faCopy} className={copyingLastMonth ? 'animate-spin' : ''} />
+                        <span>Salin Bulan Lalu</span>
+                    </button>
+                    <button onClick={handleResetClass} disabled={!canEdit} className="h-9 px-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-[10px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-red-500/20 disabled:opacity-50 shrink-0">
+                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-[10px]" />
+                        <span>Reset Kelas</span>
+                    </button>
                 </div>
             </div>
 
@@ -813,52 +976,44 @@ export default function RaportInputTable({
                     const onTouchEnd = (e) => { const dx = e.changedTouches[0].clientX - _touchStartX; if (dx < -50) goTo(safeIdx + 1); else if (dx > 50) goTo(safeIdx - 1) }
                     return (
                         <div>
-                            {/* Sticky nama + counter */}
-                            <div className="sticky top-0 z-20 flex items-center justify-between gap-2 px-3 py-2 mb-2 rounded-xl border bg-[var(--color-surface)] shadow-sm"
-                                style={{ borderColor: complete ? '#10b98130' : isDirty ? '#f59e0b30' : 'var(--color-border)' }}>
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] shrink-0">{safeIdx + 1}/{filteredStudents.length}</span>
-                                    <p className="text-[12px] font-black text-[var(--color-text)] truncate">{student.name}</p>
-                                </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                    {avg ? <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).uiColor }}>{avg}</span> : null}
-                                    {complete && <FontAwesomeIcon icon={faCircleCheck} className="text-[10px] text-emerald-500" />}
-                                    {isSaving && <FontAwesomeIcon icon={faSpinner} className="text-[9px] text-amber-500 animate-spin" />}
-                                    {!isSaving && isDirty && <span className="text-[8px] font-black text-amber-500">●</span>}
-                                    <button onClick={() => openStudentDetailDrawer(student)}
-                                        title="Histori semua raport santri ini"
-                                        className="h-7 w-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center hover:bg-indigo-500/20 transition-all">
-                                        <FontAwesomeIcon icon={faArrowTrendUp} className="text-[9px]" />
-                                    </button>
-                                </div>
-                            </div>
-
                             {/* Card dengan swipe gesture */}
                             <div className="rounded-2xl border bg-[var(--color-surface)] overflow-hidden transition-all"
                                 style={{ borderColor: complete ? '#10b98130' : isDirty ? '#f59e0b30' : 'var(--color-border)' }}
                                 onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-                                {/* Header */}
-                                <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]"
-                                    style={{ background: complete ? '#10b98008' : 'var(--color-surface-alt)' }}>
+                                {/* Sticky Header inside Card */}
+                                <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2.5 border-b bg-[var(--color-surface)] transition-all"
+                                    style={{ borderColor: complete ? '#10b98130' : 'var(--color-border)' }}>
                                     <input type="checkbox" checked={bulkSelected.has(student.id)}
                                         onChange={e => setBulkSelected(prev => { const n = new Set(prev); e.target.checked ? n.add(student.id) : n.delete(student.id); return n })}
                                         className="w-4 h-4 accent-violet-500 shrink-0 cursor-pointer" />
-                                    <RadarChart scores={sc} size={38} />
+                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] shrink-0">{safeIdx + 1}/{filteredStudents.length}</span>
+                                    <RadarChart scores={sc} size={30} />
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[13px] font-black text-[var(--color-text)] truncate">{student.name}</p>
+                                        <p className="text-[12px] font-black text-[var(--color-text)] truncate">{student.name}</p>
                                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                            {avg ? <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).uiColor }}>{avg} — {GRADE(Number(avg)).id}</span>
-                                                : <span className="text-[9px] text-[var(--color-text-muted)]">Belum diisi</span>}
-                                            {isSaving && <FontAwesomeIcon icon={faSpinner} className="text-[9px] text-amber-500 animate-spin" />}
-                                            {!isSaving && isSaved && <FontAwesomeIcon icon={faCircleCheck} className="text-[9px] text-emerald-500" />}
-                                            {!isSaving && isDirty && <span className="text-[8px] font-black text-amber-500">● belum simpan</span>}
+                                            {avg ? (
+                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).uiColor }}>
+                                                    {avg} — {GRADE(Number(avg)).id}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[8px] text-[var(--color-text-muted)]">Belum diisi</span>
+                                            )}
+                                            {isSaving && <FontAwesomeIcon icon={faSpinner} className="text-[8px] text-amber-500 animate-spin" />}
+                                            {!isSaving && isDirty && <span className="text-[7px] font-black text-amber-500">● belum simpan</span>}
                                         </div>
                                     </div>
-                                    <button onClick={() => saveStudent(student.id)} disabled={isSaving || !canEdit}
-                                        className="h-8 px-2.5 rounded-xl text-[10px] font-black flex items-center gap-1 shrink-0 transition-all"
-                                        style={{ background: isSaved ? '#10b98115' : isDirty ? '#6366f115' : 'var(--color-surface-alt)', color: isSaved ? '#10b981' : isDirty ? '#6366f1' : 'var(--color-text-muted)', border: `1px solid ${isSaved ? '#10b98130' : isDirty ? '#6366f130' : 'var(--color-border)'}` }}>
-                                        <FontAwesomeIcon icon={isSaving ? faSpinner : isSaved ? faCircleCheck : faFloppyDisk} className={isSaving ? 'animate-spin' : ''} />
-                                    </button>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button onClick={() => openStudentDetailDrawer(student)}
+                                            title="Histori semua raport santri ini"
+                                            className="h-8 w-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center hover:bg-indigo-500/20 transition-all">
+                                            <FontAwesomeIcon icon={faArrowTrendUp} className="text-[9px]" />
+                                        </button>
+                                        <button onClick={() => saveStudent(student.id)} disabled={isSaving || !canEdit}
+                                            className="h-8 px-2 rounded-xl text-[10px] font-black flex items-center gap-1 shrink-0 transition-all"
+                                            style={{ background: isSaved ? '#10b98115' : isDirty ? '#6366f115' : 'var(--color-surface-alt)', color: isSaved ? '#10b981' : isDirty ? '#6366f1' : 'var(--color-text-muted)', border: `1px solid ${isSaved ? '#10b98130' : isDirty ? '#6366f130' : 'var(--color-border)'}` }}>
+                                            <FontAwesomeIcon icon={isSaving ? faSpinner : isSaved ? faCircleCheck : faFloppyDisk} className={isSaving ? 'animate-spin' : ''} />
+                                        </button>
+                                    </div>
                                 </div>
                                 {/* Body */}
                                 <div className="px-4 py-3 space-y-3">
@@ -953,7 +1108,7 @@ export default function RaportInputTable({
             </div>
 
             {/* Averages display */}
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className="hidden md:grid grid-cols-5 gap-2">
                 {KRITERIA.map(k => { const vals = filteredStudents.map(s => scores[s.id]?.[k.key]).filter(v => v !== '' && v !== null && v !== undefined); const avg = vals.length ? (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1) : '—'; const g = avg !== '—' ? GRADE(Number(avg)) : null; return (<div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center"><div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>{k.id}</div><div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>{avg}</div><div className="text-[7px] font-bold text-[var(--color-text-muted)]">Rata - Rata Kelas</div></div>) })}
             </div>
         </div>

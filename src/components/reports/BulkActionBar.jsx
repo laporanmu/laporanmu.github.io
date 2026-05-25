@@ -18,7 +18,7 @@ const BulkActionBar = memo(({
                  bottom: 'var(--floating-bar-bottom, 16px)'
              }}>
             <div className="relative">
-                <div className="relative glass-morphism bg-gray-900/90 dark:bg-gray-800/95 backdrop-blur-3xl border border-white/20 rounded-2xl px-3 py-2 flex items-center gap-4 text-white overflow-hidden shadow-2xl">
+                <div className="relative glass-morphism bg-gray-900/90 dark:bg-gray-800/95 backdrop-blur-3xl border border-white/20 rounded-2xl px-3 py-2 flex items-center gap-2 md:gap-4 text-white overflow-hidden shadow-2xl">
                     {/* Animated scanline */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
 
@@ -37,45 +37,50 @@ const BulkActionBar = memo(({
                     <div className="w-px h-6 bg-white/10 shrink-0 hidden md:block" />
                     
                     {/* Center: action buttons */}
-                    <div className="flex-1 flex items-center gap-1.5 py-0.5 overflow-x-auto no-scrollbar">
+                    <div className="flex-1 flex items-center gap-1.5 py-0.5 min-w-0">
                         <button 
                             onClick={onSave}
                             disabled={isSavingAll}
-                            className="h-8 px-3 shrink-0 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest disabled:opacity-50"
+                            className="flex-1 md:flex-none h-8 px-2 md:px-3 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest disabled:opacity-50 min-w-0"
+                            title="Simpan Semua"
                         >
                             <FontAwesomeIcon icon={isSavingAll ? faSpinner : faFloppyDisk} className={isSavingAll ? 'animate-spin' : ''} />
-                            <span>Simpan Semua</span>
+                            <span className="hidden md:inline">Simpan Semua</span>
                         </button>
 
                         <button 
                             onClick={onIsiMassal}
-                            className="h-8 px-3 shrink-0 rounded-xl bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 hover:bg-fuchsia-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                            className="flex-1 md:flex-none h-8 px-2 md:px-3 rounded-xl bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 hover:bg-fuchsia-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest min-w-0"
+                            title="Isi Massal"
                         >
                             <FontAwesomeIcon icon={faFillDrip} />
-                            <span>Isi Massal</span>
+                            <span className="hidden md:inline">Isi Massal</span>
                         </button>
 
                         <button 
                             onClick={onWA}
-                            className="h-8 px-3 shrink-0 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                            className="flex-1 md:flex-none h-8 px-2 md:px-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest min-w-0"
+                            title="WA Blast"
                         >
                             <FontAwesomeIcon icon={faWhatsapp} />
-                            <span>WA Blast</span>
+                            <span className="hidden md:inline">WA Blast</span>
                         </button>
 
                         <button 
                             onClick={onExport}
                             disabled={isExporting}
-                            className="h-8 px-3 shrink-0 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest disabled:opacity-50"
+                            className="flex-1 md:flex-none h-8 px-2 md:px-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest disabled:opacity-50 min-w-0"
+                            title="Export ZIP"
                         >
                             <FontAwesomeIcon icon={isExporting ? faSpinner : faFileZipper} className={isExporting ? 'animate-spin' : ''} />
-                            <span>Export ZIP</span>
+                            <span className="hidden md:inline">Export ZIP</span>
                         </button>
                     </div>
 
                     <button 
                         onClick={onCancel}
                         className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-all shrink-0"
+                        title="Batal"
                     >
                         <FontAwesomeIcon icon={faXmark} />
                     </button>

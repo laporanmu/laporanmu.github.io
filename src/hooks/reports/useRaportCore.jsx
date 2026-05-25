@@ -44,7 +44,7 @@ export function useRaportCore() {
     const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1)
     const [selectedYear, setSelectedYear] = useState(now.getFullYear())
     const [musyrif, setMusyrif] = useState('')
-    const [lang, setLang] = useState('ar')
+    const [lang, setLang] = useState('id')
 
     // ── Data state
     const [students, setStudents] = useState([])
