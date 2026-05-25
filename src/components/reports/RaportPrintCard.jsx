@@ -92,12 +92,22 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
         const reportNo = getReportNumber();
         const sId = student?.id || '';
         
-        // Jika sedang running lokal (development), arahkan ke domain live github.io agar HP bisa men-scan link publik.
-        if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.')) {
-            return `https://laporanmu.github.io/verify?no=${reportNo}&s=${sId}`;
+        // Cek jika diakses lewat IP lokal agar HP satu Wi-Fi bisa langsung scan & akses local dev server
+        const isLocalIp = host.startsWith('192.168.') || 
+                          host.startsWith('10.') || 
+                          host.startsWith('172.') ||
+                          host.includes('.local');
+
+        if (isLocalIp) {
+            return `${origin}/verify?no=${reportNo}&s=${sId}`;
+        }
+
+        // Jika localhost / 127.0.0.1 (HP tidak bisa akses langsung), arahkan ke domain live aktif (laporanmu.my.id)
+        if (host === 'localhost' || host === '127.0.0.1') {
+            return `https://laporanmu.my.id/verify?no=${reportNo}&s=${sId}`;
         }
         
-        // Di production (laporanmu.github.io atau custom domain baru laporanmu.com), otomatis pakai domain yang aktif.
+        // Di production, otomatis pakai domain aktif (dinamis)
         return `${origin}/verify?no=${reportNo}&s=${sId}`;
     }
 
