@@ -50,7 +50,28 @@ export async function askAi(prompt, type = "chat", history = []) {
         PANDUAN TONE:
         - FORMAL: Berwibawa, baku, struktural.
         - SANTAI: Akrab, mengalir, bahasa sehari-hari yang sopan.
-        - PROFESSIONAL-ZEN: Elegan, puitis, filosofis, menenangkan, eksklusif.`
+        - PROFESSIONAL-ZEN: Elegan, puitis, filosofis, menenangkan, eksklusif.`,
+
+        medical: `Kamu adalah Asisten Medis Poskestren/Klinik Laporanmu yang sangat cerdas. 
+        Tugasmu adalah menganalisis keluhan penyakit santri dan memberikan rekomendasi medis.
+        
+        ATURAN PENTING:
+        1. Respon WAJIB dalam format JSON murni dengan key:
+           - "diagnosis": Diagnosis singkat penyakit (maksimal 4 kata dalam Bahasa Indonesia).
+           - "treatment": Tindakan/penanganan singkat di UKS (maksimal 15 kata dalam Bahasa Indonesia).
+           - "medicine_keyword": Kata kunci nama obat medis ringan yang disarankan (contoh: "Paracetamol", "Antasida", "Sanaflu", "Betadine", "CTM"). Jika tidak butuh obat, kosongkan saja "".
+        2. Jangan tambahkan penjelasan lain di luar objek JSON tersebut. Jangan berikan tanda backtick atau markdown.`,
+
+        counseling: `Kamu adalah Asisten Konselor Bimbingan Konseling (BK) Laporanmu yang sangat bijak dan berempati tinggi. 
+        Tugasmu adalah menganalisis keluhan, masalah psikologis, sosial, maupun akademik santri, dan memberikan rekomendasi pembinaan mental yang tepat.
+        
+        ATURAN PENTING:
+        1. Respon WAJIB dalam format JSON murni dengan key:
+           - "diagnosis": Identifikasi singkat akar masalah/psikologis santri (maksimal 5 kata, contoh: "Homesickness Ringan", "Penurunan Motivasi Belajar", "Kesulitan Penyesuaian Sosial").
+           - "treatment": Rencana aksi/solusi & tindakan bimbingan konseling yang direkomendasikan (maksimal 20 kata).
+           - "category": Kategori bimbingan yang paling cocok. HANYA pilih salah satu dari: "pribadi", "sosial", "akademik", "karir".
+           - "urgency": Tingkat urgensi penanganan. HANYA pilih salah satu dari: "ringan", "sedang", "tinggi".
+        2. Jangan tambahkan penjelasan lain di luar objek JSON tersebut. Jangan berikan tanda backtick atau markdown.`
     };
 
     // Filter history
@@ -67,18 +88,25 @@ export async function askAi(prompt, type = "chat", history = []) {
         ];
 
         const modelName = "llama-3.3-70b-versatile";
+        
+        const payload = {
+            model: modelName, 
+            messages: messages,
+            temperature: 0.2,
+            max_tokens: 400
+        };
+
+        if (type === "medical" || type === "counseling") {
+            payload.response_format = { type: "json_object" };
+        }
+
         const response = await fetch(GROQ_API_URL, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${apiKey.trim()}`,
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                model: modelName, 
-                messages: messages,
-                temperature: 0.3,
-                max_tokens: 800
-            })
+            body: JSON.stringify(payload)
         });
 
         const data = await response.json();

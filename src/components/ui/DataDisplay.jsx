@@ -1,6 +1,23 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useCountUp } from '../../hooks/useCountUp'
+import { useLanguage } from '../../context/LanguageContext'
+
+// Polymorphic Icon Renderer supporting both Lucide components and FontAwesome objects
+const renderIcon = (icon, className = '') => {
+    if (!icon) return null;
+    
+    // Check if it's a FontAwesome icon object
+    const isFontAwesome = typeof icon === 'object' && icon !== null && 'iconName' in icon;
+    
+    if (isFontAwesome) {
+        return <FontAwesomeIcon icon={icon} className={className} />;
+    }
+    
+    // Treat as Lucide React or standard React functional component
+    const IconComp = icon;
+    return <IconComp className={className} />;
+};
 
 export function StatCard({ 
     icon, 
@@ -15,10 +32,12 @@ export function StatCard({
     iconBg, 
     color = 'primary',
     className = '',
-    valueClassName = 'text-2xl text-[var(--color-text)]',
+    valueClassName = 'text-xl sm:text-[22px] text-[var(--color-text)]',
     onClick,
     title
 }) {
+    const { tNum } = useLanguage()
+
     // If color is provided, map it to specific styles
     const colorMap = {
         primary: { border: 'border-t-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' },
@@ -39,31 +58,31 @@ export function StatCard({
         <div 
             onClick={onClick} 
             title={title} 
-            className={`shrink-0 snap-center w-[220px] xs:w-[240px] sm:w-auto glass group relative overflow-hidden rounded-[2rem] p-5 border border-[var(--color-border)] flex items-center gap-4 hover:border-[var(--color-primary)]/30 hover:shadow-2xl hover:shadow-[var(--color-primary)]/5 transition-all duration-300 min-h-[90px] ${onClick ? 'cursor-pointer active:scale-95' : ''} ${className}`}
+            className={`shrink-0 snap-center w-[200px] xs:w-[220px] sm:w-auto glass group relative overflow-hidden rounded-2xl p-4 border border-[var(--color-border)] flex items-center gap-3.5 hover:border-[var(--color-primary)]/30 hover:shadow-lg hover:shadow-[var(--color-primary)]/5 transition-all duration-300 min-h-[78px] ${onClick ? 'cursor-pointer active:scale-95' : ''} ${className}`}
         >
-            {/* Neural Pulse Indicator (Top Right) */}
-            <div className="absolute top-4 right-4">
+            {/* Neural Pulse Indicator (Top Right in LTR, Top Left in RTL) */}
+            <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3">
                 <div className={`w-1.5 h-1.5 rounded-full ${finalBorder.replace('border-t-', 'bg-').replace('border-', 'bg-')} opacity-60 animate-pulse shadow-[0_0_8px_currentColor]`} />
             </div>
 
-            <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center text-lg flex-shrink-0 shadow-sm ${finalBg} transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
-                <FontAwesomeIcon icon={icon} />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-base flex-shrink-0 shadow-sm ${finalBg} transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-500`}>
+                {renderIcon(icon, 'w-4.5 h-4.5')}
             </div>
             
-            <div className="min-w-0 relative z-10 flex-1">
-                <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)] opacity-50 mb-1 truncate">{label}</p>
-                <div className="flex items-center gap-2.5">
+            <div className="min-w-0 relative z-10 flex-1 text-start">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] opacity-60 mb-0.5 truncate">{label}</p>
+                <div className="flex items-center gap-2">
                     <h3 className={`font-black font-heading leading-none tabular-nums tracking-tighter ${valueClassName}`}>
-                        {loading ? <span className="inline-block w-8 h-6 rounded bg-[var(--color-border)] animate-pulse" /> : <>{displayValue}{suffix}</>}
+                        {loading ? <span className="inline-block w-8 h-5 rounded bg-[var(--color-border)] animate-pulse" /> : <>{tNum(displayValue)}{tNum(suffix)}</>}
                     </h3>
                     {trend && (
                         <p className={`text-[9px] font-black flex items-center gap-1 ${trendUp === true ? 'text-emerald-500 bg-emerald-500/10' : trendUp === false ? 'text-rose-500 bg-rose-500/10' : 'text-[var(--color-text-muted)] bg-[var(--color-surface-alt)]'} px-1.5 py-0.5 rounded-md`}>
-                            {trend}
+                            {tNum(trend)}
                         </p>
                     )}
                 </div>
                 {subValue && (
-                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] mt-0.5 opacity-60 uppercase tracking-wider">{subValue}</p>
+                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] mt-0.5 opacity-60 uppercase tracking-wider">{tNum(subValue)}</p>
                 )}
             </div>
         </div>
@@ -151,6 +170,13 @@ export function EmptyState({ icon, title, description, action, variant = 'glass'
         amber: 'bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-amber-500/10',
         slate: 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] shadow-black/5',
     }[color] || 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] shadow-black/5'
+    // Dynamic text colors for the glass variant
+    const glassColor = {
+        indigo: 'text-indigo-500',
+        emerald: 'text-emerald-500',
+        amber: 'text-amber-500',
+        slate: 'text-[var(--color-text-muted)]',
+    }[color] || 'text-[var(--color-primary)]'
  
     const containerClasses = isPlain 
         ? 'flex-1 flex flex-col items-center justify-center py-16 text-center opacity-70 hover:opacity-100 transition-opacity' 
@@ -167,8 +193,8 @@ export function EmptyState({ icon, title, description, action, variant = 'glass'
  
             <div className={`relative z-10 flex flex-col items-center`}>
                 {icon && (
-                    <div className={`${isMinimal ? `w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl mb-4 shadow-lg mx-auto transform rotate-3 ${colorMap}` : 'w-20 h-20 mb-6 rounded-3xl mx-auto flex items-center justify-center bg-gradient-to-br from-[var(--color-surface-alt)] to-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-primary)] shadow-sm group-hover:scale-110 transition-transform duration-500'}`}>
-                        <FontAwesomeIcon icon={icon} className={isMinimal ? '' : 'text-3xl'} />
+                    <div className={`${isMinimal ? `w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl mb-4 shadow-lg mx-auto transform rotate-3 ${colorMap}` : `w-20 h-20 mb-6 rounded-3xl mx-auto flex items-center justify-center bg-gradient-to-br from-[var(--color-surface-alt)] to-[var(--color-surface)] border border-[var(--color-border)] ${glassColor} shadow-sm group-hover:scale-110 transition-transform duration-500`}`}>
+                        {renderIcon(icon, isMinimal ? 'w-6 h-6' : 'w-8 h-8 text-3xl')}
                     </div>
                 )}
                 <h3 className={`${isMinimal ? 'text-[15px] font-black mb-1' : 'text-lg font-black font-heading uppercase tracking-widest mb-1.5'} text-[var(--color-text)]`}>

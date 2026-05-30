@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate } from 'rea
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { LanguageProvider } from './context/LanguageContext'
 import { FeatureFlagsProvider, useFeatureFlags } from './context/FeatureFlagsContext'
 import { useTheme } from './context/ThemeContext'
 import DashboardLayout from './components/layout/DashboardLayout'
@@ -41,10 +42,14 @@ const PublicVerifyPage = lazyRetry(() => import('./pages/PublicVerifyPage.jsx'))
 
 // Core
 const DashboardPage = lazyRetry(() => import('./pages/DashboardPage.jsx'))
-const RaportPage = lazyRetry(() => import('./pages/reports/RaportPage.jsx'))
-const BehaviorPage = lazyRetry(() => import('./pages/reports/BehaviorPage.jsx'))
-const AttendancePage = lazyRetry(() => import('./pages/reports/AttendancePage.jsx'))
-const GatePage = lazyRetry(() => import('./pages/reports/GatePage.jsx'))
+const RaportPage = lazyRetry(() => import('./pages/academic/RaportPage.jsx'))
+const BehaviorPage = lazyRetry(() => import('./pages/student/BehaviorPage.jsx'))
+const DormsPage = lazyRetry(() => import('./pages/student/DormsPage.jsx'))
+const HealthPage = lazyRetry(() => import('./pages/student/HealthPage.jsx'))
+const CounselingPage = lazyRetry(() => import('./pages/student/CounselingPage.jsx'))
+const AttendancePage = lazyRetry(() => import('./pages/academic/AttendancePage.jsx'))
+const GatePage = lazyRetry(() => import('./pages/student/GatePage.jsx'))
+const GateKioskPage = lazyRetry(() => import('./pages/student/GateKioskPage.jsx'))
 const SettingsPage = lazyRetry(() => import('./pages/SettingsPage.jsx'))
 
 // Admin-only
@@ -82,10 +87,12 @@ const ROUTE_ALIASES = [
   // English ↔ Indonesian aliases
   { from: '/absence', to: '/attendance' },
   { from: '/attendance', to: '/attendance' },
-  { from: '/portal', to: '/gate' },
+  { from: '/portal', to: '/boarding/gate' },
+  { from: '/gate', to: '/boarding/gate' },
   { from: '/report', to: '/raport' },
   { from: '/reports', to: '/raports' },
-  { from: '/points', to: '/behavior' },
+  { from: '/points', to: '/boarding/behavior' },
+  { from: '/behavior', to: '/boarding/behavior' },
 
   // Master data aliases
   { from: '/master/student', to: '/master/students' },
@@ -182,7 +189,7 @@ function FlagRoute({ children, flag, label }) {
       <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 relative overflow-hidden">
         {/* Decorative Background Elements */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[var(--color-primary)]/5 rounded-full blur-[80px] pointer-events-none" />
-        
+
         <div className="relative z-10 flex flex-col items-center max-w-sm w-full">
           {/* Animated Icon Container */}
           <div className="relative mb-8">
@@ -243,7 +250,7 @@ function RoleFlagRoute({ children, roles = [], flag, label }) {
     <DashboardLayout>
       <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-rose-500/5 rounded-full blur-[80px] pointer-events-none" />
-        
+
         <div className="relative z-10 flex flex-col items-center max-w-sm w-full">
           <div className="relative mb-8">
             <div className="absolute inset-0 bg-rose-500/20 rounded-3xl blur-xl" />
@@ -278,7 +285,7 @@ function RoleFlagRoute({ children, roles = [], flag, label }) {
     <DashboardLayout>
       <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[80px] pointer-events-none" />
-        
+
         <div className="relative z-10 flex flex-col items-center max-w-sm w-full">
           <div className="relative mb-8">
             <div className="absolute inset-0 bg-amber-500/20 rounded-3xl blur-xl animate-pulse" />
@@ -454,14 +461,34 @@ function AppRoutes() {
             {/* Core — module flag guarded */}
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Bulanan"><RaportPage /></FlagRoute>} />
-            <Route path="/behavior" element={<FlagRoute flag="module.poin" label="Laporan Perilaku"><BehaviorPage /></FlagRoute>} />
+            <Route path="/boarding/behavior" element={<FlagRoute flag="module.poin" label="Kedisiplinan & Poin"><BehaviorPage /></FlagRoute>} />
             <Route path="/attendance" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AttendancePage /></FlagRoute>} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/boarding/dorms" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="nav.dorms" label="Manajemen Asrama">
+                <DormsPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/boarding/health" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="nav.health" label="Klinik & Kesehatan">
+                <HealthPage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/boarding/counseling" element={
+              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="nav.counseling" label="Bimbingan Konseling">
+                <CounselingPage />
+              </RoleFlagRoute>
+            } />
 
             {/* Role + flag guarded */}
-            <Route path="/gate" element={
+            <Route path="/boarding/gate" element={
               <RoleFlagRoute roles={DEV_ADMIN_GATE} flag="module.gate" label="Portal Keluar Masuk">
                 <GatePage />
+              </RoleFlagRoute>
+            } />
+            <Route path="/boarding/gate/kiosk" element={
+              <RoleFlagRoute roles={DEV_ADMIN_GATE} flag="module.gate" label="Portal Keluar Masuk">
+                <GateKioskPage />
               </RoleFlagRoute>
             } />
             <Route path="/admin/logs" element={
@@ -578,15 +605,17 @@ export default function App() {
   return (
     <GlobalErrorBoundary>
       <BrowserRouter>
-        <ThemeProvider>
-          <ToastProvider>
-            <AuthProvider>
-              <FeatureFlagsProvider>
-                <AppRoutes />
-              </FeatureFlagsProvider>
-            </AuthProvider>
-          </ToastProvider>
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <FeatureFlagsProvider>
+                  <AppRoutes />
+                </FeatureFlagsProvider>
+              </AuthProvider>
+            </ToastProvider>
+          </ThemeProvider>
+        </LanguageProvider>
       </BrowserRouter>
     </GlobalErrorBoundary>
   )

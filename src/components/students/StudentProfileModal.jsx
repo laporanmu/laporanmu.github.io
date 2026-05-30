@@ -108,13 +108,13 @@ export default memo(function StudentProfileModal({
                     <button onClick={onOpenTagModal} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center gap-2 shrink-0">
                         <FontAwesomeIcon icon={faTags} className="opacity-70" /> Label
                     </button>
-                    
+
                     <div className="flex-1" />
-                    
+
                     <button onClick={onClose} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center shrink-0">
                         Tutup
                     </button>
-                    
+
                     {canEdit && !isPrivacyMode && (
                         <button
                             onClick={() => {
@@ -276,7 +276,7 @@ export default memo(function StudentProfileModal({
                                             <FontAwesomeIcon icon={faIdBadge} className="text-[10px] text-emerald-500/60" />
                                             <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kontak Wali Utama</span>
                                         </div>
-                                            <div className="space-y-1 px-1">
+                                        <div className="space-y-1 px-1">
                                             <InfoRow label="Nama Wali / Ortu" value={isPrivacyMode ? maskInfo(selectedStudent.guardian_name, 4) : (selectedStudent.guardian_name || '-')} />
                                             <div className="space-y-1">
                                                 <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest mb-1 flex items-center gap-1.5 opacity-80">
@@ -495,7 +495,7 @@ export default memo(function StudentProfileModal({
                                 <EmptyState
                                     variant="dashed"
                                     icon={faHistory}
-                                    title="Belum ada laporan perilaku"
+                                    title="Belum ada Kedisiplinan & Poin"
                                     description="Siswa ini belum memiliki catatan histori perilaku di sistem."
                                 />
                             ) : (

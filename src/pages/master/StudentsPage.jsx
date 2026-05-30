@@ -90,6 +90,7 @@ import Modal from '../../components/ui/Modal'
 import RichSelect from '../../components/ui/RichSelect'
 import { useToast } from '../../context/ToastContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { supabase } from '../../lib/supabase'
 import mbsLogo from '../../assets/mbs.png'
 import { SortOptions, RiskThreshold, AvailableTags, getTagColor, calculateCompleteness, maskInfo, formatRelativeDate } from '../../utils/students/studentsConstants'
@@ -319,6 +320,7 @@ const SelectedStudentsCarousel = memo(({
 
 export default function StudentsPage() {
     const { addToast, addUndoToast } = useToast()
+    const { dir } = useLanguage()
     const { enabled: canEdit } = useFlag('access.teacher_students')
     const navigateLocal = useNavigate()
     const [classSearchQuery, setClassSearchQuery] = useState('')
@@ -2952,11 +2954,16 @@ export default function StudentsPage() {
                 {/* ===================== */}
                 {/* FLOATING BULK ACTION BAR - SaaS STYLE */}
                 {/* ===================== */}
-                {
+                   {
                     selectedStudentIds.length > 0 && createPortal(
                         <div
-                            className="fixed left-1/2 -translate-x-1/2 z-[250] w-[95%] md:w-max max-w-[95%] animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)"
-                            style={{ bottom: 'var(--floating-bar-bottom, 16px)' }}
+                            className="fixed -translate-x-1/2 z-[250] w-[95%] md:w-max max-w-[95%] animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)"
+                            style={{ 
+                                left: dir === 'rtl'
+                                    ? 'calc(50vw - (var(--sidebar-width, 0px) / 2))'
+                                    : 'calc(50vw + (var(--sidebar-width, 0px) / 2))',
+                                bottom: 'var(--floating-bar-bottom, 16px)' 
+                            }}
                         >
                             <div className="relative">
                                 <div className="relative glass-morphism bg-gray-900/90 dark:bg-gray-800/95 backdrop-blur-3xl border border-white/20 rounded-2xl px-3 py-2 flex items-center gap-4 text-white overflow-hidden shadow-2xl">

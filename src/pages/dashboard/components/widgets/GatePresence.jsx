@@ -49,7 +49,7 @@ export const GatePresence = memo(function GatePresence({ recentGate, loading }) 
                     ))
                 )}
             </div>
-            <Link to="/gate" className="mt-4 relative z-10 w-full flex items-center justify-center p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[9px] font-black text-[var(--color-text-muted)] hover:text-emerald-500 hover:border-emerald-500/30 transition-all uppercase tracking-widest gap-2">
+            <Link to="/boarding/gate" className="mt-4 relative z-10 w-full flex items-center justify-center p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[9px] font-black text-[var(--color-text-muted)] hover:text-emerald-500 hover:border-emerald-500/30 transition-all uppercase tracking-widest gap-2">
                 Monitor Gerbang <FontAwesomeIcon icon={faArrowRight} className="text-[8px]" />
             </Link>
         </div>

@@ -2846,7 +2846,7 @@ export default function RaportPage() {
 
                 {/* ── PAGE HEADER ── */}
                 <PageHeader
-                    badge="Reports"
+                    badge="academic"
                     breadcrumbs={['Grade Reports']}
                     title="Raport Bulanan"
                     subtitle="نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas."

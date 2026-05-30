@@ -116,6 +116,14 @@ const KNOWN_FLAGS = [
     // Nav
     { key: 'nav.dashboard', label: 'Menu Dashboard', category: 'nav', description: 'Tampilkan ringkasan statistik di sidebar', sort_order: 1 },
     { key: 'nav.students', label: 'Menu Data Siswa', category: 'nav', description: 'Tampilkan akses ke manajemen santri', sort_order: 2 },
+    { key: 'nav.poin', label: 'Menu Kedisiplinan & Poin', category: 'nav', description: 'Tampilkan menu pencatatan pelanggaran & prestasi santri', sort_order: 3 },
+    { key: 'nav.dorms', label: 'Menu Manajemen Asrama', category: 'nav', description: 'Tampilkan menu plotting kamar & audit kebersihan', sort_order: 4 },
+    { key: 'nav.health', label: 'Menu Klinik & Kesehatan', category: 'nav', description: 'Tampilkan menu rekam medis & stok obat', sort_order: 5 },
+    { key: 'nav.counseling', label: 'Menu Konseling & BK', category: 'nav', description: 'Tampilkan menu Bimbingan Konseling (BK) santri', sort_order: 6 },
+    { key: 'nav.tahfidz', label: 'Menu Tahfidz Al-Qur\'an', category: 'nav', description: 'Tampilkan jurnal setoran hafalan santri', sort_order: 7 },
+    { key: 'nav.extracurricular', label: 'Menu Ekstrakurikuler', category: 'nav', description: 'Tampilkan manajemen klub & ekskul', sort_order: 8 },
+    { key: 'nav.saving', label: 'Menu Tabungan Santri', category: 'nav', description: 'Tampilkan sistem deposit uang saku santri', sort_order: 9 },
+    { key: 'nav.academic_years', label: 'Menu Tahun Akademik', category: 'nav', description: 'Tampilkan manajemen semester & kalender', sort_order: 10 },
 
     // System
     { key: 'system.maintenance', label: 'Maintenance Mode', category: 'system', description: 'Kunci aplikasi untuk semua user kecuali developer', sort_order: 1 },

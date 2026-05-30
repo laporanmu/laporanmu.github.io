@@ -77,6 +77,7 @@ export function useNotifications() {
                             title: `Raport ${prevMonthStr} belum lengkap`,
                             body: `${classesNotDone} kelas belum diisi sama sekali`,
                             action: { label: 'Isi Sekarang', route: '/master/students' },
+                            meta: { month: prevMonth, count: classesNotDone },
                             priority: 1,
                         })
                     } else if (partialClasses > 0) {
@@ -87,6 +88,7 @@ export function useNotifications() {
                             title: `Raport ${prevMonthStr} hampir selesai`,
                             body: `${partialClasses} kelas baru sebagian terisi`,
                             action: { label: 'Lihat', route: '/master/students' },
+                            meta: { month: prevMonth, count: partialClasses },
                             priority: 3,
                         })
                     }
@@ -110,6 +112,7 @@ export function useNotifications() {
                     title: 'Siswa belum punya kelas',
                     body: `${noClassCount} siswa belum ditempatkan ke kelas`,
                     action: { label: 'Data Siswa', route: '/master/students' },
+                    meta: { count: noClassCount },
                     priority: 2,
                 })
             }
@@ -131,6 +134,7 @@ export function useNotifications() {
                     title: 'Tidak ada tahun ajaran aktif',
                     body: 'Set tahun ajaran aktif agar semua fitur berjalan normal',
                     action: { label: 'Atur Sekarang', route: '/master/academic-years' },
+                    meta: {},
                     priority: 0, // tertinggi
                 })
             } else if (activeYears.length > 1) {
@@ -141,6 +145,7 @@ export function useNotifications() {
                     title: 'Ada lebih dari 1 tahun ajaran aktif',
                     body: `${activeYears.length} tahun ajaran aktif sekaligus`,
                     action: { label: 'Periksa', route: '/master/academic-years' },
+                    meta: { count: activeYears.length },
                     priority: 1,
                 })
             }
@@ -161,6 +166,7 @@ export function useNotifications() {
                     title: 'Kelas belum ada wali kelas',
                     body: `${noTeacherClass} kelas belum memiliki wali kelas`,
                     action: { label: 'Data Kelas', route: '/master/classes' },
+                    meta: { count: noTeacherClass },
                     priority: 3,
                 })
             }
@@ -185,6 +191,7 @@ export function useNotifications() {
                     title: `Pelanggaran bulan ${BULAN.find(b => b.id === month)?.str}`,
                     body: `${violationCount} pelanggaran tercatat bulan ini`,
                     action: { label: 'Lihat Laporan', route: '/raport' },
+                    meta: { month: month, count: violationCount },
                     priority: 4,
                 })
             }
@@ -206,6 +213,7 @@ export function useNotifications() {
                     title: 'Siswa tanpa nomor WA',
                     body: `${noPhoneCount} siswa tidak bisa menerima raport via WhatsApp`,
                     action: { label: 'Data Siswa', route: '/master/students' },
+                    meta: { count: noPhoneCount },
                     priority: 5,
                 })
             }
@@ -237,4 +245,72 @@ export function useNotifications() {
     }, [buildNotifications])
 
     return { notifications, loading, refreshing, dismiss, refresh }
+}
+
+// Helper to dynamically translate notification item texts
+export function translateNotification(notif, t) {
+    if (!notif) return notif
+    const meta = notif.meta || {}
+    const getMonthStr = (mId) => t(`month.${mId}`)
+
+    switch (notif.id) {
+        case 'raport-missing':
+            return {
+                ...notif,
+                title: t('notif.raport_missing_title').replace('{month}', getMonthStr(meta.month)),
+                body: t('notif.raport_missing_body').replace('{count}', meta.count),
+                action: notif.action ? { ...notif.action, label: t('notif.action.fill_now') } : null
+            }
+        case 'raport-partial':
+            return {
+                ...notif,
+                title: t('notif.raport_partial_title').replace('{month}', getMonthStr(meta.month)),
+                body: t('notif.raport_partial_body').replace('{count}', meta.count),
+                action: notif.action ? { ...notif.action, label: t('notif.action.view') } : null
+            }
+        case 'students-no-class':
+            return {
+                ...notif,
+                title: t('notif.students_no_class_title'),
+                body: t('notif.students_no_class_body').replace('{count}', meta.count),
+                action: notif.action ? { ...notif.action, label: t('notif.action.student_data') } : null
+            }
+        case 'no-active-year':
+            return {
+                ...notif,
+                title: t('notif.no_active_year_title'),
+                body: t('notif.no_active_year_body'),
+                action: notif.action ? { ...notif.action, label: t('notif.action.set_now') } : null
+            }
+        case 'multiple-active-years':
+            return {
+                ...notif,
+                title: t('notif.multiple_active_years_title'),
+                body: t('notif.multiple_active_years_body').replace('{count}', meta.count),
+                action: notif.action ? { ...notif.action, label: t('notif.action.verify') } : null
+            }
+        case 'class-no-teacher':
+            return {
+                ...notif,
+                title: t('notif.class_no_teacher_title'),
+                body: t('notif.class_no_teacher_body').replace('{count}', meta.count),
+                action: notif.action ? { ...notif.action, label: t('notif.action.class_data') } : null
+            }
+        case 'poin-this-month':
+            return {
+                ...notif,
+                title: t('notif.poin_this_month_title').replace('{month}', getMonthStr(meta.month)),
+                body: t('notif.poin_this_month_body').replace('{count}', meta.count),
+                action: notif.action ? { ...notif.action, label: t('notif.action.view_reports') } : null
+            }
+        case 'students-no-phone':
+            return {
+                ...notif,
+                title: t('notif.students_no_phone_title'),
+                body: t('notif.students_no_phone_body').replace('{count}', meta.count),
+                action: notif.action ? { ...notif.action, label: t('notif.action.student_data') } : null
+            }
+        default:
+            return notif
+    }
 }

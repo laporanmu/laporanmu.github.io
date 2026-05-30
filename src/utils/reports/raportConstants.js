@@ -8,11 +8,11 @@ export const MAX_SCORE = 9
 export const STORAGE_BUCKET = 'raport-mbs'
 
 export const LIST_KAMAR = [
-    { id: 'Fachruddin', ar: 'فخر الدين' },
-    { id: 'Ibrahim', ar: 'إبراهيم' },
-    { id: 'Ahmad Dahlan', ar: 'أحمد دحلان' },
-    { id: 'Mas Mansyur', ar: 'ماس منصور' },
-    { id: 'Buya Hamka', ar: 'بويا هامكا' }
+    { id: 'Fachruddin', ar: 'فخر الدين', capacity: 30 },
+    { id: 'Ibrahim', ar: 'إبراهيم', capacity: 30 },
+    { id: 'Ahmad Dahlan', ar: 'أحمد دحلان', capacity: 30 },
+    { id: 'Mas Mansyur', ar: 'ماس منصور', capacity: 30 },
+    { id: 'Buya Hamka', ar: 'بويا هامكا', capacity: 30 }
 ]
 
 export const toArabicNum = (n) => String(n).replace(/[0-9]/g, d => '٠١٢٣٤٥٦٧٨٩'[d])

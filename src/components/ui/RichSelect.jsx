@@ -4,28 +4,47 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronDown, faSearch, faXmark, faCheck } from '@fortawesome/free-solid-svg-icons'
 
 /**
- * RichSelect - A premium, reusable dropdown component with auto-flip, portal, and search support.
+ * RichSelect - A premium, reusable dropdown component with auto-flip, portal, search, and dynamic grouping/tab filtering.
  * 
  * @param {boolean} compact - Lightweight mode: no portal, smaller padding, inline absolute dropdown.
  *                             Ideal for pagination or toolbar selects with few options.
  */
-const RichSelect = memo(({ 
-    value, 
-    onChange, 
-    options = [], 
-    placeholder = 'Pilih...', 
-    icon, 
-    extraOption, 
-    small, 
+/**
+ * Polymorphic icon renderer - supports both FontAwesome icon objects and Lucide React components.
+ * FontAwesome: pass icon object like { iconName: 'bed', ... }
+ * Lucide React: pass component reference like Bed, Calendar, etc.
+ */
+const renderIcon = (icon, className = '') => {
+    if (!icon) return null
+    const isFontAwesome = typeof icon === 'object' && icon !== null && 'iconName' in icon
+    if (isFontAwesome) {
+        return <FontAwesomeIcon icon={icon} className={className} />
+    }
+    const IconComp = icon
+    return <IconComp className={className} />
+}
+
+const RichSelect = memo(({
+    value,
+    onChange,
+    options = [],
+    placeholder = 'Pilih...',
+    icon,
+    extraOption,
+    small,
     status = 'normal',
     searchable = false,
     className = "",
     disabled = false,
     allowCustom = false,
-    compact = false
+    compact = false,
+    usePortal = true,
+    buttonClassName = ""
 }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [search, setSearch] = useState('')
+    const [activeGroup, setActiveGroup] = useState('All')
+    
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, placement: 'bottom', maxHeight: 240 })
     const [compactPlacement, setCompactPlacement] = useState('bottom')
     const ref = useRef(null)
@@ -43,15 +62,47 @@ const RichSelect = memo(({
         normal: 'text-[var(--color-text-muted)] opacity-50 group-focus-within:text-[var(--color-primary)] group-hover:text-[var(--color-primary)]'
     }
 
+    // Identify unique groups in options
+    const uniqueGroups = useMemo(() => {
+        const set = new Set()
+        options.forEach(o => {
+            if (o.group) set.add(o.group)
+        })
+        return Array.from(set)
+    }, [options])
+
     const updateCoords = useCallback(() => {
         if (ref.current) {
             const rect = ref.current.getBoundingClientRect()
-            const dropdownHeight = searchable ? 320 : 260 
-            const margin = 16
-            
-            const spaceBelow = window.innerHeight - rect.bottom - margin
-            const spaceAbove = rect.top - margin
-            
+            const dropdownHeight = searchable ? 320 : 260
+            const margin = 8
+
+            let containerBottom = window.innerHeight - margin
+            let containerTop = margin
+            let hasScrollableAncestor = false
+            let el = ref.current.parentElement
+            while (el && el !== document.body) {
+                const { overflow, overflowY } = window.getComputedStyle(el)
+                if (/(auto|scroll)/.test(overflow + overflowY)) {
+                    const containerRect = el.getBoundingClientRect()
+                    containerBottom = containerRect.bottom - margin
+                    containerTop = containerRect.top + margin
+                    hasScrollableAncestor = true
+                    break
+                }
+                el = el.parentElement
+            }
+
+            if (hasScrollableAncestor) {
+                if (rect.bottom < containerTop || rect.top > containerBottom) {
+                    setIsOpen(false)
+                    return
+                }
+            }
+
+            const spaceBelow = containerBottom - rect.bottom
+            const spaceAbove = rect.top - containerTop
+
             const shouldFlip = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
 
             setCoords({
@@ -63,24 +114,24 @@ const RichSelect = memo(({
                 maxHeight: shouldFlip ? spaceAbove : spaceBelow
             })
         }
-    }, [searchable])
+    }, [searchable, setIsOpen])
 
     const toggle = useCallback(() => {
         const nextState = !isOpen
         if (nextState) {
-            if (compact && ref.current) {
-                // Lightweight flip check for compact mode
+            if ((compact || !usePortal) && ref.current) {
                 const rect = ref.current.getBoundingClientRect()
-                const dropdownH = options.length * 32 + 16 // estimate
+                const dropdownH = searchable ? 320 : Math.min(options.length * 36 + 16, 240)
                 const spaceBelow = window.innerHeight - rect.bottom - 8
                 setCompactPlacement(spaceBelow < dropdownH ? 'top' : 'bottom')
-            } else if (!compact) {
+            } else if (usePortal) {
                 updateCoords()
             }
             setSearch('')
+            setActiveGroup('All')
         }
         setIsOpen(nextState)
-    }, [isOpen, compact, updateCoords, options.length])
+    }, [isOpen, compact, usePortal, updateCoords, options.length, searchable])
 
     const handleSelect = useCallback((id) => {
         onChange(id)
@@ -90,35 +141,67 @@ const RichSelect = memo(({
     useEffect(() => {
         if (!isOpen) return
 
-        // Compact mode: only need click-outside handler
         const handleClickOutside = (e) => {
             if (ref.current && !ref.current.contains(e.target)) setIsOpen(false)
         }
         document.addEventListener('mousedown', handleClickOutside)
 
-        if (!compact) {
-            window.addEventListener('scroll', updateCoords, true)
-            window.addEventListener('resize', updateCoords)
-        }
-
         if (searchable && searchInputRef.current) {
             setTimeout(() => searchInputRef.current?.focus(), 100)
         }
-            
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside)
-            if (!compact) {
+
+        if (!compact && usePortal) {
+            const scrollableAncestors = []
+            let el = ref.current?.parentElement
+            while (el && el !== document.body) {
+                const { overflow, overflowY } = window.getComputedStyle(el)
+                if (/(auto|scroll)/.test(overflow + overflowY)) {
+                    scrollableAncestors.push(el)
+                    el.addEventListener('scroll', updateCoords, { passive: true })
+                }
+                el = el.parentElement
+            }
+            window.addEventListener('scroll', updateCoords, true)
+            window.addEventListener('resize', updateCoords)
+
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside)
+                scrollableAncestors.forEach(a => a.removeEventListener('scroll', updateCoords))
                 window.removeEventListener('scroll', updateCoords, true)
                 window.removeEventListener('resize', updateCoords)
             }
         }
-    }, [isOpen, updateCoords, searchable, compact])
 
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [isOpen, updateCoords, searchable, compact, usePortal])
+
+    // Filtered options based on search query & active tab pill group
     const filteredOptions = useMemo(() => {
-        if (!search) return options
-        const s = search.toLowerCase()
-        return options.filter(o => o.name?.toLowerCase().includes(s) || o.id?.toString().toLowerCase().includes(s))
-    }, [options, search])
+        let list = options
+        if (search) {
+            const s = search.toLowerCase()
+            list = list.filter(o => o.name?.toLowerCase().includes(s) || o.id?.toString().toLowerCase().includes(s))
+        }
+        if (activeGroup !== 'All') {
+            list = list.filter(o => o.group === activeGroup)
+        }
+        return list
+    }, [options, search, activeGroup])
+
+    // Group options dynamically
+    const groupedOptions = useMemo(() => {
+        if (uniqueGroups.length === 0) return null
+        
+        const map = {}
+        filteredOptions.forEach(opt => {
+            const g = opt.group || 'Lainnya'
+            if (!map[g]) map[g] = []
+            map[g].push(opt)
+        })
+        return map
+    }, [filteredOptions, uniqueGroups])
 
     const selectedOption = useMemo(() => {
         return options.find(o => String(o.id) === String(value)) || (extraOption?.id === value ? extraOption : (allowCustom && value ? { id: value, name: value } : null))
@@ -126,10 +209,10 @@ const RichSelect = memo(({
 
     // ─── Dropdown content (shared between compact & portal modes) ───
     const renderDropdown = () => (
-        <>
+        <div className="flex flex-col min-h-0 h-full">
             {/* Search Bar */}
             {searchable && (
-                <div className="p-2 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
+                <div className="p-2 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 shrink-0">
                     <div className="relative">
                         <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-muted)] opacity-40" />
                         <input
@@ -141,7 +224,7 @@ const RichSelect = memo(({
                             className="w-full h-8 pl-8 pr-8 rounded-lg border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all font-bold"
                         />
                         {search && (
-                            <button 
+                            <button
                                 onClick={() => setSearch('')}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 transition-colors"
                             >
@@ -152,9 +235,51 @@ const RichSelect = memo(({
                 </div>
             )}
 
-            <div 
-                className="py-1 overflow-y-auto custom-scrollbar"
-                style={{ maxHeight: compact ? 200 : Math.min(searchable ? 280 : 240, coords.maxHeight - 80) }}
+            {/* Dynamic Grouping Filter Pills */}
+            {uniqueGroups.length > 0 && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/20 overflow-x-auto shrink-0 select-none custom-scrollbar">
+                    <button
+                        type="button"
+                        onClick={() => setActiveGroup('All')}
+                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${
+                            activeGroup === 'All'
+                                ? 'bg-[var(--color-primary)] text-white border-transparent shadow-sm'
+                                : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'
+                        }`}
+                    >
+                        Semua
+                    </button>
+                    {uniqueGroups.map(g => {
+                        const isPelanggaran = g.toLowerCase().includes('pelanggaran')
+                        const isPrestasi = g.toLowerCase().includes('prestasi')
+                        const isActive = activeGroup === g
+                        
+                        let activeClasses = 'bg-[var(--color-primary)] text-white border-transparent'
+                        if (isPelanggaran) activeClasses = 'bg-rose-500 text-white border-transparent shadow-sm shadow-rose-500/10'
+                        if (isPrestasi) activeClasses = 'bg-emerald-500 text-white border-transparent shadow-sm shadow-emerald-500/10'
+                        
+                        return (
+                            <button
+                                key={g}
+                                type="button"
+                                onClick={() => setActiveGroup(g)}
+                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border shrink-0 ${
+                                    isActive
+                                        ? activeClasses
+                                        : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'
+                                }`}
+                            >
+                                {g}
+                            </button>
+                        )
+                    })}
+                </div>
+            )}
+
+            {/* Options List */}
+            <div
+                className="py-1 overflow-y-auto custom-scrollbar flex-1 min-h-0"
+                style={{ maxHeight: compact ? 200 : Math.max(60, Math.min(searchable ? 280 : 240, coords.maxHeight - (searchable ? (uniqueGroups.length > 0 ? 92 : 52) : 8))) }}
             >
                 {extraOption && (
                     <button
@@ -169,7 +294,7 @@ const RichSelect = memo(({
                         {value === extraOption.id && <FontAwesomeIcon icon={faCheck} className="text-[10px]" />}
                     </button>
                 )}
-                
+
                 {allowCustom && search && !options.some(o => o.name?.toLowerCase() === search.toLowerCase()) && (
                     <button
                         type="button"
@@ -183,27 +308,62 @@ const RichSelect = memo(({
                         <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
                     </button>
                 )}
-                
+
                 {filteredOptions.length === 0 ? (
                     <div className="px-4 py-6 text-center">
                         <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest opacity-40">{allowCustom ? 'Ketik untuk menambahkan' : 'Tidak ditemukan'}</p>
                     </div>
-                ) : filteredOptions.map((opt) => (
-                    <button
-                        key={opt.id}
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleSelect(opt.id) }}
-                        className={`w-full text-left ${compact ? 'px-3 py-1.5' : 'px-4 py-2'} text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group whitespace-nowrap ${String(value) === String(opt.id) ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-[var(--color-text)]'}`}
-                    >
-                        <div className="flex items-center gap-2.5">
-                            <div className={`w-1.5 h-1.5 rounded-full transition-all ${String(value) === String(opt.id) ? 'bg-[var(--color-primary)] scale-125 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.4)]' : 'bg-[var(--color-border)] group-hover:bg-[var(--color-text-muted)]'}`} />
-                            {opt.name}
+                ) : groupedOptions ? (
+                    /* ─── Grouped Rendering ─── */
+                    Object.keys(groupedOptions).map(groupName => (
+                        <div key={groupName} className="flex flex-col">
+                            {/* Sticky Color-coded Group Header */}
+                            <div className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border-y border-[var(--color-border)]/35 sticky top-0 backdrop-blur-md z-10 select-none ${
+                                groupName.toLowerCase().includes('pelanggaran')
+                                    ? 'text-rose-500 bg-rose-50/90 dark:bg-rose-950/20'
+                                    : groupName.toLowerCase().includes('prestasi')
+                                        ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50/90 dark:bg-emerald-950/20'
+                                        : 'text-[var(--color-text-muted)] bg-[var(--color-surface-alt)]/90'
+                            }`}>
+                                {groupName}
+                            </div>
+                            
+                            {/* Group Options */}
+                            {groupedOptions[groupName].map(opt => (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleSelect(opt.id) }}
+                                    className={`w-full text-left ${compact ? 'px-3 py-1.5' : 'px-4 py-2'} text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group whitespace-nowrap ${String(value) === String(opt.id) ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-[var(--color-text)]'}`}
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <div className={`w-1.5 h-1.5 rounded-full transition-all ${String(value) === String(opt.id) ? 'bg-[var(--color-primary)] scale-125 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.4)]' : 'bg-[var(--color-border)] group-hover:bg-[var(--color-text-muted)]'}`} />
+                                        {opt.render ? opt.render : opt.name}
+                                    </div>
+                                    {String(value) === String(opt.id) && <FontAwesomeIcon icon={faCheck} className="text-[10px] animate-in zoom-in-50 duration-300" />}
+                                </button>
+                            ))}
                         </div>
-                        {String(value) === String(opt.id) && <FontAwesomeIcon icon={faCheck} className="text-[10px] animate-in zoom-in-50 duration-300" />}
-                    </button>
-                ))}
+                    ))
+                ) : (
+                    /* ─── Flat Rendering ─── */
+                    filteredOptions.map((opt) => (
+                        <button
+                            key={opt.id}
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleSelect(opt.id) }}
+                            className={`w-full text-left ${compact ? 'px-3 py-1.5' : 'px-4 py-2'} text-[11px] font-bold hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-between group whitespace-nowrap ${String(value) === String(opt.id) ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'text-[var(--color-text)]'}`}
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <div className={`w-1.5 h-1.5 rounded-full transition-all ${String(value) === String(opt.id) ? 'bg-[var(--color-primary)] scale-125 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.4)]' : 'bg-[var(--color-border)] group-hover:bg-[var(--color-text-muted)]'}`} />
+                                {opt.render ? opt.render : opt.name}
+                            </div>
+                            {String(value) === String(opt.id) && <FontAwesomeIcon icon={faCheck} className="text-[10px] animate-in zoom-in-50 duration-300" />}
+                        </button>
+                    ))
+                )}
             </div>
-        </>
+        </div>
     )
 
     return (
@@ -212,20 +372,20 @@ const RichSelect = memo(({
                 type="button"
                 onClick={disabled ? undefined : toggle}
                 disabled={disabled}
-                className={`w-full flex items-center justify-between gap-2 ${compact ? 'px-2.5 h-8' : small ? 'px-3 h-8 sm:h-9' : 'pl-9 pr-3 h-11'} rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full flex items-center justify-between gap-2 ${compact ? 'px-2.5 h-8' : small ? 'px-3 h-8 sm:h-9' : 'pl-9 pr-3 h-10 sm:h-10'} rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
             >
                 <div className="flex items-center gap-2 truncate">
-                    {icon && !small && !compact && <FontAwesomeIcon icon={icon} className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs transition-colors ${iconStatusClasses[status]}`} />}
+                    {icon && !small && !compact && renderIcon(icon, `absolute left-3.5 top-1/2 -translate-y-1/2 text-xs w-3.5 h-3.5 transition-colors ${iconStatusClasses[status]}`)}
                     <span className={selectedOption ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-60'}>
-                        {selectedOption ? selectedOption.name : placeholder}
+                        {selectedOption ? (selectedOption.render ? selectedOption.render : selectedOption.name) : placeholder}
                     </span>
                 </div>
                 <FontAwesomeIcon icon={faChevronDown} className={`text-[9px] opacity-40 transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`} />
             </button>
 
-            {isOpen && (compact ? (
-                /* ─── Compact: inline absolute dropdown with auto-flip ─── */
-                <div 
+            {isOpen && (!usePortal || compact ? (
+                /* ─── Compact/Inline: absolute dropdown ─── */
+                <div
                     className={`absolute z-50 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-2xl overflow-hidden animate-in fade-in ${compactPlacement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'} duration-150`}
                     onMouseDown={(e) => e.stopPropagation()}
                     style={{
@@ -240,15 +400,17 @@ const RichSelect = memo(({
                     {renderDropdown()}
                 </div>
             ) : (
-                /* ─── Full: portal dropdown with auto-flip ─── */
+                /* ─── Full: portal dropdown ─── */
                 createPortal(
-                    <div 
-                        className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
+                    <div
+                        className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl shadow-2xl animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'} flex flex-col`}
                         onMouseDown={(e) => e.stopPropagation()}
                         style={{
                             width: 'max-content',
                             minWidth: coords.width,
-                            maxWidth: small ? coords.width : Math.max(300, coords.width),
+                            maxWidth: small ? Math.max(200, coords.width) : Math.max(300, coords.width),
+                            maxHeight: Math.max(80, coords.maxHeight),
+                            overflow: 'hidden',
                             left: coords.left,
                             top: coords.placement === 'top' ? 'auto' : coords.bottom + 8,
                             bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',

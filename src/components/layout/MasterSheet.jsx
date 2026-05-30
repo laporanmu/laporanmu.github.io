@@ -2,21 +2,14 @@ import { useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import {
-    faUsers, faChalkboardTeacher, faSchool,
-    faExclamationTriangle, faCalendarAlt,
-    faClipboardList, faCalendarWeek, faShieldHalved,
-    faPersonWalkingArrowRight, faClockRotateLeft, faUserGear,
-    faScrewdriverWrench, faDatabase, faBoxArchive, faServer, faPalette, faNewspaper, faRobot, faCube,
-    faCalendarDays, faQrcode, faFileInvoice, faMoneyBillWave, faWallet, faBook, faUserPlus
-} from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "../../context/AuthContext"
 import { useFeatureFlags } from "../../context/FeatureFlagsContext"
+import {
+    ACADEMIC_ITEMS, FINANCE_ITEMS, BOARDING_ITEMS, MASTER_ITEMS, ADMIN_ITEMS,
+    SECTION_TITLES, filterNavItems,
+} from "./navItems"
 
 // ─── Portal container ─────────────────────────────────────────────────────────
-// Singleton di module-level — dibuat SEKALI saat module di-load, tidak pernah
-// dihapus. Mencegah removeChild crash di React 18 Strict Mode / concurrent render
-// yang bisa double-invoke render function sehingga hook-based container jadi orphan.
 const _portalContainers = {}
 function getPortalContainer(id) {
     if (!_portalContainers[id]) {
@@ -31,53 +24,22 @@ function getPortalContainer(id) {
     return _portalContainers[id]
 }
 
-// ─── Items ────────────────────────────────────────────────────────────────────
-const ACADEMIC_ITEMS = [
-    { to: "/academic/attendance", label: "Presensi Siswa", icon: faQrcode, desc: "Absensi real-time via scan QR kartu siswa", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/academic/schedule", label: "Jadwal Pelajaran", icon: faCalendarDays, desc: "Atur plotting jadwal KBM dan guru pengajar", color: "bg-purple-500/10 text-purple-600" },
-    { to: "/academic/raport", label: "E-Rapor & Nilai", icon: faFileInvoice, desc: "Input nilai harian, ujian, dan cetak raport", color: "bg-emerald-500/10 text-emerald-600" },
-]
+// ─── NavIcon Helper ──────────────────────────────────────────────────────────
+function NavIcon({ icon, className = "" }) {
+    if (!icon) return null
+    const isLucide = typeof icon === 'function' || (typeof icon === 'object' && icon.render)
+    if (isLucide) {
+        const IconComponent = icon
+        return <IconComponent className={className || "w-4 h-4"} strokeWidth={2} />
+    }
+    return <FontAwesomeIcon icon={icon} className={className} />
+}
 
-const FINANCE_ITEMS = [
-    { to: "/finance/invoices", label: "Tagihan SPP", icon: faMoneyBillWave, desc: "Kelola tagihan bulanan dan iuran sekolah", color: "bg-amber-500/10 text-amber-600" },
-    { to: "/finance/payments", label: "Riwayat Bayar", icon: faWallet, desc: "Rekapitulasi pembayaran dan tunggakan wali", color: "bg-emerald-500/10 text-emerald-600" },
-]
-
-const REPORTS_ITEMS = [
-    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen izin keluar masuk area santri", color: "bg-red-500/10 text-red-500" },
-    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Laporan perkembangan poin & prestasi bulanan", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/attendance", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Data kehadiran santri di sekolah & asrama", color: "bg-emerald-500/10 text-emerald-600" },
-    { to: "/behavior", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Riwayat detail poin kedisiplinan santri", color: "bg-orange-500/10 text-orange-500" },
-]
-
-const MASTER_ITEMS = [
-    { to: "/master/students", label: "Data Siswa", icon: faUsers, desc: "Pusat database seluruh santri aktif dalam sistem", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Data akun pengajar, musyrif, dan staf sekolah", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Pengaturan struktur kelas dan pembagian asrama", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/master/subjects", label: "Mata Pelajaran", icon: faBook, desc: "Daftar kurikulum mata pelajaran sekolah", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/master/poin", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Konfigurasi kategori poin prestasi & pelanggaran", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Manajemen semester dan periode kalender akademik", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/master/enrollment", label: "PSB / Enrollment", icon: faUserPlus, desc: "Manajemen pendaftaran dan penerimaan siswa baru", color: "bg-emerald-500/10 text-emerald-600" },
-]
-
-const ADMIN_ITEMS = [
-    { to: "/admin", label: "Admin Dashboard Center", icon: faCube, desc: "Pusat monitoring teknis & integrasi sistem", color: "bg-indigo-600/10 text-indigo-600" },
-    { to: "/admin/news", label: "Manajemen Informasi", icon: faNewspaper, desc: "Update Informasi & info terbaru ke landing page", color: "bg-emerald-500/10 text-emerald-600" },
-    { to: "/admin/ai-insights", label: "AI Insights Center", icon: faRobot, desc: "Audit perckapan AI dan analisis performa mesin", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/admin/logs", label: "Audit Logs", icon: faClockRotateLeft, desc: "Log historis aktivitas user dan perubahan data", color: "bg-purple-500/10 text-purple-600" },
-    { to: "/admin/users", label: "User Management", icon: faUserGear, desc: "Pengaturan hak akses, role, dan kredensial user", color: "bg-rose-500/10 text-rose-600" },
-    { to: "/admin/database", label: "Database Health", icon: faDatabase, desc: "Pemantauan status database & kesehatan tabel", color: "bg-cyan-500/10 text-cyan-600" },
-    { to: "/admin/storage", label: "Storage Manager", icon: faBoxArchive, desc: "Manajemen media, foto siswa, dan berkas sistem", color: "bg-amber-500/10 text-amber-600" },
-    { to: "/admin/tasks", label: "Background Tasks", icon: faServer, desc: "Status sinkronisasi background & automasi sistem", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/admin/settings", label: "Pengaturan", icon: faScrewdriverWrench, desc: "Panel pusat pengaturan parameter aplikasi utama", color: "bg-slate-500/10 text-slate-600" },
-    { to: "/admin/playground", label: "UI Playground", icon: faPalette, desc: "Panduan visual komponen dan dokumentasi desain", color: "bg-pink-500/10 text-pink-600" },
-]
-
-// ─── Section titles per key ───────────────────────────────────────────────────
+// ─── Section titles (mobile-specific, slightly different from sidebar) ────────
 const SECTION_TITLE = {
+    boarding: "Kesantrian & Kedisiplinan",
     academic: "Mesin Akademik",
     finance: "Manajemen Keuangan",
-    reports: "Laporan & Rekap",
     master: "Master Data",
     admin: "Admin Panel",
 }
@@ -93,7 +55,7 @@ function Section({ title, items, onNavigate }) {
                     <button key={it.to} onClick={() => onNavigate(it.to)}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--color-surface-alt)] transition">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${it.color}`}>
-                            <FontAwesomeIcon icon={it.icon} className="text-sm" />
+                            <NavIcon icon={it.icon} className="w-4.5 h-4.5" />
                         </div>
                         <div className="text-left min-w-0">
                             <div className="text-[13px] font-bold text-[var(--color-text)] leading-tight">{it.label}</div>
@@ -112,11 +74,6 @@ function Divider() {
 }
 
 // ─── MasterSheet ─────────────────────────────────────────────────────────────
-// Props:
-//   isOpen   — boolean, whether the sheet is visible
-//   onClose  — callback to close the sheet
-//   section  — 'reports' | 'master' | 'admin' | null
-//              null/undefined = tampilkan semua section sesuai role (legacy / full menu)
 export default function MasterSheet({ isOpen, onClose, section }) {
     const navigate = useNavigate()
     const { profile } = useAuth()
@@ -128,36 +85,20 @@ export default function MasterSheet({ isOpen, onClose, section }) {
     const isSatpam = role === 'satpam'
     const isAdminUp = ['developer', 'admin'].includes(role)
 
-    // Filter items berdasarkan role + feature flags
-    const filteredReports = REPORTS_ITEMS.filter(it => {
-        if (it.to === '/gate') return flags['nav.gate'] !== false
-        if (it.to === '/raport') return flags['nav.raport'] !== false
-        if (it.to === '/attendance') return flags['nav.absensi'] !== false
-        if (it.to === '/behavior') return flags['nav.poin'] !== false
-        return true
-    })
-    const visibleReports = isSatpam
-        ? filteredReports.filter(it => it.to === '/gate')
-        : filteredReports
+    // Filter items berdasarkan role + feature flags (using shared utility)
+    const visibleBoarding = filterNavItems(BOARDING_ITEMS, flags, role)
+    const visibleMaster = isSatpam ? [] : filterNavItems(MASTER_ITEMS, flags, role)
 
-    const filteredMaster = MASTER_ITEMS.filter(it => {
-        if (it.to === '/master/students') return flags['nav.students'] !== false
-        if (it.to === '/master/teachers') return flags['nav.teachers'] !== false
-        if (it.to === '/master/classes') return flags['nav.classes'] !== false
-        if (it.to === '/master/poin') return flags['nav.poin'] !== false
-        if (it.to === '/master/academic-years') return flags['nav.academic_years'] !== false
-        return true
-    })
-    const visibleMaster = isSatpam ? [] : filteredMaster
+    // 'more' = Master + Admin gabungan (untuk tombol Lainnya di BottomNav)
+    const isMore = section === 'more'
 
     // Tentukan section mana yang perlu ditampilkan
-    // section prop = spesifik 1 section; null = tampil semua (fallback full-menu)
     const show = {
+        boarding: !section || section === 'boarding',
         academic: (!section || section === 'academic') && !isSatpam,
         finance: (!section || section === 'finance') && !isSatpam,
-        reports: !section || section === 'reports',
-        master: (!section || section === 'master') && visibleMaster.length > 0,
-        admin: (!section || section === 'admin') && isAdminUp,
+        master: (!section || section === 'master' || isMore) && visibleMaster.length > 0,
+        admin: (!section || section === 'admin' || isMore) && isAdminUp,
     }
 
     useEffect(() => {
@@ -178,9 +119,17 @@ export default function MasterSheet({ isOpen, onClose, section }) {
 
     return createPortal(
         !isOpen ? null : (
-            <div className="fixed inset-0 z-[100000]" onClick={onClose}>
-                <div className="absolute inset-0 bg-black/35" />
-                <div className="absolute left-0 right-0 bottom-0 px-3 pb-3" onClick={(e) => e.stopPropagation()}>
+            <div className="fixed inset-0 z-[100000] overflow-hidden" onClick={onClose}>
+                <div className="absolute inset-0 bg-black/35 animate-in fade-in duration-200" />
+                <div 
+                    className="absolute left-0 right-0 bottom-0 px-3 pb-3 animate-in slide-in-from-bottom-full duration-300 ease-out" 
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                        willChange: 'transform',
+                        backfaceVisibility: 'hidden',
+                        contain: 'content'
+                    }}
+                >
                     <div className="mx-auto max-w-xl rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden">
 
                         {/* Grabber */}
@@ -189,19 +138,31 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                         </div>
 
                         <div className="max-h-[75vh] overflow-y-auto no-scrollbar pb-2">
-                            {/* ── Academic ── */}
-                            {show.academic && (
+                            {/* ── Kesantrian (Boarding) ── */}
+                            {show.boarding && (
                                 <Section
-                                    title={SECTION_TITLE.academic}
-                                    items={ACADEMIC_ITEMS}
+                                    title={SECTION_TITLE.boarding}
+                                    items={visibleBoarding}
                                     onNavigate={handleNav}
                                 />
+                            )}
+
+                            {/* ── Academic ── */}
+                            {show.academic && (
+                                <>
+                                    {show.boarding && <Divider />}
+                                    <Section
+                                        title={SECTION_TITLE.academic}
+                                        items={ACADEMIC_ITEMS}
+                                        onNavigate={handleNav}
+                                    />
+                                </>
                             )}
 
                             {/* ── Finance ── */}
                             {show.finance && (
                                 <>
-                                    {show.academic && <Divider />}
+                                    {(show.boarding || show.academic) && <Divider />}
                                     <Section
                                         title={SECTION_TITLE.finance}
                                         items={FINANCE_ITEMS}
@@ -210,22 +171,10 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                                 </>
                             )}
 
-                            {/* ── Reports ── */}
-                            {show.reports && (
-                                <>
-                                    {(show.academic || show.finance) && <Divider />}
-                                    <Section
-                                        title={SECTION_TITLE.reports}
-                                        items={visibleReports}
-                                        onNavigate={handleNav}
-                                    />
-                                </>
-                            )}
-
                             {/* ── Master Data ── */}
                             {show.master && (
                                 <>
-                                    {(show.academic || show.finance || show.reports) && <Divider />}
+                                    {(show.boarding || show.academic || show.finance) && <Divider />}
                                     <Section
                                         title={SECTION_TITLE.master}
                                         items={visibleMaster}
@@ -237,7 +186,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                             {/* ── Admin Panel ── */}
                             {show.admin && (
                                 <div className="mt-2">
-                                    {(show.academic || show.finance || show.reports || show.master) && <Divider />}
+                                    {(show.boarding || show.academic || show.finance || show.master) && <Divider />}
                                     <Section
                                         title="Infrastructure & Control"
                                         items={ADMIN_ITEMS}
@@ -247,12 +196,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                             )}
                         </div>
 
-                        <div className="mt-2 px-5 py-3 rounded-2xl bg-black/5 dark:bg-white/5 mx-3 flex items-center justify-between mb-2">
-                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">LaporanMu System</span>
-                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Operational</span>
-                        </div>
-
-                        <div className="h-3" />
+                        <div className="h-2" />
                     </div>
                 </div>
             </div>

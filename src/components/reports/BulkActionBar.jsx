@@ -5,16 +5,22 @@ import {
     faCircleCheck, faFloppyDisk, faFileZipper, faSpinner, faXmark, faFillDrip
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
+import { useLanguage } from '../../context/LanguageContext'
 
 const BulkActionBar = memo(({ 
     selectedCount, onSave, onWA, onExport, onCancel, 
     isSavingAll, isExporting, onIsiMassal
 }) => {
+    const { dir } = useLanguage()
+
     if (selectedCount === 0) return null
 
     return createPortal(
-        <div className="fixed left-1/2 -translate-x-1/2 z-[250] w-[95%] md:w-max max-w-[95%] animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)"
+        <div className="fixed -translate-x-1/2 z-[250] w-[95%] md:w-max max-w-[95%] animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)"
              style={{ 
+                 left: dir === 'rtl'
+                     ? 'calc(50vw - (var(--sidebar-width, 0px) / 2))'
+                     : 'calc(50vw + (var(--sidebar-width, 0px) / 2))',
                  bottom: 'var(--floating-bar-bottom, 16px)'
              }}>
             <div className="relative">

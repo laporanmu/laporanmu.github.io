@@ -16,6 +16,7 @@ import { StatCard, EmptyState } from '../../components/ui/DataDisplay'
 import StatsCarousel from '../../components/StatsCarousel'
 import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../context/ToastContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { useEnrollmentCore } from '../../hooks/enrollment/useEnrollmentCore'
 import { EnrollmentRow, EnrollmentMobileCard, EnrollmentSkeletonRow, EnrollmentSkeletonCard } from '../../components/enrollment/EnrollmentRow'
 import EnrollmentFormModal from '../../components/enrollment/EnrollmentFormModal'
@@ -43,6 +44,7 @@ function getPortalContainer(id) {
 
 export default function EnrollmentPage() {
     const { addToast, addUndoToast } = useToast()
+    const { dir } = useLanguage()
     const core = useEnrollmentCore({ addToast, addUndoToast })
     const [jumpPage, setJumpPage] = useState('')
     const [isArchiveOpen, setIsArchiveOpen] = useState(false)
@@ -961,7 +963,12 @@ export default function EnrollmentPage() {
             {
                 selectedIds.length > 0 && (
                     <div
-                        className="fixed left-1/2 -translate-x-1/2 z-[250] w-max max-w-[95%] animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1) bottom-[calc(84px+env(safe-area-inset-bottom))] lg:bottom-[max(24px,calc(16px+env(safe-area-inset-bottom)))]"
+                        className="fixed -translate-x-1/2 z-[250] w-max max-w-[95%] animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1) bottom-[calc(84px+env(safe-area-inset-bottom))] lg:bottom-[max(24px,calc(16px+env(safe-area-inset-bottom)))]"
+                        style={{
+                            left: dir === 'rtl'
+                                ? 'calc(50vw - (var(--sidebar-width, 0px) / 2))'
+                                : 'calc(50vw + (var(--sidebar-width, 0px) / 2))'
+                        }}
                     >
                         <div className="relative">
                             <div className="relative glass-morphism bg-gray-900/90 dark:bg-gray-800/95 backdrop-blur-3xl border border-white/20 rounded-2xl px-3 py-2 flex items-center gap-4 text-white shadow-2xl">

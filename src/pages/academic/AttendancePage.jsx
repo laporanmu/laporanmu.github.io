@@ -25,6 +25,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import Breadcrumb from '../../components/ui/Breadcrumb'
 import { EmptyState } from '../../components/ui/DataDisplay'
 import { useToast } from '../../context/ToastContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
@@ -3687,6 +3688,7 @@ function GuruTab() {
 
 export default function AttendancePage() {
     const { addToast } = useToast()
+    const { dir } = useLanguage()
     const { profile } = useAuth()
     const now = new Date()
 
@@ -4333,7 +4335,7 @@ export default function AttendancePage() {
                 {/* Page header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
-                        <Breadcrumb badge="Reports" items={['Attendance Analytics']} className="mb-1" />
+                        <Breadcrumb badge="academic" items={['Attendance Analytics']} className="mb-1" />
                         <h1 className="text-2xl font-black font-heading tracking-tight text-[var(--color-text)]">Absensi Bulanan</h1>
                         <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 font-medium opacity-70">
                             <span className="sm:hidden">Input &amp; rekap absensi siswa per bulan.</span>
@@ -5059,9 +5061,16 @@ export default function AttendancePage() {
                     </div>
 
                     {/* Floating save bar */}
-                    <div className={`fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 px-4 w-full sm:w-auto ${isDirty && activeTab === 'input'
-                        ? 'opacity-100 translate-y-0 pointer-events-auto'
-                        : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                    <div
+                        className={`fixed bottom-20 sm:bottom-6 -translate-x-1/2 z-50 transition-all duration-300 px-4 w-full sm:w-auto ${isDirty && activeTab === 'input'
+                            ? 'opacity-100 translate-y-0 pointer-events-auto'
+                            : 'opacity-0 translate-y-4 pointer-events-none'}`}
+                        style={{
+                            left: dir === 'rtl'
+                                ? 'calc(50vw - (var(--sidebar-width, 0px) / 2))'
+                                : 'calc(50vw + (var(--sidebar-width, 0px) / 2))'
+                        }}
+                    >
                         <div className="flex items-center gap-2 sm:gap-3 px-4 py-2.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-2xl">
                             <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400 shrink-0" />
                             <span className="text-[11px] text-[var(--color-text-muted)] font-medium flex-1 sm:flex-none">

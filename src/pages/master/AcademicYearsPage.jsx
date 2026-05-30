@@ -15,6 +15,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import PageHeader from '../../components/ui/PageHeader'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../context/ToastContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { useAuth } from '../../context/AuthContext'
 import { useFlag } from '../../context/FeatureFlagsContext'
 import { supabase } from '../../lib/supabase'
@@ -273,6 +274,7 @@ function TimelineView({ years, onEdit, onHistory, onSetActive, onDuplicate, onDe
 
 export default function AcademicYearsPage() {
     const { addToast, addUndoToast } = useToast()
+    const { dir } = useLanguage()
     const { profile } = useAuth()
     const { enabled: canEdit } = useFlag('access.teacher_academic')
 
@@ -1171,7 +1173,14 @@ export default function AcademicYearsPage() {
 
                 {/* Selection Action Bar ── */}
                 {selectedIds.length > 0 && (
-                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-500">
+                    <div
+                        className="fixed bottom-6 -translate-x-1/2 z-[100] w-[90%] max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-500"
+                        style={{
+                            left: dir === 'rtl'
+                                ? 'calc(50vw - (var(--sidebar-width, 0px) / 2))'
+                                : 'calc(50vw + (var(--sidebar-width, 0px) / 2))'
+                        }}
+                    >
                         <div className="bg-gray-900 text-white rounded-[2.5rem] p-2 pr-6 shadow-2xl flex items-center gap-4 border border-white/10 backdrop-blur-xl">
                             <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center font-black text-sm shadow-lg shadow-[var(--color-primary)]/20 animate-bounce">
                                 {selectedIds.length}

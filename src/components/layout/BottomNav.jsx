@@ -1,61 +1,85 @@
 import { useState, useEffect } from "react"
 import { NavLink } from "react-router-dom"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
-    faHouse, faClipboardList, faLayerGroup, faUserGear, faCog, faCalendarAlt, faMoneyBillWave
-} from "@fortawesome/free-solid-svg-icons"
+    Home,
+    Compass,
+    Layers,
+    UserCog,
+    Settings,
+    Calendar,
+    CreditCard,
+    MoreHorizontal,
+} from "lucide-react"
 import { useAuth } from "../../context/AuthContext"
-import { useFeatureFlags } from "../../context/FeatureFlagsContext"
 import MasterSheet from "./MasterSheet"
 
-// Warna aktif konsisten dengan TopNav (indigo-600)
-const ACTIVE = "text-indigo-600"
-const INACTIVE = "text-[var(--color-text-muted)] hover:text-indigo-500"
+// ─── Warna aktif ─────────────────────────────────────────────────────────────
+const ACTIVE_COLOR = "text-indigo-600"
+const INACTIVE_COLOR = "text-[var(--color-text-muted)]"
 
-// NavItem: pakai NavLink → active state otomatis + dot indicator
-function NavItem({ to, icon, label, activeColor = ACTIVE }) {
+// ─── NavItem (route link) ────────────────────────────────────────────────────
+function NavItem({ to, icon, label }) {
+    const IconComp = icon
     return (
         <NavLink
             to={to}
             className={({ isActive }) =>
-                `py-3 flex flex-col items-center justify-center gap-1 text-[8.5px] sm:text-[10px] font-bold transition-colors relative
-                 ${isActive ? activeColor : INACTIVE}`
+                `relative flex flex-col items-center justify-center gap-[3px] py-2.5 px-1 transition-colors duration-150
+                 ${isActive ? ACTIVE_COLOR : INACTIVE_COLOR}`
             }
         >
             {({ isActive }) => (
                 <>
-                    {isActive && (
-                        <span className="absolute top-1.5 w-1 h-1 rounded-full bg-indigo-600" />
-                    )}
-                    <FontAwesomeIcon icon={icon} className="text-[16px] sm:text-[17px]" />
-                    <span className="tracking-tight leading-none truncate px-0.5">{label}</span>
+                    {/* Active pill indicator */}
+                    <span
+                        className={`absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-b-full bg-indigo-600 transition-all duration-200
+                            ${isActive ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'}`}
+                    />
+                    <IconComp
+                        className={`w-5 h-5 transition-transform duration-150 ${isActive ? 'scale-110' : ''}`}
+                        strokeWidth={isActive ? 2.5 : 2}
+                    />
+                    <span className={`text-[9px] font-bold tracking-tight leading-none transition-all duration-150 ${isActive ? 'font-extrabold' : ''}`}>
+                        {label}
+                    </span>
                 </>
             )}
         </NavLink>
     )
 }
 
-// MenuButton: non-route button, styling mirip NavItem
+// ─── MenuButton (sheet trigger) ──────────────────────────────────────────────
 function MenuButton({ icon, label, onClick, active = false }) {
+    const IconComp = icon
     return (
         <button
             onClick={onClick}
             type="button"
             aria-label={`Buka menu ${label}`}
-            className={`py-3 flex flex-col items-center justify-center gap-1 text-[8.5px] sm:text-[10px] font-bold transition-colors relative ${active ? ACTIVE : INACTIVE}`}
+            className={`relative flex flex-col items-center justify-center gap-[3px] py-2.5 px-1 transition-colors duration-150
+                ${active ? ACTIVE_COLOR : INACTIVE_COLOR}`}
         >
-            {active && <span className="absolute top-1.5 w-1 h-1 rounded-full bg-indigo-600" />}
-            <FontAwesomeIcon icon={icon} className="text-[16px] sm:text-[17px]" />
-            <span className="tracking-tight leading-none truncate px-0.5">{label}</span>
+            {/* Active pill indicator */}
+            <span
+                className={`absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-b-full bg-indigo-600 transition-all duration-200
+                    ${active ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'}`}
+            />
+            <IconComp
+                className={`w-5 h-5 transition-transform duration-150 ${active ? 'scale-110' : ''}`}
+                strokeWidth={active ? 2.5 : 2}
+            />
+            <span className={`text-[9px] font-bold tracking-tight leading-none ${active ? 'font-extrabold' : ''}`}>
+                {label}
+            </span>
         </button>
     )
 }
 
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function BottomNav() {
-    // openSheet: null | 'reports' | 'master' | 'admin'
+    // openSheet: null | 'boarding' | 'academic' | 'finance' | 'master' | 'admin' | 'more'
     const [openSheet, setOpenSheet] = useState(null)
     const [isVisible, setIsVisible] = useState(true)
-    const [lastScrollY, setLastScrollY] = useState(0)
     const { profile } = useAuth()
 
     const role = profile?.role?.toLowerCase()
@@ -65,19 +89,16 @@ export default function BottomNav() {
     const open = (section) => setOpenSheet(section)
     const close = () => setOpenSheet(null)
 
-    // ── Hide on Scroll Logic ──
+    // ── Hide on Scroll ──
     useEffect(() => {
         let lastY = window.scrollY
         const handleScroll = () => {
             const currentY = window.scrollY
             const windowHeight = window.innerHeight
             const docHeight = document.documentElement.scrollHeight
-            
-            // Sensitivitas deteksi bawah (tambah threshold ke 60px)
+
             const isNearBottom = (windowHeight + currentY) >= (docHeight - 60)
             const isNearTop = currentY < 50
-
-            // Scroll direction
             const isScrollingUp = currentY < lastY
             const isScrollingDown = currentY > lastY
 
@@ -86,7 +107,7 @@ export default function BottomNav() {
             } else if (isScrollingDown && currentY > 100) {
                 setIsVisible(false)
             }
-            
+
             lastY = currentY
         }
 
@@ -96,42 +117,48 @@ export default function BottomNav() {
 
     return (
         <>
-            <nav 
-                className={`lg:hidden fixed bottom-0 left-0 right-0 z-[200] transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)
-                ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}
+            <nav
+                className={`lg:hidden fixed bottom-0 left-0 right-0 z-[200]
+                    transition-transform duration-300 ease-in-out
+                    ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
             >
-                <div className="mx-auto max-w-7xl px-3 pb-3">
-                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+                {/* Safe area padding for notched phones */}
+                <div className="mx-auto max-w-lg px-3 pb-2">
+                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl shadow-[0_-4px_24px_rgba(15,23,42,0.10)] overflow-hidden">
 
-                        {/* ── Admin / Developer: Dashboard | Akademik | Keuangan | Laporan | Master | Admin ── */}
+                        {/* ── Admin / Developer: 5 col → Home | Kesantrian | Akademik | Keuangan | Lainnya ── */}
                         {isAdminUp && (
-                            <div className="grid grid-cols-6">
-                                <NavItem to="/dashboard" icon={faHouse} label="Home" />
-                                <MenuButton icon={faCalendarAlt} label="Akademik" onClick={() => open('academic')} active={openSheet === 'academic'} />
-                                <MenuButton icon={faMoneyBillWave} label="Keuangan" onClick={() => open('finance')} active={openSheet === 'finance'} />
-                                <MenuButton icon={faClipboardList} label="Laporan" onClick={() => open('reports')} active={openSheet === 'reports'} />
-                                <MenuButton icon={faLayerGroup} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
-                                <MenuButton icon={faUserGear} label="Admin" onClick={() => open('admin')} active={openSheet === 'admin'} />
+                            <div className="grid grid-cols-5">
+                                <NavItem to="/dashboard" icon={Home} label="Home" />
+                                <MenuButton icon={Compass} label="Kesantrian" onClick={() => open('boarding')} active={openSheet === 'boarding'} />
+                                <MenuButton icon={Calendar} label="Akademik" onClick={() => open('academic')} active={openSheet === 'academic'} />
+                                <MenuButton icon={CreditCard} label="Keuangan" onClick={() => open('finance')} active={openSheet === 'finance'} />
+                                <MenuButton
+                                    icon={MoreHorizontal}
+                                    label="Lainnya"
+                                    onClick={() => open(openSheet === 'more' ? null : 'more')}
+                                    active={openSheet === 'more'}
+                                />
                             </div>
                         )}
 
-                        {/* ── Satpam: Home | Laporan | Setting (3 col) ── */}
+                        {/* ── Satpam: 3 col → Home | Kesantrian | Setting ── */}
                         {isSatpam && (
                             <div className="grid grid-cols-3">
-                                <NavItem to="/dashboard" icon={faHouse} label="Home" />
-                                <MenuButton icon={faClipboardList} label="Laporan" onClick={() => open('reports')} active={openSheet === 'reports'} />
-                                <NavItem to="/settings" icon={faCog} label="Setting" />
+                                <NavItem to="/dashboard" icon={Home} label="Home" />
+                                <MenuButton icon={Compass} label="Kesantrian" onClick={() => open('boarding')} active={openSheet === 'boarding'} />
+                                <NavItem to="/settings" icon={Settings} label="Setting" />
                             </div>
                         )}
 
-                        {/* ── Staff biasa: Home | Akademik | Keuangan | Laporan | Master (5 col) ── */}
+                        {/* ── Staff: 5 col → Home | Kesantrian | Akademik | Keuangan | Master ── */}
                         {!isAdminUp && !isSatpam && (
                             <div className="grid grid-cols-5">
-                                <NavItem to="/dashboard" icon={faHouse} label="Home" />
-                                <MenuButton icon={faCalendarAlt} label="Akademik" onClick={() => open('academic')} active={openSheet === 'academic'} />
-                                <MenuButton icon={faMoneyBillWave} label="Keuangan" onClick={() => open('finance')} active={openSheet === 'finance'} />
-                                <MenuButton icon={faClipboardList} label="Laporan" onClick={() => open('reports')} active={openSheet === 'reports'} />
-                                <MenuButton icon={faLayerGroup} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
+                                <NavItem to="/dashboard" icon={Home} label="Home" />
+                                <MenuButton icon={Compass} label="Kesantrian" onClick={() => open('boarding')} active={openSheet === 'boarding'} />
+                                <MenuButton icon={Calendar} label="Akademik" onClick={() => open('academic')} active={openSheet === 'academic'} />
+                                <MenuButton icon={CreditCard} label="Keuangan" onClick={() => open('finance')} active={openSheet === 'finance'} />
+                                <MenuButton icon={Layers} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
                             </div>
                         )}
 
@@ -139,7 +166,8 @@ export default function BottomNav() {
                 </div>
             </nav>
 
+            {/* MasterSheet: 'boarding' | 'academic' | 'finance' | 'master' | 'admin' */}
             <MasterSheet isOpen={openSheet !== null} section={openSheet} onClose={close} />
         </>
     )
-}
+}

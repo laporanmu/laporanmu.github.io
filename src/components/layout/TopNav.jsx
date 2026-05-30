@@ -14,8 +14,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons"
 import { useTheme } from "../../context/ThemeContext"
 import { useAuth } from "../../context/AuthContext"
-import { useNotifications } from "../../hooks/useNotifications"
+import { useNotifications, translateNotification } from "../../hooks/useNotifications"
 import { useFeatureFlags } from "../../context/FeatureFlagsContext"
+import { useLanguage } from "../../context/LanguageContext"
 
 // ─── Avatar component — handles image error state properly ────────────────────
 // Gradient hanya muncul saat tidak ada foto. Kalau foto gagal load,
@@ -75,10 +76,10 @@ const FINANCE_ITEMS = [
 ]
 
 const REPORTS_ITEMS = [
-    { to: "/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen Izin Keluar Masuk Santri", color: "bg-red-500/10 text-red-500" },
+    { to: "/boarding/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen Izin Keluar Masuk Santri", color: "bg-red-500/10 text-red-500" },
     { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Rekapitulasi Akademik Santri", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/attendance", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekapitulasi Absensi Santri", color: "bg-emerald-500/10 text-emerald-600" },
-    { to: "/behavior", label: "Laporan Perilaku", icon: faShieldHalved, desc: "Rekapitulasi Pelanggaran & Prestasi Santri", color: "bg-orange-500/10 text-orange-500" },
+    { to: "/boarding/behavior", label: "Kedisiplinan & Poin", icon: faShieldHalved, desc: "Rekapitulasi Pelanggaran & Prestasi Santri", color: "bg-orange-500/10 text-orange-500" },
 ]
 
 // Admin-only items — hanya tampil untuk developer & admin
@@ -115,6 +116,7 @@ function NotifBadge({ count }) {
 
 // Satu baris notifikasi di panel
 function NotifItem({ notif, onDismiss, onNavigate }) {
+    const { t } = useLanguage()
     const s = TYPE_STYLE[notif.type] || TYPE_STYLE.info
     return (
         <div className={`group relative rounded-xl border p-3 transition-all ${s.bg} ${s.border}`}>
@@ -128,7 +130,7 @@ function NotifItem({ notif, onDismiss, onNavigate }) {
                     {notif.action && (
                         <button
                             onClick={() => onNavigate(notif.action.route)}
-                            aria-label={`Buka ${notif.action.label}`}
+                            aria-label={notif.action.label}
                             className={`mt-1.5 text-[9px] font-black uppercase tracking-widest flex items-center gap-1 ${s.text} hover:opacity-70 transition-opacity`}
                         >
                             {notif.action.label} <FontAwesomeIcon icon={faArrowRight} className="text-[7px]" />
@@ -138,8 +140,8 @@ function NotifItem({ notif, onDismiss, onNavigate }) {
                 <button
                     onClick={() => onDismiss(notif.id)}
                     className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[9px]"
-                    title="Tutup"
-                    aria-label="Tutup notifikasi"
+                    title={t('notif.close')}
+                    aria-label={t('notif.close')}
                 >
                     <FontAwesomeIcon icon={faXmark} />
                 </button>
@@ -152,6 +154,7 @@ function NotifItem({ notif, onDismiss, onNavigate }) {
 // KEY FIX: menerima isOpen prop — portal selalu di-render, content dikondisikan di dalam.
 // Pola ini mencegah removeChild crash saat concurrent unmount.
 function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onRefresh, onNavigate, isMobile, anchorRef, panelRef }) {
+    const { t } = useLanguage()
     const errCount = notifications.filter(n => n.type === 'error').length
     const warnCount = notifications.filter(n => n.type === 'warning').length
     const container = getPortalContainer('portal-notif')
@@ -173,19 +176,19 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <div>
-                    <p className="text-[12px] font-black text-[var(--color-text)]">Notifikasi</p>
+                    <p className="text-[12px] font-black text-[var(--color-text)]">{t('notif.header')}</p>
                     {!loading && notifications.length > 0 && (
                         <p className="text-[9px] text-[var(--color-text-muted)] mt-0.5">
-                            {errCount > 0 && <span className="text-red-500 font-bold">{errCount} perlu tindakan · </span>}
-                            {warnCount > 0 && <span className="text-amber-500 font-bold">{warnCount} peringatan · </span>}
-                            {notifications.length} total
+                            {errCount > 0 && <span className="text-red-500 font-bold">{errCount} {t('notif.need_action')} · </span>}
+                            {warnCount > 0 && <span className="text-amber-500 font-bold">{warnCount} {t('notif.warning')} · </span>}
+                            {notifications.length} {t('notif.total')}
                         </p>
                     )}
                 </div>
                 <button
                     onClick={onRefresh}
-                    title="Refresh"
-                    aria-label="Refresh notifikasi"
+                    title={t('notif.refresh')}
+                    aria-label={t('notif.refresh')}
                     className={`p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition text-xs ${refreshing ? 'animate-spin pointer-events-none' : ''}`}
                 >
                     <FontAwesomeIcon icon={faRotateRight} />
@@ -197,13 +200,13 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
                 {loading ? (
                     <div className="py-8 flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
                         <FontAwesomeIcon icon={faRotateRight} className="animate-spin text-lg" />
-                        <p className="text-[10px]">Memuat notifikasi...</p>
+                        <p className="text-[10px]">{t('notif.loading')}</p>
                     </div>
                 ) : notifications.length === 0 ? (
                     <div className="py-8 flex flex-col items-center gap-2 text-[var(--color-text-muted)]">
                         <span className="text-2xl">🎉</span>
-                        <p className="text-[11px] font-bold">Semua beres!</p>
-                        <p className="text-[9px] text-center">Tidak ada notifikasi yang perlu ditindaklanjuti.</p>
+                        <p className="text-[11px] font-bold">{t('notif.empty_title')}</p>
+                        <p className="text-[9px] text-center">{t('notif.empty_desc')}</p>
                     </div>
                 ) : (
                     notifications.map(n => (
@@ -224,7 +227,7 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
                         onClick={() => notifications.forEach(n => onDismiss(n.id))}
                         className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition"
                     >
-                        Tutup Semua
+                        {t('notif.close_all')}
                     </button>
                 </div>
             )}
@@ -259,21 +262,22 @@ export default function TopNav({ title, subtitle }) {
     const { flags } = useFeatureFlags()
     const navigate = useNavigate()
     const { notifications, loading, refreshing, dismiss, refresh } = useNotifications()
+    const { t } = useLanguage()
 
     // ── Filter nav items by feature flags
     // nav.X flags control visibility; default true if flag not yet loaded
     const visibleReportsItems = REPORTS_ITEMS.filter(it => {
-        if (it.to === '/gate') return flags['nav.gate'] !== false
+        if (it.to === '/boarding/gate') return flags['nav.gate'] !== false
         if (it.to === '/raport') return flags['nav.raport'] !== false
         if (it.to === '/attendance') return flags['nav.absensi'] !== false
-        if (it.to === '/behavior') return flags['nav.poin'] !== false
+        if (it.to === '/boarding/behavior') return flags['nav.poin'] !== false
         return true
     })
     // Satpam: only show gate
     const role = profile?.role?.toLowerCase()
     const isSatpam = role === 'satpam'
     const filteredReportsItems = isSatpam
-        ? visibleReportsItems.filter(it => it.to === '/gate')
+        ? visibleReportsItems.filter(it => it.to === '/boarding/gate')
         : visibleReportsItems
 
     // Filter master items by nav flags
@@ -355,24 +359,27 @@ export default function TopNav({ title, subtitle }) {
     }, [])
 
     // Bell button — hanya tombol, panel dirender sekali di luar
-    const BellButton = () => (
-        <div className="relative" ref={notifBtnRef}>
-            <button
-                onClick={() => setNotifOpen(v => !v)}
-                className={`relative p-2.5 rounded-xl transition
-                    ${notifOpen
-                        ? 'bg-[var(--color-surface-alt)] text-[var(--color-primary)]'
-                        : 'hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'}
-                    ${urgentCount > 0 ? 'animate-[bellShake_2s_ease-in-out_infinite]' : ''}`}
-                aria-label="Notifikasi"
-                title="Notifikasi"
-                type="button"
-            >
-                <FontAwesomeIcon icon={faBell} />
-                <NotifBadge count={urgentCount || (totalCount > 0 ? totalCount : 0)} />
-            </button>
-        </div>
-    )
+    const BellButton = () => {
+        const { t } = useLanguage()
+        return (
+            <div className="relative" ref={notifBtnRef}>
+                <button
+                    onClick={() => setNotifOpen(v => !v)}
+                    className={`relative p-2.5 rounded-xl transition
+                        ${notifOpen
+                            ? 'bg-[var(--color-surface-alt)] text-[var(--color-primary)]'
+                            : 'hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]'}
+                        ${urgentCount > 0 ? 'animate-[bellShake_2s_ease-in-out_infinite]' : ''}`}
+                    aria-label={t('notif.header')}
+                    title={t('notif.header')}
+                    type="button"
+                >
+                    <FontAwesomeIcon icon={faBell} />
+                    <NotifBadge count={urgentCount || (totalCount > 0 ? totalCount : 0)} />
+                </button>
+            </div>
+        )
+    }
 
     // ── Hide on Scroll Logic ──
     const [isVisible, setIsVisible] = useState(true)
@@ -700,7 +707,7 @@ export default function TopNav({ title, subtitle }) {
                 NotifPanel yang putuskan render null di dalam portal. */}
             <NotifPanel
                 isOpen={notifOpen}
-                notifications={notifications}
+                notifications={notifications.map(n => translateNotification(n, t))}
                 loading={loading}
                 refreshing={refreshing}
                 onDismiss={dismiss}

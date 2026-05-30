@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useLanguage } from '../context/LanguageContext'
 
 /**
  * StatsCarousel — Horizontally scrollable stats card container on mobile,
@@ -18,6 +19,7 @@ import { useRef, useState } from 'react'
  *   className – extra classes on the outer wrapper
  */
 export default function StatsCarousel({ children, count, cols = 4, className = '' }) {
+    const { dir } = useLanguage()
     const scrollRef = useRef(null)
     const [activeIdx, setActiveIdx] = useState(0)
 
@@ -25,7 +27,7 @@ export default function StatsCarousel({ children, count, cols = 4, className = '
         const el = scrollRef.current
         if (!el) return
         const cardWidth = el.scrollWidth / count
-        const idx = Math.round(el.scrollLeft / cardWidth)
+        const idx = Math.round(Math.abs(el.scrollLeft) / cardWidth)
         setActiveIdx(Math.min(idx, count - 1))
     }
 
@@ -55,7 +57,8 @@ export default function StatsCarousel({ children, count, cols = 4, className = '
                             const el = scrollRef.current
                             if (!el) return
                             const cardWidth = el.scrollWidth / count
-                            el.scrollTo({ left: cardWidth * i, behavior: 'smooth' })
+                            const scrollMultiplier = dir === 'rtl' ? -1 : 1
+                            el.scrollTo({ left: cardWidth * i * scrollMultiplier, behavior: 'smooth' })
                         }}
                         aria-label={`Go to slide ${i + 1}`}
                         className={`rounded-full transition-all duration-300 ${

@@ -1,25 +1,152 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCalendarAlt, faChevronLeft, faChevronRight, faXmark, faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { faCalendarAlt, faChevronLeft, faChevronRight, faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { useLanguage } from '../../context/LanguageContext'
 
-const MONTHS = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-]
+const LOCALES = {
+    id: {
+        months: [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ],
+        daysShort: ['Sn', 'Sl', 'Rb', 'Km', 'Jm', 'Sb', 'Mg'],
+        formatResting: (d, m, y) => `${d} ${LOCALES.id.months[m]} ${y}`,
+        formatTyped: (d, m, y) => `${d}/${m + 1}/${y}`,
+        placeholder: 'DD/MM/YYYY',
+        today: 'Hari Ini',
+        clear: 'Hapus',
+        parse: (str) => {
+            const clean = str.trim()
+            let match = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/)
+            if (match) {
+                const day = parseInt(match[1], 10)
+                const month = parseInt(match[2], 10) - 1
+                const year = parseInt(match[3], 10)
+                return { day, month, year }
+            }
+            return null
+        }
+    },
+    en: {
+        months: [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ],
+        daysShort: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
+        formatResting: (d, m, y) => `${LOCALES.en.months[m]} ${d}, ${y}`,
+        formatTyped: (d, m, y) => `${m + 1}/${d}/${y}`,
+        placeholder: 'MM/DD/YYYY',
+        today: 'Today',
+        clear: 'Clear',
+        parse: (str) => {
+            const clean = str.trim()
+            let match = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/)
+            if (match) {
+                const month = parseInt(match[1], 10) - 1
+                const day = parseInt(match[2], 10)
+                const year = parseInt(match[3], 10)
+                return { day, month, year }
+            }
+            return null
+        }
+    },
+    ar: {
+        months: [
+            'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        ],
+        daysShort: ['ن', 'ث', 'ر', 'خ', 'ج', 'س', 'ح'],
+        formatResting: (d, m, y) => `${d} ${LOCALES.ar.months[m]} ${y}`,
+        formatTyped: (d, m, y) => `${d}/${m + 1}/${y}`,
+        placeholder: 'DD/MM/YYYY',
+        today: 'اليوم',
+        clear: 'حذف',
+        parse: (str) => {
+            const clean = str.trim()
+            let match = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/)
+            if (match) {
+                const day = parseInt(match[1], 10)
+                const month = parseInt(match[2], 10) - 1
+                const year = parseInt(match[3], 10)
+                return { day, month, year }
+            }
+            return null
+        }
+    }
+}
 
-const DAYS_SHORT = ['Sn', 'Sl', 'Rb', 'Km', 'Jm', 'Sb', 'Mg']
+const normalizeArabicDigits = (str) => {
+    if (!str) return ''
+    const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']
+    return str.replace(/[٠-٩]/g, d => String(arabicDigits.indexOf(d)))
+}
+
+// Parse typed strings dynamically based on selected system language
+const parseDateString = (str, lang) => {
+    if (!str) return null
+    const clean = normalizeArabicDigits(str.trim())
+    
+    // First try standard database format YYYY-MM-DD or YYYY/MM/DD
+    let match = clean.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/)
+    if (match) {
+        const y = parseInt(match[1], 10)
+        const m = parseInt(match[2], 10) - 1
+        const d = parseInt(match[3], 10)
+        const date = new Date(y, m, d)
+        if (!isNaN(date.getTime()) && date.getFullYear() === y && date.getMonth() === m && date.getDate() === d) {
+            return date
+        }
+    }
+    
+    // Next, try localized parser
+    const parser = LOCALES[lang] || LOCALES.id
+    const parsed = parser.parse(clean)
+    if (parsed) {
+        const { day, month, year } = parsed
+        const date = new Date(year, month, day)
+        if (!isNaN(date.getTime()) && date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+            return date
+        }
+    }
+    return null
+}
 
 const RichDatePicker = memo(({
     value, // Format: YYYY-MM-DD
     onChange,
-    placeholder = 'Pilih Tanggal...',
+    placeholder,
     small = false,
     disabled = false,
     className = "",
-    compact = false
+    compact = false,
+    clearable = true
 }) => {
+    // Access active language context with safe fallback
+    let systemLanguage = 'id'
+    let tNum = (val) => String(val)
+    try {
+        const langCtx = useLanguage()
+        if (langCtx && langCtx.language) {
+            systemLanguage = langCtx.language
+        }
+        if (langCtx && langCtx.tNum) {
+            tNum = langCtx.tNum
+        }
+    } catch {
+        // Safe fallback
+    }
+
+    const currentLocale = useMemo(() => LOCALES[systemLanguage] || LOCALES.id, [systemLanguage])
+    const defaultPlaceholder = useMemo(() => {
+        const ph = placeholder || currentLocale.placeholder
+        return tNum(ph)
+    }, [placeholder, currentLocale, tNum])
+
     const [isOpen, setIsOpen] = useState(false)
+    const [isFocused, setIsFocused] = useState(false)
+    const [typedValue, setTypedValue] = useState('')
+
     const [currentDate, setCurrentDate] = useState(() => {
         if (value) {
             const d = new Date(value)
@@ -27,128 +154,177 @@ const RichDatePicker = memo(({
         }
         return new Date()
     })
-    
+
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, placement: 'bottom', maxHeight: 360 })
-    const [compactPlacement, setCompactPlacement] = useState('bottom')
     const ref = useRef(null)
 
-    // Synchronize currentDate if value changes
+    // Synchronize currentDate and typedValue when value prop or active language changes
     useEffect(() => {
         if (value) {
             const d = new Date(value)
             if (!isNaN(d.getTime())) {
                 setCurrentDate(d)
+                
+                const [y, m, dStr] = value.split('-')
+                setTypedValue(currentLocale.formatTyped(parseInt(dStr, 10), parseInt(m, 10) - 1, parseInt(y, 10)))
             }
+        } else if (!isFocused) {
+            setTypedValue('')
         }
-    }, [value])
+    }, [value, isFocused, currentLocale])
 
     const updateCoords = useCallback(() => {
         if (ref.current) {
             const rect = ref.current.getBoundingClientRect()
-            const dropdownHeight = 320
-            const margin = 16
-            
-            const spaceBelow = window.innerHeight - rect.bottom - margin
-            const spaceAbove = rect.top - margin
-            
+            const dropdownHeight = 260
+            const margin = 8
+
+            let containerBottom = window.innerHeight - margin
+            let containerTop = margin
+            let hasScrollableAncestor = false
+            let el = ref.current.parentElement
+            while (el && el !== document.body) {
+                const { overflow, overflowY } = window.getComputedStyle(el)
+                if (/(auto|scroll)/.test(overflow + overflowY)) {
+                    const containerRect = el.getBoundingClientRect()
+                    containerBottom = containerRect.bottom - margin
+                    containerTop = containerRect.top + margin
+                    hasScrollableAncestor = true
+                    break
+                }
+                el = el.parentElement
+            }
+
+            if (hasScrollableAncestor) {
+                if (rect.bottom < containerTop || rect.top > containerBottom) {
+                    setIsOpen(false)
+                    return
+                }
+            }
+
+            const spaceBelow = containerBottom - rect.bottom
+            const spaceAbove = rect.top - containerTop
             const shouldFlip = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
 
             setCoords({
                 top: rect.top,
-                bottom: rect.bottom,
                 left: rect.left,
                 width: rect.width,
                 placement: shouldFlip ? 'top' : 'bottom',
-                maxHeight: shouldFlip ? spaceAbove : spaceBelow
+                maxHeight: shouldFlip ? spaceAbove - 16 : spaceBelow - 16
             })
         }
-    }, [])
+    }, [setIsOpen])
 
-    const toggle = useCallback(() => {
-        const nextState = !isOpen
-        if (nextState) {
-            if (compact && ref.current) {
-                const rect = ref.current.getBoundingClientRect()
-                const dropdownH = 300
-                const spaceBelow = window.innerHeight - rect.bottom - 8
-                setCompactPlacement(spaceBelow < dropdownH ? 'top' : 'bottom')
-            } else if (!compact) {
-                updateCoords()
-            }
+    const handleFocus = () => {
+        setIsFocused(true)
+        updateCoords()
+        setIsOpen(true)
+    }
+
+    const handleBlur = () => {
+        setIsFocused(false)
+        
+        // Restore input to match valid value
+        if (value) {
+            const [y, m, dStr] = value.split('-')
+            setTypedValue(currentLocale.formatTyped(parseInt(dStr, 10), parseInt(m, 10) - 1, parseInt(y, 10)))
+        } else {
+            setTypedValue('')
         }
-        setIsOpen(nextState)
-    }, [isOpen, compact, updateCoords])
+    }
+
+    const handleInputChange = (e) => {
+        const val = e.target.value
+        setTypedValue(val)
+        
+        const parsed = parseDateString(val, systemLanguage)
+        if (parsed) {
+            const formattedMonth = String(parsed.getMonth() + 1).padStart(2, '0')
+            const formattedDay = String(parsed.getDate()).padStart(2, '0')
+            const yyyymmdd = `${parsed.getFullYear()}-${formattedMonth}-${formattedDay}`
+            onChange(yyyymmdd)
+            setCurrentDate(parsed)
+        }
+    }
 
     useEffect(() => {
         if (!isOpen) return
 
         const handleClickOutside = (e) => {
-            if (ref.current && !ref.current.contains(e.target)) setIsOpen(false)
+            if (ref.current && !ref.current.contains(e.target)) {
+                setIsOpen(false)
+            }
         }
         document.addEventListener('mousedown', handleClickOutside)
 
-        if (!compact) {
-            window.addEventListener('scroll', updateCoords, true)
-            window.addEventListener('resize', updateCoords)
+        const scrollableAncestors = []
+        let el = ref.current?.parentElement
+        while (el && el !== document.body) {
+            const { overflow, overflowY } = window.getComputedStyle(el)
+            if (/(auto|scroll)/.test(overflow + overflowY)) {
+                scrollableAncestors.push(el)
+                el.addEventListener('scroll', updateCoords, { passive: true })
+            }
+            el = el.parentElement
         }
-            
+        window.addEventListener('scroll', updateCoords, true)
+        window.addEventListener('resize', updateCoords)
+
         return () => {
             document.removeEventListener('mousedown', handleClickOutside)
-            if (!compact) {
-                window.removeEventListener('scroll', updateCoords, true)
-                window.removeEventListener('resize', updateCoords)
-            }
+            scrollableAncestors.forEach(a => a.removeEventListener('scroll', updateCoords))
+            window.removeEventListener('scroll', updateCoords, true)
+            window.removeEventListener('resize', updateCoords)
         }
-    }, [isOpen, updateCoords, compact])
+    }, [isOpen, updateCoords])
 
-    // Format display date
-    const formattedDisplay = useMemo(() => {
-        if (!value) return ''
-        const d = new Date(value)
-        if (isNaN(d.getTime())) return ''
-        return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
-    }, [value])
-
-    const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
+    const year = currentDate.getFullYear()
 
     const handlePrevMonth = useCallback((e) => {
         e.stopPropagation()
-        setCurrentDate(new Date(year, month - 1, 1))
-    }, [year, month])
+        e.preventDefault()
+        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+    }, [])
 
     const handleNextMonth = useCallback((e) => {
         e.stopPropagation()
-        setCurrentDate(new Date(year, month + 1, 1))
-    }, [year, month])
+        e.preventDefault()
+        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+    }, [])
 
     const handleSelectDay = useCallback((day) => {
         const formattedMonth = String(month + 1).padStart(2, '0')
         const formattedDay = String(day).padStart(2, '0')
         onChange(`${year}-${formattedMonth}-${formattedDay}`)
+        setTypedValue(currentLocale.formatTyped(day, month, year))
         setIsOpen(false)
-    }, [year, month, onChange])
+    }, [year, month, onChange, currentLocale])
 
     const handleToday = useCallback((e) => {
         e.stopPropagation()
+        e.preventDefault()
         const today = new Date()
         const formattedMonth = String(today.getMonth() + 1).padStart(2, '0')
         const formattedDay = String(today.getDate()).padStart(2, '0')
         onChange(`${today.getFullYear()}-${formattedMonth}-${formattedDay}`)
+        setTypedValue(currentLocale.formatTyped(today.getDate(), today.getMonth(), today.getFullYear()))
         setIsOpen(false)
-    }, [onChange])
+    }, [onChange, currentLocale])
 
     const handleClear = useCallback((e) => {
         e.stopPropagation()
+        e.preventDefault()
         onChange('')
+        setTypedValue('')
         setIsOpen(false)
     }, [onChange])
 
     // Generate days grid
     const daysInMonth = useMemo(() => new Date(year, month + 1, 0).getDate(), [year, month])
-    
-    // First day of month (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-    // We adjust it so 0 = Monday, ..., 6 = Sunday
+
+    // First day of month index (adjusted so Monday = 0, ..., Sunday = 6)
     const firstDayIndex = useMemo(() => {
         const d = new Date(year, month, 1).getDay()
         return d === 0 ? 6 : d - 1
@@ -156,11 +332,9 @@ const RichDatePicker = memo(({
 
     const calendarGrid = useMemo(() => {
         const cells = []
-        // Empty cells before the 1st day
         for (let i = 0; i < firstDayIndex; i++) {
             cells.push(null)
         }
-        // Actual days of the month
         for (let i = 1; i <= daysInMonth; i++) {
             cells.push(i)
         }
@@ -169,8 +343,8 @@ const RichDatePicker = memo(({
 
     const isSelected = useCallback((day) => {
         if (!value || !day) return false
-        const d = new Date(value)
-        return d.getDate() === day && d.getMonth() === month && d.getFullYear() === year
+        const [y, m, d] = value.split('-').map(Number)
+        return d === day && (m - 1) === month && y === year
     }, [value, month, year])
 
     const isToday = useCallback((day) => {
@@ -179,60 +353,69 @@ const RichDatePicker = memo(({
         return today.getDate() === day && today.getMonth() === month && today.getFullYear() === year
     }, [month, year])
 
+    // Display resting value (e.g., "29 Mei 2026" or "May 29, 2026")
+    const displayVal = useMemo(() => {
+        if (!value) return ''
+        const [y, m, d] = value.split('-')
+        const resting = currentLocale.formatResting(parseInt(d, 10), parseInt(m, 10) - 1, parseInt(y, 10))
+        return tNum(resting)
+    }, [value, currentLocale, tNum])
+
     const renderCalendar = () => (
-        <div className="p-3 bg-[var(--color-surface)] w-[260px] sm:w-[280px]">
+        <div className="p-2.5 bg-[var(--color-surface)] w-[230px] sm:w-[240px]">
             {/* Header: Month & Year Selector */}
-            <div className="flex items-center justify-between mb-3.5">
+            <div className="flex items-center justify-between mb-2 pb-1 border-b border-[var(--color-border)]/40 select-none">
                 <button
                     type="button"
                     onClick={handlePrevMonth}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors active:scale-95"
+                    className="w-7 h-7 rounded-lg hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] flex items-center justify-center transition-colors border border-[var(--color-border)]/30 active:scale-90"
                 >
-                    <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
+                    <FontAwesomeIcon icon={faChevronLeft} className="text-[10px] opacity-70" />
                 </button>
-                <div className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)] select-none">
-                    {MONTHS[month]} {year}
-                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text)]">
+                    {currentLocale.months[month]} {tNum(year)}
+                </span>
                 <button
                     type="button"
                     onClick={handleNextMonth}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors active:scale-95"
+                    className="w-7 h-7 rounded-lg hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] flex items-center justify-center transition-colors border border-[var(--color-border)]/30 active:scale-90"
                 >
-                    <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
+                    <FontAwesomeIcon icon={faChevronRight} className="text-[10px] opacity-70" />
                 </button>
             </div>
 
-            {/* Weekday Names */}
-            <div className="grid grid-cols-7 gap-1 text-center mb-1.5 select-none">
-                {DAYS_SHORT.map((d, idx) => (
-                    <div key={idx} className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)] opacity-50">
+            {/* Days Short Name Header */}
+            <div className="grid grid-cols-7 text-center mb-1.5 select-none">
+                {currentLocale.daysShort.map((d, i) => (
+                    <span key={i} className="text-[9px] font-bold text-[var(--color-text-muted)] tracking-wider opacity-60">
                         {d}
-                    </div>
+                    </span>
                 ))}
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center mb-3">
+            <div className="grid grid-cols-7 gap-1">
                 {calendarGrid.map((day, idx) => {
                     if (day === null) {
-                        return <div key={`empty-${idx}`} className="w-8 h-8" />
+                        return <div key={`empty-${idx}`} />
                     }
+
                     const selected = isSelected(day)
-                    const today = isToday(day)
+                    const activeToday = isToday(day)
+
                     return (
                         <button
                             key={`day-${day}`}
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); handleSelectDay(day); }}
-                            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-[11px] font-black flex items-center justify-center transition-all active:scale-90 ${
-                                selected
-                                    ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20'
-                                    : today
-                                    ? 'border border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10'
-                                    : 'text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] border border-transparent'
-                            }`}
+                            onClick={() => handleSelectDay(day)}
+                            className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-[10px] font-bold transition-all relative ${selected
+                                ? 'bg-[var(--color-primary)] text-white font-black shadow-md shadow-[var(--color-primary)]/10 scale-105'
+                                : activeToday
+                                    ? 'border-2 border-[var(--color-primary)]/50 text-[var(--color-primary)] font-black'
+                                    : 'hover:bg-[var(--color-surface-alt)] text-[var(--color-text)]'
+                                }`}
                         >
-                            {day}
+                            {tNum(day)}
                         </button>
                     )
                 })}
@@ -240,19 +423,23 @@ const RichDatePicker = memo(({
 
             {/* Footer Buttons */}
             <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)] select-none">
-                <button
-                    type="button"
-                    onClick={handleClear}
-                    className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-all border border-transparent hover:border-red-100"
-                >
-                    Hapus
-                </button>
+                {clearable ? (
+                    <button
+                        type="button"
+                        onClick={handleClear}
+                        className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-all border border-transparent hover:border-red-100"
+                    >
+                        {currentLocale.clear}
+                    </button>
+                ) : (
+                    <div />
+                )}
                 <button
                     type="button"
                     onClick={handleToday}
                     className="text-[9px] font-black uppercase tracking-widest text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 px-2 py-1.5 rounded-lg transition-all border border-transparent"
                 >
-                    Hari Ini
+                    {currentLocale.today}
                 </button>
             </div>
         </div>
@@ -260,53 +447,45 @@ const RichDatePicker = memo(({
 
     return (
         <div className={`relative ${className}`} ref={ref}>
-            <button
-                type="button"
-                onClick={disabled ? undefined : toggle}
+            <input
+                type="text"
+                value={isFocused ? tNum(typedValue) : displayVal}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
                 disabled={disabled}
-                className={`w-full flex items-center justify-between gap-2 ${small ? 'px-3 h-8 sm:h-9' : 'pl-9 pr-3 h-11'} rounded-lg sm:rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:border-[var(--color-primary)] outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-                <div className="flex items-center gap-2 truncate">
-                    <FontAwesomeIcon icon={faCalendarAlt} className="text-[var(--color-text-muted)] opacity-50 group-focus:text-[var(--color-primary)] group-hover:text-[var(--color-primary)] transition-colors text-xs shrink-0" />
-                    <span className={value ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-60'}>
-                        {formattedDisplay || placeholder}
-                    </span>
-                </div>
-                <FontAwesomeIcon icon={faChevronDown} className={`text-[9px] opacity-40 transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`} />
-            </button>
+                placeholder={defaultPlaceholder}
+                className={`w-full pl-9 pr-8 h-[40px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] outline-none transition-all text-xs font-black shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            />
+            
+            <FontAwesomeIcon 
+                icon={faCalendarAlt} 
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)] opacity-50 pointer-events-none" 
+            />
+            
+            <FontAwesomeIcon 
+                icon={faChevronDown} 
+                className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] opacity-40 transition-transform duration-300 pointer-events-none ${isOpen ? 'rotate-180 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`} 
+            />
 
-            {isOpen && (compact ? (
-                <div 
-                    className="absolute z-50 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
-                    onMouseDown={(e) => e.stopPropagation()}
+            {/* Portal Dropdown Calendar */}
+            {isOpen && createPortal(
+                <div
+                    className="fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-3"
+                    onMouseDown={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                    }}
                     style={{
-                        minWidth: '260px',
-                        right: 0,
-                        ...(compactPlacement === 'top'
-                            ? { bottom: '100%', marginBottom: 4 }
-                            : { top: '100%', marginTop: 4 }
-                        ),
+                        left: Math.max(16, Math.min(coords.left, window.innerWidth - 240 - 16)),
+                        top: coords.placement === 'top' ? 'auto' : coords.top + 48,
+                        bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
                     }}
                 >
                     {renderCalendar()}
-                </div>
-            ) : (
-                createPortal(
-                    <div 
-                        className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'}`}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        style={{
-                            width: 'max-content',
-                            left: Math.max(16, Math.min(coords.left, window.innerWidth - (window.innerWidth < 640 ? 260 : 280) - 16)),
-                            top: coords.placement === 'top' ? 'auto' : coords.bottom + 8,
-                            bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
-                        }}
-                    >
-                        {renderCalendar()}
-                    </div>,
-                    document.body
-                )
-            ))}
+                </div>,
+                document.body
+            )}
         </div>
     )
 })
