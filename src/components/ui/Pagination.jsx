@@ -1,9 +1,16 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { 
+import {
     faChevronLeft, faChevronRight, faAnglesLeft, faAnglesRight
 } from '@fortawesome/free-solid-svg-icons'
 import RichSelect from './RichSelect'
+import { useLanguage } from '../../context/LanguageContext'
+
+const PAGINATION_STRINGS = {
+    id: { totalData: 'Total Data', showing: 'Menampilkan', of: 'dari', rows: 'Baris:', page: 'Halaman', jump: 'Tujuan', jumpTip: 'Jump ke hal...', statusPrefix: 'Status' },
+    en: { totalData: 'Total Data', showing: 'Showing', of: 'of', rows: 'Rows:', page: 'Page', jump: 'Go to', jumpTip: 'Jump to page...', statusPrefix: 'Status' },
+    ar: { totalData: 'إجمالي البيانات', showing: 'عرض', of: 'من', rows: 'صفوف:', page: 'صفحة', jump: 'اذهب', jumpTip: 'انتقل إلى صفحة...', statusPrefix: 'حالة' },
+}
 
 const PAGE_SIZE_OPTIONS = [
     { id: 10, name: '10' },
@@ -12,12 +19,14 @@ const PAGE_SIZE_OPTIONS = [
     { id: 100, name: '100' },
 ]
 
-const PAGE_SIZE_OPTIONS_MOBILE = [
-    { id: 10, name: '10 / hal' },
-    { id: 25, name: '25 / hal' },
-    { id: 50, name: '50 / hal' },
-    { id: 100, name: '100 / hal' },
-]
+function getPageSizeMobileOptions(str) {
+    return [
+        { id: 10, name: `10 / ${str}` },
+        { id: 25, name: `25 / ${str}` },
+        { id: 50, name: `50 / ${str}` },
+        { id: 100, name: `100 / ${str}` },
+    ]
+}
 
 /**
  * Standard Pagination component based on StudentsPage style.
@@ -39,6 +48,9 @@ export default function Pagination({
     jumpPage,
     setJumpPage,
 }) {
+    const { language } = useLanguage()
+    const s = PAGINATION_STRINGS[language] || PAGINATION_STRINGS.id
+    const PAGE_SIZE_OPTIONS_MOBILE = getPageSizeMobileOptions(s.page)
     const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
     const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1
     const toRow = Math.min(page * pageSize, totalRows)
@@ -56,7 +68,7 @@ export default function Pagination({
             <div className="flex md:hidden flex-col gap-3.5">
                 <div className="flex items-center justify-between px-1">
                     <div className="flex flex-col">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-0.5">Total Data</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-0.5">{s.totalData}</span>
                         <span className="text-[12px] font-extrabold text-[var(--color-text)] tracking-tight">{totalRows} <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider ml-0.5">{label}</span></span>
                     </div>
                     <div className="w-24">
@@ -89,7 +101,7 @@ export default function Pagination({
                     </div>
 
                     <div className="flex flex-col items-center justify-center px-2">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-0.5">Halaman</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-0.5">{s.page}</span>
                         <div className="flex items-baseline gap-1">
                             <span className="text-[14px] font-black text-[var(--color-primary)] leading-none">{page}</span>
                             <span className="text-[10px] font-bold text-[var(--color-text-muted)] opacity-50 leading-none">/ {totalPages}</span>
@@ -119,14 +131,14 @@ export default function Pagination({
             <div className="hidden md:flex md:flex-row items-center justify-between gap-4">
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="flex flex-col items-center sm:items-start text-left">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 leading-none mb-1">Status {label}</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50 leading-none mb-1">{s.statusPrefix} {label}</p>
                         <p className="text-[11px] font-bold text-[var(--color-text)] whitespace-nowrap">
-                            Menampilkan <span className="text-[var(--color-primary)]">{fromRow}—{toRow}</span> dari <span className="text-[var(--color-primary)]">{totalRows}</span> {label}
+                            {s.showing} <span className="text-[var(--color-primary)]">{fromRow}—{toRow}</span> {s.of} <span className="text-[var(--color-primary)]">{totalRows}</span> {label}
                         </p>
                     </div>
                     <div className="h-8 w-px bg-[var(--color-border)] hidden sm:block mx-1 opacity-50" />
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">Baris:</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">{s.rows}</span>
                         <div className="w-[72px]">
                             <RichSelect
                                 value={pageSize}
@@ -193,11 +205,11 @@ export default function Pagination({
                                     if (n >= 1 && n <= totalPages) { setPage(n); setJumpPage('') }
                                 }
                             }}
-                            placeholder="Tuju"
+                            placeholder={s.jump}
                             className="w-16 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-center text-[10px] font-black focus:border-[var(--color-primary)] transition-all outline-none"
                         />
                         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[8px] font-black py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                            Jump ke hal...
+                            {s.jumpTip}
                         </div>
                     </div>
                 </div>

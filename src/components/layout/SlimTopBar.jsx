@@ -105,7 +105,7 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
     const { isDark, toggleTheme } = useTheme()
     const { profile, signOut } = useAuth()
     const { flags } = useFeatureFlags()
-    const { language, setLanguage, t, tNav, tGroup, dir } = useLanguage()
+    const { language, setLanguage, t, tNav, tNavDesc, tGroup, dir } = useLanguage()
     const navigate = useNavigate()
     const location = useLocation()
     const { notifications, loading, refreshing, dismiss, refresh } = useNotifications()
@@ -134,7 +134,7 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
 
     // ── Build searchable items list (Translated dynamically) ──
     const allSearchItems = useMemo(() => {
-        const items = [{ ...DASHBOARD_ITEM, label: tNav(DASHBOARD_ITEM), _groupLabel: '' }]
+        const items = [{ ...DASHBOARD_ITEM, label: tNav(DASHBOARD_ITEM), desc: tNavDesc(DASHBOARD_ITEM), _groupLabel: '' }]
 
         NAV_GROUPS.forEach(group => {
             // Role filter
@@ -146,13 +146,14 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                 items.push({
                     ...item,
                     label: tNav(item),
+                    desc: tNavDesc(item),
                     _groupLabel: tGroup(group.key, group.label)
                 })
             })
         })
 
         return items
-    }, [role, flags, tNav, tGroup])
+    }, [role, flags, tNav, tNavDesc, tGroup])
 
     // ── Filter search results ──
     const searchResults = useMemo(() => {
@@ -337,8 +338,8 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                                 >
                                     {searchResults.length === 0 ? (
                                         <div className="px-4 py-6 text-center text-[var(--color-text-muted)]">
-                                            <p className="text-[12px] font-bold">Tidak ditemukan</p>
-                                            <p className="text-[10px] mt-1">Coba kata kunci lain</p>
+                                            <p className="text-[12px] font-bold">{t('ui.search_no_result')}</p>
+                                            <p className="text-[10px] mt-1">{t('ui.search_no_result_hint')}</p>
                                         </div>
                                     ) : (
                                         <div className="p-1.5">
@@ -353,9 +354,9 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                                         </div>
                                     )}
                                     <div className="px-4 py-2 border-t border-[var(--color-border)] flex items-center justify-between text-[var(--color-text-muted)]">
-                                        <span className="text-[9px] font-bold">↑↓ navigasi</span>
-                                        <span className="text-[9px] font-bold">↵ buka</span>
-                                        <span className="text-[9px] font-bold">esc tutup</span>
+                                        <span className="text-[9px] font-bold">{t('ui.search_hint_navigate')}</span>
+                                        <span className="text-[9px] font-bold">{t('ui.search_hint_open')}</span>
+                                        <span className="text-[9px] font-bold">{t('ui.search_hint_close')}</span>
                                     </div>
                                 </div>
                             )}
@@ -558,19 +559,21 @@ function NotifItem({ item, onDismiss, onNavigate }) {
     const Icon = s.icon
 
     return (
-        <div className={`group relative p-3.5 rounded-2xl border ${s.bg} ${s.border} transition-all hover:scale-[1.01] flex gap-3 min-w-0`}>
+        <div className={`group relative p-3 rounded-xl border ${s.bg} ${s.border} transition-all hover:scale-[1.01] flex gap-2.5 min-w-0`}>
             {/* Type badge icon */}
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-[var(--color-surface)] shadow-sm ${s.text}`}>
-                <Icon className="w-4.5 h-4.5" />
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-[var(--color-surface)] shadow-sm ${s.text}`}>
+                <Icon className="w-3.5 h-3.5" />
             </div>
 
             <div className="flex-1 min-w-0 pe-6">
-                <p className="text-[12.5px] font-bold text-[var(--color-text)] leading-tight">{item.title}</p>
-                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed mt-1">{item.body || item.message}</p>
-                <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[9px] font-bold tracking-wider text-[var(--color-text-muted)]/75 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-md">
-                        {item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
+                <p className="text-[12px] font-bold text-[var(--color-text)] leading-tight">{item.title}</p>
+                <p className="text-[10.5px] text-[var(--color-text-muted)] leading-relaxed mt-0.5">{item.body || item.message}</p>
+                <div className="flex items-center gap-2 mt-1.5">
+                    {item.created_at && (
+                        <span className="text-[9px] font-bold tracking-wider text-[var(--color-text-muted)]/75 bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded-md">
+                            {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    )}
                     {item.action && (
                         <button
                             onClick={() => onNavigate(item.action.route)}
@@ -584,7 +587,7 @@ function NotifItem({ item, onDismiss, onNavigate }) {
                             onClick={() => onNavigate(item.action_url)}
                             className={`text-[9px] font-extrabold uppercase tracking-widest flex items-center gap-1 hover:underline ${s.text}`}
                         >
-                            Detail <ArrowRight className="w-3 h-3" strokeWidth={2} />
+                            {t('ui.detail')} <ArrowRight className="w-3 h-3" strokeWidth={2} />
                         </button>
                     )}
                 </div>
@@ -593,7 +596,7 @@ function NotifItem({ item, onDismiss, onNavigate }) {
             {/* Dismiss button */}
             <button
                 onClick={() => onDismiss(item.id)}
-                className="absolute top-3.5 right-3.5 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity"
                 type="button"
                 aria-label={t('notif.close')}
             >
@@ -611,13 +614,13 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
     return (
         <div
             ref={panelRef}
-            className={`absolute top-[52px] w-full max-w-[380px] rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden z-[99999] flex flex-col ${dir === 'rtl' ? 'left-3 sm:left-4' : 'right-3 sm:right-4'}`}
+            className={`absolute top-[52px] w-full max-w-[340px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden z-[99999] flex flex-col ${dir === 'rtl' ? 'left-3 sm:left-4' : 'right-3 sm:right-4'}`}
         >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+            <div className="px-3.5 py-2.5 border-b border-[var(--color-border)] flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                    <Bell className="w-4 h-4 text-[var(--color-primary)]" strokeWidth={2} />
-                    <span className="text-[12.5px] font-extrabold text-[var(--color-text)]">{t('notif.header')}</span>
+                    <Bell className="w-3.5 h-3.5 text-[var(--color-primary)]" strokeWidth={2} />
+                    <span className="text-[12px] font-extrabold text-[var(--color-text)]">{t('notif.header')}</span>
                 </div>
                 <button
                     onClick={onRefresh}
@@ -625,12 +628,12 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
                     disabled={refreshing}
                     type="button"
                 >
-                    <RotateCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} strokeWidth={2} />
+                    <RotateCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} strokeWidth={2} />
                 </button>
             </div>
 
             {/* List */}
-            <div className="max-h-[350px] overflow-y-auto p-2.5 space-y-2 no-scrollbar">
+            <div className="max-h-[350px] overflow-y-auto p-2 space-y-2 no-scrollbar">
                 {loading ? (
                     <div className="py-8 text-center text-[var(--color-text-muted)] flex flex-col items-center gap-2">
                         <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
@@ -638,9 +641,9 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
                     </div>
                 ) : notifications.length === 0 ? (
                     <div className="py-12 text-center text-[var(--color-text-muted)] flex flex-col items-center justify-center">
-                        <Bell className="w-10 h-10 opacity-15 mb-3" strokeWidth={1.5} />
-                        <p className="text-[12px] font-bold">{t('notif.empty_title')}</p>
-                        <p className="text-[10px] mt-1">{t('notif.empty_desc')}</p>
+                        <Bell className="w-8 h-8 opacity-15 mb-2.5" strokeWidth={1.5} />
+                        <p className="text-[11.5px] font-bold">{t('notif.empty_title')}</p>
+                        <p className="text-[10px] mt-0.5">{t('notif.empty_desc')}</p>
                     </div>
                 ) : (
                     notifications.map(item => (
@@ -655,7 +658,7 @@ function NotifPanel({ isOpen, notifications, loading, refreshing, onDismiss, onR
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-2 bg-black/5 dark:bg-white/5 border-t border-[var(--color-border)] flex items-center justify-between text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">
+            <div className="px-3.5 py-2 bg-black/5 dark:bg-white/5 border-t border-[var(--color-border)] flex items-center justify-between text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">
                 <span>{t('notif.realtime')}</span>
                 <span>LaporanMu</span>
             </div>

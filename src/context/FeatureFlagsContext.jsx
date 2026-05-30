@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, isDemoMode } from '../lib/supabase'
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -16,6 +16,26 @@ export function FeatureFlagsProvider({ children }) {
     const [loading, setLoading] = useState(true)
 
     const fetchFlags = useCallback(async () => {
+        if (isDemoMode) {
+            setFlags({
+                'module.absensi': true,
+                'module.poin': true,
+                'module.raport': true,
+                'module.gate': true,
+                'module.students': true,
+                'module.teachers': true,
+                'module.classes': true,
+                'module.violation_types': true,
+                'module.academic_years': true,
+                'module.enrollment': true,
+                'nav.dorms': true,
+                'nav.health': true,
+                'nav.counseling': true,
+                'system.maintenance': false,
+            })
+            setLoading(false)
+            return
+        }
         try {
             const { data, error } = await supabase
                 .from('feature_flags')
@@ -33,6 +53,10 @@ export function FeatureFlagsProvider({ children }) {
     }, [])
 
     useEffect(() => {
+        if (isDemoMode) {
+            fetchFlags()
+            return
+        }
         fetchFlags()
 
         // Realtime subscription — update flags instantly when changed in admin panel

@@ -67,7 +67,7 @@ const KIOSK_PURPOSES = [
 export default function GateKioskPage() {
   const navigate = useNavigate()
   const { addToast } = useToast()
-  const { language } = useLanguage()
+  const { language, tNum } = useLanguage()
   const dir = language === 'ar' ? 'rtl' : 'ltr'
 
   // Load core logic from useGateCore
@@ -80,7 +80,6 @@ export default function GateKioskPage() {
   } = useGateCore({ activeTab: 'input', rekapMode: 'harian', rekapDate: new Date() })
 
   // Kiosk Specific States
-  const [scanInput, setScanInput] = useState('')
   const [selectedPurpose, setSelectedPurpose] = useState('Keluar Sementara')
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem('kiosk_muted') === 'true')
   const [showManualModal, setShowManualModal] = useState(false)
@@ -92,7 +91,8 @@ export default function GateKioskPage() {
   const [statusDetails, setStatusDetails] = useState(null) // { name, type, action, subtitle }
   const [countdown, setCountdown] = useState(4)
 
-  const scanInputRef = useRef(null)
+  const scanBufferRef = useRef('')
+  const bufferTimeoutRef = useRef(null)
   const timerRef = useRef(null)
   const countdownIntervalRef = useRef(null)
   
@@ -103,26 +103,14 @@ export default function GateKioskPage() {
     return () => clearInterval(t)
   }, [])
 
-  // Auto-focus focus lock
-  useEffect(() => {
-    if (kioskState === 'standby' && scanInputRef.current) {
-      scanInputRef.current.focus()
-    }
-  }, [kioskState])
-
-  const handleGlobalClick = () => {
-    if (kioskState === 'standby' && scanInputRef.current) {
-      scanInputRef.current.focus()
-    }
-  }
-
   // Handle Mute setting
   const toggleMute = (e) => {
     e.stopPropagation()
-    const newMuted = !isMuted
-    setIsMuted(newMuted)
-    localStorage.setItem('kiosk_muted', String(newMuted))
-    addToast(newMuted ? 'Suara dinonaktifkan' : 'Suara diaktifkan', 'info')
+    addToast(newMuted 
+      ? (language === 'en' ? 'Sound muted' : language === 'ar' ? 'تم كتم الصوت' : 'Suara dinonaktifkan') 
+      : (language === 'en' ? 'Sound enabled' : language === 'ar' ? 'تم تفعيل الصوت' : 'Suara diaktifkan'), 
+      'info'
+    )
   }
 
   // Audio helper
@@ -136,7 +124,7 @@ export default function GateKioskPage() {
   const resetToStandby = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
-    setScanInput('')
+    scanBufferRef.current = ''
     setManualId('')
     setKioskState('standby')
     setStatusDetails(null)
@@ -258,7 +246,7 @@ export default function GateKioskPage() {
       console.error(err)
       triggerAudio('error')
       setKioskState('error')
-      setStatusMessage(language === 'en' ? 'Unexpected transaction error' : 'Terjadi kesalahan sistem saat memproses transaksi.')
+      setStatusMessage(language === 'en' ? 'Unexpected transaction error' : language === 'ar' ? 'حدث خطأ غير متوقع في المعاملة.' : 'Terjadi kesalahan sistem saat memproses transaksi.')
     }
 
     // Start 4s countdown back to standby
@@ -269,12 +257,47 @@ export default function GateKioskPage() {
     timerRef.current = setTimeout(resetToStandby, 4000)
   }, [studentList, teacherList, todayLogs, selectedPurpose, language, triggerAudio, handleSubmit, loadTodayLogs, resetToStandby])
 
-  // Handle Invisible Input keydowns
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      processCardId(scanInput)
+  // Handle Global RFID card scanner keydowns
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // Only capture when on standby and manual modal is closed
+      if (kioskState !== 'standby' || showManualModal) {
+        return
+      }
+
+      // Ignore standard modifier keys
+      if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') {
+        return
+      }
+
+      // If we see Enter, submit the accumulated string
+      if (e.key === 'Enter') {
+        const cardId = scanBufferRef.current.trim()
+        if (cardId) {
+          processCardId(cardId)
+        }
+        scanBufferRef.current = ''
+        if (bufferTimeoutRef.current) clearTimeout(bufferTimeoutRef.current)
+      } else {
+        // Accumulate single characters (alphanumeric card codes)
+        if (e.key.length === 1) {
+          scanBufferRef.current += e.key
+        }
+
+        // Auto-clear buffer if typing is too slow or idle for 1s
+        if (bufferTimeoutRef.current) clearTimeout(bufferTimeoutRef.current)
+        bufferTimeoutRef.current = setTimeout(() => {
+          scanBufferRef.current = ''
+        }, 1000)
+      }
     }
-  }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown)
+      if (bufferTimeoutRef.current) clearTimeout(bufferTimeoutRef.current)
+    }
+  }, [kioskState, showManualModal, processCardId])
 
   // Handle Manual Modal submission
   const handleManualSubmit = (e) => {
@@ -291,7 +314,6 @@ export default function GateKioskPage() {
   return (
     <div 
       className="min-h-screen bg-[var(--color-app-bg)] relative flex flex-col items-center justify-between p-6 select-none overflow-hidden"
-      onClick={handleGlobalClick}
       dir={dir}
     >
       {/* Decorative premium floating ambient glows */}
@@ -299,21 +321,6 @@ export default function GateKioskPage() {
         <div className="absolute -top-[10%] left-[20%] w-[600px] h-[600px] rounded-full bg-[var(--color-primary)]/10 blur-[120px] animate-pulse" />
         <div className="absolute -bottom-[10%] right-[20%] w-[500px] h-[500px] rounded-full bg-emerald-500/5 blur-[100px] animate-pulse" />
       </div>
-
-      {/* Invisible Input for Scanner USB Keyboard Emulation */}
-      <input
-        ref={scanInputRef}
-        type="text"
-        value={scanInput}
-        onChange={e => setScanInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={() => {
-          if (kioskState === 'standby' && !showManualModal) {
-            setTimeout(() => scanInputRef.current?.focus(), 50)
-          }
-        }}
-        className="absolute top-0 left-0 w-1 h-1 opacity-0 pointer-events-none"
-      />
 
       {/* HEADER SECTION */}
       <div className="w-full max-w-6xl flex items-center justify-between z-10 gap-3">
@@ -351,7 +358,9 @@ export default function GateKioskPage() {
             className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all border active:scale-95 shadow-sm backdrop-blur-md ${isMuted 
               ? 'border-red-500/20 bg-red-500/10 text-red-500' 
               : 'border-[var(--color-border)] bg-[var(--color-surface)]/60 text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-            title={isMuted ? 'Aktifkan Suara' : 'Matikan Suara'}
+            title={isMuted 
+              ? (language === 'en' ? 'Unmute Sound' : language === 'ar' ? 'تفعيل الصوت' : 'Aktifkan Suara') 
+              : (language === 'en' ? 'Mute Sound' : language === 'ar' ? 'كتم الصوت' : 'Matikan Suara')}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
@@ -360,7 +369,7 @@ export default function GateKioskPage() {
           <button 
             onClick={(e) => { e.stopPropagation(); setShowManualModal(true) }}
             className="w-11 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur-md text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center justify-center transition-all active:scale-95 shadow-sm"
-            title="Ketik ID Manual"
+            title={language === 'en' ? 'Type ID Manually' : language === 'ar' ? 'إدخال المعرف يدوياً' : 'Ketik ID Manual'}
           >
             <Keyboard className="w-4 h-4" />
           </button>
@@ -498,7 +507,7 @@ export default function GateKioskPage() {
               />
             </div>
             <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider opacity-60">
-              {language === 'en' ? `Resets in ${countdown}s` : `Kembali ke siaga dalam ${countdown} detik`}
+              {language === 'en' ? `Resets in ${countdown}s` : language === 'ar' ? `إعادة تعيين خلال ${tNum(countdown)} ثوانٍ` : `Kembali ke siaga dalam ${countdown} detik`}
             </p>
           </div>
         )}
@@ -531,7 +540,7 @@ export default function GateKioskPage() {
               />
             </div>
             <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider opacity-60">
-              {language === 'en' ? `Resets in ${countdown}s` : `Kembali ke siaga dalam ${countdown} detik`}
+              {language === 'en' ? `Resets in ${countdown}s` : language === 'ar' ? `إعادة تعيين خلال ${tNum(countdown)} ثوانٍ` : `Kembali ke siaga dalam ${countdown} detik`}
             </p>
           </div>
         )}
@@ -546,11 +555,11 @@ export default function GateKioskPage() {
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
               <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">
-                {language === 'en' ? 'Active Outside' : 'Di Luar Sekolah'}
+                {language === 'en' ? 'Active Outside' : language === 'ar' ? 'خارج المدرسة' : 'Di Luar Sekolah'}
               </span>
             </div>
             <span className="text-[13px] font-black text-[var(--color-text)] bg-[var(--color-surface-alt)] border border-[var(--color-border)] px-2.5 py-0.5 rounded-xl font-mono tabular-nums leading-none">
-              {activeOutCount}
+              {tNum(activeOutCount)}
             </span>
           </div>
 
@@ -559,20 +568,20 @@ export default function GateKioskPage() {
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
               <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">
-                {language === 'en' ? 'Returned Today' : 'Kembali Hari Ini'}
+                {language === 'en' ? 'Returned Today' : language === 'ar' ? 'عاد اليوم' : 'Kembali Hari Ini'}
               </span>
             </div>
             <span className="text-[13px] font-black text-[var(--color-text)] bg-[var(--color-surface-alt)] border border-[var(--color-border)] px-2.5 py-0.5 rounded-xl font-mono tabular-nums leading-none">
-              {returnedCount}
+              {tNum(returnedCount)}
             </span>
           </div>
         </div>
 
         {/* Server Status Indicator */}
-        <div className="flex items-center gap-2 bg-[var(--color-surface)]/40 px-3 py-1.5 rounded-full border border-[var(--color-border)]/40 mt-1 md:mt-0 shadow-sm shrink-0">
+        <div className="flex items-center gap-2 bg-[var(--color-surface)]/40 px-3 py-1.5 rounded-full border border-[var(--color-border)]/40 mt-1 md:mt-0 shadow-sm shrink-0" dir="ltr">
           <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
           <span className="text-[8.5px] sm:text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-70">
-            LaporanMu Gate Kiosk • {language === 'en' ? 'ONLINE' : 'TERHUBUNG'}
+            LaporanMu Gate Kiosk • {language === 'en' ? 'ONLINE' : language === 'ar' ? 'متصل' : 'TERHUBUNG'}
           </span>
         </div>
       </div>
@@ -581,10 +590,12 @@ export default function GateKioskPage() {
       <Modal
         isOpen={showManualModal}
         onClose={() => setShowManualModal(false)}
-        title={language === 'en' ? 'Enter Card ID Manually' : 'Ketik Kode ID Secara Manual'}
+        title={language === 'en' ? 'Enter Card ID Manually' : language === 'ar' ? 'أدخل معرف البطاقة يدوياً' : 'Ketik Kode ID Secara Manual'}
         description={language === 'en' 
           ? 'Type NISN (Students) or NBM/NIP (Teachers) below.' 
-          : 'Gunakan nomor NISN (Santri) atau NBM/NIP (Guru/Karyawan) apabila kartu RFID tidak terbaca.'}
+          : language === 'ar'
+            ? 'أدخل رقم NISN (للطلاب) أو NBM/NIP (للمعلمين) إذا لم تتم قراءة بطاقة RFID.'
+            : 'Gunakan nomor NISN (Santri) atau NBM/NIP (Guru/Karyawan) apabila kartu RFID tidak terbaca.'}
         size="sm"
         icon={Keyboard}
         noPadding={false}
@@ -593,7 +604,7 @@ export default function GateKioskPage() {
           <input
             type="text"
             autoFocus
-            placeholder="CONTOH: 0098765432"
+            placeholder={language === 'en' ? 'E.G. 0098765432' : language === 'ar' ? 'مثال: ٠٠٩٨٧٦٥٤٣٢' : 'CONTOH: 0098765432'}
             value={manualId}
             onChange={e => setManualId(e.target.value)}
             className="w-full h-11 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-mono font-bold text-center focus:outline-none focus:border-[var(--color-primary)] transition-all uppercase tracking-wider"
@@ -605,14 +616,14 @@ export default function GateKioskPage() {
               onClick={() => setShowManualModal(false)}
               className="h-10 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all active:scale-95"
             >
-              {language === 'en' ? 'Cancel' : 'Batal'}
+              {language === 'en' ? 'Cancel' : language === 'ar' ? 'إلغاء' : 'Batal'}
             </button>
             <button
               type="submit"
               disabled={!manualId || manualId.trim() === ''}
               className="h-10 flex-1 rounded-xl bg-[var(--color-primary)] text-white text-[11px] font-black uppercase tracking-widest hover:opacity-95 transition-all active:scale-95 disabled:opacity-50"
             >
-              {language === 'en' ? 'Submit' : 'Proses'}
+              {language === 'en' ? 'Submit' : language === 'ar' ? 'إرسال' : 'Proses'}
             </button>
           </div>
         </form>

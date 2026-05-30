@@ -56,5 +56,16 @@
   "notif.action.set_now": "Configure Now",
   "notif.action.verify": "Review",
   "notif.action.class_data": "Class Data",
-  "notif.action.view_reports": "View Reports"
+  "notif.action.view_reports": "View Reports",
+  "auth.demoDevName": "Developer",
+  "auth.demoAdminName": "Administrator",
+  "auth.demoGuruName": "John Smith",
+  "auth.demoSatpamName": "Gate Guard",
+  "auth.demoViewerName": "Demo Viewer",
+  "ui.search_no_result": "Not found",
+  "ui.search_no_result_hint": "Try another keyword",
+  "ui.search_hint_navigate": "↑↓ navigate",
+  "ui.search_hint_open": "↵ open",
+  "ui.search_hint_close": "esc close",
+  "ui.detail": "Detail"
 }

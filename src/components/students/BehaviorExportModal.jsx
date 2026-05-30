@@ -41,21 +41,22 @@ import {
     faFileSignature
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
+import { useLanguage } from '../../context/LanguageContext'
 
 const COLUMN_DEFS = [
-    { key: 'reported_at', label: 'Tanggal', icon: faCalendarAlt },
-    { key: 'student', label: 'Nama Siswa', icon: faUser },
-    { key: 'class', label: 'Kelas', icon: faSchool },
-    { key: 'rule', label: 'Jenis Perilaku', icon: faTags },
-    { key: 'points', label: 'Poin', icon: faStar },
-    { key: 'notes', label: 'Catatan', icon: faFileLines },
-    { key: 'teacher', label: 'Dicatat Oleh', icon: faFileSignature },
+    { key: 'reported_at', label: 'colDate', icon: faCalendarAlt },
+    { key: 'student', label: 'colStudent', icon: faUser },
+    { key: 'class', label: 'colClass', icon: faSchool },
+    { key: 'rule', label: 'colRule', icon: faTags },
+    { key: 'points', label: 'colPoints', icon: faStar },
+    { key: 'notes', label: 'colNotes', icon: faFileLines },
+    { key: 'teacher', label: 'colTeacher', icon: faFileSignature },
 ]
 
 const PRESETS = [
-    { id: 'all', label: 'Lengkap', cols: ['reported_at', 'student', 'class', 'rule', 'points', 'notes', 'teacher'] },
-    { id: 'summary', label: 'Ringkasan Poin', cols: ['student', 'class', 'rule', 'points'] },
-    { id: 'minimal', label: 'Daftar Perilaku', cols: ['reported_at', 'student', 'class', 'rule'] },
+    { id: 'all', label: 'exportPresetLengkap', cols: ['reported_at', 'student', 'class', 'rule', 'points', 'notes', 'teacher'] },
+    { id: 'summary', label: 'exportPresetRingkasan', cols: ['student', 'class', 'rule', 'points'] },
+    { id: 'minimal', label: 'exportPresetDaftar', cols: ['reported_at', 'student', 'class', 'rule'] },
 ]
 
 export default function BehaviorExportModal({
@@ -73,11 +74,20 @@ export default function BehaviorExportModal({
     handleExportPDF,
     addToast,
 }) {
-    const [fileName, setFileName] = useState(`Laporan_Perilaku_${new Date().toISOString().slice(0, 10)}`)
+    const { language, t, tNum } = useLanguage()
+    const tp = (key) => t(`behavior.${key}`)
+
+    const [fileName, setFileName] = useState('')
     const [advancedOpen, setAdvancedOpen] = useState(false)
     const [pdfOrientation, setPdfOrientation] = useState('landscape') // 'landscape' | 'portrait'
     const [includeHeader, setIncludeHeader] = useState(true)
     const containerRef = useRef(null)
+
+    useEffect(() => {
+        if (isOpen) {
+            setFileName(`${tp('exportFilenamePrefix')}_${new Date().toISOString().slice(0, 10)}`)
+        }
+    }, [isOpen, language])
 
     useEffect(() => {
         if (exporting && containerRef.current) {
@@ -130,11 +140,11 @@ export default function BehaviorExportModal({
                     <FontAwesomeIcon icon={icon} className="text-[9px]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className={`text-[9px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>{label}</div>
+                    <div className={`text-[9px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>{tp(label)}</div>
                 </div>
                 {isSelected && (
                     <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center shadow-md border border-white dark:border-[var(--color-surface)] animate-in zoom-in duration-200">
-                        {orderIdx}
+                        {tNum(orderIdx)}
                     </div>
                 )}
             </button>
@@ -150,8 +160,8 @@ export default function BehaviorExportModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Export Laporan Perilaku"
-            description="Cadangkan atau pindahkan catatan perkembangan karakter siswa ke format CSV, Excel, atau PDF."
+            title={tp('exportTitle')}
+            description={tp('exportDesc')}
             icon={faFileExport}
             iconBg="bg-amber-500/10"
             iconColor="text-amber-600"
@@ -164,7 +174,7 @@ export default function BehaviorExportModal({
                         onClick={onClose}
                         className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
                     >
-                        Tutup
+                        {tp('exportClose')}
                     </button>
                     <div className="flex-1" />
                 </div>
@@ -187,9 +197,9 @@ export default function BehaviorExportModal({
                                 </div>
                             </div>
                             <div className="flex flex-col items-center">
-                                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-[var(--color-primary)]">Mengolah Data</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-[var(--color-primary)]">{tp('exportLoading')}</span>
                                 <span className="text-[8px] font-extrabold text-[var(--color-text-muted)] uppercase tracking-widest mt-1.5 flex items-center gap-1">
-                                    Proses ekspor berjalan
+                                    {tp('exportLoadingDesc')}
                                     <span className="inline-flex gap-0.5 items-center">
                                         <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '0ms' }}></span>
                                         <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '150ms' }}></span>
@@ -204,12 +214,12 @@ export default function BehaviorExportModal({
                 <div className={`space-y-6 pb-2 transition-all duration-500 ${exporting ? 'blur-sm grayscale-[0.5] opacity-50 pointer-events-none' : ''}`}>
                     {/* Section 1: Scope */}
                     <div className="space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">1 — Jangkauan Data</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">{tp('exportScopeTitle')}</p>
                         <div className="grid grid-cols-3 gap-2.5">
                             {[
-                                { val: 'filtered', label: 'Filter Aktif', desc: `${reportsCount} laporan`, icon: faSliders },
-                                { val: 'selected', label: 'Dipilih', desc: `${selectedCount} laporan`, icon: faCheckCircle, disabled: selectedCount === 0 },
-                                { val: 'all', label: 'Semua', desc: 'Tanpa filter', icon: faClipboardList },
+                                { val: 'filtered', label: tp('exportScopeFilter'), desc: `${tNum(reportsCount)} ${t('behavior.reports')}`, icon: faSliders },
+                                { val: 'selected', label: tp('exportScopeSelected'), desc: `${tNum(selectedCount)} ${t('behavior.reports')}`, icon: faCheckCircle, disabled: selectedCount === 0 },
+                                { val: 'all', label: tp('exportScopeAll'), desc: tp('exportScopeNoFilter'), icon: faClipboardList },
                             ].map(({ val, label, desc, icon, disabled }) => (
                                 <button
                                     key={val}
@@ -237,10 +247,10 @@ export default function BehaviorExportModal({
                     {/* Section 2: Columns */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">2 — Kolom & Presets</p>
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">{tp('exportColPresetTitle')}</p>
                             <div className="flex gap-2">
-                                <button type="button" onClick={() => handlePresetClick(COLUMN_DEFS.map(c => c.key))} className="text-[9px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest bg-[var(--color-primary)]/5 px-2 py-1 rounded-lg transition-colors">Semua</button>
-                                <button type="button" onClick={() => handlePresetClick(['student', 'class', 'rule', 'points'])} className="text-[9px] font-black text-rose-500 hover:underline uppercase tracking-widest bg-rose-500/5 px-2 py-1 rounded-lg transition-colors">Reset</button>
+                                <button type="button" onClick={() => handlePresetClick(COLUMN_DEFS.map(c => c.key))} className="text-[9px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest bg-[var(--color-primary)]/5 px-2 py-1 rounded-lg transition-colors">{tp('exportColPresetAll')}</button>
+                                <button type="button" onClick={() => handlePresetClick(['student', 'class', 'rule', 'points'])} className="text-[9px] font-black text-rose-500 hover:underline uppercase tracking-widest bg-rose-500/5 px-2 py-1 rounded-lg transition-colors">{tp('exportColPresetReset')}</button>
                             </div>
                         </div>
 
@@ -248,7 +258,7 @@ export default function BehaviorExportModal({
                         <div className="flex flex-col gap-2 p-3 bg-[var(--color-surface-alt)]/40 rounded-2xl border border-[var(--color-border)]/50">
                             <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider text-[var(--color-text-muted)] opacity-60">
                                 <FontAwesomeIcon icon={faTags} className="text-[9px]" />
-                                <span>Pilih Paket Kolom (Preset)</span>
+                                <span>{tp('exportPresetHeader')}</span>
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {PRESETS.map(preset => {
@@ -263,7 +273,7 @@ export default function BehaviorExportModal({
                                                     ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm shadow-[var(--color-primary)]/20'
                                                     : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]'}`}
                                         >
-                                            {preset.label}
+                                            {tp(preset.label)}
                                         </button>
                                     )
                                 })}
@@ -276,7 +286,7 @@ export default function BehaviorExportModal({
                                 <div className="w-full border-t border-dashed border-[var(--color-border)]/65"></div>
                             </div>
                             <div className="relative bg-[var(--color-surface)] px-3 text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">
-                                Pilih Kolom Kustom
+                                {tp('exportCustomCol')}
                             </div>
                         </div>
 
@@ -287,14 +297,14 @@ export default function BehaviorExportModal({
 
                     {/* Section 3: Filename & Advanced */}
                     <div className="space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">3 — Konfigurasi File</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">{tp('exportConfigTitle')}</p>
                         <div className="flex flex-col sm:flex-row gap-3">
                             <div className="flex-1 relative">
                                 <input
                                     type="text"
                                     value={fileName}
                                     onChange={(e) => setFileName(e.target.value)}
-                                    placeholder="Nama file export..."
+                                    placeholder={tp('exportConfigPlaceholder')}
                                     className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-xs font-bold focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all placeholder:opacity-50 pr-20"
                                 />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-[var(--color-border)] text-[8px] font-black uppercase text-[var(--color-text-muted)]">
@@ -308,7 +318,7 @@ export default function BehaviorExportModal({
                                     ${advancedOpen ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40'}`}
                             >
                                 <FontAwesomeIcon icon={faGear} className={advancedOpen ? 'animate-spin-slow' : ''} />
-                                Opsi
+                                {tp('exportConfigOptions')}
                             </button>
                         </div>
 
@@ -317,10 +327,10 @@ export default function BehaviorExportModal({
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5">
                                         <FontAwesomeIcon icon={faHeading} />
-                                        Sertakan Header
+                                        {tp('exportConfigHeader')}
                                     </label>
                                     <div className="flex gap-1 bg-[var(--color-surface)] p-1 rounded-lg border border-[var(--color-border)]">
-                                        {[{ v: true, l: 'Ya' }, { v: false, l: 'Tidak' }].map(opt => (
+                                        {[{ v: true, l: tp('exportConfigHeaderYes') }, { v: false, l: tp('exportConfigHeaderNo') }].map(opt => (
                                             <button
                                                 key={String(opt.v)}
                                                 type="button"
@@ -335,7 +345,7 @@ export default function BehaviorExportModal({
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5">
                                         <FontAwesomeIcon icon={faArrowsLeftRight} />
-                                        PDF Orientasi
+                                        {tp('exportConfigPdf')}
                                     </label>
                                     <div className="flex gap-1 bg-[var(--color-surface)] p-1 rounded-lg border border-[var(--color-border)]">
                                         {[
@@ -360,7 +370,7 @@ export default function BehaviorExportModal({
 
                     {/* Section 4: Format Grid */}
                     <div className="space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">4 — Mulai Ekspor</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">{tp('exportStartTitle')}</p>
                         <div className="grid grid-cols-3 gap-2.5">
                             {[
                                 { label: 'CSV', icon: faFileCsv, desc: 'Universal', onClick: () => handleExportCSV(fileName, exportOptions), color: 'hover:border-slate-400 hover:bg-slate-50', iconColor: 'text-slate-500' },
@@ -387,7 +397,7 @@ export default function BehaviorExportModal({
                     {exportColumns.length === 0 && (
                         <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-red-500/5 border border-red-500/10 text-red-600 text-xs font-black uppercase tracking-tight animate-pulse">
                             <FontAwesomeIcon icon={faTriangleExclamation} />
-                            Pilih minimal satu kolom untuk melanjutkan
+                            {tp('exportWarning')}
                         </div>
                     )}
                 </div>

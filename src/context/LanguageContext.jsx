@@ -6,20 +6,23 @@ const LanguageContext = createContext()
 import idCommon from "../locales/id/common.json"
 import idNav from "../locales/id/nav.json"
 import idGate from "../locales/id/gate.json"
+import idBehavior from "../locales/id/behavior.json"
 
 import enCommon from "../locales/en/common.json"
 import enNav from "../locales/en/nav.json"
 import enGate from "../locales/en/gate.json"
+import enBehavior from "../locales/en/behavior.json"
 
 import arCommon from "../locales/ar/common.json"
 import arNav from "../locales/ar/nav.json"
 import arGate from "../locales/ar/gate.json"
+import arBehavior from "../locales/ar/behavior.json"
 
 // Combine modular dictionaries into single namespace
 const DICTIONARY = {
-    id: { ...idCommon, ...idNav, ...idGate },
-    en: { ...enCommon, ...enNav, ...enGate },
-    ar: { ...arCommon, ...arNav, ...arGate }
+    id: { ...idCommon, ...idNav, ...idGate, ...idBehavior },
+    en: { ...enCommon, ...enNav, ...enGate, ...enBehavior },
+    ar: { ...arCommon, ...arNav, ...arGate, ...arBehavior }
 }
 
 const STORAGE_KEY = "app-language"
@@ -104,6 +107,16 @@ export function LanguageProvider({ children }) {
         return key ? t(key) : item.label
     }
 
+    // Translate page description in search dropdown
+    const tNavDesc = (item) => {
+        if (!item) return ""
+        const key = getTranslationKey(item.to)
+        if (!key) return item.desc || ""
+        const descKey = key.replace('nav.', 'nav.desc.')
+        const translated = t(descKey)
+        return translated === descKey ? (item.desc || "") : translated
+    }
+
     const tGroup = (key, defaultLabel) => {
         const translateKey = `section.${key}`
         const translation = t(translateKey)
@@ -124,7 +137,7 @@ export function LanguageProvider({ children }) {
     const dir = language === "ar" ? "rtl" : "ltr"
 
     return (
-        <LanguageContext.Provider value={{ language, setLanguage, t, tNav, tGroup, tNum, dir }}>
+        <LanguageContext.Provider value={{ language, setLanguage, t, tNav, tNavDesc, tGroup, tNum, dir }}>
             {children}
         </LanguageContext.Provider>
     )

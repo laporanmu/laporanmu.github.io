@@ -17,6 +17,7 @@ import PageHeader from '../../components/ui/PageHeader'
 import { StatCard, EmptyState } from '../../components/ui/DataDisplay'
 import Modal from '../../components/ui/Modal'
 import BehaviorFormModal from '../../components/students/BehaviorFormModal'
+import BehaviorDetailModal from '../../components/students/BehaviorDetailModal'
 import RichSelect from '../../components/ui/RichSelect'
 import { TableSkeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../context/ToastContext'
@@ -30,6 +31,71 @@ import { logAudit, logAuditBatch } from '../../lib/auditLogger'
 
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
+
+const DB_TRANSLATIONS = {
+    en: {
+        "Berbicara Di Dalam Kelas": "Talking in Class",
+        "Makan di Dalam Kelas": "Eating in Class",
+        "Terlambat Masuk Kelas": "Late to Class",
+        "Juara Lomba Tahfidz": "Tahfidz Competition Winner",
+        "Tidak Membawa Buku": "Not Bringing Books",
+        "Membuang Sampah Sembarangan": "Littering",
+        "Membantu Teman": "Helping Friends",
+        "Membaca Al-Qur'an": "Reading Al-Qur'an",
+        "Melanggar Aturan Asrama": "Violating Dorm Rules",
+        "Berpakaian Rapi": "Dressed Neatly",
+        "Membantu Membersihkan Masjid": "Helping Clean the Mosque",
+        "Merusak Fasilitas Sekolah": "Damaging School Facilities",
+        "Selesai Hafalan Juz 30": "Completed Memorization of Juz 30",
+        
+        // Students
+        "Budi Santoso": "John Smith",
+        "Siti Maryam": "Jane Doe",
+        "Muhammad Ali": "Muhammad Ali",
+        "Fatima Zahra": "Fatima Zahra",
+        "Ahmad Faiz": "Ahmad Faiz",
+        
+        // Teachers
+        "Ustadz Ahmad": "Mr. Ahmad",
+        "Ustadz Faisal": "Mr. Faisal",
+        
+        // Notes
+        "Terlambat 15 menit": "15 minutes late",
+        "Membersihkan teras depan": "Cleaning the front terrace",
+        "Memecahkan kaca jendela kelas": "Breaking the classroom window glass"
+    },
+    ar: {
+        "Berbicara Di Dalam Kelas": "التحدث في الفصل",
+        "Makan di Dalam Kelas": "الأكل في الفصل",
+        "Terlambat Masuk Kelas": "التأخر عن الفصل",
+        "Juara Lomba Tahfidz": "الفائز في مسابقة التحفيظ",
+        "Tidak Membawa Buku": "عدم إحضار الكتب",
+        "Membuang Sampah Sembarangan": "رمي النفايات في غير مكانها",
+        "Membantu Teman": "مساعدة الأصدقاء",
+        "Membaca Al-Qur'an": "قراءة القرآن",
+        "Melanggar Aturan Asrama": "مخالفة قوانين السكن",
+        "Berpakaian Rapi": "حسن المظهر",
+        "Membantu Membersihkan Masjid": "المساعدة في تنظيف المسجد",
+        "Merusak Fasilitas Sekolah": "إتلاف مرافق المدرسة",
+        "Selesai Hafalan Juz 30": "إتمام حفظ جزء ٣٠",
+        
+        // Students
+        "Budi Santoso": "أحمد محمد",
+        "Siti Maryam": "مريم علي",
+        "Muhammad Ali": "محمد علي",
+        "Fatima Zahra": "فاطمة الزهراء",
+        "Ahmad Faiz": "أحمد فايز",
+        
+        // Teachers
+        "Ustadz Ahmad": "الأستاذ أحمد",
+        "Ustadz Faisal": "الأستاذ فيصل",
+        
+        // Notes
+        "Terlambat 15 menit": "متأخر ١٥ دقيقة",
+        "Membersihkan teras depan": "تنظيف الفناء الأمامي للمسجد",
+        "Memecahkan kaca jendela kelas": "كسر زجاج نافذة الفصل"
+    }
+}
 
 const PAGE_SIZE = 10
 const LS_VIEW = 'reports_view'
@@ -50,7 +116,12 @@ function getPortalContainer(id) {
 export default function BehaviorPage() {
     const { profile } = useAuth()
     const { addToast } = useToast()
-    const { dir } = useLanguage()
+    const { language, t, tNum, dir } = useLanguage()
+    const tp = useCallback((key) => t(`behavior.${key}`), [t])
+    const tDb = useCallback((text) => {
+        if (!text) return text
+        return DB_TRANSLATIONS[language]?.[text] || text
+    }, [language])
 
     // access.teacher_poin flag — kalau off, guru tidak bisa tambah/edit/hapus poin
     const { enabled: teacherPoinEnabled } = useFlag('access.teacher_poin')
@@ -83,6 +154,8 @@ export default function BehaviorPage() {
 
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedItem, setSelectedItem] = useState(null)
+    const [detailItem, setDetailItem] = useState(null)
+    const [isDetailOpen, setIsDetailOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
     const [itemToDelete, setItemToDelete] = useState(null)
@@ -145,16 +218,19 @@ export default function BehaviorPage() {
     const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1
     const toRow = Math.min(page * pageSize, totalRows)
 
-    const getTypeName = (id) => violationTypes.find(vt => vt.id === id)?.name ?? '—'
+    const getTypeName = (id) => {
+        const name = violationTypes.find(vt => vt.id === id)?.name ?? '—'
+        return tDb(name)
+    }
 
     const activeFilters = useMemo(() => {
         const chips = []
-        if (filterType === 'positive') chips.push({ label: 'Positif (+)', clear: () => setFilterType('') })
-        if (filterType === 'negative') chips.push({ label: 'Negatif (−)', clear: () => setFilterType('') })
-        if (filterClass) chips.push({ label: `Kelas: ${filterClass}`, clear: () => setFilterClass('') })
-        if (sortBy !== 'newest') chips.push({ label: 'Urutan: Terlama', clear: () => setSortBy('newest') })
+        if (filterType === 'positive') chips.push({ label: `${tp('positive')} (+)`, clear: () => setFilterType('') })
+        if (filterType === 'negative') chips.push({ label: `${tp('negative')} (−)`, clear: () => setFilterType('') })
+        if (filterClass) chips.push({ label: `${tp('classLabel')}: ${filterClass}`, clear: () => setFilterClass('') })
+        if (sortBy !== 'newest') chips.push({ label: `${tp('sortLabel')}: ${tp('oldest')}`, clear: () => setSortBy('newest') })
         return chips
-    }, [filterType, filterClass, sortBy])
+    }, [filterType, filterClass, sortBy, tp])
 
     const groupedReports = useMemo(() => {
         const groups = {}
@@ -170,15 +246,17 @@ export default function BehaviorPage() {
     const allSelected = reports.length > 0 && reports.every(r => selectedIds.includes(r.id))
 
     // ── Formatters ────────────────────────────────────────────────────────────
-    const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''
-    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    const fmtLocale = language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID'
+    const fmtTime = (d) => d ? new Date(d).toLocaleTimeString(fmtLocale, { hour: '2-digit', minute: '2-digit' }) : ''
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString(fmtLocale, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
     const fmtDayLabel = (d) => {
         const today = new Date().toISOString().slice(0, 10)
         const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
         const ds = d.slice(0, 10)
-        if (ds === today) return 'Hari Ini'
-        if (ds === yesterday) return 'Kemarin'
-        return new Date(d).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+        if (ds === today) return tp('today')
+        if (ds === yesterday) return tp('yesterday')
+        const loc = language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID'
+        return new Date(d).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     }
 
     const mask = (str, visibleLen = 3) => {
@@ -227,6 +305,7 @@ export default function BehaviorPage() {
                 setSearchQuery(''); setSelectedIds([]);
                 setIsModalOpen(false); setIsExportModalOpen(false); setIsImportModalOpen(false)
                 setIsShortcutOpen(false); setIsDeleteModalOpen(false); setIsBulkDeleteOpen(false)
+                setIsDetailOpen(false); setDetailItem(null);
             }
             if (e.key === '?' && !isTyping) setIsShortcutOpen(v => !v)
 
@@ -278,7 +357,7 @@ export default function BehaviorPage() {
                 setViolationTypes(filteredVTs)
             }
             if (classRes.data) setClassesList(classRes.data.map(c => c.name).filter(Boolean).sort())
-        } catch { addToast('Gagal memuat metadata', 'error') }
+        } catch { addToast(tp('toastLoadMetaError'), 'error') }
     }, [addToast, canAchievement, canViolation])
 
     const fetchReports = useCallback(async () => {
@@ -322,7 +401,7 @@ export default function BehaviorPage() {
             }
             setReports(filtered)
             setTotalRows(count ?? 0)
-        } catch { addToast('Gagal memuat laporan', 'error') }
+        } catch { addToast(tp('toastLoadReportError'), 'error') }
         finally { setLoading(false) }
     }, [page, pageSize, debouncedSearch, filterType, filterClass, sortBy, students, canViolation, canAchievement, addToast])
 
@@ -430,6 +509,10 @@ export default function BehaviorPage() {
         setSelectedItem(null)
         setIsModalOpen(true)
     }
+    const handleOpenDetail = (r) => {
+        setDetailItem(r)
+        setIsDetailOpen(true)
+    }
     const handleEdit = (r) => {
         setSelectedItem(r)
         setIsModalOpen(true)
@@ -452,7 +535,7 @@ export default function BehaviorPage() {
             if (selectedItem) {
                 const { error } = await supabase.from('reports').update(payload).eq('id', selectedItem.id)
                 if (error) throw error
-                addToast('Laporan diupdate', 'success')
+                addToast(tp('toastUpdateSuccess'), 'success')
                 await logAudit({
                     action: 'UPDATE', source: 'OPERATIONAL', tableName: 'reports', recordId: selectedItem.id,
                     oldData: selectedItem,
@@ -461,14 +544,14 @@ export default function BehaviorPage() {
             } else {
                 const { data: insData, error } = await supabase.from('reports').insert([payload]).select().single()
                 if (error) throw error
-                addToast('Laporan berhasil dibuat', 'success')
+                addToast(tp('toastCreateSuccess'), 'success')
                 await logAudit({
                     action: 'INSERT', source: 'OPERATIONAL', tableName: 'reports', recordId: insData?.id,
                     newData: insData || payload
                 })
             }
             setIsModalOpen(false); fetchReports(); fetchStats()
-        } catch (err) { addToast(err.message || 'Gagal menyimpan', 'error') }
+        } catch (err) { addToast(err.message || tp('toastSaveError'), 'error') }
         finally { setSubmitting(false) }
     }
     const handleDeleteConfirm = async () => {
@@ -477,13 +560,13 @@ export default function BehaviorPage() {
         try {
             const { error } = await supabase.from('reports').delete().eq('id', itemToDelete.id)
             if (error) throw error
-            addToast('Laporan dihapus', 'success')
+            addToast(tp('toastDeleteSuccess'), 'success')
             await logAudit({
                 action: 'DELETE', source: 'OPERATIONAL', tableName: 'reports', recordId: itemToDelete.id,
                 oldData: itemToDelete
             })
             setIsDeleteModalOpen(false); fetchReports(); fetchStats()
-        } catch (err) { addToast(err.message || 'Gagal menghapus', 'error') }
+        } catch (err) { addToast(err.message || tp('toastDeleteError'), 'error') }
         finally { setSubmitting(false); setItemToDelete(null) }
     }
     const handleBulkDelete = async () => {
@@ -493,13 +576,13 @@ export default function BehaviorPage() {
         try {
             const { error } = await supabase.from('reports').delete().in('id', idsSnap)
             if (error) throw error
-            addToast(`${idsSnap.length} laporan dihapus`, 'success')
+            addToast(`${tNum(idsSnap.length)} ${tp('toastBulkDeleteSuccess')}`, 'success')
             await logAudit({
                 action: 'DELETE', source: 'OPERATIONAL', tableName: 'reports', recordId: null,
                 oldData: { bulk: true, count: idsSnap.length, ids: idsSnap }
             })
             setSelectedIds([]); setIsBulkDeleteOpen(false); fetchReports(); fetchStats()
-        } catch (err) { addToast(err.message || 'Gagal hapus massal', 'error') }
+        } catch (err) { addToast(err.message || tp('toastBulkDeleteError'), 'error') }
         finally { setSubmitting(false) }
     }
 
@@ -508,15 +591,15 @@ export default function BehaviorPage() {
 
 
     return (
-        <DashboardLayout title="Kedisiplinan & Poin">
+        <DashboardLayout title={tp('title')}>
             {/* TAMBAH INI: */}
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
 
                 {/* Privasi Banner */}
                 {isPrivacyMode && (
                     <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><EyeOff className="w-4 h-4" /> <span>Mode Privasi Aktif<span className="hidden sm:inline"> — Data sensitif disensor</span></span></div>
-                        <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">Matikan</button>
+                        <div className="flex items-center gap-2 text-amber-600 text-xs font-bold"><EyeOff className="w-4 h-4" /> <span>{tp('privacyActive')}<span className="hidden sm:inline">{tp('privacyDesc')}</span></span></div>
+                        <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">{tp('disable')}</button>
                     </div>
                 )}
 
@@ -524,7 +607,7 @@ export default function BehaviorPage() {
                 {!canInput && (
                     <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
                         <EyeOff className="text-rose-500 shrink-0 w-4 h-4" />
-                        <p className="text-[11px] font-bold text-rose-600 flex-1">Mode Read-only — Input poin dinonaktifkan oleh administrator.</p>
+                        <p className="text-[11px] font-bold text-rose-600 flex-1">{tp('readOnlyBanner')}</p>
                     </div>
                 )}
 
@@ -591,9 +674,9 @@ export default function BehaviorPage() {
                 {/* ── PAGE HEADER ── */}
                 <PageHeader
                     badge="boarding"
-                    breadcrumbs={['Behavior Analytics']}
-                    title="Kedisiplinan & Poin"
-                    subtitle="Rekam dan pantau perkembangan karakter siswa."
+                    breadcrumbs={[tp('analytics')]}
+                    title={tp('title')}
+                    subtitle={tp('subtitle')}
                     actions={
                         <>
 
@@ -603,7 +686,7 @@ export default function BehaviorPage() {
                                     ref={headerMenuBtnRef}
                                     onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
                                     className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                                    title="Opsi Laporan"
+                                    title={tp('reportOptions')}
                                 >
                                     <Sliders className="w-4 h-4" />
                                 </button>
@@ -623,14 +706,14 @@ export default function BehaviorPage() {
                                                 left: Math.max(10, headerMenuRect.right - 224)
                                             }}
                                         >
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Opsi & Aksi</p>
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('reportOptions')}</p>
                                             <button onClick={() => { setIsImportModalOpen(true); setIsHeaderMenuOpen(false) }}
                                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left">
                                                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                                                     <Upload className="w-4 h-4 text-xs" />
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-[11px] font-black leading-tight">Import Data</p>
+                                                    <p className="text-[11px] font-black leading-tight">{tp('importData')}</p>
                                                     <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
                                                 </div>
                                             </button>
@@ -640,7 +723,7 @@ export default function BehaviorPage() {
                                                     <Download className="w-4 h-4 text-xs" />
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-[11px] font-black leading-tight">Export Data</p>
+                                                    <p className="text-[11px] font-black leading-tight">{tp('exportData')}</p>
                                                     <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xls, csv</p>
                                                 </div>
                                             </button>
@@ -674,23 +757,23 @@ export default function BehaviorPage() {
                                             }}
                                         >
                                             <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
-                                                <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
-                                                <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
+                                                <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">{tp('shortcuts')}</p>
+                                                <span className="text-[9px] text-[var(--color-text-muted)] font-bold">{tp('shortcutToggle')}</span>
                                             </div>
                                             <div className="p-3 space-y-0.5">
                                                 {[
-                                                    { section: 'Navigasi' },
-                                                    { keys: ['Ctrl', 'K'], label: 'Cari laporan' },
-                                                    { keys: ['Esc'], label: 'Tutup modal / reset search' },
-                                                    { section: 'Aksi' },
-                                                    { keys: ['N'], label: 'Tambah laporan baru' },
-                                                    { keys: ['Ctrl', 'E'], label: 'Buka menu export' },
-                                                    { keys: ['Ctrl', 'I'], label: 'Buka menu import' },
-                                                    { section: 'Tampilan' },
-                                                    { keys: ['P'], label: 'Toggle privacy mode' },
-                                                    { keys: ['R'], label: 'Refresh data' },
-                                                    { keys: ['X'], label: 'Reset filter' },
-                                                    { keys: ['?'], label: 'Tampilkan shortcut ini' },
+                                                    { section: tp('nav') },
+                                                    { keys: ['Ctrl', 'K'], label: tp('shortcutSearch') },
+                                                    { keys: ['Esc'], label: tp('shortcutEsc') },
+                                                    { section: tp('actions') },
+                                                    { keys: ['N'], label: tp('shortcutAdd') },
+                                                    { keys: ['Ctrl', 'E'], label: tp('shortcutExport') },
+                                                    { keys: ['Ctrl', 'I'], label: tp('shortcutImport') },
+                                                    { section: tp('views') },
+                                                    { keys: ['P'], label: tp('shortcutPrivacy') },
+                                                    { keys: ['R'], label: tp('shortcutRefresh') },
+                                                    { keys: ['X'], label: tp('shortcutReset') },
+                                                    { keys: ['?'], label: tp('shortcutShow') },
                                                 ].map((item, i) => item.section ? (
                                                     <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
                                                 ) : (
@@ -718,7 +801,7 @@ export default function BehaviorPage() {
                             >
                                 {isPrivacyMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
-                                    Privasi
+                                    {tp('privacy')}
                                 </span>
                             </button>
 
@@ -727,7 +810,7 @@ export default function BehaviorPage() {
                                 className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10"
                             >
                                 <Plus className="w-3.5 h-3.5" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">{canInput ? 'Buat Laporan' : 'Read-only'}</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest">{canInput ? tp('createReport') : 'Read-only'}</span>
                             </button>
                         </>
                     }
@@ -735,38 +818,14 @@ export default function BehaviorPage() {
 
                 {/* ── STATS ── */}
                 <StatsCarousel count={4} cols={4}>
-                    <StatCard
-                        key="total"
-                        icon={ClipboardList}
-                        label="Total"
-                        value={stats.total}
-                        color="primary"
-                    />
-                    <StatCard
-                        key="positive"
-                        icon={CheckCircle2}
-                        label="Positif"
-                        value={stats.positive}
-                        color="emerald"
+                    <StatCard key="total" icon={ClipboardList} label={tp('total')} value={stats.total} color="primary" />
+                    <StatCard key="positive" icon={CheckCircle2} label={tp('positive')} value={stats.positive} color="emerald"
                         onClick={() => setFilterType(prev => prev === 'positive' ? '' : 'positive')}
-                        className={filterType === 'positive' ? 'ring-2 ring-[var(--color-primary)]/30' : ''}
-                    />
-                    <StatCard
-                        key="negative"
-                        icon={AlertCircle}
-                        label="Negatif"
-                        value={stats.negative}
-                        color="rose"
+                        className={filterType === 'positive' ? 'ring-2 ring-[var(--color-primary)]/30' : ''} />
+                    <StatCard key="negative" icon={AlertCircle} label={tp('negative')} value={stats.negative} color="rose"
                         onClick={() => setFilterType(prev => prev === 'negative' ? '' : 'negative')}
-                        className={filterType === 'negative' ? 'ring-2 ring-[var(--color-primary)]/30' : ''}
-                    />
-                    <StatCard
-                        key="today"
-                        icon={Calendar}
-                        label="Hari Ini"
-                        value={stats.today}
-                        color="amber"
-                    />
+                        className={filterType === 'negative' ? 'ring-2 ring-[var(--color-primary)]/30' : ''} />
+                    <StatCard key="today" icon={Calendar} label={tp('today')} value={stats.today} color="amber" />
                 </StatsCarousel>
 
                 {/* ── SEARCH + FILTER ── */}
@@ -784,7 +843,7 @@ export default function BehaviorPage() {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Cari nama siswa atau jenis perilaku... (Ctrl+K)"
+                                    placeholder={`${tp('searchPlaceholder')} (Ctrl+K)`}
                                     className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-[var(--color-surface-alt)]/50 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all rounded-xl font-bold placeholder:font-normal placeholder:opacity-40"
                                 />
                                 {searchQuery && (
@@ -803,9 +862,9 @@ export default function BehaviorPage() {
                             {/* Group 1: Kategori */}
                             <div className="flex items-center gap-1.5 shrink-0">
                                 {[
-                                    { id: '', label: 'Semua', icon: ClipboardList, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },
-                                    { id: 'positive', label: 'Positif', icon: CheckCircle2, activeCls: 'bg-emerald-500 border-emerald-500' },
-                                    { id: 'negative', label: 'Negatif', icon: AlertCircle, activeCls: 'bg-rose-500 border-rose-500' },
+                                    { id: '', label: tp('all'), icon: ClipboardList, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },
+                                    { id: 'positive', label: tp('positive'), icon: CheckCircle2, activeCls: 'bg-emerald-500 border-emerald-500' },
+                                    { id: 'negative', label: tp('negative'), icon: AlertCircle, activeCls: 'bg-rose-500 border-rose-500' },
                                 ].map((s) => (
                                     <button
                                         key={s.id}
@@ -834,7 +893,7 @@ export default function BehaviorPage() {
                                         }`}
                                 >
                                     {sortBy === 'newest' ? <ArrowDown className="w-3.5 h-3.5 opacity-30" /> : <ArrowUp className="w-3.5 h-3.5" />}
-                                    {sortBy === 'newest' ? 'Terbaru' : 'Terlama'}
+                                    {sortBy === 'newest' ? tp('newest') : tp('oldest')}
                                 </button>
                             </div>
                         </div>
@@ -847,16 +906,16 @@ export default function BehaviorPage() {
                             {/* View Mode Switcher */}
                             <div className="bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)] flex gap-0.5">
                                 <button onClick={() => setViewMode('timeline')}
-                                    title="Timeline"
+                                    title={tp('timeline')}
                                     className={`h-7 px-2.5 sm:px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'timeline' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                                     <LayoutList className="w-3.5 h-3.5" />
-                                    <span className="hidden xl:inline">Timeline</span>
+                                    <span className="hidden xl:inline">{tp('timeline')}</span>
                                 </button>
                                 <button onClick={() => setViewMode('table')}
-                                    title="Tabel"
+                                    title={tp('tableView')}
                                     className={`h-7 px-2.5 sm:px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                                     <Table className="w-3.5 h-3.5" />
-                                    <span className="hidden xl:inline">Tabel</span>
+                                    <span className="hidden xl:inline">{tp('tableView')}</span>
                                 </button>
                             </div>
 
@@ -864,10 +923,10 @@ export default function BehaviorPage() {
                             <button
                                 onClick={() => setSelectedIds(allSelected ? [] : reports.map(r => r.id))}
                                 className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
-                                title="Pilih Semua / Batal"
+                                title={tp('selectAll')}
                             >
                                 <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span className="hidden xs:inline">${selectedIds.length > 0 ? 'Terpilih' : 'Pilih'}</span>
+                                <span className="hidden xs:inline">${selectedIds.length > 0 ? tp('selected') : tp('select')}</span>
                                 {selectedIds.length > 0 && (
                                     <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">
                                         {selectedIds.length}
@@ -881,7 +940,7 @@ export default function BehaviorPage() {
                                     ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30'
                                     : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
                                 <Sliders className="w-3.5 h-3.5" />
-                                <span className="hidden xs:inline">Lainnya</span>
+                                <span className="hidden xs:inline">{tp('moreFilters')}</span>
                                 {activeFilters.length > 0 && (
                                     <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
                                         {activeFilters.length}
@@ -904,9 +963,9 @@ export default function BehaviorPage() {
                                 </button>
                             ))}
                             <button type="button" onClick={resetAllFilters}
-                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title="Reset semua filter">
+                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title={tp('resetAllFilters')}>
                                 <RotateCcw className="w-3.5 h-3.5" />
-                                Reset semua
+                                {tp('resetAllFilters')}
                             </button>
                         </div>
                     )}
@@ -920,7 +979,7 @@ export default function BehaviorPage() {
                                     <div className="w-1 h-3.5 bg-[var(--color-primary)] rounded-full" />
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-primary)] flex items-center gap-2">
                                         <Sliders className="w-3 h-3 opacity-60" />
-                                        Filter Lanjutan
+                                        {tp('advancedFilter')}
                                     </span>
                                 </div>
                                 <button
@@ -928,47 +987,47 @@ export default function BehaviorPage() {
                                     className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/5 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-500/10"
                                 >
                                     <RotateCcw className="w-3 h-3" />
-                                    Reset Semua Filter
+                                    {tp('resetAllFilters')}
                                 </button>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Kategori</label>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{tp('filterCategory')}</label>
                                     <RichSelect
                                         value={filterType}
                                         onChange={(val) => { setFilterType(val); setPage(1) }}
                                         options={[
-                                            { id: '', name: 'Semua Perilaku' },
-                                            { id: 'positive', name: 'Positif (+)' },
-                                            { id: 'negative', name: 'Negatif (−)' },
+                                            { id: '', name: tp('allBehaviors') },
+                                            { id: 'positive', name: `${tp('positive')} (+)` },
+                                            { id: 'negative', name: `${tp('negative')} (−)` },
                                         ]}
-                                        placeholder="Semua Perilaku"
+                                        placeholder={tp('allBehaviors')}
                                         small
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Kelas</label>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{tp('classLabel')}</label>
                                     <RichSelect
                                         value={filterClass}
                                         onChange={(val) => { setFilterClass(val); setPage(1) }}
                                         options={[
-                                            { id: '', name: 'Semua Kelas' },
+                                            { id: '', name: tp('allClasses') },
                                             ...classesList.map(c => ({ id: c, name: c }))
                                         ]}
-                                        placeholder="Semua Kelas"
+                                        placeholder={tp('allClasses')}
                                         small
                                         searchable
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Urutan</label>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{tp('sortLabel')}</label>
                                     <RichSelect
                                         value={sortBy}
                                         onChange={(val) => { setSortBy(val); setPage(1) }}
                                         options={[
-                                            { id: 'newest', name: '↓ Terbaru' },
-                                            { id: 'oldest', name: '↑ Terlama' },
+                                            { id: 'newest', name: `↓ ${tp('newest')}` },
+                                            { id: 'oldest', name: `↑ ${tp('oldest')}` },
                                         ]}
                                         small
                                     />
@@ -976,7 +1035,7 @@ export default function BehaviorPage() {
                                 <div className="flex items-end justify-end">
                                     <button onClick={() => setShowAdvFilter(false)}
                                         className="h-9 px-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
-                                        Tutup Panel
+                                        {tp('closePanel')}
                                     </button>
                                 </div>
                             </div>
@@ -1031,12 +1090,12 @@ export default function BehaviorPage() {
                         <div className="w-14 h-14 bg-[var(--color-surface-alt)] rounded-2xl flex items-center justify-center mx-auto mb-4 opacity-30 text-2xl">
                             <ClipboardList className="w-8 h-8" />
                         </div>
-                        <h3 className="text-lg font-black text-[var(--color-text)] mb-2">Belum Ada Laporan</h3>
+                        <h3 className="text-lg font-black text-[var(--color-text)] mb-2">{tp('noReports')}</h3>
                         <p className="text-sm text-[var(--color-text-muted)] max-w-xs mx-auto mb-6 opacity-70">
-                            Gunakan tombol "Buat Laporan" untuk mulai mendata perilaku siswa.
+                            {tp('noReportsDesc')}
                         </p>
                         <button onClick={handleAdd} disabled={!canInput} className="btn btn-primary h-10 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed">
-                            {canInput ? 'Buat Sekarang' : 'Read-only'}
+                            {canInput ? tp('createNow') : 'Read-only'}
                         </button>
                     </div>
                 ) : viewMode === 'timeline' ? (
@@ -1052,15 +1111,15 @@ export default function BehaviorPage() {
                                 <EmptyState
                                     variant="plain"
                                     icon={Search}
-                                    title="Pencarian Tidak Ditemukan"
-                                    description="Maaf, kami tidak menemukan data laporan perilaku dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                    title={tp('noSearchResult')}
+                                    description={tp('noSearchResultDesc')}
                                     action={
                                         <button
                                             type="button"
                                             onClick={resetAllFilters}
                                             className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-all"
                                         >
-                                            Reset Semua Filter
+                                            {tp('resetAllFilters')}
                                         </button>
                                     }
                                 />
@@ -1083,7 +1142,7 @@ export default function BehaviorPage() {
                                             <div className="flex items-center gap-3 bg-[var(--color-surface)]/95 backdrop-blur-md pl-4 pr-5 py-1.5 rounded-2xl border border-[var(--color-border)] w-fit shadow-md shadow-black/[0.02]">
                                                 <span className="text-[11px] font-black uppercase text-[var(--color-text)] tracking-wider leading-none">{fmtDayLabel(date)}</span>
                                                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] opacity-40 animate-pulse" />
-                                                <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider font-extrabold leading-none">{items.length} Laporan</span>
+                                                <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider font-extrabold leading-none">{tNum(items.length)} {tp('reportCount')}</span>
                                             </div>
                                         </div>
 
@@ -1127,7 +1186,7 @@ export default function BehaviorPage() {
 
                                                                 {/* Avatar fallback gradient */}
                                                                 <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xs shadow-inner transition-transform duration-200 group-hover/item:scale-105 ${isPos ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 text-emerald-600 ring-2 ring-emerald-500/10' : 'bg-gradient-to-br from-rose-500/20 to-rose-500/5 text-rose-600 ring-2 ring-rose-500/10'}`}>
-                                                                    {(stud?.name || '?')[0].toUpperCase()}
+                                                                    {(tDb(stud?.name) || '?')[0].toUpperCase()}
                                                                 </div>
 
                                                                 {/* Body */}
@@ -1135,7 +1194,7 @@ export default function BehaviorPage() {
                                                                     <div className="min-w-0 flex-1">
                                                                         <div className="flex items-center gap-2 flex-wrap">
                                                                             <span className="text-sm font-black text-[var(--color-text)] tracking-tight leading-none group-hover/item:text-[var(--color-primary)] transition-colors duration-200">
-                                                                                {mask(stud?.name || '—')}
+                                                                                {mask(tDb(stud?.name) || '—')}
                                                                             </span>
                                                                             {stud?.class_name && (
                                                                                 <span className="px-2 py-0.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest flex-shrink-0 shadow-sm">
@@ -1152,15 +1211,15 @@ export default function BehaviorPage() {
                                                                         {r.notes && (
                                                                             <div className={`mt-2 py-1 px-3 border-l-2 ${isPos ? 'border-emerald-500/40 bg-emerald-500/[0.02]' : 'border-rose-500/40 bg-rose-500/[0.02]'} rounded-r-xl max-w-xl shadow-inner`}>
                                                                                 <p className="text-[10px] italic font-semibold text-[var(--color-text-muted)] opacity-85 leading-relaxed break-words">
-                                                                                    "{mask(r.notes)}"
+                                                                                    "{mask(tDb(r.notes))}"
                                                                                 </p>
                                                                             </div>
                                                                         )}
 
                                                                         <div className="flex items-center gap-1.5 mt-2 text-[var(--color-text-muted)] opacity-55">
-                                                                            <span className="text-[9px] font-medium leading-none">Dicatat oleh</span>
+                                                                            <span className="text-[9px] font-medium leading-none">{tp('recordedBy')}</span>
                                                                             <span className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text)] leading-none">
-                                                                                {mask(r.teacher_name || 'Sistem')}
+                                                                                {mask(tDb(r.teacher_name) || tp('system'))}
                                                                             </span>
                                                                         </div>
                                                                     </div>
@@ -1175,6 +1234,9 @@ export default function BehaviorPage() {
 
                                                                 {/* Action Menu for Mobile/Timeline */}
                                                                 <div className="flex items-center gap-1 ml-2 self-center">
+                                                                    <button onClick={() => handleOpenDetail(r)} className="w-8 h-8 flex items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:scale-105 active:scale-95 transition-all shadow-sm">
+                                                                        <Eye className="w-3.5 h-3.5" />
+                                                                    </button>
                                                                     <button onClick={() => handleEdit(r)} className="w-8 h-8 flex items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:scale-105 active:scale-95 transition-all shadow-sm">
                                                                         <Edit2 className="w-3.5 h-3.5" />
                                                                     </button>
@@ -1199,7 +1261,7 @@ export default function BehaviorPage() {
                             pageSize={pageSize}
                             setPage={setPage}
                             setPageSize={setPageSize}
-                            label="laporan"
+                            label={tp('reportCount')}
                             jumpPage={jumpPage}
                             setJumpPage={setJumpPage}
                         />
@@ -1224,13 +1286,13 @@ export default function BehaviorPage() {
                                                 onChange={() => setSelectedIds(allSelected ? [] : reports.map(r => r.id))}
                                                 className="w-4 h-4 rounded border-[var(--color-border)] cursor-pointer" />
                                         </th>
-                                        <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Siswa</th>
-                                        {visibleCols.type && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Jenis Laporan</th>}
-                                        {visibleCols.points && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center">Poin</th>}
-                                        {visibleCols.time && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Waktu</th>}
-                                        {visibleCols.teacher && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Dicatat Oleh</th>}
-                                        <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-20 relative">
-                                            <span>Aksi</span>
+                                        <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[25%]">{tp('studentCol')}</th>
+                                        {visibleCols.type && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[35%]">{tp('reportType')}</th>}
+                                        {visibleCols.points && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[10%]">{tp('points')}</th>}
+                                        {visibleCols.time && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[15%]">{tp('time')}</th>}
+                                        {visibleCols.teacher && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[15%]">{tp('recordedBy')}</th>}
+                                        <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28 relative">
+                                            <span>{tp('actions')}</span>
                                             <div className="absolute right-2 top-1/2 -translate-y-1/2">
                                                 <button
                                                     onClick={(e) => {
@@ -1245,12 +1307,12 @@ export default function BehaviorPage() {
                                                 {isColMenuOpen && createPortal(
                                                     <div ref={colMenuRef} className="fixed z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95 slide-in-from-top-2"
                                                         style={{ top: menuPos.top, right: menuPos.right }}>
-                                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Atur Kolom</p>
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('manageColumns')}</p>
                                                         {[
-                                                            { key: 'type', label: 'Jenis Laporan' },
-                                                            { key: 'points', label: 'Poin' },
-                                                            { key: 'time', label: 'Waktu' },
-                                                            { key: 'teacher', label: 'Dicatat Oleh' }
+                                                            { key: 'type', label: tp('reportType') },
+                                                            { key: 'points', label: tp('points') },
+                                                            { key: 'time', label: tp('time') },
+                                                            { key: 'teacher', label: tp('recordedBy') }
                                                         ].map(({ key, label }) => (
                                                             <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
                                                                 <span className="text-[10px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)]">{label}</span>
@@ -1273,15 +1335,15 @@ export default function BehaviorPage() {
                                                 <EmptyState
                                                     variant="plain"
                                                     icon={Search}
-                                                    title="Pencarian Tidak Ditemukan"
-                                                    description="Maaf, kami tidak menemukan data laporan perilaku dengan kriteria tersebut. Coba ubah kata kunci atau reset filter."
+                                                    title={tp('noSearchResult')}
+                                                    description={tp('noSearchResultDesc')}
                                                     action={
                                                         <button
                                                             type="button"
                                                             onClick={resetAllFilters}
                                                             className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-all"
                                                         >
-                                                            Reset Semua Filter
+                                                            {tp('resetAllFilters')}
                                                         </button>
                                                     }
                                                 />
@@ -1301,10 +1363,10 @@ export default function BehaviorPage() {
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-2.5">
                                                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-[11px] flex-shrink-0 ${isP ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
-                                                            {(s?.name || '?')[0].toUpperCase()}
+                                                            {(tDb(s?.name) || '?')[0].toUpperCase()}
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-black text-[var(--color-text)] leading-tight truncate max-w-[150px]">{mask(s?.name || '—')}</p>
+                                                            <p className="text-sm font-black text-[var(--color-text)] leading-tight truncate max-w-[200px]">{mask(tDb(s?.name) || '—')}</p>
                                                             {s?.class_name && <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-50">{s.class_name}</p>}
                                                         </div>
                                                     </div>
@@ -1312,7 +1374,7 @@ export default function BehaviorPage() {
                                                 {visibleCols.type && (
                                                     <td className="px-4 py-3">
                                                         <p className="text-xs font-bold text-[var(--color-text)]">{getTypeName(r.violation_type_id)}</p>
-                                                        {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 truncate max-w-[180px]">{mask(r.notes)}</p>}
+                                                        {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 truncate max-w-[280px]">{mask(tDb(r.notes))}</p>}
                                                     </td>
                                                 )}
                                                 {visibleCols.points && (
@@ -1330,11 +1392,14 @@ export default function BehaviorPage() {
                                                 )}
                                                 {visibleCols.teacher && (
                                                     <td className="px-4 py-3">
-                                                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide opacity-50 truncate max-w-[100px]">{mask(r.teacher_name || '—')}</p>
+                                                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide opacity-50 truncate max-w-[140px]">{mask(r.teacher_name || '—')}</p>
                                                     </td>
                                                 )}
                                                 <td className="px-4 py-3 text-center relative">
                                                     <div className="flex items-center justify-center gap-1 transition-opacity duration-150">
+                                                        <button onClick={() => handleOpenDetail(r)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all" title="Lihat detail">
+                                                            <Eye className="w-3.5 h-3.5" />
+                                                        </button>
                                                         <button onClick={() => handleEdit(r)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all">
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </button>
@@ -1356,7 +1421,7 @@ export default function BehaviorPage() {
                             pageSize={pageSize}
                             setPage={setPage}
                             setPageSize={setPageSize}
-                            label="laporan"
+                            label={tp('reportCount')}
                             jumpPage={jumpPage}
                             setJumpPage={setJumpPage}
                         />
@@ -1367,16 +1432,31 @@ export default function BehaviorPage() {
                 <BulkActionsBar
                     selectedCount={selectedIds.length}
                     onClear={() => setSelectedIds([])}
-                    title="Terpilih"
-                    subtitle="Aksi Massal"
+                    title={tp('selected')}
+                    subtitle={tp('bulkActions')}
                 >
+                    {/* Action 1: Export Selected */}
                     <button
-                        onClick={() => setIsBulkDeleteOpen(true)}
-                        className="h-9 px-4 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white justify-center shadow-lg shadow-red-500/5"
+                        onClick={() => {
+                            setExportScope('selected');
+                            setIsExportModalOpen(true);
+                        }}
+                        className="h-9 px-4 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white justify-center shadow-lg shadow-emerald-500/5"
                     >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Hapus</span>
+                        <Download className="w-3.5 h-3.5" />
+                        <span>{tp('exportData')}</span>
                     </button>
+
+                    {/* Action 2: Delete Selected (Only for roles with input capability) */}
+                    {canInput && (
+                        <button
+                            onClick={() => setIsBulkDeleteOpen(true)}
+                            className="h-9 px-4 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white justify-center shadow-lg shadow-red-500/5"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>{tp('delete')}</span>
+                        </button>
+                    )}
                 </BulkActionsBar>
 
                 {/* ── WIZARD FORM MODAL ── */}
@@ -1395,8 +1475,8 @@ export default function BehaviorPage() {
                 <Modal
                     isOpen={isDeleteModalOpen}
                     onClose={() => setIsDeleteModalOpen(false)}
-                    title="Hapus Laporan"
-                    description="Kedisiplinan & Poin santri akan dihapus permanen"
+                    title={tp('deleteReport')}
+                    description={tp('deleteReportDesc')}
                     icon={Trash2}
                     iconBg="bg-red-500/10"
                     iconColor="text-red-500"
@@ -1409,7 +1489,7 @@ export default function BehaviorPage() {
                                 onClick={() => setIsDeleteModalOpen(false)}
                                 className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                             >
-                                Batal
+                                {tp('cancel')}
                             </button>
                             <div className="flex-1" />
                             <button
@@ -1423,14 +1503,14 @@ export default function BehaviorPage() {
                                 ) : (
                                     <Trash2 className="w-3.5 h-3.5 opacity-70" />
                                 )}
-                                Ya, Hapus
+                                {tp('yesDelete')}
                             </button>
                         </div>
                     }
                 >
                     <div className="px-1">
                         <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                            Laporan untuk santri <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{students.find(s => s.id === itemToDelete?.student_id)?.name}</span> dengan poin <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToDelete?.points > 0 ? `+${itemToDelete.points}` : itemToDelete?.points}</span> akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
+                            Laporan untuk santri <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{mask(students.find(s => s.id === itemToDelete?.student_id)?.name || '')}</span> {tp('deleteWarning')} <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToDelete?.points > 0 ? `+${itemToDelete.points}` : itemToDelete?.points}</span> {tp('deleteWarning2')}
                         </p>
                     </div>
                 </Modal>
@@ -1439,8 +1519,8 @@ export default function BehaviorPage() {
                 <Modal
                     isOpen={isBulkDeleteOpen}
                     onClose={() => setIsBulkDeleteOpen(false)}
-                    title="Hapus Massal"
-                    description="Menghapus beberapa data laporan secara permanen"
+                    title={tp('bulkDelete')}
+                    description={tp('bulkDeleteDesc')}
                     icon={Trash2}
                     iconBg="bg-red-500/10"
                     iconColor="text-red-500"
@@ -1453,7 +1533,7 @@ export default function BehaviorPage() {
                                 onClick={() => setIsBulkDeleteOpen(false)}
                                 className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                             >
-                                Batal
+                                {tp('cancel')}
                             </button>
                             <div className="flex-1" />
                             <button
@@ -1467,17 +1547,58 @@ export default function BehaviorPage() {
                                 ) : (
                                     <Trash2 className="w-3.5 h-3.5 opacity-70" />
                                 )}
-                                Hapus {selectedIds.length} Laporan
+                                {tp('yesDelete')} {tNum(selectedIds.length)} {tp('reportCount')}
                             </button>
                         </div>
                     }
                 >
-                    <div className="px-1">
+                    <div className="px-1 space-y-3">
+                        {/* Warning text */}
                         <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                            Anda memilih untuk menghapus <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{selectedIds.length} laporan</span> secara permanen. Data yang telah dihapus tidak dapat dipulihkan kembali.
+                            {tp('bulkDeleteWarning1')} <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{tNum(selectedIds.length)} {tp('reportCount')}</span> {tp('bulkDeleteWarning2')}
                         </p>
+
+                        {/* Preview list of reports to be deleted */}
+                        <div className={`rounded-xl border border-red-500/10 bg-red-500/[0.03] overflow-hidden ${selectedIds.length > 4 ? 'max-h-[200px] overflow-y-auto' : ''}`}>
+                            {selectedIds.map((id, idx) => {
+                                const r = reports.find(x => x.id === id)
+                                if (!r) return null
+                                const s = students.find(x => x.id === r.student_id)
+                                const isPos = (r.points ?? 0) > 0
+                                return (
+                                    <div key={id} className={`flex items-center gap-2.5 px-3 py-2 ${idx < selectedIds.length - 1 ? 'border-b border-red-500/10' : ''}`}>
+                                        {/* Avatar */}
+                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 ${isPos ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                                            {(s?.name || '?')[0].toUpperCase()}
+                                        </div>
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-black text-[var(--color-text)] truncate">{isPrivacyMode ? mask(s?.name || '—') : (s?.name || '—')}</p>
+                                            <p className="text-[9px] text-[var(--color-text-muted)] opacity-60 truncate">{getTypeName(r.violation_type_id)}</p>
+                                        </div>
+                                        {/* Points badge */}
+                                        <span className={`shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded-lg border ${isPos ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
+                                            {isPos ? '+' : ''}{r.points}
+                                        </span>
+                                    </div>
+                                )
+                            })}
+                        </div>
                     </div>
                 </Modal>
+
+                {/* ── DETAIL MODAL ── */}
+                <BehaviorDetailModal
+                    isOpen={isDetailOpen}
+                    onClose={() => { setIsDetailOpen(false); setDetailItem(null); }}
+                    detailItem={detailItem}
+                    students={students}
+                    violationTypes={violationTypes}
+                    isPrivacyMode={isPrivacyMode}
+                    canInput={canInput}
+                    onEdit={(r) => { setSelectedItem(r); setIsModalOpen(true) }}
+                    onDelete={(r) => { setItemToDelete(r); setIsDeleteModalOpen(true) }}
+                />
 
             </div>
         </DashboardLayout >

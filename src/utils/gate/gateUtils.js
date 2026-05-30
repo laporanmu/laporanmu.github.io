@@ -145,12 +145,12 @@ export const PRINT_T = {
 
     // Table headers
     thNo: "#",
+    thDate: "Tanggal",
     thName: "Nama",
     thType: "Jenis",
     thPurpose: "Keperluan",
-    thTimeOut: "Jam Keluar",
-    thTimeIn: "Jam Kembali / Masuk",
-    thTimeTamuOut: "Jam Keluar (Tamu)",
+    thExit: "Keluar",
+    thEntry: "Masuk / Kembali",
     thDuration: "Durasi",
     thVehicle: "Kendaraan",
     thStatus: "Status",
@@ -203,12 +203,12 @@ export const PRINT_T = {
 
     // Table headers
     thNo: "#",
+    thDate: "Date",
     thName: "Name",
     thType: "Type",
     thPurpose: "Purpose",
-    thTimeOut: "Time Out",
-    thTimeIn: "Time In / Return",
-    thTimeTamuOut: "Time Out (Guest)",
+    thExit: "Exit",
+    thEntry: "Entry / Return",
     thDuration: "Duration",
     thVehicle: "Vehicle",
     thStatus: "Status",
@@ -261,12 +261,12 @@ export const PRINT_T = {
 
     // Table headers
     thNo: "#",
+    thDate: "التاريخ",
     thName: "الاسم",
     thType: "النوع",
     thPurpose: "السبب",
-    thTimeOut: "وقت الخروج",
-    thTimeIn: "وقت الدخول / العودة",
-    thTimeTamuOut: "وقت الخروج (للضيف)",
+    thExit: "خروج",
+    thEntry: "دخول / عودة",
     thDuration: "المدة",
     thVehicle: "المركبة",
     thStatus: "الحالة",
@@ -327,23 +327,26 @@ export function buildPrintHTMLDetail(src, title, typeMeta, language = 'id', opts
 
   /* ── rows ── */
   const rows = src.map((l, i) => {
-    const isG = l.visitor_type !== 'tamu'
+    const isInternal = l.visitor_type !== 'tamu'
     const dur = durasi(l.check_in, l.check_out)
     const statusLabel = !l.check_out
-      ? (isG ? pt('notReturned') : pt('stillInside'))
-      : (isG ? pt('returned') : pt('left'))
+      ? (isInternal ? pt('notReturned') : pt('stillInside'))
+      : (isInternal ? pt('returned') : pt('left'))
+
+    const timeExit = isInternal ? l.check_in : l.check_out
+    const timeEntry = isInternal ? l.check_out : l.check_in
 
     return `<tr>
       <td>${i + 1}</td>
+      <td style="color:#64748b;font-weight:600">${fmtDate(l.check_in, language)}</td>
       <td style="font-weight:700">
         ${l.visitor_name}
         ${showNip && l.visitor_nip ? `<br><span style="font-size:8px;color:#888;font-weight:400">${l.visitor_nip}</span>` : ''}
       </td>
       <td><span class="tag-visitor ${l.visitor_type}">${typeMeta[l.visitor_type]?.label || l.visitor_type}</span></td>
       ${showPurpose ? `<td style="color:#475569">${translatePurpose(l.purpose, language)}</td>` : ''}
-      <td style="color:#dc2626;font-weight:600">${isG ? fmtTime(l.check_in, language) : '-'}</td>
-      <td style="color:#16a34a;font-weight:600">${isG ? fmtTime(l.check_out, language) : fmtTime(l.check_in, language)}</td>
-      <td style="color:#dc2626;font-weight:600">${!isG ? fmtTime(l.check_out, language) : '-'}</td>
+      <td style="color:#dc2626;font-weight:600">${timeExit ? fmtTime(timeExit, language) : '-'}</td>
+      <td style="color:#16a34a;font-weight:600">${timeEntry ? fmtTime(timeEntry, language) : '-'}</td>
       ${showDuration ? `<td style="color:#64748b">${dur || '-'}</td>` : ''}
       ${showVehicle ? `<td style="color:#475569">${l.vehicle_plate || '-'}</td>` : ''}
       <td><span class="tag-status ${!l.check_out ? 'warning' : 'success'}">${statusLabel}</span></td>
@@ -364,12 +367,12 @@ export function buildPrintHTMLDetail(src, title, typeMeta, language = 'id', opts
   /* ── table headers ── */
   const tableHeaders = `
     <th>${pt('thNo')}</th>
+    <th>${pt('thDate')}</th>
     <th>${pt('thName')}${showNip ? ' / NIP' : ''}</th>
     <th>${pt('thType')}</th>
     ${showPurpose ? `<th>${pt('thPurpose')}</th>` : ''}
-    <th>${pt('thTimeOut')}</th>
-    <th>${pt('thTimeIn')}</th>
-    <th>${pt('thTimeTamuOut')}</th>
+    <th>${pt('thExit')}</th>
+    <th>${pt('thEntry')}</th>
     ${showDuration ? `<th>${pt('thDuration')}</th>` : ''}
     ${showVehicle ? `<th>${pt('thVehicle')}</th>` : ''}
     <th>${pt('thStatus')}</th>
@@ -689,27 +692,26 @@ export function buildCSVRingkasan(ringkasan, label, typeMeta, language = 'id') {
   }
 }
 
-/**
- * Build CSV string for the Detail Log view.
- * @returns {{ csv: string, filename: string, count: number }}
- */
 export function buildCSVDetail(src, label, typeMeta, language = 'id') {
-  const header = ['No', 'Nama', 'Jenis', 'NIP / Instansi', 'Keperluan', 'Jam Keluar (Guru)', 'Jam Kembali / Masuk Tamu', 'Jam Keluar (Tamu)', 'Durasi', 'Kendaraan', 'Status']
+  const header = ['No', 'Tanggal', 'Nama', 'NIP', 'Jenis', 'Keperluan', 'Keluar', 'Masuk / Kembali', 'Durasi', 'Kendaraan', 'Status']
   const rows = src.map((l, i) => {
-    const isG = l.visitor_type !== 'tamu'
+    const isInternal = l.visitor_type !== 'tamu'
     const dur = durasi(l.check_in, l.check_out) || '-'
     const stat = !l.check_out
-      ? (isG ? 'Belum Kembali' : 'Masih di Dalam')
-      : (isG ? 'Sudah Kembali' : 'Sudah Keluar')
+      ? (isInternal ? 'Belum Kembali' : 'Masih di Dalam')
+      : (isInternal ? 'Sudah Kembali' : 'Sudah Keluar')
     const cleanPurpose = translatePurpose(l.purpose, language)
+    const timeExit = isInternal ? l.check_in : l.check_out
+    const timeEntry = isInternal ? l.check_out : l.check_in
     return [
-      i + 1, l.visitor_name,
-      typeMeta[l.visitor_type]?.label || l.visitor_type,
+      i + 1,
+      fmtDate(l.check_in, language),
+      l.visitor_name,
       l.visitor_nip || '-',
+      typeMeta[l.visitor_type]?.label || l.visitor_type,
       `"${cleanPurpose.replace(/"/g, '""')}"`,
-      isG ? fmtTime(l.check_in) : '-',
-      isG ? fmtTime(l.check_out) : fmtTime(l.check_in),
-      !isG ? fmtTime(l.check_out) : '-',
+      timeExit ? fmtTime(timeExit, language) : '-',
+      timeEntry ? fmtTime(timeEntry, language) : '-',
       dur, l.vehicle_plate || '-', stat,
     ].join(',')
   })

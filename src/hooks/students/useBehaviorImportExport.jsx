@@ -1,14 +1,15 @@
 import { useState, useMemo, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { logAudit } from '../../lib/auditLogger'
+import { useLanguage } from '../../context/LanguageContext'
 
 export const SYSTEM_COLS = [
-    { key: 'student_name', label: 'Nama Siswa', synonyms: ['nama', 'student', 'siswa', 'student_name', 'nama siswa', 'name', 'nama lengkap'] },
-    { key: 'class_name', label: 'Rombel / Kelas', synonyms: ['kelas', 'class', 'class_name', 'rombongan belajar', 'rombel', 'nama kelas'] },
-    { key: 'rule_name', label: 'Jenis Perilaku', synonyms: ['rule_name', 'violation', 'jenis', 'perilaku', 'jenis perilaku', 'jenis pelanggaran', 'pelanggaran', 'prestasi', 'rule'] },
-    { key: 'points', label: 'Poin', synonyms: ['poin', 'points', 'nilai poin', 'nilai', 'point'] },
-    { key: 'notes', label: 'Catatan', synonyms: ['catatan', 'notes', 'keterangan', 'detail', 'deskripsi'] },
-    { key: 'date', label: 'Tanggal', synonyms: ['tanggal', 'date', 'reported_at', 'waktu'] }
+    { key: 'student_name', labelKey: 'colStudent', synonyms: ['nama', 'student', 'siswa', 'student_name', 'nama siswa', 'name', 'nama lengkap'] },
+    { key: 'class_name', labelKey: 'colClass', synonyms: ['kelas', 'class', 'class_name', 'rombongan belajar', 'rombel', 'nama kelas'] },
+    { key: 'rule_name', labelKey: 'colRule', synonyms: ['rule_name', 'violation', 'jenis', 'perilaku', 'jenis perilaku', 'jenis pelanggaran', 'pelanggaran', 'prestasi', 'rule'] },
+    { key: 'points', labelKey: 'colPoints', synonyms: ['poin', 'points', 'nilai poin', 'nilai', 'point'] },
+    { key: 'notes', labelKey: 'colNotes', synonyms: ['catatan', 'notes', 'keterangan', 'detail', 'deskripsi'] },
+    { key: 'date', labelKey: 'colDate', synonyms: ['tanggal', 'date', 'reported_at', 'waktu'] }
 ]
 
 export function useBehaviorImportExport({
@@ -28,6 +29,8 @@ export function useBehaviorImportExport({
     selectedIds,
     profile
 }) {
+    const { t, language, tNum } = useLanguage()
+
     // ---- STATE ----
     const [isImportModalOpen, setIsImportModalOpen] = useState(false)
     const [isExportModalOpen, setIsExportModalOpen] = useState(false)
@@ -65,13 +68,13 @@ export function useBehaviorImportExport({
 
     // ---- EXPORT LOGIC ----
     const ALL_EXPORT_COLUMNS = [
-        { key: 'date', label: 'Tanggal', fn: r => r.reported_at ? new Date(r.reported_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' },
-        { key: 'student', label: 'Siswa', fn: r => r.students?.name || '-' },
-        { key: 'class', label: 'Kelas', fn: r => r.students?.classes?.name || '-' },
-        { key: 'type', label: 'Jenis Perilaku', fn: r => r.point_rules?.name || '-' },
-        { key: 'points', label: 'Poin', fn: r => r.points ?? 0 },
-        { key: 'notes', label: 'Catatan', fn: r => r.notes || '-' },
-        { key: 'teacher', label: 'Pelapor/Pencatat', fn: r => r.teacher_name || '-' }
+        { key: 'date', label: t('behavior.colDate'), fn: r => r.reported_at ? new Date(r.reported_at).toLocaleDateString(language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—' },
+        { key: 'student', label: t('behavior.colStudent'), fn: r => r.students?.name || '-' },
+        { key: 'class', label: t('behavior.colClass'), fn: r => r.students?.classes?.name || '-' },
+        { key: 'type', label: t('behavior.colRule'), fn: r => r.point_rules?.name || '-' },
+        { key: 'points', label: t('behavior.colPoints'), fn: r => r.points ?? 0 },
+        { key: 'notes', label: t('behavior.colNotes'), fn: r => r.notes || '-' },
+        { key: 'teacher', label: t('behavior.colTeacher'), fn: r => r.teacher_name || '-' }
     ]
 
     const getExportData = async () => {
@@ -123,18 +126,18 @@ export function useBehaviorImportExport({
         try {
             const Papa = (await import('papaparse')).default
             const rows = await getExportData()
-            if (!rows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+            if (!rows.length) return addToast(t('behavior.toastNoDataExport'), 'warning')
             const csv = Papa.unparse(rows)
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
             downloadBlob(blob, `${filename || 'export_perilaku'}.csv`)
-            addToast(`Export CSV berhasil (${rows.length} baris)`, 'success')
+            addToast(t('behavior.toastExportSuccessCSV').replace('{count}', tNum(rows.length)), 'success')
             await logAudit({
                 action: 'EXPORT', source: 'OPERATIONAL', tableName: 'reports',
                 newData: { format: 'CSV', count: rows.length, scope: exportScope }
             })
         } catch (e) {
             console.error(e)
-            addToast('Gagal export CSV', 'error')
+            addToast(t('behavior.toastExportFailedCSV'), 'error')
         } finally {
             setExporting(false)
         }
@@ -145,23 +148,23 @@ export function useBehaviorImportExport({
         try {
             const XLSX = await import('xlsx')
             const data = await getExportData()
-            if (!data.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+            if (!data.length) return addToast(t('behavior.toastNoDataExport'), 'warning')
             const ws = XLSX.utils.json_to_sheet(data)
             const cols = Object.keys(data[0]).map(k => ({ wch: Math.max(k.length, 14) }))
             ws['!cols'] = cols
             const wb = XLSX.utils.book_new()
-            XLSX.utils.book_append_sheet(wb, ws, 'Kedisiplinan & Poin')
+            XLSX.utils.book_append_sheet(wb, ws, t('behavior.importRefDesc'))
             const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
             const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
             downloadBlob(blob, `${filename || 'export_perilaku'}.xlsx`)
-            addToast(`Export Excel berhasil (${data.length} baris)`, 'success')
+            addToast(t('behavior.toastExportSuccessExcel').replace('{count}', tNum(data.length)), 'success')
             await logAudit({
                 action: 'EXPORT', source: 'OPERATIONAL', tableName: 'reports',
                 newData: { format: 'XLSX', count: data.length, scope: exportScope }
             })
         } catch (e) {
             console.error(e)
-            addToast('Gagal export Excel', 'error')
+            addToast(t('behavior.toastExportFailedExcel'), 'error')
         } finally {
             setExporting(false)
         }
@@ -176,13 +179,15 @@ export function useBehaviorImportExport({
             ])
             const autoTable = autoTableMod.default || autoTableMod
             const allRows = await getExportData()
-            if (!allRows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+            if (!allRows.length) return addToast(t('behavior.toastNoDataExport'), 'warning')
 
             const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
             doc.setFontSize(13)
-            doc.text('Laporan Data Perilaku Siswa', 14, 12)
+            doc.text(t('behavior.pdfTitle'), 14, 12)
             doc.setFontSize(8)
-            doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}  |  Total: ${allRows.length} laporan  |  Cakupan: ${exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'}`, 14, 18)
+            const dateStrLabel = new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID')
+            const scopeLabel = exportScope === 'filtered' ? t('behavior.pdfScopeFiltered') : exportScope === 'selected' ? t('behavior.pdfScopeSelected') : t('behavior.pdfScopeAll')
+            doc.text(`${t('behavior.pdfDate')}: ${dateStrLabel}  |  ${t('behavior.pdfTotal')}: ${tNum(allRows.length)} ${t('behavior.reports')}  |  ${t('behavior.pdfScope')}: ${scopeLabel}`, 14, 18)
 
             const headers = Object.keys(allRows[0])
             const rows = allRows.map(r => headers.map(h => String(r[h] ?? '')))
@@ -196,9 +201,9 @@ export function useBehaviorImportExport({
                 headStyles: { fillColor: [79, 70, 229], textColor: 255 },
                 alternateRowStyles: { fillColor: [248, 250, 252] },
                 columnStyles: {
-                    'Poin': { halign: 'center' },
-                    'Tanggal': { halign: 'center' },
-                    'Kelas': { halign: 'center' }
+                    [t('behavior.colPoints')]: { halign: 'center' },
+                    [t('behavior.colDate')]: { halign: 'center' },
+                    [t('behavior.colClass')]: { halign: 'center' }
                 }
             })
 
@@ -207,23 +212,23 @@ export function useBehaviorImportExport({
                 doc.setPage(i)
                 doc.setFontSize(7)
                 doc.setTextColor(150)
-                const dateStr = new Date().toLocaleString('id-ID', {
+                const dateStr = new Date().toLocaleString(language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID', {
                     dateStyle: 'medium',
                     timeStyle: 'short'
                 })
-                doc.text(`Dicetak otomatis oleh Laporanmu pada ${dateStr}`, 14, doc.internal.pageSize.height - 8)
-                doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 8)
+                doc.text(t('behavior.pdfPrintedBy').replace('{date}', dateStr), 14, doc.internal.pageSize.height - 8)
+                doc.text(t('behavior.pdfPageOf').replace('{current}', tNum(i)).replace('{total}', tNum(pageCount)), doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 8)
             }
 
             doc.save(`${filename || 'export_perilaku'}.pdf`)
-            addToast(`Export PDF berhasil (${allRows.length} baris)`, 'success')
+            addToast(t('behavior.toastExportSuccessPDF').replace('{count}', tNum(allRows.length)), 'success')
             await logAudit({
                 action: 'EXPORT', source: 'OPERATIONAL', tableName: 'reports',
                 newData: { format: 'PDF', count: allRows.length, scope: exportScope }
             })
         } catch (e) {
             console.error(e)
-            addToast('Gagal export PDF', 'error')
+            addToast(t('behavior.toastExportFailedPDF'), 'error')
         } finally {
             setExporting(false)
         }
@@ -326,16 +331,17 @@ export function useBehaviorImportExport({
             const rowIssues = []
 
             if (!r.student_id) {
-                rowIssues.push({ level: 'error', message: `Siswa "${r._studentName}" tidak ditemukan di database` })
+                rowIssues.push({ level: 'error', type: 'student', message: t('behavior.importErrStudentNotFound').replace('{name}', r._studentName) })
             }
             if (!r.violation_type_id) {
-                rowIssues.push({ level: 'error', message: `Jenis perilaku "${r._violationName}" tidak ditemukan` })
+                rowIssues.push({ level: 'error', type: 'rule', message: t('behavior.importErrRuleNotFound').replace('{name}', r._violationName) })
             }
 
             if (rowIssues.length) {
                 issues.push({
                     row: idx + 2,
                     level: 'error',
+                    types: rowIssues.map(x => x.type),
                     messages: rowIssues.map(x => x.message)
                 })
             }
@@ -354,7 +360,7 @@ export function useBehaviorImportExport({
     const processImportFile = async (file) => {
         const ext = file.name.toLowerCase()
         if (!ext.endsWith('.csv') && !ext.endsWith('.xlsx')) {
-            addToast('Format tidak didukung. Gunakan .csv atau .xlsx', 'error')
+            addToast(t('behavior.toastImportUnsupportedFormat'), 'error')
             return
         }
         setImportFileName(file.name)
@@ -364,7 +370,7 @@ export function useBehaviorImportExport({
         try {
             const isXlsx = ext.endsWith('.xlsx') || (file.type || '').includes('sheet')
             const rows = isXlsx ? await parseExcelFile(file) : await parseCSVFile(file)
-            if (!rows.length) { addToast('File kosong atau tidak terbaca', 'error'); return }
+            if (!rows.length) { addToast(t('behavior.toastImportEmptyFile'), 'error'); return }
 
             setImportRawData(rows)
             const headers = Object.keys(rows[0])
@@ -377,7 +383,7 @@ export function useBehaviorImportExport({
                 const match = headers.find(h => {
                     const normH = norm(h)
                     const cleanH = norm(h.split(/[\(\[\{（\n\r]/)[0])
-                    const normL = norm(sys.label)
+                    const normL = norm(t(`behavior.${sys.labelKey}`))
                     const normK = norm(sys.key)
                     if (normH === normL || normH === normK || cleanH === normL || cleanH === normK) return true
                     if (sys.synonyms && sys.synonyms.some(syn => {
@@ -393,7 +399,7 @@ export function useBehaviorImportExport({
             setImportStep(2)
         } catch (err) {
             console.error(err)
-            addToast('Gagal membaca file import', 'error')
+            addToast(t('behavior.toastImportFailedRead'), 'error')
         } finally {
             setImportLoading(false)
         }
@@ -415,7 +421,7 @@ export function useBehaviorImportExport({
         })
         setImportPreview(newPrev)
         validateImportPreview(newPrev)
-        addToast(`Selesai memperbarui ${newPrev.length} baris`, 'success')
+        addToast(t('behavior.toastImportBulkUpdateSuccess').replace('{count}', tNum(newPrev.length)), 'success')
     }
 
     const handleImportCellEdit = (index, key, value) => {
@@ -441,7 +447,7 @@ export function useBehaviorImportExport({
         const next = importPreview.filter((_, i) => i !== idx)
         setImportPreview(next)
         validateImportPreview(next)
-        addToast('Baris berhasil dihapus', 'success')
+        addToast(t('behavior.toastImportRowDeleted'), 'success')
     }
 
     const handleImportClick = () => {
@@ -462,20 +468,20 @@ export function useBehaviorImportExport({
     const handleDownloadTemplate = async () => {
         const templateData = [
             {
-                'Nama Siswa': 'Budi Santoso',
-                'Rombel / Kelas': '10A Boarding Putra',
-                'Jenis Perilaku': 'Terlambat Masuk Kelas',
-                'Poin': -5,
-                'Catatan': 'Terlambat 15 menit',
-                'Tanggal': '2026-05-29'
+                [t('behavior.colStudent')]: t('behavior.tplStudent1'),
+                [t('behavior.colClass')]: t('behavior.tplClass1'),
+                [t('behavior.colRule')]: t('behavior.tplRule1'),
+                [t('behavior.colPoints')]: -5,
+                [t('behavior.colNotes')]: t('behavior.tplNotes1'),
+                [t('behavior.colDate')]: '2026-05-29'
             },
             {
-                'Nama Siswa': 'Siti Maryam',
-                'Rombel / Kelas': '10B Boarding Putri',
-                'Jenis Perilaku': 'Membantu Membersihkan Masjid',
-                'Poin': 10,
-                'Catatan': 'Inisiatif piket luar jadwal',
-                'Tanggal': '2026-05-29'
+                [t('behavior.colStudent')]: t('behavior.tplStudent2'),
+                [t('behavior.colClass')]: t('behavior.tplClass2'),
+                [t('behavior.colRule')]: t('behavior.tplRule2'),
+                [t('behavior.colPoints')]: 10,
+                [t('behavior.colNotes')]: t('behavior.tplNotes2'),
+                [t('behavior.colDate')]: '2026-05-29'
             }
         ]
         const XLSX = await import('xlsx')
@@ -485,19 +491,19 @@ export function useBehaviorImportExport({
             { wch: 25 }, { wch: 15 }
         ]
         const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, 'Template Import Perilaku')
+        XLSX.utils.book_append_sheet(wb, ws, t('behavior.importTitle'))
         const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
         const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-        downloadBlob(blob, 'Template Import Kedisiplinan & Poin.xlsx')
+        downloadBlob(blob, `${t('behavior.importDownloadTemplate')}.xlsx`)
     }
 
     const handleCommitImport = async () => {
         if (!importPreview.length) {
-            addToast('Tidak ada data untuk diimport', 'error')
+            addToast(t('behavior.toastImportNoData'), 'error')
             return
         }
         if (hasImportBlockingErrors) {
-            addToast('Masih ada ERROR. Mohon perbaiki data dulu ya.', 'error')
+            addToast(t('behavior.toastImportFixErrors'), 'error')
             return
         }
 
@@ -520,7 +526,7 @@ export function useBehaviorImportExport({
                 setImportProgress({ done: Math.min(i + CHUNK, importReadyRows.length), total: importReadyRows.length })
             }
 
-            addToast(`Berhasil mengimpor ${importReadyRows.length} Kedisiplinan & Poin`, 'success')
+            addToast(t('behavior.toastImportSuccess').replace('{count}', tNum(importReadyRows.length)), 'success')
             await logAudit({
                 action: 'INSERT',
                 source: 'OPERATIONAL',
@@ -540,7 +546,7 @@ export function useBehaviorImportExport({
             fetchStats()
         } catch (err) {
             console.error(err)
-            addToast('Gagal mengimpor data (cek duplikat atau koneksi)', 'error')
+            addToast(t('behavior.toastImportFailed'), 'error')
         } finally {
             setImporting(false)
         }

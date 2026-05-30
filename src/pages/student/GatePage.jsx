@@ -1269,50 +1269,109 @@ export default function GatePage() {
                           </button>
                         )}
                       />
-                      : <div className="overflow-x-auto w-full max-w-full">
-                        <table className="w-full min-w-[750px]">
-                          <thead>
-                            <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-                              {[
-                                '#',
-                                language === 'en' ? 'Name' : language === 'ar' ? 'الاسم' : 'Nama',
-                                language === 'en' ? 'Type' : language === 'ar' ? 'النوع' : 'Jenis',
-                                language === 'en' ? 'NIP / Institution' : language === 'ar' ? 'الرقم الوظيفي / المؤسسة' : 'NIP / Instansi',
-                                language === 'en' ? 'Purpose' : language === 'ar' ? 'الغرض' : 'Keperluan',
-                                language === 'en' ? 'Out Time' : language === 'ar' ? 'وقت الخروج' : 'Jam Keluar',
-                                language === 'en' ? 'Return / Entry' : language === 'ar' ? 'العودة / الدخول' : 'Jam Kembali / Masuk',
-                                language === 'en' ? 'Exit Time (Guest)' : language === 'ar' ? 'وقت الخروج (للضيوف)' : 'Jam Keluar (Tamu)',
-                                language === 'en' ? 'Duration' : language === 'ar' ? 'المدة' : 'Durasi',
-                                language === 'en' ? 'Vehicle' : language === 'ar' ? 'المركبة' : 'Kendaraan'
-                              ].map(h => (
-                                <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
+                      : <>
+                          {/* Desktop View Table */}
+                          <div className="hidden sm:block overflow-x-auto w-full max-w-full">
+                            <table className="w-full min-w-[750px]">
+                              <thead>
+                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                  {[
+                                    '#',
+                                    language === 'en' ? 'Name' : language === 'ar' ? 'الاسم' : 'Nama',
+                                    language === 'en' ? 'Type' : language === 'ar' ? 'النوع' : 'Jenis',
+                                    language === 'en' ? 'NIP / Institution' : language === 'ar' ? 'الرقم الوظيفي / المؤسسة' : 'NIP / Instansi',
+                                    language === 'en' ? 'Purpose' : language === 'ar' ? 'الغرض' : 'Keperluan',
+                                    language === 'en' ? 'Out Time' : language === 'ar' ? 'وقت الخروج' : 'Jam Keluar',
+                                    language === 'en' ? 'Return / Entry' : language === 'ar' ? 'العودة / الدخول' : 'Jam Kembali / Masuk',
+                                    language === 'en' ? 'Exit Time (Guest)' : language === 'ar' ? 'وقت الخروج (للضيوف)' : 'Jam Keluar (Tamu)',
+                                    language === 'en' ? 'Duration' : language === 'ar' ? 'المدة' : 'Durasi',
+                                    language === 'en' ? 'Vehicle' : language === 'ar' ? 'المركبة' : 'Kendaraan'
+                                  ].map(h => (
+                                    <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {filteredRekapData.map((log, i) => {
+                                  const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
+                                  const isG = log.visitor_type !== 'tamu'
+                                  const dur = durasi(log.check_in, log.check_out, language)
+                                  return (
+                                    <tr key={log.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors cursor-pointer"
+                                      onClick={() => setEditLog(log)}>
+                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
+                                      <td className="px-3 py-2.5 text-[12px] font-black text-[var(--color-text)]">{log.visitor_name}</td>
+                                      <td className="px-3 py-2.5"><span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span></td>
+                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.visitor_nip || '-'}</td>
+                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text)]">{translatePurpose(log.purpose, language)}</td>
+                                      <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{isG ? fmtTime(log.check_in) : '-'}</td>
+                                      <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-600">{isG ? fmtTime(log.check_out) : fmtTime(log.check_in)}</td>
+                                      <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{!isG ? fmtTime(log.check_out) : '-'}</td>
+                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)] font-bold">{dur || '-'}</td>
+                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.vehicle_plate || '-'}</td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Mobile View Cards */}
+                          <div className="block sm:hidden flex flex-col gap-2 p-2 bg-[var(--color-surface-alt)]/20">
                             {filteredRekapData.map((log, i) => {
                               const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
                               const isG = log.visitor_type !== 'tamu'
                               const dur = durasi(log.check_in, log.check_out, language)
+                              
+                              // Display appropriate times depending on guest type
+                              const showExit = isG ? fmtTime(log.check_in) : fmtTime(log.check_out)
+                              const showEntry = isG ? fmtTime(log.check_out) : fmtTime(log.check_in)
+                              
+                              const timeLabel = isG ? showEntry : showExit
+                              const IconComp = meta.icon || LogIn
+
                               return (
-                                <tr key={log.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors cursor-pointer"
-                                  onClick={() => setEditLog(log)}>
-                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
-                                  <td className="px-3 py-2.5 text-[12px] font-black text-[var(--color-text)]">{log.visitor_name}</td>
-                                  <td className="px-3 py-2.5"><span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span></td>
-                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.visitor_nip || '-'}</td>
-                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text)]">{translatePurpose(log.purpose, language)}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{isG ? fmtTime(log.check_in) : '-'}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-600">{isG ? fmtTime(log.check_out) : fmtTime(log.check_in)}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{!isG ? fmtTime(log.check_out) : '-'}</td>
-                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)] font-bold">{dur || '-'}</td>
-                                  <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.vehicle_plate || '-'}</td>
-                                </tr>
+                                <div key={log.id}
+                                  className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl flex items-center gap-3 shadow-xs">
+                                  
+                                  {/* Left: Icon circle */}
+                                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${meta.bg}`}>
+                                    <IconComp className={`w-4 h-4 ${meta.color}`} />
+                                  </div>
+
+                                  {/* Middle: Text and details */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-[12.5px] font-bold text-[var(--color-text)] truncate leading-none">
+                                        {log.visitor_name}
+                                      </h4>
+                                      <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${meta.bg} ${meta.color} leading-none`}>
+                                        {meta.label}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 leading-tight truncate">
+                                      <span className="font-semibold text-[var(--color-text)]">{translatePurpose(log.purpose, language)}</span>
+                                      <span className="mx-1.5 opacity-60">·</span>
+                                      <span className="font-medium tabular-nums">{timeLabel}</span>
+                                      {dur && (
+                                        <>
+                                          <span className="mx-1.5 opacity-60">·</span>
+                                          <span className="font-semibold text-[var(--color-text)] tabular-nums">{dur}</span>
+                                        </>
+                                      )}
+                                    </p>
+                                  </div>
+
+                                  {/* Right: Circle Edit Button */}
+                                  <button onClick={() => setEditLog(log)}
+                                    className="h-8 w-8 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center justify-center transition-colors shrink-0">
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               )
                             })}
-                          </tbody>
-                        </table>
-                      </div>
+                          </div>
+                        </>
                   }
                 </div>
               )}
@@ -1330,78 +1389,142 @@ export default function GatePage() {
                         title={language === 'en' ? 'Empty Data' : language === 'ar' ? 'بيانات فارغة' : 'Data Kosong'}
                         description={language === 'en' ? 'No summary recorded for this period.' : language === 'ar' ? 'لم يتم تسجيل أي ملخص لهذه الفترة.' : `Belum ada ringkasan orang yang tercatat untuk periode ${rekapLabel}.`}
                       />
-                      : <div className="overflow-x-auto w-full max-w-full">
-                        <table className="w-full min-w-[600px]">
-                          <thead>
-                            <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-                              {['#', 'Nama', 'Jenis', 'Jml Keluar', 'Total Durasi Keluar', 'Rata-rata', 'Belum Kembali', 'Keperluan'].map(h => (
-                                <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
-                              ))}
-                              <th className="px-3 py-2.5 border-b border-[var(--color-border)]">
-                                <span className="text-[8px] text-[var(--color-text-muted)]/50 font-bold normal-case tracking-normal">klik baris → detail log</span>
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
+                      : <>
+                          {/* Desktop View Table */}
+                          <div className="hidden sm:block overflow-x-auto w-full max-w-full">
+                            <table className="w-full min-w-[600px]">
+                              <thead>
+                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                  {['#', 'Nama', 'Jenis', 'Jml Keluar', 'Total Durasi Keluar', 'Rata-rata', 'Belum Kembali', 'Keperluan'].map(h => (
+                                    <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
+                                  ))}
+                                  <th className="px-3 py-2.5 border-b border-[var(--color-border)]">
+                                    <span className="text-[8px] text-[var(--color-text-muted)]/50 font-bold normal-case tracking-normal">klik baris → detail log</span>
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rekapRingkasan.map((r, i) => {
+                                  const meta = TYPE_META[r.type] || TYPE_META.tamu
+                                  const isInternal = r.type !== 'tamu'
+                                  const totalH = Math.floor(r.totalMs / 3600000)
+                                  const totalM = Math.floor((r.totalMs % 3600000) / 60000)
+                                  const totalStr = r.totalMs > 0 ? (totalH > 0 ? `${totalH}j ${totalM}m` : `${totalM}m`) : '-'
+                                  const completedCount = r.count - r.belumKembali
+                                  const avgMs = completedCount > 0 ? r.totalMs / completedCount : 0
+                                  const avgH = Math.floor(avgMs / 3600000)
+                                  const avgM = Math.floor((avgMs % 3600000) / 60000)
+                                  const avgStr = avgMs > 0 ? (avgH > 0 ? `${avgH}j ${avgM}m` : `${avgM}m`) : '-'
+                                  const maxMs = rekapRingkasan[0]?.totalMs || 1
+                                  const barPct = maxMs > 0 ? Math.round((r.totalMs / maxMs) * 100) : 0
+                                  return (
+                                    <tr key={r.id}
+                                      onClick={() => { setRekapView('log'); setSearchRekap(r.name) }}
+                                      className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/60 transition-colors cursor-pointer group"
+                                      title={`Klik untuk lihat detail log ${r.name}`}>
+                                      <td className="px-3 py-3 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
+                                      <td className="px-3 py-3">
+                                        <p className="text-[12px] font-black text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{r.name}</p>
+                                        {r.nip !== '-' && <p className="text-[9px] text-[var(--color-text-muted)]">{r.nip}</p>}
+                                      </td>
+                                      <td className="px-3 py-3">
+                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span>
+                                      </td>
+                                      <td className="px-3 py-3 text-[13px] font-black text-[var(--color-text)] tabular-nums">{r.count}×</td>
+                                      <td className="px-3 py-3">
+                                        {isInternal ? (
+                                          <div className="flex items-center gap-2">
+                                            <span className={`text-[12px] font-black tabular-nums ${r.totalMs > 0 ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>{totalStr}</span>
+                                            {barPct > 0 && (
+                                              <div className="flex-1 max-w-[60px] h-1.5 rounded-full bg-[var(--color-surface-alt)]">
+                                                <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${barPct}%` }} />
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : <span className="text-[11px] text-[var(--color-text-muted)]">-</span>}
+                                      </td>
+                                      <td className="px-3 py-3 text-[11px] font-bold text-[var(--color-text-muted)] tabular-nums">{isInternal ? avgStr : '-'}</td>
+                                      <td className="px-3 py-3">
+                                        {r.belumKembali > 0
+                                          ? <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600">{r.belumKembali}×</span>
+                                          : <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">-</span>}
+                                      </td>
+                                      <td className="px-3 py-3 text-[10px] text-[var(--color-text-muted)] max-w-[180px]">
+                                        <p className="truncate">{r.purposes.slice(0, 3).map(p => translatePurpose(p, language)).join(', ')}{r.purposes.length > 3 ? ` +${r.purposes.length - 3}` : ''}</p>
+                                      </td>
+                                      <td className="px-3 py-3">
+                                        <span className="text-[9px] text-[var(--color-primary)]/50 font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Detail →</span>
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Mobile View Cards */}
+                          <div className="block sm:hidden flex flex-col gap-2 p-2 bg-[var(--color-surface-alt)]/20">
                             {rekapRingkasan.map((r, i) => {
                               const meta = TYPE_META[r.type] || TYPE_META.tamu
                               const isInternal = r.type !== 'tamu'
                               const totalH = Math.floor(r.totalMs / 3600000)
                               const totalM = Math.floor((r.totalMs % 3600000) / 60000)
                               const totalStr = r.totalMs > 0 ? (totalH > 0 ? `${totalH}j ${totalM}m` : `${totalM}m`) : '-'
-                              // FIX: use completedCount variable — avoids (r.count - r.belumKembali || 1) precedence bug
                               const completedCount = r.count - r.belumKembali
                               const avgMs = completedCount > 0 ? r.totalMs / completedCount : 0
                               const avgH = Math.floor(avgMs / 3600000)
                               const avgM = Math.floor((avgMs % 3600000) / 60000)
                               const avgStr = avgMs > 0 ? (avgH > 0 ? `${avgH}j ${avgM}m` : `${avgM}m`) : '-'
-                              // Bar visual proporsi total durasi
-                              const maxMs = rekapRingkasan[0]?.totalMs || 1
-                              const barPct = maxMs > 0 ? Math.round((r.totalMs / maxMs) * 100) : 0
+                              const IconComp = meta.icon || Users
+
                               return (
-                                <tr key={r.id}
-                                  onClick={() => { setRekapView('log'); setSearchRekap(r.name) }}
-                                  className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/60 transition-colors cursor-pointer group"
-                                  title={`Klik untuk lihat detail log ${r.name}`}>
-                                  <td className="px-3 py-3 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
-                                  <td className="px-3 py-3">
-                                    <p className="text-[12px] font-black text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{r.name}</p>
-                                    {r.nip !== '-' && <p className="text-[9px] text-[var(--color-text-muted)]">{r.nip}</p>}
-                                  </td>
-                                  <td className="px-3 py-3">
-                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span>
-                                  </td>
-                                  <td className="px-3 py-3 text-[13px] font-black text-[var(--color-text)] tabular-nums">{r.count}×</td>
-                                  <td className="px-3 py-3">
-                                    {isInternal ? (
-                                      <div className="flex items-center gap-2">
-                                        <span className={`text-[12px] font-black tabular-nums ${r.totalMs > 0 ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>{totalStr}</span>
-                                        {barPct > 0 && (
-                                          <div className="flex-1 max-w-[60px] h-1.5 rounded-full bg-[var(--color-surface-alt)]">
-                                            <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${barPct}%` }} />
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : <span className="text-[11px] text-[var(--color-text-muted)]">-</span>}
-                                  </td>
-                                  <td className="px-3 py-3 text-[11px] font-bold text-[var(--color-text-muted)] tabular-nums">{isInternal ? avgStr : '-'}</td>
-                                  <td className="px-3 py-3">
-                                    {r.belumKembali > 0
-                                      ? <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600">{r.belumKembali}×</span>
-                                      : <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">-</span>}
-                                  </td>
-                                  <td className="px-3 py-3 text-[10px] text-[var(--color-text-muted)] max-w-[180px]">
-                                    <p className="truncate">{r.purposes.slice(0, 3).map(p => translatePurpose(p, language)).join(', ')}{r.purposes.length > 3 ? ` +${r.purposes.length - 3}` : ''}</p>
-                                  </td>
-                                  <td className="px-3 py-3">
-                                    <span className="text-[9px] text-[var(--color-primary)]/50 font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Detail →</span>
-                                  </td>
-                                </tr>
+                                <div key={i}
+                                  className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl flex items-center gap-3 shadow-xs">
+                                  
+                                  {/* Left: Icon circle */}
+                                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${meta.bg}`}>
+                                    <IconComp className={`w-4 h-4 ${meta.color}`} />
+                                  </div>
+
+                                  {/* Middle: Text and details */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-[12.5px] font-bold text-[var(--color-text)] truncate leading-none">
+                                        {r.name}
+                                      </h4>
+                                      <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${meta.bg} ${meta.color} leading-none`}>
+                                        {meta.label}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 leading-tight truncate font-medium">
+                                      <span>Keluar: <span className="font-bold text-[var(--color-text)]">{r.count}×</span></span>
+                                      {isInternal && (
+                                        <>
+                                          <span className="mx-1.5 opacity-60">·</span>
+                                          <span>Avg: <span className="font-bold text-[var(--color-text)] tabular-nums">{avgStr}</span></span>
+                                        </>
+                                      )}
+                                      {r.belumKembali > 0 && (
+                                        <>
+                                          <span className="mx-1.5 opacity-60">·</span>
+                                          <span className="font-bold text-amber-600 bg-amber-500/10 px-1 py-0.2 rounded text-[9px] uppercase">
+                                            {r.belumKembali}× Aktif
+                                          </span>
+                                        </>
+                                      )}
+                                    </p>
+                                  </div>
+
+                                  {/* Right: Circle Navigation Button */}
+                                  <button onClick={() => { setRekapView('log'); setSearchRekap(r.name) }}
+                                    className="h-8 w-8 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center justify-center transition-colors shrink-0">
+                                    <ChevronRight className="w-4 h-4" />
+                                  </button>
+                                </div>
                               )
                             })}
-                          </tbody>
-                        </table>
-                      </div>
+                          </div>
+                        </>
                   }
                 </div>
               )}

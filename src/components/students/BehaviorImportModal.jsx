@@ -31,8 +31,12 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import RichSelect from '../ui/RichSelect'
+import { useLanguage } from '../../context/LanguageContext'
 
 export default function BehaviorImportModal(props) {
+    const { language, t, tNum } = useLanguage()
+    const tp = (key) => t(`behavior.${key}`)
+
     const {
         isOpen,
         onClose,
@@ -125,7 +129,7 @@ export default function BehaviorImportModal(props) {
                 return (
                     <div ref={cellRef} className="relative">
                         <div className="bg-[var(--color-primary)]/10 rounded-lg px-2 py-1 text-[var(--color-primary)] font-black border border-[var(--color-primary)] shadow-sm">
-                            {importPreview[rowIdx]._studentName || 'Pilih Siswa...'}
+                            {importPreview[rowIdx]._studentName || tp('importSelectStudent')}
                         </div>
                         {renderDropdown(
                             <>
@@ -133,7 +137,7 @@ export default function BehaviorImportModal(props) {
                                     <input
                                         autoFocus
                                         className="w-full bg-transparent text-[10px] font-bold outline-none placeholder:font-normal placeholder:opacity-30"
-                                        placeholder="Cari nama atau kelas..."
+                                        placeholder={tp('importSearchStudent')}
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
                                         onKeyDown={e => {
@@ -163,7 +167,7 @@ export default function BehaviorImportModal(props) {
                                             {value === s.id && <FontAwesomeIcon icon={faCheck} className="text-[8px]" />}
                                         </button>
                                     )) : (
-                                        <div className="px-3 py-3 text-[9px] text-[var(--color-text-muted)] italic text-center">Data tidak ditemukan</div>
+                                        <div className="px-3 py-3 text-[9px] text-[var(--color-text-muted)] italic text-center">{tp('importNoData')}</div>
                                     )}
                                 </div>
                                 <button
@@ -171,7 +175,7 @@ export default function BehaviorImportModal(props) {
                                     className="p-2 text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-red-500 transition-colors border-t border-[var(--color-border)]"
                                     onClick={() => setImportEditCell(null)}
                                 >
-                                    Batal
+                                    {tp('cancel')}
                                 </button>
                             </>
                         )}
@@ -187,7 +191,7 @@ export default function BehaviorImportModal(props) {
                 return (
                     <div ref={cellRef} className="relative">
                         <div className="bg-[var(--color-primary)]/10 rounded-lg px-2 py-1 text-[var(--color-primary)] font-black border border-[var(--color-primary)] shadow-sm">
-                            {importPreview[rowIdx]._violationName || 'Pilih Perilaku...'}
+                            {importPreview[rowIdx]._violationName || tp('importSelectBehavior')}
                         </div>
                         {renderDropdown(
                             <>
@@ -195,7 +199,7 @@ export default function BehaviorImportModal(props) {
                                     <input
                                         autoFocus
                                         className="w-full bg-transparent text-[10px] font-bold outline-none placeholder:font-normal placeholder:opacity-30"
-                                        placeholder="Cari jenis perilaku..."
+                                        placeholder={tp('importSearchBehavior')}
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
                                         onKeyDown={e => {
@@ -220,12 +224,12 @@ export default function BehaviorImportModal(props) {
                                         >
                                             <div className="flex items-center justify-between w-full">
                                                 <span className="truncate pr-2">{v.name}</span>
-                                                <span className={`text-[8px] font-black px-1 py-0.5 rounded ${v.points > 0 ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>{v.points > 0 ? `+${v.points}` : v.points}</span>
+                                                <span className={`text-[8px] font-black px-1 py-0.5 rounded ${v.points > 0 ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>{v.points > 0 ? `+${tNum(v.points)}` : tNum(v.points)}</span>
                                             </div>
                                             {value === v.id && <FontAwesomeIcon icon={faCheck} className="text-[8px] ml-2 shrink-0" />}
                                         </button>
                                     )) : (
-                                        <div className="px-3 py-3 text-[9px] text-[var(--color-text-muted)] italic text-center">Data tidak ditemukan</div>
+                                        <div className="px-3 py-3 text-[9px] text-[var(--color-text-muted)] italic text-center">{tp('importNoData')}</div>
                                     )}
                                 </div>
                                 <button
@@ -233,7 +237,7 @@ export default function BehaviorImportModal(props) {
                                     className="p-2 text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-red-500 transition-colors border-t border-[var(--color-border)]"
                                     onClick={() => setImportEditCell(null)}
                                 >
-                                    Batal
+                                    {tp('cancel')}
                                 </button>
                             </>
                         )}
@@ -279,8 +283,8 @@ export default function BehaviorImportModal(props) {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Import Kedisiplinan & Poin"
-            description="Unggah data pelanggaran & prestasi secara masal dari Excel atau CSV. Sistem memvalidasi relasi data secara instan."
+            title={tp('importTitle')}
+            description={tp('importDesc')}
             icon={faFileImport}
             iconBg="bg-emerald-500/10"
             iconColor="text-emerald-600"
@@ -293,7 +297,7 @@ export default function BehaviorImportModal(props) {
                             onClick={onClose}
                             className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
                         >
-                            Batal
+                            {tp('cancel')}
                         </button>
                     ) : (
                         <button
@@ -302,7 +306,7 @@ export default function BehaviorImportModal(props) {
                             className="h-10 px-6 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-widest disabled:opacity-50 hover:bg-[var(--color-border)] transition-all flex items-center gap-2"
                         >
                             <FontAwesomeIcon icon={faArrowLeft} />
-                            Kembali
+                            {tp('back')}
                         </button>
                     )}
 
@@ -322,9 +326,9 @@ export default function BehaviorImportModal(props) {
                                 className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
                             >
                                 {(importRawData.length > 0 && importFileName) ? (
-                                    <>Lanjutkan <FontAwesomeIcon icon={faArrowRight} /></>
+                                    <>{tp('continue')} <FontAwesomeIcon icon={faArrowRight} /></>
                                 ) : (
-                                    <>Pilih File <FontAwesomeIcon icon={faUpload} /></>
+                                    <>{tp('importStepUploadDesc')} <FontAwesomeIcon icon={faUpload} /></>
                                 )}
                             </button>
                         ) : importStep === 2 ? (
@@ -338,7 +342,7 @@ export default function BehaviorImportModal(props) {
                                 disabled={!importColumnMapping.student_name || !importColumnMapping.rule_name}
                                 className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
                             >
-                                Review Data <FontAwesomeIcon icon={faArrowRight} />
+                                {tp('importReviewDataText')} <FontAwesomeIcon icon={faArrowRight} />
                             </button>
                         ) : (
                             <button
@@ -347,8 +351,8 @@ export default function BehaviorImportModal(props) {
                                 className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
                             >
                                 {importing
-                                    ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> Mengimport...</>
-                                    : <><FontAwesomeIcon icon={faCheck} /> Selesaikan Import</>}
+                                    ? <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> {tp('importLoadingText')}</>
+                                    : <><FontAwesomeIcon icon={faCheck} /> {tp('importFinishText')}</>}
                             </button>
                         )}
                     </div>
@@ -358,9 +362,9 @@ export default function BehaviorImportModal(props) {
             {/* Header Progress Steppers */}
             <div className="flex items-center justify-center gap-3 mb-6">
                 {[
-                    { step: 1, label: 'Upload', desc: 'Pilih File' },
-                    { step: 2, label: 'Mapping', desc: 'Atur Kolom' },
-                    { step: 3, label: 'Review', desc: 'Validasi' },
+                    { step: 1, label: tp('importStepUpload'), desc: tp('importStepUploadDesc') },
+                    { step: 2, label: tp('importStepMapping'), desc: tp('importStepMappingDesc') },
+                    { step: 3, label: tp('importStepReview'), desc: tp('importStepReviewDesc') },
                 ].map((s, idx) => (
                     <React.Fragment key={s.step}>
                         <div className="flex items-center gap-3">
@@ -388,7 +392,7 @@ export default function BehaviorImportModal(props) {
                         </div>
                         {importPreview.length > 0 && (
                             <div className="px-3.5 py-1.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[10px] font-black shadow-sm shrink-0">
-                                {importPreview.length} baris
+                                {tNum(importPreview.length)} {tp('importRows')}
                             </div>
                         )}
                     </div>
@@ -398,7 +402,7 @@ export default function BehaviorImportModal(props) {
                         className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm group"
                     >
                         <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-[9px] group-hover:rotate-180 transition-transform duration-500" />
-                        Ganti File
+                        {tp('importChangeFile')}
                     </button>
                 </div>
             )}
@@ -423,9 +427,9 @@ export default function BehaviorImportModal(props) {
                         <FontAwesomeIcon icon={faUpload} className={`text-sm transition-all ${importDragOver ? 'text-[var(--color-primary)] scale-110' : 'text-[var(--color-primary)]/60'}`} />
                         <div className="text-left">
                             <p className="text-[11px] font-black text-[var(--color-primary)] uppercase tracking-wider leading-none">
-                                {importDragOver ? 'Lepaskan file di sini' : 'Drag & Drop atau Klik untuk Pilih File'}
+                                {importDragOver ? tp('importDropActive') : tp('importDropInactive')}
                             </p>
-                            <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1 opacity-60">Mendukung .csv dan .xlsx</p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1 opacity-60">{tp('importDropSupported')}</p>
                         </div>
                     </div>
 
@@ -438,8 +442,8 @@ export default function BehaviorImportModal(props) {
                                         <FontAwesomeIcon icon={faSchool} className="text-xs" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text)]">Data Referensi</span>
-                                        <span className="text-[8px] font-bold text-emerald-600">Siswa & Perilaku</span>
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text)]">{tp('importRefData')}</span>
+                                        <span className="text-[8px] font-bold text-emerald-600">{tp('importRefDesc')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -448,7 +452,7 @@ export default function BehaviorImportModal(props) {
                                 onClick={handleDownloadTemplate}
                                 className="shrink-0 h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
                             >
-                                <FontAwesomeIcon icon={faDownload} /> Download Template
+                                <FontAwesomeIcon icon={faDownload} /> {tp('importDownloadTemplate')}
                             </button>
                         </div>
 
@@ -457,14 +461,14 @@ export default function BehaviorImportModal(props) {
                             <div className="px-4 py-2 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <FontAwesomeIcon icon={faTableList} className="text-[var(--color-primary)] text-xs" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Visualisasi Struktur Kolom Excel</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">{tp('importVisTitle')}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="relative flex h-1.5 w-1.5">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                                     </span>
-                                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Auto-Match Active</span>
+                                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">{tp('importVisAutoMatch')}</span>
                                 </div>
                             </div>
 
@@ -474,10 +478,10 @@ export default function BehaviorImportModal(props) {
                                         <tr className="bg-[var(--color-surface)]">
                                             <th className="w-8 border-r border-b border-[var(--color-border)]"></th>
                                             {[
-                                                { l: 'A', k: 'NAME', n: 'Nama Siswa', w: 'w-[30%]' },
-                                                { l: 'B', k: 'BEHAVIOR', n: 'Jenis Perilaku', w: 'w-[30%]' },
-                                                { l: 'C', k: 'POINTS', n: 'Poin', w: 'w-[12%]' },
-                                                { l: 'D', k: 'NOTES', n: 'Catatan', w: 'w-[28%]' }
+                                                { l: 'A', k: 'NAME', n: tp('colStudent'), w: 'w-[30%]' },
+                                                { l: 'B', k: 'BEHAVIOR', n: tp('colRule'), w: 'w-[30%]' },
+                                                { l: 'C', k: 'POINTS', n: tp('colPoints'), w: 'w-[12%]' },
+                                                { l: 'D', k: 'NOTES', n: tp('colNotes'), w: 'w-[28%]' }
                                             ].map((col, i) => (
                                                 <th key={i} className={`px-2 py-1.5 border-r border-b border-[var(--color-border)] text-left ${col.w} min-w-0 overflow-hidden`}>
                                                     <div className="flex flex-col min-w-0">
@@ -493,8 +497,8 @@ export default function BehaviorImportModal(props) {
                                     </thead>
                                     <tbody>
                                         {[
-                                            ['Budi Santoso', 'Terlambat Masuk Kelas', '-5', 'Terlambat 15 menit'],
-                                            ['Siti Maryam', 'Membantu Membersihkan Masjid', '10', 'Inisiatif sangat baik']
+                                            [tp('tplStudent1'), tp('tplRule1'), '-5', tp('tplNotes1')],
+                                            [tp('tplStudent2'), tp('tplRule2'), '10', tp('tplNotes2_short')]
                                         ].map((row, rIdx) => (
                                             <tr key={rIdx}>
                                                 <td className="bg-[var(--color-surface-alt)] border-r border-b border-[var(--color-border)] text-[8px] font-bold text-[var(--color-text-muted)] text-center py-1">
@@ -512,7 +516,7 @@ export default function BehaviorImportModal(props) {
                             </div>
                             <div className="px-4 py-1.5 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex items-center justify-between">
                                 <p className="text-[8px] text-[var(--color-text-muted)] font-medium italic opacity-60">
-                                    * Gunakan judul kolom yang mendekati nama di atas untuk pencocokan otomatis.
+                                    {tp('importVisNote')}
                                 </p>
                                 <div className="flex gap-1.5">
                                     {['.xlsx', '.csv'].map(ext => (
@@ -528,9 +532,9 @@ export default function BehaviorImportModal(props) {
             {importStep === 2 && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Cocokkan Kolom File</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{tp('importMapTitle')}</span>
                         <span className="text-[9px] font-bold py-1 px-2 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)]">
-                            {importFileHeaders.length} kolom ditemukan
+                            {tNum(importFileHeaders.length)} {tp('importMapFound')}
                         </span>
                     </div>
 
@@ -542,10 +546,10 @@ export default function BehaviorImportModal(props) {
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="flex flex-col w-[130px] shrink-0">
                                             <span className="text-[10px] font-black text-[var(--color-text)] flex items-center gap-1">
-                                                {sys.label}
-                                                {['student_name', 'violation_name'].includes(sys.key) && <span className="text-red-500 text-[9px]">*</span>}
+                                                {tp(sys.labelKey)}
+                                                {['student_name', 'rule_name'].includes(sys.key) && <span className="text-red-500 text-[9px]">*</span>}
                                             </span>
-                                            <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-50 uppercase tracking-tight">Sistem</span>
+                                            <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-50 uppercase tracking-tight">{tp('importMapSystem')}</span>
                                         </div>
 
                                         <div className="flex items-center gap-1.5 opacity-30">
@@ -558,8 +562,8 @@ export default function BehaviorImportModal(props) {
                                                 value={mapped || ''}
                                                 onChange={(val) => setImportColumnMapping(v => ({ ...v, [sys.key]: val }))}
                                                 options={importFileHeaders.map(h => ({ id: h, name: h }))}
-                                                placeholder="-- Lewati Kolom --"
-                                                extraOption={{ id: '', name: '-- Lewati Kolom --' }}
+                                                placeholder={tp('importMapSkip')}
+                                                extraOption={{ id: '', name: tp('importMapSkip') }}
                                                 status={mapped ? 'success' : 'normal'}
                                                 searchable={importFileHeaders.length > 5}
                                             />
@@ -577,7 +581,7 @@ export default function BehaviorImportModal(props) {
                     {importLoading ? (
                         <div className="flex items-center justify-center py-14 text-[var(--color-text-muted)] gap-2">
                             <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
-                            <span className="text-xs font-bold">Memproses preview...</span>
+                            <span className="text-xs font-bold">{tp('importProcessingPreview')}</span>
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -586,9 +590,9 @@ export default function BehaviorImportModal(props) {
                                 {/* Stats Group */}
                                 <div className="flex items-center gap-2 p-1 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]/50">
                                     {[
-                                        { label: 'Total Baris', value: importPreview.length, color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-border)]/20', icon: faFileLines },
-                                        { label: 'Siap Import', value: importReadyRows.length, color: 'text-emerald-600', bg: 'bg-emerald-500/10', icon: faCheckCircle },
-                                        { label: 'Ada Isu/Error', value: importPreview.filter(r => r._hasError).length, color: 'text-red-600', bg: 'bg-red-500/10', icon: faCircleExclamation },
+                                        { label: tp('importStatTotal'), value: tNum(importPreview.length), color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-border)]/20', icon: faFileLines },
+                                        { label: tp('importStatReady'), value: tNum(importReadyRows.length), color: 'text-emerald-600', bg: 'bg-emerald-500/10', icon: faCheckCircle },
+                                        { label: tp('importStatIssues'), value: tNum(importPreview.filter(r => r._hasError).length), color: 'text-red-600', bg: 'bg-red-500/10', icon: faCircleExclamation },
                                     ].map((stat, i) => (
                                         <div key={i} className={`flex items-center gap-2 px-2 py-1 rounded-lg ${stat.bg} ${stat.color} transition-all`} title={stat.label}>
                                             <FontAwesomeIcon icon={stat.icon} className="text-[10px] opacity-70" />
@@ -608,21 +612,21 @@ export default function BehaviorImportModal(props) {
                                                 : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-red-500/40 hover:text-red-500'}`}
                                     >
                                         <FontAwesomeIcon icon={filterIssuesOnly ? faCheck : faFilter} className="text-[9px]" />
-                                        <span>{filterIssuesOnly ? 'Hanya Isu' : 'Semua'}</span>
+                                        <span>{filterIssuesOnly ? tp('importFilterIssues') : tp('importFilterAll')}</span>
                                     </button>
                                 </div>
                             </div>
 
                             {/* Bulk Fix Section - Smart Suggestion */}
-                            {importIssues.some(iss => iss.messages.some(m => m.includes('Siswa tidak ditemukan'))) && (
+                            {importIssues.some(iss => iss.types?.includes('student')) && (
                                 <div className="p-3 rounded-2xl bg-amber-500/5 border border-amber-500/15 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in zoom-in-95 duration-500">
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
                                             <FontAwesomeIcon icon={faBolt} />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Perbaikan Massal Tersedia</p>
-                                            <p className="text-[10px] font-bold text-amber-600/80">Beberapa baris memiliki siswa yang tidak dikenali. Pilih siswa secara massal?</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">{tp('importBulkStudentTitle')}</p>
+                                            <p className="text-[10px] font-bold text-amber-600/80">{tp('importBulkStudentDesc')}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -635,24 +639,24 @@ export default function BehaviorImportModal(props) {
                                             }}
                                             className="h-9 px-3 rounded-xl bg-white border border-amber-500/30 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-amber-500/10 transition-all cursor-pointer"
                                         >
-                                            <option value="">-- Pilih Siswa --</option>
+                                            <option value="">{tp('importBulkStudentSelect')}</option>
                                             {students.sort((a, b) => a.name.localeCompare(b.name)).map(s => (
-                                                <option key={s.id} value={s.id}>{s.name} ({s.class_name || 'Tanpa Kelas'})</option>
+                                                <option key={s.id} value={s.id}>{s.name} ({s.class_name || tp('importNoClass')})</option>
                                             ))}
                                         </select>
                                     </div>
                                 </div>
                             )}
 
-                            {importIssues.some(iss => iss.messages.some(m => m.includes('perilaku tidak ditemukan'))) && (
+                            {importIssues.some(iss => iss.types?.includes('rule')) && (
                                 <div className="p-3 rounded-2xl bg-violet-500/5 border border-violet-500/15 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in zoom-in-95 duration-500">
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center shrink-0">
                                             <FontAwesomeIcon icon={faBolt} />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-violet-700">Petakan Massal Perilaku</p>
-                                            <p className="text-[10px] font-bold text-violet-600/80">Petakan baris perilaku tak dikenal ke satu jenis poin aturan?</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-violet-700">{tp('importBulkBehaviorTitle')}</p>
+                                            <p className="text-[10px] font-bold text-violet-600/80">{tp('importBulkBehaviorDesc')}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -665,9 +669,9 @@ export default function BehaviorImportModal(props) {
                                             }}
                                             className="h-9 px-3 rounded-xl bg-white border border-violet-500/30 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-violet-500/10 transition-all cursor-pointer"
                                         >
-                                            <option value="">-- Pilih Perilaku --</option>
+                                            <option value="">{tp('importBulkBehaviorSelect')}</option>
                                             {violationTypes.sort((a, b) => a.name.localeCompare(b.name)).map(v => (
-                                                <option key={v.id} value={v.id}>{v.name} ({v.points > 0 ? `+${v.points}` : v.points})</option>
+                                                <option key={v.id} value={v.id}>{v.name} ({v.points > 0 ? `+${tNum(v.points)}` : tNum(v.points)})</option>
                                             ))}
                                         </select>
                                     </div>
@@ -679,11 +683,11 @@ export default function BehaviorImportModal(props) {
                                     <table className="w-full border-collapse table-fixed">
                                         <thead>
                                             <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30">
-                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[26%]">Nama Siswa</th>
-                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[28%]">Jenis Perilaku</th>
-                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[12%]">Poin</th>
-                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[22%]">Catatan</th>
-                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[12%]">Aksi</th>
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[26%]">{tp('colStudent')}</th>
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[28%]">{tp('colRule')}</th>
+                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[12%]">{tp('colPoints')}</th>
+                                                <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[22%]">{tp('colNotes')}</th>
+                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[12%]">{tp('importRowActions')}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -737,7 +741,7 @@ export default function BehaviorImportModal(props) {
                                                                         type="button"
                                                                         onClick={() => handleRemoveImportRow(i)}
                                                                         className="w-5 h-5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center group/del"
-                                                                        title="Hapus Baris"
+                                                                        title={tp('importDeleteRow')}
                                                                     >
                                                                         <FontAwesomeIcon icon={faTrash} className="text-[9px] group-hover/del:scale-110 transition-transform" />
                                                                     </button>
@@ -751,14 +755,14 @@ export default function BehaviorImportModal(props) {
                                 </div>
                                 <div className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] border-t border-[var(--color-border)] flex items-center justify-between">
                                     <div className="flex items-center gap-4">
-                                        <span>Menampilkan {Math.min(importPreview.filter(r => !filterIssuesOnly || r._hasError).length, 300)} dari {importPreview.length} total baris</span>
+                                        <span>{tp('importShowingRows').replace('{shown}', tNum(Math.min(importPreview.filter(r => !filterIssuesOnly || r._hasError).length, 300))).replace('{total}', tNum(importPreview.length))}</span>
                                         <div className="w-px h-3 bg-[var(--color-border)]" />
                                         <span className="text-emerald-600 flex items-center gap-1.5">
                                             <FontAwesomeIcon icon={faCheckCircle} className="text-[8px]" />
-                                            {importReadyRows.length} baris siap diimport
+                                            {tNum(importReadyRows.length)} {tp('importRowsReady')}
                                         </span>
                                     </div>
-                                    {filterIssuesOnly && <span className="text-red-500 animate-pulse">Filter "Hanya Isu" Aktif</span>}
+                                    {filterIssuesOnly && <span className="text-red-500 animate-pulse">{tp('importActiveFilterIssues')}</span>}
                                 </div>
                             </div>
 
@@ -771,9 +775,9 @@ export default function BehaviorImportModal(props) {
                                     >
                                         <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
                                             <FontAwesomeIcon icon={faChevronDown} className={`text-[7px] transition-transform ${importValidationOpen ? '' : '-rotate-90'}`} />
-                                            Catatan Validasi
+                                            {tp('importValidationNotes')}
                                         </span>
-                                        <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-50">{importIssues.length} isu</span>
+                                        <span className="text-[8px] font-bold text-[var(--color-text-muted)] opacity-50">{tNum(importIssues.length)} {tp('importValidationCount')}</span>
                                     </button>
                                     {importValidationOpen && <div className="max-h-[140px] overflow-auto divide-y divide-[var(--color-border)]">
                                         {importIssues.map((issue, idx) => {
@@ -786,7 +790,7 @@ export default function BehaviorImportModal(props) {
                                                         {issue.level.toUpperCase()}
                                                     </span>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-[9px] font-black text-[var(--color-text-muted)] mb-0.5">Baris {issue.row}</p>
+                                                        <p className="text-[9px] font-black text-[var(--color-text-muted)] mb-0.5">{tp('row')} {tNum(issue.row)}</p>
                                                         {issue.messages.map((msg, mi) => (
                                                             <p key={mi} className="text-[10px] font-bold text-[var(--color-text)] leading-snug">{msg}</p>
                                                         ))}

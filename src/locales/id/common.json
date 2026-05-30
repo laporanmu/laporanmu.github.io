@@ -60,5 +60,16 @@
   "notif.action.set_now": "Atur Sekarang",
   "notif.action.verify": "Periksa",
   "notif.action.class_data": "Data Kelas",
-  "notif.action.view_reports": "Lihat Laporan"
+  "notif.action.view_reports": "Lihat Laporan",
+  "auth.demoDevName": "Developer",
+  "auth.demoAdminName": "Administrator",
+  "auth.demoGuruName": "Budi Santoso",
+  "auth.demoSatpamName": "Penjaga Gerbang",
+  "auth.demoViewerName": "Demo Viewer",
+  "ui.search_no_result": "Tidak ditemukan",
+  "ui.search_no_result_hint": "Coba kata kunci lain",
+  "ui.search_hint_navigate": "↑↓ navigasi",
+  "ui.search_hint_open": "↵ buka",
+  "ui.search_hint_close": "esc tutup",
+  "ui.detail": "Detail"
 }

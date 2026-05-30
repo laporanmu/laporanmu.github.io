@@ -56,5 +56,16 @@
   "notif.action.set_now": "الضبط الآن",
   "notif.action.verify": "تحقق",
   "notif.action.class_data": "بيانات الفصول",
-  "notif.action.view_reports": "عرض التقارير"
+  "notif.action.view_reports": "عرض التقارير",
+  "auth.demoDevName": "المطور",
+  "auth.demoAdminName": "المسؤول",
+  "auth.demoGuruName": "محمد أحمد",
+  "auth.demoSatpamName": "حارس البوابة",
+  "auth.demoViewerName": "عرض تجريبي",
+  "ui.search_no_result": "لم يتم العثور على نتائج",
+  "ui.search_no_result_hint": "جرب كلمة بحث أخرى",
+  "ui.search_hint_navigate": "↑↓ التنقل",
+  "ui.search_hint_open": "↵ فتح",
+  "ui.search_hint_close": "esc إغلاق",
+  "ui.detail": "تفاصيل"
 }

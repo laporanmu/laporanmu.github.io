@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { supabase, isDemoMode } from '../lib/supabase'
+import { useLanguage } from './LanguageContext'
 
 const AuthContext = createContext({})
 
@@ -106,6 +107,8 @@ export function AuthProvider({ children }) {
             setProfile(null)
             localStorage.removeItem('laporanmu_demo_session')
             sessionStorage.removeItem('laporanmu_demo_session')
+            localStorage.removeItem('laporanmu_force_demo')
+            window.location.reload()
             return
         }
         await supabase.auth.signOut()
@@ -125,9 +128,27 @@ export function AuthProvider({ children }) {
         return userLevel >= minLevel
     }
 
+    const { t } = useLanguage()
+    const localizedProfile = useMemo(() => {
+        if (!profile || !isDemoMode) return profile
+        let name = profile.name
+        if (profile.role === 'guru') {
+            name = t('auth.demoGuruName')
+        } else if (profile.role === 'satpam') {
+            name = t('auth.demoSatpamName')
+        } else if (profile.role === 'developer') {
+            name = t('auth.demoDevName')
+        } else if (profile.role === 'admin') {
+            name = t('auth.demoAdminName')
+        } else if (profile.role === 'viewer') {
+            name = t('auth.demoViewerName')
+        }
+        return { ...profile, name }
+    }, [profile, t])
+
     const value = {
         user,
-        profile,
+        profile: localizedProfile,
         loading,
         signIn,
         signOut,

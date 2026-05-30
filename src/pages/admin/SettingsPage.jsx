@@ -781,7 +781,8 @@ function ActivityFeed({ refreshKey, flags }) {
 export default function AdminSettingsPage() {
     const { addToast } = useToast()
     const { settings, loading: settingsLoading, saveSettings } = useSchoolSettings()
-    const { profile } = useAuth()
+    const { profile, isDemoMode } = useAuth()
+    const hasDbCredentials = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 
     const [activeTab, setActiveTab] = useState('flags')
     const [activeCategory, setActiveCategory] = useState('module')
@@ -1093,20 +1094,70 @@ export default function AdminSettingsPage() {
 
                                             {/* Responsive Grid List */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch content-start auto-rows-min">
-                                                {activeFlagRows.length === 0 ? (
-                                                    <div className="col-span-full py-12 flex flex-col items-center justify-center opacity-30 gap-3 bg-[var(--color-surface-alt)]/30 rounded-3xl border border-dashed border-[var(--color-border)]">
-                                                        <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center mb-1">
-                                                            <FontAwesomeIcon icon={faToggleOn} className="text-xl text-[var(--color-text-muted)] opacity-20" />
+                                                {/* Demo Mode Toggle Card */}
+                                                {activeCategory === 'system' && !flagSearch.trim() && (
+                                                    <div className={[
+                                                        'flex items-center gap-4 px-4 py-3.5 rounded-xl border transition-all duration-200 group h-full',
+                                                        isDemoMode
+                                                            ? 'border-amber-500/30 bg-amber-500/[0.02] shadow-sm'
+                                                            : 'border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/30 grayscale-[0.5] opacity-80',
+                                                    ].join(' ')}>
+                                                        {/* Accent dot */}
+                                                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all duration-300 ${isDemoMode ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-slate-300'}`} />
+
+                                                        {/* Label + desc */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className={`text-[13px] font-bold leading-tight transition-colors ${isDemoMode ? 'text-[var(--color-text)] font-black' : 'text-[var(--color-text-muted)]'}`}>
+                                                                    Demo Mode
+                                                                </span>
+                                                                {isDemoMode ? (
+                                                                    <span className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/20">demo</span>
+                                                                ) : (
+                                                                    <span className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-[var(--color-text-muted)]">db real</span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5 leading-snug opacity-70 group-hover:opacity-100 transition-opacity line-clamp-1">
+                                                                {!hasDbCredentials ? 'Dipaksa aktif karena kredensial Supabase kosong' : 'Gunakan mock database lokal untuk simulasi/testing'}
+                                                            </p>
                                                         </div>
-                                                        <div className="text-center">
-                                                            <p className="text-[13px] font-black text-[var(--color-text)]">
-                                                                {flagSearch ? 'Tidak ada flag yang cocok' : 'Belum ada flag di kategori ini'}
-                                                            </p>
-                                                            <p className="text-[11px] text-[var(--color-text-muted)] mt-1 max-w-[240px] mx-auto leading-relaxed">
-                                                                {flagSearch ? 'Coba ubah kata kunci pencarian Anda.' : 'Klik tombol di bawah untuk mendaftarkan fitur standar ke kategori ini.'}
-                                                            </p>
+
+                                                        {/* Toggle area */}
+                                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                                            <Toggle
+                                                                checked={isDemoMode}
+                                                                disabled={!hasDbCredentials}
+                                                                onChange={(newVal) => {
+                                                                    if (newVal) {
+                                                                        localStorage.setItem('laporanmu_force_demo', 'true')
+                                                                    } else {
+                                                                        localStorage.removeItem('laporanmu_force_demo')
+                                                                    }
+                                                                    addToast(newVal ? 'Beralih ke Demo Mode...' : 'Beralih ke Database Real...', 'info')
+                                                                    setTimeout(() => window.location.reload(), 800)
+                                                                }}
+                                                                activeColor="bg-amber-500"
+                                                            />
                                                         </div>
                                                     </div>
+                                                )}
+
+                                                {activeFlagRows.length === 0 ? (
+                                                    (activeCategory === 'system' && !flagSearch.trim()) ? null : (
+                                                        <div className="col-span-full py-12 flex flex-col items-center justify-center opacity-30 gap-3 bg-[var(--color-surface-alt)]/30 rounded-3xl border border-dashed border-[var(--color-border)]">
+                                                            <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center mb-1">
+                                                                <FontAwesomeIcon icon={faToggleOn} className="text-xl text-[var(--color-text-muted)] opacity-20" />
+                                                            </div>
+                                                            <div className="text-center">
+                                                                <p className="text-[13px] font-black text-[var(--color-text)]">
+                                                                    {flagSearch ? 'Tidak ada flag yang cocok' : 'Belum ada flag di kategori ini'}
+                                                                </p>
+                                                                <p className="text-[11px] text-[var(--color-text-muted)] mt-1 max-w-[240px] mx-auto leading-relaxed">
+                                                                    {flagSearch ? 'Coba ubah kata kunci pencarian Anda.' : 'Klik tombol di bawah untuk mendaftarkan fitur standar ke kategori ini.'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )
                                                 ) : (
                                                     activeFlagRows.map(flag => (
                                                         <FlagRow

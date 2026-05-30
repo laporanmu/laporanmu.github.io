@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleCheck, faCircleExclamation, faDownload, faLink, faSpinner, faTable, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
+import { useLanguage } from '../../context/LanguageContext'
 
 export default function StudentGSheetsModal({
     isOpen,
@@ -12,6 +13,7 @@ export default function StudentGSheetsModal({
     handleFetchGSheets,
     onDownloadTemplate
 }) {
+    const { t, language } = useLanguage()
     // --- Enterprise Logic: Smart URL Validation ---
     const urlStatus = useMemo(() => {
         if (!gSheetsUrl) return 'empty'
@@ -102,8 +104,8 @@ export default function StudentGSheetsModal({
                             </thead>
                             <tbody>
                                 {[
-                                    { n: '1', name: 'Budi Santoso', g: 'L', p: '0812...', c: '10A Boarding Putra' },
-                                    { n: '2', name: 'Siti Aminah', g: 'P', p: '0857...', c: '10B Boarding Putri' }
+                                    { n: '1', name: t('behavior.tplStudent1'), g: language === 'en' ? 'M' : 'L', p: '0812...', c: t('behavior.tplClass1') },
+                                    { n: '2', name: t('behavior.tplStudent2'), g: language === 'en' ? 'F' : 'P', p: '0857...', c: t('behavior.tplClass2') }
                                 ].map((row, idx) => (
                                     <tr key={idx} className="border-b last:border-b-0 border-[var(--color-border)]">
                                         <td className="px-3 py-2 text-[9px] font-black text-[var(--color-text-muted)] text-center bg-[var(--color-surface-alt)]/30 border-r border-[var(--color-border)]">{row.n}</td>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, memo } from 'react'
+import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react'
 import {
     Plus, Search, Loader2, ArrowUp, ArrowDown, AlertTriangle,
     ChevronRight, ArrowRight, ArrowLeft, RotateCcw, Edit2, Clock
@@ -9,6 +9,34 @@ import RichDatePicker from '../ui/RichDatePicker'
 import RichTimePicker from '../ui/RichTimePicker'
 import { faBook } from '@fortawesome/free-solid-svg-icons'
 import { useToast } from '../../context/ToastContext'
+import { useLanguage } from '../../context/LanguageContext'
+
+const DB_TRANSLATIONS = {
+    en: {
+        "Berbicara Di Dalam Kelas": "Talking in Class",
+        "Makan di Dalam Kelas": "Eating in Class",
+        "Terlambat Masuk Kelas": "Late to Class",
+        "Juara Lomba Tahfidz": "Tahfidz Competition Winner",
+        "Tidak Membawa Buku": "Not Bringing Books",
+        "Membuang Sampah Sembarangan": "Littering",
+        "Membantu Teman": "Helping Friends",
+        "Membaca Al-Qur'an": "Reading Al-Qur'an",
+        "Melanggar Aturan Asrama": "Violating Dorm Rules",
+        "Berpakaian Rapi": "Dressed Neatly"
+    },
+    ar: {
+        "Berbicara Di Dalam Kelas": "التحدث في الفصل",
+        "Makan di Dalam Kelas": "الأكل في الفصل",
+        "Terlambat Masuk Kelas": "التأخر عن الفصل",
+        "Juara Lomba Tahfidz": "الفائز في مسابقة التحفيظ",
+        "Tidak Membawa Buku": "عدم إحضار الكتب",
+        "Membuang Sampah Sembarangan": "رمي النفايات في غير مكانها",
+        "Membantu Teman": "مساعدة الأصدقاء",
+        "Membaca Al-Qur'an": "قراءة القرآن",
+        "Melanggar Aturan Asrama": "مخالفة قوانين السكن",
+        "Berpakaian Rapi": "حسن المظهر"
+    }
+}
 
 const BehaviorFormModal = memo(function BehaviorFormModal({
     isOpen,
@@ -21,6 +49,12 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
     submitting = false
 }) {
     const { addToast } = useToast()
+    const { language, t, tNum, dir } = useLanguage()
+    const tp = useCallback((key) => t(`behavior.${key}`), [t])
+    const tDb = useCallback((text) => {
+        if (!text) return text
+        return DB_TRANSLATIONS[language]?.[text] || text
+    }, [language])
     const [currentStep, setCurrentStep] = useState(1)
     const [modalSearch, setModalSearch] = useState('')
     const [modalClassFilter, setModalClassFilter] = useState('')
@@ -92,7 +126,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                 if (savedForm.student_id) {
                     setCurrentStep(2)
                 }
-                if (addToast) addToast('Draft berhasil dimuat', 'success')
+                if (addToast) addToast(tp('draftLoaded'), 'success')
             } catch (e) {
                 console.error('Failed to parse draft', e)
             }
@@ -185,11 +219,11 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
     const selectOptions = useMemo(() => {
         return violationTypes.map(vt => {
             const isNegative = vt.points < 0
-            const ptsText = `[Poin ${isNegative ? '' : '+'}${vt.points}]`
+            const ptsText = `[${tp('points')} ${isNegative ? '' : '+'}${tNum(vt.points)}]`
             return {
                 id: vt.id,
-                name: `${isNegative ? '🔴' : '🟢'} ${ptsText} ${vt.name}`,
-                group: isNegative ? 'Pelanggaran' : 'Prestasi',
+                name: `${isNegative ? '🔴' : '🟢'} ${ptsText} ${tDb(vt.name)}`,
+                group: isNegative ? tp('violation') : tp('achievement'),
                 render: (
                     <span className="flex items-center gap-1.5 font-bold">
                         {isNegative ? (
@@ -200,12 +234,12 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                         <span className={isNegative ? 'text-rose-600 dark:text-rose-400 font-black' : 'text-emerald-600 dark:text-emerald-400 font-black'}>
                             {ptsText}
                         </span>
-                        <span className="text-[var(--color-text)] font-semibold truncate">{vt.name}</span>
+                        <span className="text-[var(--color-text)] font-semibold truncate">{tDb(vt.name)}</span>
                     </span>
                 )
             }
         })
-    }, [violationTypes])
+    }, [violationTypes, tp, tNum, tDb])
 
     const classOptions = useMemo(() => {
         return classesList.map(c => ({ id: c, name: c }))
@@ -230,8 +264,8 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
     const handleSubmit = (e) => {
         if (e) e.preventDefault()
         const errors = {}
-        if (!formData.student_id) errors.student_id = 'Siswa wajib dipilih'
-        if (!formData.violation_type_id) errors.violation_type_id = 'Jenis laporan wajib dipilih'
+        if (!formData.student_id) errors.student_id = tp('errStudentRequired')
+        if (!formData.violation_type_id) errors.violation_type_id = tp('errTypeRequired')
 
         if (Object.keys(errors).length) {
             setFormErrors(errors)
@@ -262,7 +296,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={selectedItem ? 'Edit Laporan' : 'Tambah Laporan Baru'}
+            title={selectedItem ? tp('editReport') : tp('addReport')}
             description={
                 <div className="flex items-center gap-2">
                     <div className="h-1.5 w-24 bg-[var(--color-border)] rounded-full overflow-hidden shrink-0">
@@ -271,7 +305,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                             style={{ width: `${progress}%` }}
                         />
                     </div>
-                    <span className="text-[10px] font-black text-[var(--color-primary)]">{progress}% Lengkap</span>
+                    <span className="text-[10px] font-black text-[var(--color-primary)]">{tNum(progress)}% {tp('complete')}</span>
                 </div>
             }
             icon={selectedItem ? Edit2 : Plus}
@@ -287,7 +321,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                         onClick={onClose}
                         className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                     >
-                        Batal
+                        {tp('cancel')}
                     </button>
 
                     <div className="flex-1" />
@@ -299,7 +333,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                             disabled={!formData.student_id}
                             className="h-10 px-6 sm:px-8 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-primary)]/10 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                         >
-                            <span>Lanjut</span>
+                            <span>{tp('next')}</span>
                             <ArrowRight className="w-3.5 h-3.5 text-white" />
                         </button>
                     ) : (
@@ -312,12 +346,12 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                             {submitting ? (
                                 <>
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    <span>Menyimpan...</span>
+                                    <span>{tp('saving')}</span>
                                 </>
                             ) : (
                                 <>
                                     {selectedItem ? <Edit2 className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                                    <span>{selectedItem ? 'Simpan Perubahan' : 'Simpan Laporan'}</span>
+                                    <span>{selectedItem ? tp('saveChanges') : tp('saveReport')}</span>
                                 </>
                             )}
                         </button>
@@ -331,20 +365,20 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                     <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 animate-in slide-in-from-top-2">
                         <div className="flex items-center gap-2">
                             <RotateCcw className="text-amber-500 w-3.5 h-3.5" />
-                            <span className="text-[10px] font-bold text-amber-700">Ada draft data yang belum selesai</span>
+                            <span className="text-[10px] font-bold text-amber-700">{tp('hasDraft')}</span>
                         </div>
                         <div className="flex gap-2">
                             <button
                                 onClick={clearDraft}
                                 className="text-[9px] font-black uppercase text-amber-600/50 hover:text-amber-600 transition-colors"
                             >
-                                Hapus
+                                {tp('deleteDraft')}
                             </button>
                             <button
                                 onClick={loadDraft}
                                 className="px-2.5 py-1 rounded-lg bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider shadow-sm hover:bg-amber-600 transition-all active:scale-95"
                             >
-                                Lanjutkan
+                                {tp('continueDraft')}
                             </button>
                         </div>
                     </div>
@@ -357,21 +391,21 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                         <div className="grid grid-cols-[130px_1fr] gap-2">
                             <div>
                                 <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1.5">
-                                    Kelas
+                                    {tp('classLabel')}
                                 </label>
                                 <RichSelect
                                     value={modalClassFilter}
                                     onChange={setModalClassFilter}
                                     options={classOptions}
-                                    placeholder="Semua"
-                                    extraOption={{ id: '', name: 'Semua' }}
+                                    placeholder={tp('allClassesShort')}
+                                    extraOption={{ id: '', name: tp('allClassesShort') }}
                                     small={true}
                                     buttonClassName="!h-10 sm:!h-10 rounded-xl px-3.5"
                                 />
                             </div>
                             <div>
                                 <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1.5">
-                                    Cari Nama
+                                    {tp('searchName')}
                                 </label>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] w-3.5 h-3.5 pointer-events-none" />
@@ -380,7 +414,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                         ref={searchInputRef}
                                         value={modalSearch}
                                         onChange={e => setModalSearch(e.target.value)}
-                                        placeholder="Nama siswa..."
+                                        placeholder={tp('searchPlaceholderModal')}
                                         className="input-field w-full h-10 pl-9 rounded-xl border-[var(--color-border)] bg-[var(--color-surface-alt)] text-sm font-bold focus:border-[var(--color-primary)] transition-all"
                                     />
                                 </div>
@@ -391,7 +425,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                             <div className="animate-in fade-in slide-in-from-top-1 duration-200">
                                 <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest opacity-80">
                                     <Clock className="w-3 h-3 text-[var(--color-primary)]" />
-                                    <span>Baru Dilaporkan</span>
+                                    <span>{tp('recentlyReported')}</span>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                                     {recentStudents.map(s => (
@@ -417,7 +451,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                     <div className="py-10 text-center opacity-40">
                                         <Search className="w-5 h-5 mx-auto mb-2" />
                                         <p className="text-[10px] font-black uppercase tracking-widest">
-                                            {students.length === 0 ? 'Memuat data...' : 'Tidak ditemukan'}
+                                            {students.length === 0 ? tp('loadingData') : tp('notFound')}
                                         </p>
                                     </div>
                                 ) : (
@@ -461,7 +495,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                                                         ? 'text-rose-500'
                                                                         : 'text-[var(--color-primary)]'
                                                                 }`}>
-                                                                • {(s.total_points ?? 0)} Poin
+                                                                • {tNum(s.total_points ?? 0)} {tp('points')}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -474,7 +508,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                         ))}
                                         {filteredStudentsForModal.length > displayedStudents.length && (
                                             <div className="py-2 text-center text-[9px] font-bold text-[var(--color-text-muted)] opacity-50 bg-[var(--color-surface)] rounded-xl border border-dashed border-[var(--color-border)]/60 my-1 mx-1">
-                                                Menampilkan 25 dari {filteredStudentsForModal.length} santri. Gunakan pencarian untuk mencari santri lainnya.
+                                                {tp('showingCount').replace('{total}', tNum(filteredStudentsForModal.length))}
                                             </div>
                                         )}
                                     </>
@@ -490,7 +524,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest leading-none mb-0.5">
-                                    Penerima Laporan
+                                    {tp('recipient')}
                                 </p>
                                 <p className="text-sm font-black text-[var(--color-text)] truncate">
                                     {students.find(s => s.id === formData.student_id)?.name}
@@ -513,7 +547,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
 
                         <div className="space-y-1.5">
                             <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block">
-                                Jenis Perilaku / Laporan
+                                {tp('behaviorType')}
                             </label>
                             <RichSelect
                                 value={formData.violation_type_id}
@@ -522,7 +556,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                     setFormErrors(p => ({ ...p, violation_type_id: '' }))
                                 }}
                                 options={selectOptions}
-                                placeholder="Pilih kategori perilaku..."
+                                placeholder={tp('selectBehaviorPlaceholder')}
                                 icon={faBook}
                                 searchable={true}
                                 status={formErrors.violation_type_id ? 'error' : 'normal'}
@@ -538,7 +572,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                         {/* Waktu Kejadian Section */}
                         <div className="space-y-1.5 border-t border-[var(--color-border)]/50 pt-3 mt-1 animate-in fade-in duration-200">
                             <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1">
-                                Tanggal & Waktu Kejadian
+                                {tp('dateTime')}
                             </label>
                             <div className="grid grid-cols-[1fr_150px] gap-2">
                                 <RichDatePicker
@@ -565,12 +599,12 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
 
                         <div className="space-y-1.5">
                             <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block">
-                                Catatan <span className="normal-case font-medium opacity-50">(opsional)</span>
+                                {tp('notes')} <span className="normal-case font-medium opacity-50">({tp('optional')})</span>
                             </label>
                             <textarea
                                 value={formData.notes || ''}
                                 onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                                placeholder="Detail kronologi jika diperlukan..."
+                                placeholder={tp('notesPlaceholder')}
                                 className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl p-3 text-sm font-medium text-[var(--color-text)] outline-none min-h-[72px] focus:ring-2 ring-[var(--color-primary)]/20 transition-all resize-none"
                             />
                         </div>

@@ -121,8 +121,8 @@ const Modal = memo(function Modal({
             role="dialog"
             aria-modal="true"
         >
-            {/* Optimized Backdrop */}
-            <div className="absolute inset-0 bg-slate-950/45 sm:bg-slate-950/40 sm:backdrop-blur-[2px]" />
+            {/* Optimized Backdrop (No heavy blur filters to ensure buttery smooth 60fps mobile transitions) */}
+            <div className="absolute inset-0 bg-slate-950/40" />
 
             {/* Modal Panel — 2 div terpisah:
                  - Outer: handle transform/opacity animation (boleh punya willChange/transform)

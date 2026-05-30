@@ -116,9 +116,9 @@ export function EditLogModal({ log, onSave, onDelete, onCancel, saving }) {
   const [purpose, setPurpose] = useState(log.purpose || '')
   const [destination, setDestination] = useState(log.destination || '')
   const [vehicle, setVehicle] = useState(log.vehicle_plate || '')
-  const [timeIn, setTimeIn] = useState(fmtTime(log.check_in, language).replace('.', ':'))
-  const [timeOut, setTimeOut] = useState(log.check_out ? fmtTime(log.check_out, language).replace('.', ':') : '')
-  const [timeEst, setTimeEst] = useState(log.estimated_return ? fmtTime(log.estimated_return, language).replace('.', ':') : '')
+  const [timeIn, setTimeIn] = useState(fmtTime(log.check_in).replace('.', ':'))
+  const [timeOut, setTimeOut] = useState(log.check_out ? fmtTime(log.check_out).replace('.', ':') : '')
+  const [timeEst, setTimeEst] = useState(log.estimated_return ? fmtTime(log.estimated_return).replace('.', ':') : '')
   const [confirmDel, setConfirmDel] = useState(false)
 
   const handleSave = () => {

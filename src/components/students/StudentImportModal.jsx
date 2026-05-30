@@ -28,8 +28,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import RichSelect from '../ui/RichSelect'
+import { useLanguage } from '../../context/LanguageContext'
 
 export default function StudentImportModal(props) {
+    const { t, language } = useLanguage()
     const [showClassesDropdown, setShowClassesDropdown] = useState(false)
     const classesDropdownRef = useRef(null)
 
@@ -506,8 +508,8 @@ export default function StudentImportModal(props) {
                                     </thead>
                                     <tbody>
                                         {[
-                                            ['Budi Santoso', 'L', '10A Boarding Putra', '08123...', '2024001', 'Ahmad'],
-                                            ['Siti Maryam', 'P', '10B Boarding Putri', '08567...', '2024002', 'Aminah']
+                                            [t('behavior.tplStudent1'), language === 'en' ? 'M' : 'L', t('behavior.tplClass1'), '08123...', '2024001', language === 'en' ? 'James Smith' : language === 'ar' ? 'محمد' : 'Ahmad'],
+                                            [t('behavior.tplStudent2'), language === 'en' ? 'F' : 'P', t('behavior.tplClass2'), '08567...', '2024002', language === 'en' ? 'Mary Doe' : language === 'ar' ? 'علي' : 'Aminah']
                                         ].map((row, rIdx) => (
                                             <tr key={rIdx}>
                                                 <td className="bg-[var(--color-surface-alt)] border-r border-b border-[var(--color-border)] text-[8px] font-bold text-[var(--color-text-muted)] text-center py-1">

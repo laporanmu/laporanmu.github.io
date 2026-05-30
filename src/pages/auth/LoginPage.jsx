@@ -5,6 +5,8 @@ import { faEnvelope, faLock, faArrowRight, faSpinner, faEye, faEyeSlash, faSun, 
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useTheme } from '../../context/ThemeContext'
+import Modal from '../../components/ui/Modal'
+import { Laptop, Shield, GraduationCap, IdCard, Eye } from 'lucide-react'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
@@ -181,15 +183,35 @@ export default function LoginPage() {
                 </div>
 
                 {/* Demo Trigger Button (Subtle) */}
-                {isDemoMode && !showDemoDrawer && (
-                    <div className="flex justify-center animate-in fade-in slide-in-from-top-4 duration-1000">
+                {!showDemoDrawer && (
+                    <div className="flex flex-col items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-1000">
                         <button
-                            onClick={() => setShowDemoDrawer(true)}
+                            type="button"
+                            onClick={() => {
+                                if (!isDemoMode) {
+                                    localStorage.setItem('laporanmu_force_demo', 'true')
+                                    window.location.reload()
+                                } else {
+                                    setShowDemoDrawer(true)
+                                }
+                            }}
                             className="text-[10px] font-black uppercase tracking-widest text-amber-600/60 hover:text-amber-600 bg-amber-500/5 hover:bg-amber-500/10 border border-amber-500/10 px-4 py-1.5 rounded-full transition-all flex items-center gap-2 group"
                         >
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 group-hover:scale-125 transition-transform animate-pulse" />
-                            Punya Akun Demo? Klik di sini
+                            {isDemoMode ? "Punya Akun Demo? Klik di sini" : "Aktifkan Demo Mode"}
                         </button>
+                        {isDemoMode && (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    localStorage.removeItem('laporanmu_force_demo')
+                                    window.location.reload()
+                                }}
+                                className="text-[8px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 hover:underline transition-all"
+                            >
+                                Kembali ke Mode Database (Real)
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -328,69 +350,72 @@ export default function LoginPage() {
             </div>
 
             {/* Help Modal */}
-            {showHelpModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 isolate">
-                    <div className="absolute inset-0 bg-[var(--color-surface)]/80 backdrop-blur-sm" onClick={() => setShowHelpModal(false)} />
-                    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] w-full max-w-sm rounded-[2rem] p-8 shadow-2xl relative z-10 animate-in zoom-in fade-in duration-300">
-                        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto mb-6">
-                            <FontAwesomeIcon icon={faKey} size="2x" />
-                        </div>
-                        <h3 className="text-xl font-black font-heading text-center mb-2">Bantuan Login</h3>
-                        <p className="text-sm text-[var(--color-text-muted)] text-center mb-8 leading-relaxed">
-                            Akses ditangguhkan atau lupa kata sandi? Silakan hubungi <span className="font-bold text-[var(--color-text)]">Admin Sekolah</span> atau <span className="font-bold text-[var(--color-text)]">Staf IT</span> melalui WhatsApp atau datang langsung ke ruang administrasi untuk mereset akun Anda.
-                        </p>
-                        <button
-                            onClick={() => setShowHelpModal(false)}
-                            className="btn btn-primary w-full py-4 text-xs font-black uppercase tracking-widest"
-                        >
-                            Saya Mengerti
-                        </button>
-                    </div>
+            <Modal
+                isOpen={showHelpModal}
+                onClose={() => setShowHelpModal(false)}
+                title="Bantuan Login"
+                size="sm"
+                icon={faKey}
+                iconBg="bg-indigo-500/10"
+                iconColor="text-indigo-500"
+            >
+                <div className="text-center">
+                    <p className="text-sm text-[var(--color-text-muted)] mb-8 leading-relaxed">
+                        Akses ditangguhkan atau lupa kata sandi? Silakan hubungi <span className="font-bold text-[var(--color-text)]">Admin Sekolah</span> atau <span className="font-bold text-[var(--color-text)]">Staf IT</span> melalui WhatsApp atau datang langsung ke ruang administrasi untuk mereset akun Anda.
+                    </p>
+                    <button
+                        onClick={() => setShowHelpModal(false)}
+                        className="btn btn-primary w-full py-4 text-xs font-black uppercase tracking-widest"
+                    >
+                        Saya Mengerti
+                    </button>
                 </div>
-            )}
+            </Modal>
 
             {/* Demo Access Drawer/Modal */}
-            {showDemoDrawer && (
-                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 isolate">
-                    <div className="absolute inset-0 bg-[var(--color-surface)]/80 backdrop-blur-sm" onClick={() => setShowDemoDrawer(false)} />
-                    <div className="bg-[var(--color-surface)] border-t sm:border border-[var(--color-border)] w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl relative z-10 animate-in slide-in-from-bottom duration-500">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 className="text-lg font-black font-heading">Akun Demo</h3>
-                                <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Gunakan password: demo123</p>
+            <Modal
+                isOpen={showDemoDrawer}
+                onClose={() => setShowDemoDrawer(false)}
+                title="Akun Demo"
+                description={
+                    <span className="text-amber-500 font-extrabold uppercase tracking-widest text-[9px]">
+                        Gunakan password: demo123
+                    </span>
+                }
+                icon={faKey}
+                iconBg="bg-amber-500/10"
+                iconColor="text-amber-500"
+                size="md"
+                mobileVariant="bottom-sheet"
+            >
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                    {[
+                        { role: 'Developer', email: 'dev@laporanmu.id', desc: 'Akses penuh fitur sistem', Icon: Laptop, color: 'text-indigo-500 bg-indigo-500/10' },
+                        { role: 'Admin', email: 'admin@laporanmu.id', desc: 'Manajemen data & user', Icon: Shield, color: 'text-rose-500 bg-rose-500/10' },
+                        { role: 'Guru', email: 'guru@laporanmu.id', desc: 'Input nilai & presensi', Icon: GraduationCap, color: 'text-violet-500 bg-violet-500/10' },
+                        { role: 'Satpam', email: 'satpam@laporanmu.id', desc: 'Buku tamu & izin keluar', Icon: IdCard, color: 'text-amber-500 bg-amber-500/10' },
+                        { role: 'Viewer', email: 'viewer@laporanmu.id', desc: 'Hanya melihat dashboard', Icon: Eye, color: 'text-emerald-500 bg-emerald-500/10' },
+                    ].map(u => (
+                        <button
+                            key={u.role}
+                            type="button"
+                            onClick={() => { setEmail(u.email); setPassword('demo123'); setShowDemoDrawer(false) }}
+                            className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all group text-left"
+                        >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${u.color}`}>
+                                <u.Icon className="w-5 h-5" />
                             </div>
-                            <button onClick={() => setShowDemoDrawer(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 transition-all">
-                                <FontAwesomeIcon icon={faXmark} />
-                            </button>
-                        </div>
-                        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                            {[
-                                { role: 'Developer', email: 'dev@laporanmu.id', desc: 'Akses penuh fitur sistem', icon: '💻' },
-                                { role: 'Admin', email: 'admin@laporanmu.id', desc: 'Manajemen data & user', icon: '🛡️' },
-                                { role: 'Guru', email: 'guru@laporanmu.id', desc: 'Input nilai & presensi', icon: '👨‍🏫' },
-                                { role: 'Satpam', email: 'satpam@laporanmu.id', desc: 'Buku tamu & izin keluar', icon: '👮' },
-                                { role: 'Viewer', email: 'viewer@laporanmu.id', desc: 'Hanya melihat dashboard', icon: '👁️' },
-                            ].map(u => (
-                                <button
-                                    key={u.role}
-                                    type="button"
-                                    onClick={() => { setEmail(u.email); setPassword('demo123'); setShowDemoDrawer(false) }}
-                                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all group text-left"
-                                >
-                                    <span className="text-2xl grayscale group-hover:grayscale-0 transition-all">{u.icon}</span>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between mb-0.5">
-                                            <span className="text-xs font-black uppercase tracking-wider">{u.role}</span>
-                                            <code className="text-[9px] font-mono text-[var(--color-text-muted)]">{u.email}</code>
-                                        </div>
-                                        <p className="text-[11px] text-[var(--color-text-muted)]">{u.desc}</p>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-0.5">
+                                    <span className="text-xs font-black uppercase tracking-wider">{u.role}</span>
+                                    <code className="text-[9px] font-mono text-[var(--color-text-muted)]">{u.email}</code>
+                                </div>
+                                <p className="text-[11px] text-[var(--color-text-muted)]">{u.desc}</p>
+                            </div>
+                        </button>
+                    ))}
                 </div>
-            )}
+            </Modal>
         </div>
     )
 }
