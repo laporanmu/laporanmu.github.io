@@ -32,7 +32,7 @@
   "behavior.today": "Hari Ini",
   "behavior.yesterday": "Kemarin",
   "behavior.reports": "Laporan",
-  "behavior.searchPlaceholder": "Cari nama siswa atau jenis perilaku... (Ctrl+K)",
+  "behavior.searchPlaceholder": "Cari nama siswa...",
   "behavior.all": "Semua",
   "behavior.newest": "Terbaru",
   "behavior.oldest": "Terlama",
@@ -79,6 +79,8 @@
   "behavior.tableView": "Tabel",
   "behavior.moreFilters": "Lainnya",
   "behavior.advancedFilter": "Filter Lanjutan",
+  "behavior.filterShort": "Filter",
+  "behavior.resetShort": "Reset",
   "behavior.filterCategory": "Kategori",
   "behavior.noSearchResult": "Pencarian Tidak Ditemukan",
   "behavior.noSearchResultDesc": "Maaf, kami tidak menemukan data laporan perilaku dengan kriteria tersebut. Coba ubah kata kunci atau reset filter.",
@@ -119,6 +121,7 @@
   "behavior.allClassesShort": "Semua",
   "behavior.searchName": "Cari Nama",
   "behavior.searchPlaceholderModal": "Nama siswa...",
+  "behavior.searchPlaceholderBehavior": "Cari jenis pelanggaran atau prestasi...",
   "behavior.recentlyReported": "Baru Dilaporkan",
   "behavior.loadingData": "Memuat data...",
   "behavior.notFound": "Tidak ditemukan",
@@ -273,5 +276,10 @@
   "behavior.atTime": "pukul",
   "behavior.noNotes": "Tidak ada catatan tambahan.",
   "behavior.detailEdit": "Edit Laporan",
-  "behavior.detailDelete": "Hapus"
+  "behavior.detailDelete": "Hapus",
+  "behavior.unknown": "Tidak Diketahui",
+  "behavior.disablePrivacy": "Matikan Mode Privasi",
+  "behavior.enablePrivacy": "Aktifkan Mode Privasi",
+  "behavior.readOnly": "Hanya Baca",
+  "behavior.deleteConfirmTemplate": "Laporan untuk santri {student} dengan poin {points} akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan."
 }

@@ -1,10 +1,15 @@
 {
-  "section.boarding": "Kesiswaan",
+  "section.boarding": "Kesantrian",
   "section.academic": "Akademik",
   "section.finance": "Keuangan",
   "section.master": "Master Data",
   "section.admin": "Admin",
   "section.reports": "Laporan",
+  "section.sheet.boarding": "Kesantrian & Kedisiplinan",
+  "section.sheet.academic": "Mesin Akademik",
+  "section.sheet.finance": "Manajemen Keuangan",
+  "section.sheet.master": "Master Data",
+  "section.sheet.admin": "Infrastructure & Control",
 
   "nav.dashboard": "Dashboard",
   "nav.gate": "Portal Perizinan",

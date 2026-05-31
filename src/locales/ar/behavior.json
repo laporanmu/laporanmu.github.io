@@ -32,7 +32,7 @@
   "behavior.today": "اليوم",
   "behavior.yesterday": "أمس",
   "behavior.reports": "تقارير",
-  "behavior.searchPlaceholder": "البحث عن اسم الطالب أو نوع السلوك... (Ctrl+K)",
+  "behavior.searchPlaceholder": "البحث عن اسم الطالب...",
   "behavior.all": "الكل",
   "behavior.newest": "الأحدث",
   "behavior.oldest": "الأقدم",
@@ -79,6 +79,8 @@
   "behavior.tableView": "جدول",
   "behavior.moreFilters": "المزيد",
   "behavior.advancedFilter": "فلاتر متقدمة",
+  "behavior.filterShort": "تصفية",
+  "behavior.resetShort": "إعادة تعيين",
   "behavior.filterCategory": "التصنيف",
   "behavior.noSearchResult": "لا توجد نتائج",
   "behavior.noSearchResultDesc": "لم نتمكن من العثور على تقارير سلوكية تطابق معاييرك. حاول تغيير الكلمات المفتاحية أو إعادة تعيين الفلاتر.",
@@ -119,6 +121,7 @@
   "behavior.allClassesShort": "الكل",
   "behavior.searchName": "البحث عن الاسم",
   "behavior.searchPlaceholderModal": "اسم الطالب...",
+  "behavior.searchPlaceholderBehavior": "البحث عن المخالفات أو الإنجازات...",
   "behavior.recentlyReported": "سجلت مؤخراً",
   "behavior.loadingData": "جاري تحميل البيانات...",
   "behavior.notFound": "غير موجود",
@@ -270,5 +273,10 @@
   "behavior.atTime": "الساعة",
   "behavior.noNotes": "لا توجد ملاحظات إضافية.",
   "behavior.detailEdit": "تعديل التقرير",
-  "behavior.detailDelete": "حذف"
+  "behavior.detailDelete": "حذف",
+  "behavior.unknown": "غير معروف",
+  "behavior.disablePrivacy": "تعطيل وضع الخصوصية",
+  "behavior.enablePrivacy": "تفعيل وضع الخصوصية",
+  "behavior.readOnly": "للقراءة فقط",
+  "behavior.deleteConfirmTemplate": "سيتم حذف تقرير الطالب {student} الذي يحتوي على نقاط {points} نهائياً. لا يمكن التراجع عن هذا الإجراء."
 }

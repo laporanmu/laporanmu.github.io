@@ -11,6 +11,7 @@ import {
     MoreHorizontal,
 } from "lucide-react"
 import { useAuth } from "../../context/AuthContext"
+import { useLanguage } from "../../context/LanguageContext"
 import MasterSheet from "./MasterSheet"
 
 // ─── Warna aktif ─────────────────────────────────────────────────────────────
@@ -81,6 +82,7 @@ export default function BottomNav() {
     const [openSheet, setOpenSheet] = useState(null)
     const [isVisible, setIsVisible] = useState(true)
     const { profile } = useAuth()
+    const { t } = useLanguage()
 
     const role = profile?.role?.toLowerCase()
     const isAdminUp = ['developer', 'admin'].includes(role)
@@ -129,13 +131,13 @@ export default function BottomNav() {
                         {/* ── Admin / Developer: 5 col → Home | Kesantrian | Akademik | Keuangan | Lainnya ── */}
                         {isAdminUp && (
                             <div className="grid grid-cols-5">
-                                <NavItem to="/dashboard" icon={Home} label="Home" />
-                                <MenuButton icon={Compass} label="Kesantrian" onClick={() => open('boarding')} active={openSheet === 'boarding'} />
-                                <MenuButton icon={Calendar} label="Akademik" onClick={() => open('academic')} active={openSheet === 'academic'} />
-                                <MenuButton icon={CreditCard} label="Keuangan" onClick={() => open('finance')} active={openSheet === 'finance'} />
+                                <NavItem to="/dashboard" icon={Home} label={t('nav.dashboard')} />
+                                <MenuButton icon={Compass} label={t('section.boarding')} onClick={() => open('boarding')} active={openSheet === 'boarding'} />
+                                <MenuButton icon={Calendar} label={t('section.academic')} onClick={() => open('academic')} active={openSheet === 'academic'} />
+                                <MenuButton icon={CreditCard} label={t('section.finance')} onClick={() => open('finance')} active={openSheet === 'finance'} />
                                 <MenuButton
                                     icon={MoreHorizontal}
-                                    label="Lainnya"
+                                    label={t('ui.more')}
                                     onClick={() => open(openSheet === 'more' ? null : 'more')}
                                     active={openSheet === 'more'}
                                 />
@@ -145,20 +147,20 @@ export default function BottomNav() {
                         {/* ── Satpam: 3 col → Home | Kesantrian | Setting ── */}
                         {isSatpam && (
                             <div className="grid grid-cols-3">
-                                <NavItem to="/dashboard" icon={Home} label="Home" />
-                                <MenuButton icon={Compass} label="Kesantrian" onClick={() => open('boarding')} active={openSheet === 'boarding'} />
-                                <NavItem to="/settings" icon={Settings} label="Setting" />
+                                <NavItem to="/dashboard" icon={Home} label={t('nav.dashboard')} />
+                                <MenuButton icon={Compass} label={t('section.boarding')} onClick={() => open('boarding')} active={openSheet === 'boarding'} />
+                                <NavItem to="/settings" icon={Settings} label={t('nav.settings')} />
                             </div>
                         )}
 
                         {/* ── Staff: 5 col → Home | Kesantrian | Akademik | Keuangan | Master ── */}
                         {!isAdminUp && !isSatpam && (
                             <div className="grid grid-cols-5">
-                                <NavItem to="/dashboard" icon={Home} label="Home" />
-                                <MenuButton icon={Compass} label="Kesantrian" onClick={() => open('boarding')} active={openSheet === 'boarding'} />
-                                <MenuButton icon={Calendar} label="Akademik" onClick={() => open('academic')} active={openSheet === 'academic'} />
-                                <MenuButton icon={CreditCard} label="Keuangan" onClick={() => open('finance')} active={openSheet === 'finance'} />
-                                <MenuButton icon={Layers} label="Master" onClick={() => open('master')} active={openSheet === 'master'} />
+                                <NavItem to="/dashboard" icon={Home} label={t('nav.dashboard')} />
+                                <MenuButton icon={Compass} label={t('section.boarding')} onClick={() => open('boarding')} active={openSheet === 'boarding'} />
+                                <MenuButton icon={Calendar} label={t('section.academic')} onClick={() => open('academic')} active={openSheet === 'academic'} />
+                                <MenuButton icon={CreditCard} label={t('section.finance')} onClick={() => open('finance')} active={openSheet === 'finance'} />
+                                <MenuButton icon={Layers} label={t('section.master')} onClick={() => open('master')} active={openSheet === 'master'} />
                             </div>
                         )}
 

@@ -365,8 +365,8 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
 
                     {/* ── Right: Language (sm+) + Theme (sm+) + Bell + Avatar ── */}
                     <div className="flex items-center gap-1 shrink-0">
-                        {/* Language Selector — hidden on mobile */}
-                        <div className="relative hidden sm:block" ref={langRef}>
+                        {/* Language Selector */}
+                        <div className="relative" ref={langRef}>
                             <button
                                 onClick={() => setLangOpen(v => !v)}
                                 className={`h-8 flex items-center gap-1.5 px-2.5 rounded-xl border border-[var(--color-border)]/80 hover:bg-[var(--color-surface-alt)] transition text-[11px] font-extrabold uppercase tracking-tight
@@ -415,11 +415,11 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                             )}
                         </div>
 
-                        {/* Theme toggle — hidden on mobile */}
+                        {/* Theme toggle */}
                         <button
                             onClick={toggleTheme}
                             aria-label={isDark ? "Aktifkan Mode Terang" : "Aktifkan Mode Gelap"}
-                            className="hidden sm:flex w-8 h-8 items-center justify-center rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition"
+                            className="flex w-8 h-8 items-center justify-center rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition"
                             type="button"
                         >
                             {isDark ? (
@@ -472,38 +472,7 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                                         <p className="text-[12px] font-bold text-[var(--color-text)] truncate">{profile?.name || 'User'}</p>
                                         <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{profile?.role || 'Staff'}</p>
                                     </div>
-                                    {/* Language selector — mobile only, shown in profile dropdown */}
-                                    <div className="sm:hidden px-3 py-2 border-b border-[var(--color-border)]">
-                                        <p className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5 px-1">{t("ui.language")}</p>
-                                        <div className="flex gap-1">
-                                            {[
-                                                { code: "id", label: "ID" },
-                                                { code: "en", label: "EN" },
-                                                { code: "ar", label: "AR" }
-                                            ].map(item => (
-                                                <button
-                                                    key={item.code}
-                                                    onClick={() => { setLanguage(item.code) }}
-                                                    className={`flex-1 flex items-center justify-center py-1.5 rounded-lg text-[10px] font-semibold transition-all
-                                                        ${language === item.code
-                                                            ? 'bg-[var(--color-primary)] text-white shadow-sm ring-1 ring-[var(--color-primary)]/30'
-                                                            : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
-                                                    type="button"
-                                                >
-                                                    <span>{item.label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    {/* Theme toggle — mobile only, shown in profile dropdown */}
-                                    <button
-                                        onClick={() => { toggleTheme() }}
-                                        className={`sm:hidden w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-surface-alt)] transition font-semibold text-[13px] text-[var(--color-text)] border-b border-[var(--color-border)] ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
-                                        type="button"
-                                    >
-                                        {isDark ? <Sun className="w-4 h-4" strokeWidth={2} /> : <Moon className="w-4 h-4" strokeWidth={2} />}
-                                        <span>{isDark ? t("ui.theme_light") : t("ui.theme_dark")}</span>
-                                    </button>
+
                                     <button
                                         onClick={() => { setProfileOpen(false); navigate("/settings") }}
                                         className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-surface-alt)] transition font-semibold text-[13px] text-[var(--color-text)] ${dir === 'rtl' ? 'text-right' : 'text-left'}`}

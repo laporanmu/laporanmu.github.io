@@ -67,5 +67,6 @@
   "ui.search_hint_navigate": "↑↓ التنقل",
   "ui.search_hint_open": "↵ فتح",
   "ui.search_hint_close": "esc إغلاق",
-  "ui.detail": "تفاصيل"
+  "ui.detail": "تفاصيل",
+  "ui.more": "المزيد"
 }

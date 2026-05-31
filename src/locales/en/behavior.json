@@ -32,7 +32,7 @@
   "behavior.today": "Today",
   "behavior.yesterday": "Yesterday",
   "behavior.reports": "Reports",
-  "behavior.searchPlaceholder": "Search student name or behavior type... (Ctrl+K)",
+  "behavior.searchPlaceholder": "Search student name...",
   "behavior.all": "All",
   "behavior.newest": "Newest",
   "behavior.oldest": "Oldest",
@@ -79,6 +79,8 @@
   "behavior.tableView": "Table",
   "behavior.moreFilters": "More",
   "behavior.advancedFilter": "Advanced Filters",
+  "behavior.filterShort": "Filter",
+  "behavior.resetShort": "Reset",
   "behavior.filterCategory": "Category",
   "behavior.noSearchResult": "No Results Found",
   "behavior.noSearchResultDesc": "We couldn't find any behavior reports matching your criteria. Try changing keywords or reset filters.",
@@ -119,6 +121,7 @@
   "behavior.allClassesShort": "All",
   "behavior.searchName": "Search Name",
   "behavior.searchPlaceholderModal": "Student name...",
+  "behavior.searchPlaceholderBehavior": "Search violations or achievements...",
   "behavior.recentlyReported": "Recently Reported",
   "behavior.loadingData": "Loading data...",
   "behavior.notFound": "Not found",
@@ -273,5 +276,10 @@
   "behavior.atTime": "at",
   "behavior.noNotes": "No additional notes.",
   "behavior.detailEdit": "Edit Report",
-  "behavior.detailDelete": "Delete"
+  "behavior.detailDelete": "Delete",
+  "behavior.unknown": "Unknown",
+  "behavior.disablePrivacy": "Disable Privacy Mode",
+  "behavior.enablePrivacy": "Enable Privacy Mode",
+  "behavior.readOnly": "Read-only",
+  "behavior.deleteConfirmTemplate": "Report for student {student} with points {points} will be permanently deleted. This action cannot be undone."
 }

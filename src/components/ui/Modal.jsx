@@ -24,7 +24,8 @@ const Modal = memo(function Modal({
     size = 'md', variant = 'centered', mobileVariant = 'centered',
     noPadding = false, contentClassName = "",
     icon, iconBg, iconColor, description,
-    closeOnOutsideClick = true
+    closeOnOutsideClick = true,
+    maxMobileHeight = '70vh'
 }) {
     const [mounted, setMounted] = useState(false)
     const [visible, setVisible] = useState(false)
@@ -143,10 +144,11 @@ const Modal = memo(function Modal({
                 <div
                     className={`bg-[var(--color-surface)] shadow-2xl w-full relative overflow-hidden flex flex-col border border-[var(--color-border)]/60
                     ${isBottomSheet
-                            ? 'rounded-t-[2.25rem] md:rounded-[2.25rem] max-h-[88vh] md:max-h-[calc(100vh-6rem)]'
+                            ? 'rounded-t-[2.25rem] md:rounded-[2.25rem] md:max-h-[calc(100vh-6rem)]'
                             : 'rounded-[2.25rem] max-h-[calc(100vh-6rem)]'
                         }
                 `}
+                    style={isBottomSheet ? { maxHeight: `min(${maxMobileHeight}, calc(100vh - env(safe-area-inset-bottom, 0px)))` } : undefined}
                 >
                     {/* Drag Handle for Bottom Sheet */}
                     {isBottomSheet && (

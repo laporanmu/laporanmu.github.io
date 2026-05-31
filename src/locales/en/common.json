@@ -67,5 +67,6 @@
   "ui.search_hint_navigate": "↑↓ navigate",
   "ui.search_hint_open": "↵ open",
   "ui.search_hint_close": "esc close",
-  "ui.detail": "Detail"
+  "ui.detail": "Detail",
+  "ui.more": "More"
 }

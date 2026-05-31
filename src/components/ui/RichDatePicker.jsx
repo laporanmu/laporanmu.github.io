@@ -13,7 +13,7 @@ const LOCALES = {
         daysShort: ['Sn', 'Sl', 'Rb', 'Km', 'Jm', 'Sb', 'Mg'],
         formatResting: (d, m, y) => `${d} ${LOCALES.id.months[m]} ${y}`,
         formatTyped: (d, m, y) => `${d}/${m + 1}/${y}`,
-        placeholder: 'DD/MM/YYYY',
+        placeholder: 'Pilih Tanggal',
         today: 'Hari Ini',
         clear: 'Hapus',
         parse: (str) => {
@@ -36,7 +36,7 @@ const LOCALES = {
         daysShort: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
         formatResting: (d, m, y) => `${LOCALES.en.months[m]} ${d}, ${y}`,
         formatTyped: (d, m, y) => `${m + 1}/${d}/${y}`,
-        placeholder: 'MM/DD/YYYY',
+        placeholder: 'Choose Date',
         today: 'Today',
         clear: 'Clear',
         parse: (str) => {
@@ -59,7 +59,7 @@ const LOCALES = {
         daysShort: ['ن', 'ث', 'ر', 'خ', 'ج', 'س', 'ح'],
         formatResting: (d, m, y) => `${d} ${LOCALES.ar.months[m]} ${y}`,
         formatTyped: (d, m, y) => `${d}/${m + 1}/${y}`,
-        placeholder: 'DD/MM/YYYY',
+        placeholder: 'اختر التاريخ',
         today: 'اليوم',
         clear: 'حذف',
         parse: (str) => {
@@ -86,7 +86,7 @@ const normalizeArabicDigits = (str) => {
 const parseDateString = (str, lang) => {
     if (!str) return null
     const clean = normalizeArabicDigits(str.trim())
-    
+
     // First try standard database format YYYY-MM-DD or YYYY/MM/DD
     let match = clean.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/)
     if (match) {
@@ -98,7 +98,7 @@ const parseDateString = (str, lang) => {
             return date
         }
     }
-    
+
     // Next, try localized parser
     const parser = LOCALES[lang] || LOCALES.id
     const parsed = parser.parse(clean)
@@ -164,7 +164,7 @@ const RichDatePicker = memo(({
             const d = new Date(value)
             if (!isNaN(d.getTime())) {
                 setCurrentDate(d)
-                
+
                 const [y, m, dStr] = value.split('-')
                 setTypedValue(currentLocale.formatTyped(parseInt(dStr, 10), parseInt(m, 10) - 1, parseInt(y, 10)))
             }
@@ -224,7 +224,7 @@ const RichDatePicker = memo(({
 
     const handleBlur = () => {
         setIsFocused(false)
-        
+
         // Restore input to match valid value
         if (value) {
             const [y, m, dStr] = value.split('-')
@@ -237,7 +237,7 @@ const RichDatePicker = memo(({
     const handleInputChange = (e) => {
         const val = e.target.value
         setTypedValue(val)
-        
+
         const parsed = parseDateString(val, systemLanguage)
         if (parsed) {
             const formattedMonth = String(parsed.getMonth() + 1).padStart(2, '0')
@@ -457,15 +457,15 @@ const RichDatePicker = memo(({
                 placeholder={defaultPlaceholder}
                 className={`w-full pl-9 pr-8 h-[40px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] outline-none transition-all text-xs font-black shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
-            
-            <FontAwesomeIcon 
-                icon={faCalendarAlt} 
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)] opacity-50 pointer-events-none" 
+
+            <FontAwesomeIcon
+                icon={faCalendarAlt}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)] opacity-50 pointer-events-none"
             />
-            
-            <FontAwesomeIcon 
-                icon={faChevronDown} 
-                className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] opacity-40 transition-transform duration-300 pointer-events-none ${isOpen ? 'rotate-180 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`} 
+
+            <FontAwesomeIcon
+                icon={faChevronDown}
+                className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] opacity-40 transition-transform duration-300 pointer-events-none ${isOpen ? 'rotate-180 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
             />
 
             {/* Portal Dropdown Calendar */}

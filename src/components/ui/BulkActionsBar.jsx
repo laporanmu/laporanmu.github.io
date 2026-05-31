@@ -36,9 +36,11 @@ export default function BulkActionsBar({
     <div
       className="fixed -translate-x-1/2 z-[250] w-[95%] max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)"
       style={{
-        left: dir === 'rtl'
-          ? 'calc(50vw - (var(--sidebar-width, 0px) / 2))'
-          : 'calc(50vw + (var(--sidebar-width, 0px) / 2))',
+        left: isMobile
+          ? '50%'
+          : dir === 'rtl'
+            ? 'calc(50vw - (var(--sidebar-width, 0px) / 2))'
+            : 'calc(50vw + (var(--sidebar-width, 0px) / 2))',
         bottom: isMobile
           ? 'max(80px, calc(12px + env(safe-area-inset-bottom)))'
           : '16px'
@@ -64,7 +66,7 @@ export default function BulkActionsBar({
           <div className="w-px h-6 bg-white/10 mx-1.5 hidden sm:block shrink-0" />
 
           {/* Actions Area */}
-          <div className="flex items-center gap-1.5 flex-1 justify-center">
+          <div className="flex items-center gap-1.5 flex-1 justify-center max-sm:[&_span]:hidden max-sm:[&_button]:w-9 max-sm:[&_button]:h-9 max-sm:[&_button]:px-0 max-sm:[&_button]:rounded-xl">
             {children}
           </div>
 

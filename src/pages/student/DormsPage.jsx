@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -6,6 +7,7 @@ import Breadcrumb from '../../components/ui/Breadcrumb'
 import PageHeader from '../../components/ui/PageHeader'
 import { EmptyState, StatCard } from '../../components/ui/DataDisplay'
 import RichSelect from '../../components/ui/RichSelect'
+import RichDatePicker from '../../components/ui/RichDatePicker'
 import Pagination from '../../components/ui/Pagination'
 import StatsCarousel from '../../components/StatsCarousel'
 import BulkActionsBar from '../../components/ui/BulkActionsBar'
@@ -13,26 +15,272 @@ import { LIST_KAMAR } from '../../utils/reports/raportConstants'
 import Modal from '../../components/ui/Modal'
 import {
     Bed, Users, ClipboardList, CheckSquare, Search, Plus, Trash2, X,
-    ChevronRight, Sparkles, Star, Award, ShieldAlert, UserMinus, ArrowRightLeft,
-    Check, Calendar, User, RefreshCw, AlertCircle, LayoutGrid, Table, Edit2,
-    Clock1,
-    Clock10Icon,
-    Clock
+    Sparkles, Star, Award, ShieldAlert, UserMinus, ArrowRightLeft,
+    Check, User, RefreshCw, AlertCircle, LayoutGrid, Table, Edit2,
+    Clock, CheckCircle2, Sliders, RotateCcw,
+    User2Icon, VenusAndMars, Info,
+    Eye, EyeOff, Download, FileSpreadsheet
 } from 'lucide-react'
-import { faGraduationCap } from '@fortawesome/free-solid-svg-icons'
 
 // Local storage keys for audit and task persistence during preview/session
 const LS_AUDITS = 'laporanmu_dorm_audits'
 const LS_TASKS = 'laporanmu_dorm_tasks'
 const LS_LOGS = 'laporanmu_dorm_shift_logs'
 
+// ── Taruh TEPAT di atas "export default function DormsPage()" ──
+
+const InventoryModalContent = ({
+    inventoryModalDorm,
+    inventories,
+    setSelectedDormForInventory,
+    setEditingInventoryItem,
+    setNewInventoryItem,
+    setIsInventoryModalOpen,
+    setInventoryToDelete,
+    setIsConfirmDeleteInventoryOpen,
+    setPendingInventoryDorm,
+    setInventoryModalDorm,
+}) => {
+    const [invSearch, setInvSearch] = useState('')
+    const [invSort, setInvSort] = useState('name_asc')
+    const [invFilter, setInvFilter] = useState('all')
+
+    const roomItems = inventories.filter(i => i.dorm_id === inventoryModalDorm?.id)
+
+    const filtered = roomItems
+        .filter(item => {
+            const matchSearch = item.item_name.toLowerCase().includes(invSearch.toLowerCase())
+            const matchFilter =
+                invFilter === 'all' ? true :
+                    invFilter === 'good' ? item.damaged_condition_count === 0 :
+                        invFilter === 'damaged' ? item.damaged_condition_count > 0 : true
+            return matchSearch && matchFilter
+        })
+        .sort((a, b) => {
+            if (invSort === 'name_asc') return a.item_name.localeCompare(b.item_name)
+            if (invSort === 'name_desc') return b.item_name.localeCompare(a.item_name)
+            if (invSort === 'total_desc') return b.total_quantity - a.total_quantity
+            if (invSort === 'damaged_desc') return b.damaged_condition_count - a.damaged_condition_count
+            return 0
+        })
+
+    return (
+        <div className="flex flex-col gap-0">
+            {/* Toolbar */}
+            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center gap-2">
+                {/* Search */}
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-40" />
+                    <input
+                        type="text"
+                        value={invSearch}
+                        onChange={e => setInvSearch(e.target.value)}
+                        placeholder="Cari item..."
+                        className="w-full h-8 pl-8 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition"
+                    />
+                </div>
+
+                {/* Filter pills */}
+                {['all', 'good', 'damaged'].map(f => (
+                    <button
+                        key={f}
+                        onClick={() => setInvFilter(f)}
+                        className={`h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all shrink-0 ${invFilter === f
+                            ? 'bg-[var(--color-primary)] text-white border-transparent'
+                            : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'
+                            }`}
+                    >
+                        {f === 'all' ? 'Semua' : f === 'good' ? 'Baik' : 'Rusak'}
+                    </button>
+                ))}
+
+                {/* Sort */}
+                <div className="shrink-0 w-[130px]">
+                    <RichSelect
+                        compact
+                        value={invSort}
+                        onChange={setInvSort}
+                        options={[
+                            { id: 'name_asc', name: 'Nama A–Z' },
+                            { id: 'name_desc', name: 'Nama Z–A' },
+                            { id: 'total_desc', name: 'Terbanyak' },
+                            { id: 'damaged_desc', name: 'Rusak' },
+                        ]}
+                    />
+                </div>
+
+                <span className="text-[9px] text-[var(--color-text-muted)] font-black opacity-50 shrink-0">
+                    {filtered.length}/{roomItems.length}
+                </span>
+            </div>
+
+            {/* Table */}
+            <div className="px-4 py-4">
+                {filtered.length === 0 ? (
+                    <EmptyState
+                        variant="dashed"
+                        icon={ClipboardList}
+                        color="indigo"
+                        title={roomItems.length === 0 ? 'Belum Ada Inventaris' : 'Tidak Ditemukan'}
+                        description={
+                            roomItems.length === 0
+                                ? 'Klik "+ Tambah Item" untuk menambahkan fasilitas kamar ini.'
+                                : 'Tidak ada item yang cocok dengan pencarian atau filter saat ini.'
+                        }
+                    />
+                ) : (
+                    <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden">
+                        <table className="w-full text-left table-fixed border-separate border-spacing-0">
+                            <thead className="bg-[var(--color-surface-alt)]/60 border-b border-[var(--color-border)]">
+                                <tr>
+                                    <th className="pl-4 pr-2 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[50%]">Nama Item</th>
+                                    <th className="px-2 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[20%]">Total</th>
+                                    <th className="px-2 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[20%]">Kondisi</th>
+                                    <th className="px-2 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[15%]">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[var(--color-border)]">
+                                {filtered.map(item => (
+                                    <tr key={item.id} className="hover:bg-[var(--color-surface-alt)]/25 transition-colors">
+                                        {/* Nama Item */}
+                                        <td className="pl-4 pr-2 py-3.5 text-left">
+                                            <p className="text-[12px] font-black text-[var(--color-text)]">{item.item_name}</p>
+                                            {item.notes && <p className="text-[9px] text-[var(--color-text-muted)] opacity-60 mt-0.5">{item.notes}</p>}
+                                        </td>
+
+                                        {/* Total — angka saja */}
+                                        <td className="px-2 py-3.5 text-center">
+                                            <p className="text-[13px] font-black text-[var(--color-text)]">{item.total_quantity} Buah</p>
+                                        </td>
+
+                                        {/* Kondisi — angka real baik & rusak */}
+                                        <td className="px-2 py-3.5 text-center">
+                                            <div className="flex items-center justify-center gap-2.5">
+                                                <span className="flex items-center gap-1 text-[11px] font-black text-emerald-600">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                                    {item.good_condition_count}
+                                                </span>
+                                                <span className="text-[var(--color-border)]">|</span>
+                                                <span className={`flex items-center gap-1 text-[11px] font-black ${item.damaged_condition_count > 0 ? 'text-rose-500' : 'text-[var(--color-text-muted)] opacity-30'}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.damaged_condition_count > 0 ? 'bg-rose-500' : 'bg-[var(--color-border)]'}`} />
+                                                    {item.damaged_condition_count}
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        {/* Aksi */}
+                                        <td className="px-2 py-3.5 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <button
+                                                    onClick={() => {
+                                                        setPendingInventoryDorm(inventoryModalDorm)
+                                                        setSelectedDormForInventory(inventoryModalDorm?.id)
+                                                        setEditingInventoryItem(item)
+                                                        setNewInventoryItem({
+                                                            item_name: item.item_name,
+                                                            total_quantity: item.total_quantity,
+                                                            good_condition_count: item.good_condition_count,
+                                                            damaged_condition_count: item.damaged_condition_count,
+                                                            notes: item.notes || ''
+                                                        })
+                                                        setInventoryModalDorm(null)
+                                                        setIsInventoryModalOpen(true)
+                                                    }}
+                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => { setPendingInventoryDorm(inventoryModalDorm); setInventoryModalDorm(null); setInventoryToDelete(item); setIsConfirmDeleteInventoryOpen(true) }}
+                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// Helper: create/find a portal container div by ID
+function getPortalContainer(id) {
+    let el = document.getElementById(id)
+    if (!el) { el = document.createElement('div'); el.id = id; document.body.appendChild(el) }
+    return el
+}
+
+// Privacy mask helper
+function maskName(str) {
+    if (!str) return '—'
+    const parts = str.trim().split(' ')
+    return parts.map((p, i) => i === 0 ? p : p[0] + '***').join(' ')
+}
+
 export default function DormsPage() {
     const { addToast } = useToast()
-    const [activeTab, setActiveTab] = useState('plotting') // 'plotting' | 'kebersihan' | 'musyrif'
+    const [activeTab, setActiveTab] = useState('plotting') // 'plotting' | 'kebersihan' | 'musyrif' | 'inventori' | 'kelola_kamar'
+
+    // Header actions state
+    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
+    const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
+    const [headerMenuRect, setHeaderMenuRect] = useState(null)
+    const [headerMenuMounted, setHeaderMenuMounted] = useState(false)
+    const headerMenuBtnRef = useRef(null)
+
+    // Mount/unmount header dropdown with animation delay
+    useEffect(() => {
+        if (isHeaderMenuOpen) {
+            setHeaderMenuMounted(true)
+        } else {
+            const t = setTimeout(() => setHeaderMenuMounted(false), 200)
+            return () => clearTimeout(t)
+        }
+    }, [isHeaderMenuOpen])
+
+    // Close header menu on outside click
+    useEffect(() => {
+        if (!isHeaderMenuOpen) return
+        const handler = (e) => {
+            if (headerMenuBtnRef.current && !headerMenuBtnRef.current.contains(e.target) && !e.target.closest('#portal-dorm-header-menu')) {
+                setIsHeaderMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [isHeaderMenuOpen])
 
     // --- State variables ---
     const [students, setStudents] = useState([])
     const [classesList, setClassesList] = useState([])
+
+    // Export plotting CSV — declared after students to avoid TDZ
+    const handleExportCSV = useCallback(() => {
+        setIsHeaderMenuOpen(false)
+        try {
+            const rows = [['Nama Santri', 'Kelas', 'Kamar', 'Status']]
+            students.forEach(s => {
+                rows.push([
+                    s.name,
+                    s.classes?.name || '—',
+                    s.metadata?.kamar || '—',
+                    s.metadata?.kamar ? 'Terplot' : 'Belum Terplot'
+                ])
+            })
+            const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n')
+            const blob = new Blob([csv], { type: 'text/csv' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a'); a.href = url; a.download = 'plotting_kamar.csv'; a.click()
+            URL.revokeObjectURL(url)
+            addToast('Data plotting berhasil diekspor', 'success')
+        } catch { addToast('Gagal mengekspor data', 'error') }
+    }, [students, addToast])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
@@ -40,7 +288,10 @@ export default function DormsPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedClassFilter, setSelectedClassFilter] = useState('')
     const [selectedRoomTab, setSelectedRoomTab] = useState('All') // 'All' | 'Unassigned' | 'Fachruddin' | ...
+    const [selectedGenderFilter, setSelectedGenderFilter] = useState('') // '' | 'putra' | 'putri'
+    const [selectedBuildingFilter, setSelectedBuildingFilter] = useState('') // '' | 'Gedung A' | ...
     const [viewMode, setViewMode] = useState('cards') // 'cards' | 'table'
+    const [showAdvFilter, setShowAdvFilter] = useState(false)
 
     // Pagination states
     const [page, setPage] = useState(1)
@@ -51,6 +302,8 @@ export default function DormsPage() {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
     const [studentToAssign, setStudentToAssign] = useState(null)
     const [selectedTargetRoom, setSelectedTargetRoom] = useState('')
+    const [inventoryModalDorm, setInventoryModalDorm] = useState(null)
+    const [pendingInventoryDorm, setPendingInventoryDorm] = useState(null)
 
     // Eviction modal state
     const [isConfirmEvictOpen, setIsConfirmEvictOpen] = useState(false)
@@ -90,13 +343,32 @@ export default function DormsPage() {
     const [isDormModalOpen, setIsDormModalOpen] = useState(false)
     const [editingDorm, setEditingDorm] = useState(null)
     const [submittingDorm, setSubmittingDorm] = useState(false)
-    const [newDorm, setNewDorm] = useState({ id: '', ar: '', capacity: 30 })
+    const [newDorm, setNewDorm] = useState({ id: '', ar: '', capacity: 30, gender: '', building: '', status: 'active', musyrif_id: '' })
     const [isConfirmDeleteDormOpen, setIsConfirmDeleteDormOpen] = useState(false)
     const [dormToDelete, setDormToDelete] = useState(null)
     const [submittingDeleteDorm, setSubmittingDeleteDorm] = useState(false)
     const [isConfirmDeleteAuditOpen, setIsConfirmDeleteAuditOpen] = useState(false)
     const [auditToDelete, setAuditToDelete] = useState(null)
     const [submittingDeleteAudit, setSubmittingDeleteAudit] = useState(false)
+
+    // Musyrif (staff) list — for PJ Kamar assignment
+    const [musyrifList, setMusyrifList] = useState([])
+
+    // Inventory state
+    const [inventories, setInventories] = useState([]) // { dorm_id, items: [] }
+    const [loadingInventory, setLoadingInventory] = useState(false)
+    const [selectedDormForInventory, setSelectedDormForInventory] = useState('')
+    const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false)
+    const [editingInventoryItem, setEditingInventoryItem] = useState(null)
+    const [newInventoryItem, setNewInventoryItem] = useState({ item_name: '', total_quantity: 1, good_condition_count: 1, damaged_condition_count: 0, notes: '' })
+    const [submittingInventory, setSubmittingInventory] = useState(false)
+    const [isConfirmDeleteInventoryOpen, setIsConfirmDeleteInventoryOpen] = useState(false)
+    const [inventoryToDelete, setInventoryToDelete] = useState(null)
+
+    // Audit date filter
+    const [auditDateFrom, setAuditDateFrom] = useState('')
+    const [auditDateTo, setAuditDateTo] = useState('')
+    const [auditRoomFilter, setAuditRoomFilter] = useState('')
 
     const fetchDorms = async () => {
         try {
@@ -224,11 +496,46 @@ export default function DormsPage() {
             await fetchAudits()
             await fetchShiftLogs()
             await fetchMusyrifTasks()
+
+            // 5. Fetch musyrif list and inventories
+            await fetchMusyrifList()
+            await fetchInventories()
         } catch (err) {
             console.error('[DormsPage] Gagal mengambil data:', err.message)
             addToast('Gagal memuat data dari database', 'error')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchMusyrifList = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, name, role')
+                .order('name')
+            if (error) throw error
+            setMusyrifList(data || [])
+        } catch (err) {
+            console.warn('[DormsPage] Gagal memuat daftar musyrif:', err.message)
+            setMusyrifList([])
+        }
+    }
+
+    const fetchInventories = async () => {
+        try {
+            setLoadingInventory(true)
+            const { data, error } = await supabase
+                .from('dorm_inventories')
+                .select('*')
+                .order('dorm_id')
+            if (error) throw error
+            setInventories(data || [])
+        } catch (err) {
+            // Table may not exist yet \u2014 silent fallback
+            setInventories([])
+        } finally {
+            setLoadingInventory(false)
         }
     }
 
@@ -238,11 +545,11 @@ export default function DormsPage() {
 
     useEffect(() => {
         setPage(1)
-    }, [searchQuery, selectedClassFilter, selectedRoomTab])
+    }, [searchQuery, selectedClassFilter, selectedRoomTab, selectedGenderFilter, selectedBuildingFilter])
 
     useEffect(() => {
         setSelectedIds([])
-    }, [searchQuery, selectedClassFilter, selectedRoomTab, page])
+    }, [searchQuery, selectedClassFilter, selectedRoomTab, selectedGenderFilter, selectedBuildingFilter, page])
 
     // --- Room assignment functions ---
     const handleOpenAssignModal = (student) => {
@@ -410,11 +717,20 @@ export default function DormsPage() {
         if (!newDorm.id.trim()) return
         try {
             setSubmittingDorm(true)
+            const dormData = {
+                ar: newDorm.ar || null,
+                capacity: Number(newDorm.capacity),
+                gender: newDorm.gender || null,
+                building: newDorm.building || null,
+                status: newDorm.status || 'active',
+                musyrif_id: newDorm.musyrif_id || null
+            }
+
             if (editingDorm) {
                 // Update
                 const { error } = await supabase
                     .from('dorms')
-                    .update({ ar: newDorm.ar, capacity: Number(newDorm.capacity) })
+                    .update(dormData)
                     .eq('id', editingDorm.id)
                 if (error) throw error
                 addToast(`Kamar ${editingDorm.id} berhasil diperbarui`, 'success')
@@ -422,7 +738,7 @@ export default function DormsPage() {
                 // Create
                 const { error } = await supabase
                     .from('dorms')
-                    .insert([{ id: newDorm.id, ar: newDorm.ar, capacity: Number(newDorm.capacity) }])
+                    .insert([{ id: newDorm.id, ...dormData }])
                 if (error) throw error
                 addToast(`Kamar ${newDorm.id} berhasil ditambahkan`, 'success')
             }
@@ -568,6 +884,80 @@ export default function DormsPage() {
             setSubmittingDeleteAudit(false)
         }
     }
+    // --- Inventory CRUD Functions ---
+    const handleSaveInventoryItem = async (e) => {
+        e.preventDefault()
+        if (!newInventoryItem.item_name.trim() || !selectedDormForInventory) return
+        try {
+            setSubmittingInventory(true)
+            const payload = {
+                dorm_id: selectedDormForInventory,
+                item_name: newInventoryItem.item_name,
+                total_quantity: Number(newInventoryItem.total_quantity) || 1,
+                good_condition_count: Number(newInventoryItem.good_condition_count) || 0,
+                damaged_condition_count: Number(newInventoryItem.damaged_condition_count) || 0,
+                notes: newInventoryItem.notes || null,
+                last_checked_at: new Date().toISOString()
+            }
+            if (editingInventoryItem) {
+                const { error } = await supabase.from('dorm_inventories').update(payload).eq('id', editingInventoryItem.id)
+                if (error) throw error
+                addToast('Item inventaris berhasil diperbarui', 'success')
+            } else {
+                const { error } = await supabase.from('dorm_inventories').insert([payload])
+                if (error) throw error
+                addToast('Item inventaris berhasil ditambahkan', 'success')
+            }
+            setIsInventoryModalOpen(false)
+            setEditingInventoryItem(null)
+            setNewInventoryItem({ item_name: '', total_quantity: 1, good_condition_count: 1, damaged_condition_count: 0, notes: '' })
+            await fetchInventories()
+            if (pendingInventoryDorm) {
+                setInventoryModalDorm(pendingInventoryDorm)
+                setPendingInventoryDorm(null)
+            }
+        } catch (err) {
+            console.error('[DormsPage] Gagal menyimpan inventaris:', err.message)
+            addToast('Gagal menyimpan data inventaris. Pastikan tabel dorm_inventories sudah dibuat.', 'error')
+        } finally {
+            setSubmittingInventory(false)
+        }
+    }
+
+    const handleConfirmDeleteInventory = async () => {
+        if (!inventoryToDelete) return
+        try {
+            const { error } = await supabase.from('dorm_inventories').delete().eq('id', inventoryToDelete.id)
+            if (error) throw error
+            addToast('Item inventaris berhasil dihapus', 'success')
+            setIsConfirmDeleteInventoryOpen(false)
+            setInventoryToDelete(null)
+            await fetchInventories()
+            if (pendingInventoryDorm) {
+                setInventoryModalDorm(pendingInventoryDorm)
+                setPendingInventoryDorm(null)
+            }
+        } catch (err) {
+            console.error('[DormsPage] Gagal menghapus inventaris:', err.message)
+            addToast('Gagal menghapus item inventaris', 'error')
+        }
+    }
+
+    // --- Musyrif ID Assignment (PJ Kamar) ---
+    const handleSaveMusyrifId = async (dormId, musyrifId) => {
+        try {
+            const { error } = await supabase
+                .from('dorms')
+                .update({ musyrif_id: musyrifId || null })
+                .eq('id', dormId)
+            if (error) throw error
+            addToast(`PJ Kamar ${dormId} berhasil diperbarui`, 'success')
+            await fetchDorms()
+        } catch (err) {
+            console.error('[DormsPage] Gagal update musyrif_id:', err.message)
+            addToast('Gagal menetapkan PJ Kamar', 'error')
+        }
+    }
 
     // --- Musyrif Task Functions ---
     const toggleTask = async (taskId) => {
@@ -698,6 +1088,39 @@ export default function DormsPage() {
         return mapping
     }, [students, dorms])
 
+    const activeFilters = useMemo(() => {
+        const list = []
+        if (selectedClassFilter) {
+            const cls = classesList.find(c => c.id === selectedClassFilter)
+            list.push({
+                label: `Kelas: ${cls?.name || selectedClassFilter}`,
+                clear: () => { setSelectedClassFilter(''); setPage(1); }
+            })
+        }
+        if (selectedRoomTab && selectedRoomTab !== 'All') {
+            let label = `Kamar: ${selectedRoomTab}`
+            if (selectedRoomTab === 'Assigned') label = 'Status: Sudah Diplot'
+            if (selectedRoomTab === 'Unassigned') label = 'Status: Belum Diplot'
+            list.push({
+                label,
+                clear: () => { setSelectedRoomTab('All'); setPage(1); }
+            })
+        }
+        if (selectedGenderFilter) {
+            list.push({
+                label: `Kelamin: ${selectedGenderFilter === 'putra' ? 'Putra' : 'Putri'}`,
+                clear: () => { setSelectedGenderFilter(''); setPage(1); }
+            })
+        }
+        if (selectedBuildingFilter) {
+            list.push({
+                label: `Gedung: ${selectedBuildingFilter}`,
+                clear: () => { setSelectedBuildingFilter(''); setPage(1); }
+            })
+        }
+        return list
+    }, [selectedClassFilter, selectedRoomTab, selectedGenderFilter, selectedBuildingFilter, classesList])
+
     // Filtered students list for room listing
     const filteredStudents = useMemo(() => {
         return students.filter(s => {
@@ -708,19 +1131,49 @@ export default function DormsPage() {
             let matchRoomTab = true
             if (selectedRoomTab === 'Unassigned') {
                 matchRoomTab = !roomVal
+            } else if (selectedRoomTab === 'Assigned') {
+                matchRoomTab = !!roomVal
             } else if (selectedRoomTab !== 'All') {
                 matchRoomTab = roomVal === selectedRoomTab
             }
 
-            return matchSearch && matchClass && matchRoomTab
+            let matchGender = true
+            if (selectedGenderFilter) {
+                const dormOfStudent = dorms.find(d => d.id === roomVal)
+                matchGender = dormOfStudent?.gender === selectedGenderFilter
+            }
+
+            let matchBuilding = true
+            if (selectedBuildingFilter) {
+                const dormOfStudent = dorms.find(d => d.id === roomVal)
+                matchBuilding = dormOfStudent?.building === selectedBuildingFilter
+            }
+
+            return matchSearch && matchClass && matchRoomTab && matchGender && matchBuilding
         })
-    }, [students, searchQuery, selectedClassFilter, selectedRoomTab])
+    }, [students, searchQuery, selectedClassFilter, selectedRoomTab, selectedGenderFilter, selectedBuildingFilter, dorms])
 
     // Sliced and paginated students list
     const paginatedStudents = useMemo(() => {
         const startIndex = (page - 1) * pageSize
         return filteredStudents.slice(startIndex, startIndex + pageSize)
     }, [filteredStudents, page, pageSize])
+
+    // Filtered audits for Kontrol Kebersihan tab
+    const filteredAudits = useMemo(() => {
+        return audits.filter(a => {
+            const matchRoom = auditRoomFilter ? a.room === auditRoomFilter : true
+            const matchFrom = auditDateFrom ? a.date >= auditDateFrom : true
+            const matchTo = auditDateTo ? a.date <= auditDateTo : true
+            return matchRoom && matchFrom && matchTo
+        })
+    }, [audits, auditRoomFilter, auditDateFrom, auditDateTo])
+
+    // Computed unique building list from dorms (for filter dropdown)
+    const buildingOptions = useMemo(() => {
+        const buildings = dorms.map(d => d.building).filter(Boolean)
+        return [...new Set(buildings)]
+    }, [dorms])
 
     const allSelected = paginatedStudents.length > 0 && paginatedStudents.every(s => selectedIds.includes(s.id))
 
@@ -748,14 +1201,86 @@ export default function DormsPage() {
                     badge="Kesantrian"
                     breadcrumbs={['Manajemen Asrama']}
                     title="Manajemen Asrama"
-                    subtitle="Plotting kamar santri, kontrol kebersihan berkala, dan monitoring tugas harian Musyrif."
+                    subtitle="Plotting kamar santri, audit kebersihan, dan jurnal Musyrif."
+                    actions={
+                        <>
+                            {/* Dropdown: Opsi Ekspor */}
+                            <div className="relative">
+                                <button
+                                    ref={headerMenuBtnRef}
+                                    onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                                    className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${
+                                        isHeaderMenuOpen
+                                            ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
+                                            : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'
+                                    }`}
+                                    title="Opsi Data"
+                                >
+                                    <Sliders className="w-4 h-4" />
+                                </button>
+
+                                {headerMenuMounted && headerMenuRect && createPortal(
+                                    <>
+                                        <div
+                                            className={`fixed inset-0 z-[9990] bg-black/[0.08] transition-opacity duration-200 ${isHeaderMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+                                            onClick={() => setIsHeaderMenuOpen(false)}
+                                        />
+                                        <div
+                                            className={`fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-[opacity,transform] duration-200 ease-out origin-top-right ${
+                                                isHeaderMenuOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
+                                            }`}
+                                            style={{ top: headerMenuRect.bottom + 8, left: Math.max(10, headerMenuRect.right - 224) }}
+                                        >
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Opsi Data</p>
+                                            <button
+                                                onClick={handleExportCSV}
+                                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
+                                            >
+                                                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <Download className="w-4 h-4" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-[11px] font-black leading-tight">Ekspor Plotting</p>
+                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">csv</p>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </>,
+                                    getPortalContainer('portal-dorm-header-menu')
+                                )}
+                            </div>
+
+                            {/* Privasi */}
+                            <button
+                                onClick={() => setIsPrivacyMode(v => !v)}
+                                className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${
+                                    isPrivacyMode
+                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
+                                        : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                                }`}
+                                title={isPrivacyMode ? 'Nonaktifkan Mode Privasi' : 'Aktifkan Mode Privasi'}
+                            >
+                                {isPrivacyMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Privasi</span>
+                            </button>
+
+                            {/* Primary: Assign Santri */}
+                            <button
+                                onClick={() => { setSelectedTargetRoom(''); setStudentToAssign(null); setIsAssignModalOpen(true) }}
+                                className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 border border-white/10"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Assign Santri</span>
+                            </button>
+                        </>
+                    }
                 />
 
                 {/* --- STATS CAROUSEL / STAT CARDS --- */}
                 <StatsCarousel count={4} className="mb-5">
                     <StatCard
-                        onClick={() => { setActiveTab('plotting'); setSelectedRoomTab('All'); }}
-                        className={`${activeTab === 'plotting' && selectedRoomTab === 'All' ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/10 shadow-md' : 'border-transparent'}`}
+                        onClick={() => { setActiveTab('plotting'); setSelectedRoomTab('Assigned'); }}
+                        className={`${activeTab === 'plotting' && selectedRoomTab !== 'Unassigned' ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/10 shadow-md' : 'border-transparent'}`}
                         icon={Bed}
                         label="Plotting Kamar"
                         value={stats.assignedCount}
@@ -795,34 +1320,38 @@ export default function DormsPage() {
                 </StatsCarousel>
 
                 {/* --- NAVIGATION TABS --- */}
-                <div className="flex gap-1.5 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-fit overflow-x-auto scrollbar-hide">
+                <div className="grid grid-cols-4 sm:flex gap-1 sm:gap-1.5 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full sm:w-fit shrink-0">
                     <button
                         onClick={() => setActiveTab('plotting')}
-                        className={`h-9 px-4 sm:px-6 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'plotting' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'plotting' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
-                        <Bed className="w-3.5 h-3.5" />
-                        Plotting Kamar
+                        <Bed className="w-3.5 h-3.5 shrink-0" />
+                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Plotting</span>
+                        <span className="hidden sm:inline">Plotting Kamar</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('kebersihan')}
-                        className={`h-9 px-4 sm:px-6 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'kebersihan' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kebersihan' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
-                        <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                        Kontrol Kebersihan
+                        <Sparkles className="w-3.5 h-3.5 animate-pulse shrink-0" />
+                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Kebersihan</span>
+                        <span className="hidden sm:inline">Kontrol Kebersihan</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('musyrif')}
-                        className={`h-9 px-4 sm:px-6 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'musyrif' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'musyrif' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
-                        <CheckSquare className="w-3.5 h-3.5" />
-                        Tugas Musyrif
+                        <CheckSquare className="w-3.5 h-3.5 shrink-0" />
+                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Musyrif</span>
+                        <span className="hidden sm:inline">Tugas Musyrif</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('kelola_kamar')}
-                        className={`h-9 px-4 sm:px-6 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'kelola_kamar' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kelola_kamar' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
-                        <ShieldAlert className="w-3.5 h-3.5" />
-                        Kelola Kamar
+                        <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Kelola</span>
+                        <span className="hidden sm:inline">Kelola Kamar</span>
                     </button>
                 </div>
 
@@ -831,108 +1360,246 @@ export default function DormsPage() {
                 {/* ======================================================== */}
                 {activeTab === 'plotting' && (
                     <div className="space-y-5 animate-in fade-in duration-300">
-                        {/* Summary Rooms Cards (Horizontally Scrollable Carousel) */}
-                        <div className="flex gap-3.5 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory -mx-4 px-4 sm:-mx-6 sm:px-6">
-                            {dorms.map(room => {
-                                const assigned = studentsByRoom[room.id] || []
-                                const count = assigned.length
-                                const maxCapacity = room.capacity || 30
-                                return (
-                                    <div
-                                        key={room.id}
-                                        onClick={() => setSelectedRoomTab(room.id)}
-                                        className={`glass rounded-2xl p-4 border transition-all duration-300 cursor-pointer flex flex-col justify-between h-[115px] min-w-[165px] sm:min-w-[185px] flex-shrink-0 snap-start group ${selectedRoomTab === room.id ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-md shadow-[var(--color-primary)]/5' : 'hover:scale-[1.01] hover:border-[var(--color-border-hover)]'}`}
-                                    >
-                                        <div>
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-[12px] font-black text-[var(--color-text)] leading-none">{room.id}</p>
-                                                <Bed className={`w-4 h-4 transition-transform group-hover:scale-110 ${selectedRoomTab === room.id ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] opacity-40'}`} />
-                                            </div>
-                                            <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1.5" dir="rtl">{room.ar}</p>
+                        {/* ── SEARCH & FILTER BAR (Standardized from BehaviorPage) ── */}
+                        <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
+                            {/* Row 1: Search + Quick Filters + Action Buttons */}
+                            <div className="flex items-center gap-1.5 p-2 xs:gap-2 xs:p-2.5 lg:p-3">
+                                {/* Search Bar - Dynamic & Responsive */}
+                                <div className="flex-1 min-w-[80px] sm:min-w-[140px] transition-all duration-300">
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm group-focus-within:text-[var(--color-primary)] transition-colors">
+                                            <Search className="w-4 h-4" />
                                         </div>
-                                        <div>
-                                            <div className="w-full bg-[var(--color-surface-alt)] h-1.5 rounded-full overflow-hidden mb-2">
-                                                <div className="bg-[var(--color-primary)] h-full transition-all duration-500" style={{ width: `${Math.min((count / maxCapacity) * 100, 100)}%` }} />
-                                            </div>
-                                            <div className="flex items-center justify-between text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-wider leading-none">
-                                                <span>Kapasitas</span>
-                                                <span className={count >= maxCapacity ? 'text-amber-600' : 'text-[var(--color-primary)]'}>{count} / {maxCapacity}</span>
-                                            </div>
-                                        </div>
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                                            placeholder="Cari nama santri..."
+                                            className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-[var(--color-surface-alt)]/50 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all rounded-xl font-bold placeholder:font-normal placeholder:opacity-40 outline-none"
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                onClick={() => { setSearchQuery(''); setPage(1); }}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] transition-all"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
                                     </div>
-                                )
-                            })}
-                        </div>
-
-                        {/* ── CARD 1: SEARCH & FILTER BAR ── */}
-                        <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden mb-4 p-3 bg-[var(--color-surface-alt)]/10">
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                                {/* Left: Search input */}
-                                <div className="relative flex-1 min-w-[200px]">
-                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)] opacity-60 pointer-events-none" />
-                                    <input
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-                                        placeholder="Cari nama santri..."
-                                        className="w-full h-10 pl-9.5 pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition"
-                                    />
-                                    {searchQuery && (
-                                        <button onClick={() => { setSearchQuery(''); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    )}
                                 </div>
 
-                                {/* Right: Filters & Switcher */}
-                                <div className="flex flex-wrap items-center gap-3 shrink-0">
-                                    {/* Class Selector Dropdown */}
-                                    <div className="w-[165px]">
-                                        <RichSelect
-                                            value={selectedClassFilter}
-                                            onChange={(val) => { setSelectedClassFilter(val); setPage(1); }}
-                                            options={[
-                                                { id: '', name: 'Semua Kelas' },
-                                                ...classesList.map(c => ({ id: c.id, name: c.name }))
-                                            ]}
-                                            placeholder="Semua Kelas"
-                                            icon={faGraduationCap}
-                                        />
-                                    </div>
+                                {/* Quick Filter Chips - Desktop Only */}
+                                <div className="hidden lg:flex flex-initial items-center gap-2 overflow-x-auto scrollbar-hide py-0.5 min-w-0 h-full">
+                                    <div className="h-4 w-px bg-[var(--color-border)] mx-1" />
 
-                                    {/* Quick Room filter tabs */}
-                                    <div className="flex gap-1 p-1 h-10 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] items-center shrink-0">
-                                        <button
-                                            onClick={() => { setSelectedRoomTab('All'); setPage(1); }}
-                                            className={`h-full px-3.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center ${selectedRoomTab === 'All' ? 'bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                        >
-                                            Semua
-                                        </button>
-                                        <button
-                                            onClick={() => { setSelectedRoomTab('Unassigned'); setPage(1); }}
-                                            className={`h-full px-3.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center ${selectedRoomTab === 'Unassigned' ? 'bg-[var(--color-surface)] text-amber-500 shadow-sm' : 'text-[var(--color-text-muted)] hover:text-amber-500'}`}
-                                        >
-                                            Kosong
-                                        </button>
+                                    {/* Group 1: Status Plotting */}
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        {[
+                                            { id: 'All', label: 'Semua', icon: Users, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },
+                                            { id: 'Assigned', label: 'Sudah Diplot', icon: CheckCircle2, activeCls: 'bg-emerald-500 border-emerald-500' },
+                                            { id: 'Unassigned', label: 'Belum Diplot', icon: AlertCircle, activeCls: 'bg-amber-500 border-amber-500' },
+                                        ].map((s) => {
+                                            const isActive = selectedRoomTab === s.id || (s.id === 'Assigned' && selectedRoomTab !== 'All' && selectedRoomTab !== 'Unassigned' && selectedRoomTab !== '')
+                                            return (
+                                                <button
+                                                    key={s.id}
+                                                    onClick={() => {
+                                                        if (s.id === 'Assigned') {
+                                                            setSelectedRoomTab('Assigned')
+                                                        } else {
+                                                            setSelectedRoomTab(s.id);
+                                                        }
+                                                        setPage(1);
+                                                    }}
+                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${isActive
+                                                        ? `${s.activeCls} text-white`
+                                                        : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]'
+                                                        }`}
+                                                >
+                                                    <s.icon className={`w-3.5 h-3.5 ${isActive ? 'opacity-100' : 'opacity-30'}`} />
+                                                    {s.label}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
+                                </div>
 
+                                {/* Divider */}
+                                <div className="hidden lg:block w-px h-4 bg-[var(--color-border)] mx-2 shrink-0" />
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center justify-end gap-1.5 xs:gap-2 shrink-0 lg:ml-auto">
                                     {/* View Switcher (Cards vs Tabel) */}
-                                    <div className="bg-[var(--color-surface-alt)] p-1 h-10 rounded-xl border border-[var(--color-border)] flex gap-1 items-center shrink-0">
-                                        <button onClick={() => setViewMode('cards')}
+                                    <div className="bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)] flex gap-0.5 items-center shrink-0">
+                                        <button
+                                            onClick={() => setViewMode('cards')}
                                             title="Kartu"
-                                            className={`h-full px-3.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'cards' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                            className={`h-7 px-2.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'cards' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                        >
                                             <LayoutGrid className="w-3.5 h-3.5" />
                                             <span className="hidden sm:inline">Kartu</span>
                                         </button>
-                                        <button onClick={() => setViewMode('table')}
+                                        <button
+                                            onClick={() => setViewMode('table')}
                                             title="Tabel"
-                                            className={`h-full px-3.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                            className={`h-7 px-2.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                                        >
                                             <Table className="w-3.5 h-3.5" />
                                             <span className="hidden sm:inline">Tabel</span>
                                         </button>
                                     </div>
+
+                                    {/* Pilih Semua / Batal */}
+                                    <button
+                                        onClick={toggleAll}
+                                        className={`h-9 px-2.5 xs:px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white shadow-md shadow-indigo-500/20' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
+                                        title={selectedIds.length > 0 ? 'Batalkan Pilihan' : 'Pilih Semua'}
+                                    >
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span className="hidden sm:inline">{selectedIds.length > 0 ? 'Terpilih' : 'Pilih Semua'}</span>
+                                        {selectedIds.length > 0 && (
+                                            <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">
+                                                {selectedIds.length}
+                                            </span>
+                                        )}
+                                    </button>
+
+                                    {/* Advanced Filter Sliders */}
+                                    <button
+                                        onClick={() => setShowAdvFilter(v => !v)}
+                                        className={`h-9 px-2.5 xs:px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${showAdvFilter || activeFilters.length > 0
+                                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30'
+                                            : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                                        title="Filter Lanjutan"
+                                    >
+                                        <Sliders className="w-3.5 h-3.5" />
+                                        <span className="hidden sm:inline">Filter</span>
+                                        {activeFilters.length > 0 && (
+                                            <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
+                                                {activeFilters.length}
+                                            </span>
+                                        )}
+                                    </button>
                                 </div>
                             </div>
+
+                            {/* Active Filter Chips */}
+                            {activeFilters.length > 0 && (
+                                <div className="px-3 pb-3 -mt-1 flex flex-wrap gap-2">
+                                    {activeFilters.map((f, i) => (
+                                        <button key={i} type="button" onClick={f.clear}
+                                            className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus Filter">
+                                            {f.label}
+                                            <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
+                                                <X className="w-3.5 h-3.5" />
+                                            </span>
+                                        </button>
+                                    ))}
+                                    <button type="button"
+                                        onClick={() => {
+                                            setSelectedClassFilter('');
+                                            setSelectedRoomTab('All');
+                                            setPage(1);
+                                        }}
+                                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title="Reset Semua Filter">
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        <span>Reset Filter</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Row 2: Advanced Filter Panel */}
+                            {showAdvFilter && (
+                                <div className="border-t border-[var(--color-border)] p-3.5 bg-[var(--color-surface-alt)]/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+                                    {/* Header Panel with Standardized "Vertical Bar" Pattern */}
+                                    <div className="flex items-center justify-between mb-3.5">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-1 h-3.5 bg-[var(--color-primary)] rounded-full" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-primary)] flex items-center gap-2">
+                                                <Sliders className="w-3 h-3 opacity-60" />
+                                                <span className="sm:hidden">Filter</span>
+                                                <span className="hidden sm:inline">Filter Lanjutan</span>
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedClassFilter('');
+                                                setSelectedRoomTab('All');
+                                                setSelectedGenderFilter('');
+                                                setPage(1);
+                                            }}
+                                            className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/5 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-500/10"
+                                        >
+                                            <RotateCcw className="w-3 h-3" />
+                                            <span>Reset Filter</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <div>
+                                            <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Kelas</label>
+                                            <RichSelect
+                                                value={selectedClassFilter}
+                                                onChange={(val) => { setSelectedClassFilter(val); setPage(1); }}
+                                                options={[
+                                                    { id: '', name: 'Semua Kelas' },
+                                                    ...classesList.map(c => ({ id: c.id, name: c.name }))
+                                                ]}
+                                                placeholder="Semua Kelas"
+                                                small
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Kamar</label>
+                                            <RichSelect
+                                                value={selectedRoomTab}
+                                                onChange={(val) => { setSelectedRoomTab(val); setPage(1); }}
+                                                options={[
+                                                    { id: 'All', name: 'Semua Kamar' },
+                                                    { id: 'Assigned', name: 'Sudah Diplot' },
+                                                    { id: 'Unassigned', name: 'Belum Diplot' },
+                                                    ...dorms.map(d => ({ id: d.id, name: d.id }))
+                                                ]}
+                                                placeholder="Semua Kamar"
+                                                small
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Jenis Kelamin</label>
+                                            <RichSelect
+                                                value={selectedGenderFilter}
+                                                onChange={(val) => { setSelectedGenderFilter(val); setPage(1); }}
+                                                options={[
+                                                    { id: '', name: 'Semua' },
+                                                    { id: 'putra', name: 'Putra' },
+                                                    { id: 'putri', name: 'Putri' },
+                                                ]}
+                                                placeholder="Semua"
+                                                small
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Gedung / Blok</label>
+                                            <RichSelect
+                                                value={selectedBuildingFilter}
+                                                onChange={(val) => { setSelectedBuildingFilter(val); setPage(1); }}
+                                                options={[
+                                                    { id: '', name: 'Semua Gedung' },
+                                                    ...buildingOptions.map(b => ({ id: b, name: b }))
+                                                ]}
+                                                placeholder="Semua Gedung"
+                                                small
+                                            />
+                                        </div>
+                                        <div className="flex items-end justify-end">
+                                            <button onClick={() => setShowAdvFilter(false)}
+                                                className="h-9 px-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
+                                                Tutup Panel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* ── CARD 2: DATA CONTAINER ── */}
@@ -958,6 +1625,7 @@ export default function DormsPage() {
                                                     setSearchQuery('')
                                                     setSelectedClassFilter('')
                                                     setSelectedRoomTab('All')
+                                                    setSelectedGenderFilter('')
                                                     setPage(1)
                                                 }}
                                                 className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
@@ -984,7 +1652,7 @@ export default function DormsPage() {
                                                                 <User className="w-4.5 h-4.5" />
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <p className="text-[12px] font-black text-[var(--color-text)] truncate">{student.name}</p>
+                                                                <p className="text-[12px] font-black text-[var(--color-text)] truncate">{isPrivacyMode ? maskName(student.name) : student.name}</p>
                                                                 <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">{student.classes?.name || 'Kelas —'}</p>
                                                             </div>
                                                         </div>
@@ -998,24 +1666,38 @@ export default function DormsPage() {
 
                                                     <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-3 mt-1">
                                                         <div>
-                                                            <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Kamar Saat Ini</p>
-                                                            <p className={`text-[11px] font-black mt-0.5 ${room ? 'text-indigo-600' : 'text-amber-500'}`}>
-                                                                {room || 'Belum Diplot'}
-                                                            </p>
+                                                            <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Kamar & Okupansi</p>
+                                                            {room ? (
+                                                                (() => {
+                                                                    const roomDetails = dorms.find(d => d.id === room)
+                                                                    const cap = roomDetails?.capacity || 30
+                                                                    const occupiedCount = students.filter(s => s.metadata?.kamar === room).length
+                                                                    return (
+                                                                        <p className="text-[11px] font-black mt-0.5 text-indigo-600 flex items-center gap-1">
+                                                                            <span>{room}</span>
+                                                                            <span className="text-[9px] text-[var(--color-text-muted)] font-black opacity-60">({occupiedCount}/{cap})</span>
+                                                                        </p>
+                                                                    )
+                                                                })()
+                                                            ) : (
+                                                                <p className="text-[11px] font-black mt-0.5 text-amber-500">
+                                                                    Belum Diplot
+                                                                </p>
+                                                            )}
                                                         </div>
                                                         <div className="flex items-center gap-1.5">
                                                             {room && (
                                                                 <button
                                                                     onClick={() => handleOpenEvictModal(student)}
                                                                     title="Keluarkan dari Kamar"
-                                                                    className="w-8 h-8 rounded-xl bg-red-500/5 hover:bg-red-500/10 text-red-500 flex items-center justify-center transition border border-red-500/10"
+                                                                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/5 active:scale-95 transition-all"
                                                                 >
                                                                     <UserMinus className="w-3.5 h-3.5" />
                                                                 </button>
                                                             )}
                                                             <button
                                                                 onClick={() => handleOpenAssignModal(student)}
-                                                                className="h-8 px-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] hover:bg-[var(--color-surface-alt)]/80 text-[10px] font-black uppercase tracking-widest text-[var(--color-text)] flex items-center gap-1.5 transition"
+                                                                className="h-8 px-3.5 flex items-center gap-1.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 active:scale-95 transition-all"
                                                             >
                                                                 <ArrowRightLeft className="w-3 h-3" />
                                                                 Plotting
@@ -1029,7 +1711,7 @@ export default function DormsPage() {
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
+                                    <table className="w-full text-left border-collapse min-w-[750px]">
                                         <thead className="bg-[var(--color-surface-alt)]/60 border-b border-[var(--color-border)]">
                                             <tr>
                                                 <th className="px-5 py-3.5 w-12 text-center">
@@ -1040,9 +1722,9 @@ export default function DormsPage() {
                                                         className="w-4 h-4 rounded border-[var(--color-border)] cursor-pointer accent-[var(--color-primary)]"
                                                     />
                                                 </th>
-                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Santri</th>
-                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kelas</th>
-                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kamar Saat Ini</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[35%]">Santri</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[20%]">Status</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[30%]">Kamar & Okupansi</th>
                                                 <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-36">Aksi</th>
                                             </tr>
                                         </thead>
@@ -1066,49 +1748,71 @@ export default function DormsPage() {
                                                                     {student.name[0].toUpperCase()}
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-sm font-black text-[var(--color-text)] leading-tight">{student.name}</p>
+                                                                    <p className="text-sm font-black text-[var(--color-text)] leading-tight whitespace-nowrap">{isPrivacyMode ? maskName(student.name) : student.name}</p>
+                                                                    <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-50 mt-0.5">{student.classes?.name || 'Kelas —'}</p>
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-5 py-3.5 text-xs font-bold text-[var(--color-text)]">
-                                                            {student.classes?.name || '—'}
-                                                        </td>
                                                         <td className="px-5 py-3.5">
                                                             {room ? (
-                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
-                                                                    <Bed className="w-3.5 h-3.5" />
-                                                                    {room}
+                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/25">
+                                                                    Terplot
                                                                 </span>
                                                             ) : (
-                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 border border-dashed border-amber-500/30">
-                                                                    Belum Diplot
+                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-dashed border-amber-500/25">
+                                                                    Belum Terplot
                                                                 </span>
                                                             )}
                                                         </td>
+                                                        <td className="px-5 py-3.5">
+                                                            {(() => {
+                                                                if (!room) {
+                                                                    return (
+                                                                        <span className="text-xs font-bold text-[var(--color-text-muted)]/50">—</span>
+                                                                    )
+                                                                }
+                                                                const roomDetails = dorms.find(d => d.id === room)
+                                                                const cap = roomDetails?.capacity || 30
+                                                                const occupiedCount = students.filter(s => s.metadata?.kamar === room).length
+                                                                return (
+                                                                    <div className="flex flex-col gap-0.5">
+                                                                        <span className="text-xs font-black text-indigo-600 flex items-center gap-1.5">
+                                                                            <Bed className="w-3.5 h-3.5 opacity-70" />
+                                                                            {room}
+                                                                        </span>
+                                                                        <span className="text-[10px] text-[var(--color-text-muted)] font-black opacity-60">
+                                                                            {occupiedCount} / {cap} Terisi
+                                                                        </span>
+                                                                    </div>
+                                                                )
+                                                            })()}
+                                                        </td>
                                                         <td className="px-5 py-3.5 text-center">
-                                                            <button
-                                                                onClick={() => handleOpenAssignModal(student)}
-                                                                title="Plotting Kamar"
-                                                                className="w-8 h-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] hover:bg-[var(--color-surface-alt)]/80 text-[var(--color-text)] inline-flex items-center justify-center flex-shrink-0 transition"
-                                                            >
-                                                                <ArrowRightLeft className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            {room ? (
+                                                            <div className="flex items-center justify-center gap-1">
                                                                 <button
-                                                                    onClick={() => handleOpenEvictModal(student)}
-                                                                    title="Keluarkan dari Kamar"
-                                                                    className="w-8 h-8 rounded-xl bg-red-500/5 hover:bg-red-500/10 text-red-500 inline-flex items-center justify-center flex-shrink-0 transition border border-red-500/10 ml-2"
+                                                                    onClick={() => handleOpenAssignModal(student)}
+                                                                    title="Plotting Kamar"
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all"
                                                                 >
-                                                                    <UserMinus className="w-3.5 h-3.5" />
+                                                                    <ArrowRightLeft className="w-3.5 h-3.5" />
                                                                 </button>
-                                                            ) : (
-                                                                <button
-                                                                    disabled
-                                                                    className="w-8 h-8 rounded-xl opacity-0 pointer-events-none flex-shrink-0 inline-flex items-center justify-center border border-transparent ml-2"
-                                                                >
-                                                                    <UserMinus className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            )}
+                                                                {room ? (
+                                                                    <button
+                                                                        onClick={() => handleOpenEvictModal(student)}
+                                                                        title="Keluarkan dari Kamar"
+                                                                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all"
+                                                                    >
+                                                                        <UserMinus className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        disabled
+                                                                        className="w-7 h-7 rounded-lg opacity-0 pointer-events-none flex-shrink-0 inline-flex items-center justify-center"
+                                                                    >
+                                                                        <UserMinus className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 )
@@ -1166,7 +1870,7 @@ export default function DormsPage() {
                         {/* Room Rating Cleanliness Scorecard */}
                         <div className="lg:col-span-2 space-y-4">
                             <div className="glass rounded-[1.5rem] p-5">
-                                <div className="flex items-center justify-between mb-5">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                                     <div>
                                         <p className="text-[13px] font-black text-[var(--color-text)]">Jurnal Penilaian Kebersihan</p>
                                         <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Riwayat skor kebersihan dan kerapian kamar mingguan.</p>
@@ -1180,14 +1884,63 @@ export default function DormsPage() {
                                     </button>
                                 </div>
 
+                                {/* Filter Bar */}
+                                <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl bg-[var(--color-surface-alt)]/40 border border-[var(--color-border)]">
+
+                                    {/* Room Filter — RichSelect compact */}
+                                    <div className="flex-1 min-w-[110px]">
+                                        <RichSelect
+                                            icon={Bed}
+                                            value={auditRoomFilter}
+                                            onChange={setAuditRoomFilter}
+                                            placeholder="Semua Kamar"
+                                            options={dorms.map(d => ({ id: d.id, name: d.id }))}
+                                            extraOption={{ id: '', name: 'Semua Kamar' }}
+                                        />
+                                    </div>
+
+                                    {/* Date Range — RichDatePicker */}
+                                    <div className="flex items-center gap-1.5">
+                                        <RichDatePicker
+                                            compact
+                                            value={auditDateFrom}
+                                            onChange={setAuditDateFrom}
+                                            clearable={false}
+                                            className="w-[190px]"
+                                        />
+                                        <span className="text-[10px] text-[var(--color-text-muted)] font-black">s/d</span>
+                                        <RichDatePicker
+                                            compact
+                                            value={auditDateTo}
+                                            onChange={setAuditDateTo}
+                                            clearable={false}
+                                            className="w-[190px]"
+                                        />
+                                    </div>
+
+                                    {/* Reset Button */}
+                                    {(auditRoomFilter || auditDateFrom || auditDateTo) && (
+                                        <button
+                                            onClick={() => { setAuditRoomFilter(''); setAuditDateFrom(''); setAuditDateTo(''); }}
+                                            className="h-8 px-2.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/10 transition flex items-center gap-1.5"
+                                        >
+                                            <X className="w-3 h-3" /> Reset
+                                        </button>
+                                    )}
+
+                                    <span className="text-[9px] text-[var(--color-text-muted)] font-black ml-auto opacity-60">
+                                        {filteredAudits.length} / {audits.length} laporan
+                                    </span>
+                                </div>
+
                                 <div className="space-y-3">
-                                    {audits.length === 0 ? (
+                                    {filteredAudits.length === 0 ? (
                                         <EmptyState
                                             variant="plain"
                                             icon={ClipboardList}
-                                            title="Belum Ada Penilaian"
-                                            description="Belum ada laporan kebersihan yang diinput. Klik '+ Input Penilaian' untuk memulai."
-                                            action={
+                                            title={audits.length === 0 ? "Belum Ada Penilaian" : "Tidak Ditemukan"}
+                                            description={audits.length === 0 ? "Belum ada laporan kebersihan yang diinput. Klik '+ Input Penilaian' untuk memulai." : "Tidak ada laporan yang sesuai filter."}
+                                            action={audits.length === 0 ? (
                                                 <button
                                                     onClick={() => setIsAuditModalOpen(true)}
                                                     className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 shadow-lg shadow-[var(--color-primary)]/10 transition flex items-center gap-2 mx-auto"
@@ -1195,9 +1948,9 @@ export default function DormsPage() {
                                                     <Plus className="w-3.5 h-3.5" />
                                                     Input Penilaian
                                                 </button>
-                                            }
+                                            ) : null}
                                         />
-                                    ) : audits.map(audit => (
+                                    ) : filteredAudits.map(audit => (
                                         <div
                                             key={audit.id}
                                             className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-[var(--color-border-hover)] transition"
@@ -1213,9 +1966,9 @@ export default function DormsPage() {
                                                 <div className="flex items-center gap-3 text-[9px] text-[var(--color-text-muted)] opacity-60 font-semibold pt-1">
                                                     <span>Tgl: {audit.date}</span>
                                                     <span>•</span>
-                                                    <span>Kerapian: {audit.aspects?.kerapian ?? audit.aspects?.kerapian}</span>
+                                                    <span>Kerapian: {audit.aspects?.kerapian}</span>
                                                     <span>•</span>
-                                                    <span>Kebersihan: {audit.aspects?.kebersihan ?? audit.aspects?.kebersihan}</span>
+                                                    <span>Kebersihan: {audit.aspects?.kebersihan}</span>
                                                 </div>
                                             </div>
 
@@ -1710,8 +2463,157 @@ export default function DormsPage() {
                 </Modal>
 
                 {/* ======================================================== */}
-                {/* MODAL: INPUT PENILAIAN KEBERSIHAN                        */}
+                {/* MODAL: MELIHAT  INVENTARIS  KAMAR                        */}
                 {/* ======================================================== */}
+                <Modal
+                    isOpen={!!inventoryModalDorm}
+                    onClose={() => setInventoryModalDorm(null)}
+                    title={`Inventori — ${inventoryModalDorm?.id}`}
+                    description="Daftar fasilitas dan kondisi barang di kamar ini."
+                    icon={ClipboardList}
+                    iconBg="bg-indigo-500/10"
+                    iconColor="text-indigo-500"
+                    size="md"
+                    noPadding
+                    footer={
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-[var(--color-text-muted)] font-black opacity-60">
+                                {inventories.filter(i => i.dorm_id === inventoryModalDorm?.id).length} item tercatat
+                            </span>
+                            <button
+                                onClick={() => {
+                                    setPendingInventoryDorm(inventoryModalDorm)
+                                    setSelectedDormForInventory(inventoryModalDorm?.id)
+                                    setEditingInventoryItem(null)
+                                    setNewInventoryItem({ item_name: '', total_quantity: 1, good_condition_count: 1, damaged_condition_count: 0, notes: '' })
+                                    setInventoryModalDorm(null)
+                                    setIsInventoryModalOpen(true)
+                                }}
+                                className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 transition-all"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                Tambah Item
+                            </button>
+                        </div>
+                    }
+                >
+                    <InventoryModalContent
+                        inventoryModalDorm={inventoryModalDorm}
+                        inventories={inventories}
+                        setSelectedDormForInventory={setSelectedDormForInventory}
+                        setEditingInventoryItem={setEditingInventoryItem}
+                        setNewInventoryItem={setNewInventoryItem}
+                        setIsInventoryModalOpen={setIsInventoryModalOpen}
+                        setInventoryToDelete={setInventoryToDelete}
+                        setIsConfirmDeleteInventoryOpen={setIsConfirmDeleteInventoryOpen}
+                        setPendingInventoryDorm={setPendingInventoryDorm}    // ← tambah
+                        setInventoryModalDorm={setInventoryModalDorm}        // ← tambah
+                    />
+                </Modal>
+
+                {/* ======================================================== */}
+                {/* MODAL: TAMBAH / EDIT ITEM INVENTARIS                     */}
+                {/* ======================================================== */}
+                <Modal
+                    isOpen={isInventoryModalOpen}
+                    onClose={() => { setIsInventoryModalOpen(false); setEditingInventoryItem(null) }}
+                    title={editingInventoryItem ? 'Edit Item Inventaris' : 'Tambah Item Inventaris'}
+                    description={`Kamar: ${selectedDormForInventory || '—'}`}
+                    icon={ClipboardList}
+                    size="sm"
+                    mobileVariant="bottom-sheet"
+                    footer={
+                        <div className="flex items-center w-full gap-3">
+                            <button type="button" onClick={() => {
+                                setIsInventoryModalOpen(false);
+                                if (pendingInventoryDorm) {
+                                    setInventoryModalDorm(pendingInventoryDorm)
+                                    setPendingInventoryDorm(null)
+                                }; setEditingInventoryItem(null)
+                            }}
+                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition">
+                                Batal
+                            </button>
+                            <button type="submit" form="inventory-form" disabled={submittingInventory}
+                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition flex items-center justify-center gap-2 ml-auto">
+                                {submittingInventory ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                Simpan
+                            </button>
+                        </div>
+                    }
+                >
+                    <form id="inventory-form" onSubmit={handleSaveInventoryItem} className="space-y-4">
+                        <div>
+                            <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">Nama Item *</label>
+                            <input type="text" required value={newInventoryItem.item_name}
+                                onChange={e => setNewInventoryItem(p => ({ ...p, item_name: e.target.value }))}
+                                placeholder="Contoh: Kasur, Kipas Angin, Lemari"
+                                className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition" />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                            <div>
+                                <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">Total</label>
+                                <input type="number" min="0" required value={newInventoryItem.total_quantity}
+                                    onChange={e => setNewInventoryItem(p => ({ ...p, total_quantity: Number(e.target.value) }))}
+                                    className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition" />
+                            </div>
+                            <div>
+                                <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">Kondisi Baik</label>
+                                <input type="number" min="0" value={newInventoryItem.good_condition_count}
+                                    onChange={e => setNewInventoryItem(p => ({ ...p, good_condition_count: Number(e.target.value) }))}
+                                    className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition" />
+                            </div>
+                            <div>
+                                <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">Rusak</label>
+                                <input type="number" min="0" value={newInventoryItem.damaged_condition_count}
+                                    onChange={e => setNewInventoryItem(p => ({ ...p, damaged_condition_count: Number(e.target.value) }))}
+                                    className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">Catatan (Optional)</label>
+                            <input type="text" value={newInventoryItem.notes}
+                                onChange={e => setNewInventoryItem(p => ({ ...p, notes: e.target.value }))}
+                                placeholder="Contoh: Perlu penggantian, bantalan sudah tipis"
+                                className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition" />
+                        </div>
+                    </form>
+                </Modal>
+
+                {/* ======================================================== */}
+                {/* MODAL: KONFIRMASI HAPUS INVENTARIS                       */}
+                {/* ======================================================== */}
+                <Modal
+                    isOpen={isConfirmDeleteInventoryOpen}
+                    onClose={() => { setIsConfirmDeleteInventoryOpen(false); setInventoryToDelete(null) }}
+                    title="Hapus Item Inventaris"
+                    description="Item akan dihapus secara permanen"
+                    icon={Trash2} iconBg="bg-red-500/10" iconColor="text-red-500"
+                    size="sm" mobileVariant="bottom-sheet"
+                    footer={
+                        <div className="flex items-center w-full gap-3">
+                            <button type="button" onClick={() => { setIsConfirmDeleteInventoryOpen(false); setInventoryToDelete(null); if (pendingInventoryDorm) { setInventoryModalDorm(pendingInventoryDorm); setPendingInventoryDorm(null); } }}
+                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0">
+                                Batal
+                            </button>
+                            <div className="flex-1" />
+                            <button type="button" onClick={handleConfirmDeleteInventory}
+                                className="h-10 px-6 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 shrink-0">
+                                <Trash2 className="w-3.5 h-3.5 opacity-70" /> Ya, Hapus
+                            </button>
+                        </div>
+                    }
+                >
+                    <div className="px-1">
+                        {inventoryToDelete && (
+                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                Apakah Anda yakin ingin menghapus item <span className="text-[var(--color-text)] font-black">{inventoryToDelete.item_name}</span>? Tindakan ini tidak dapat dibatalkan.
+                            </p>
+                        )}
+                    </div>
+                </Modal>
+
+
                 <Modal
                     isOpen={isAuditModalOpen}
                     onClose={() => setIsAuditModalOpen(false)}
@@ -1899,7 +2801,7 @@ export default function DormsPage() {
                 </Modal>
 
                 {/* ======================================================== */}
-                {/* TAB 4: KELOLA KAMAR (DORM MASTER DATA)                   */}
+                {/* TAB 5: KELOLA KAMAR (DORM MASTER DATA)                   */}
                 {/* ======================================================== */}
                 {activeTab === 'kelola_kamar' && (
                     <div className="space-y-5 animate-in fade-in duration-300">
@@ -1912,7 +2814,7 @@ export default function DormsPage() {
                             <button
                                 onClick={() => {
                                     setEditingDorm(null);
-                                    setNewDorm({ id: '', ar: '', capacity: 30 });
+                                    setNewDorm({ id: '', ar: '', capacity: 30, gender: '', building: '', status: 'active', musyrif_id: '' });
                                     setIsDormModalOpen(true);
                                 }}
                                 className="h-10 px-5 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white hover:scale-105 active:scale-95 justify-center shadow-lg shadow-[var(--color-primary)]/10"
@@ -1937,14 +2839,16 @@ export default function DormsPage() {
                                 />
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
+                                    <table className="w-full text-left border-collapse min-w-[750px]">
                                         <thead className="bg-[var(--color-surface-alt)]/60 border-b border-[var(--color-border)]">
                                             <tr>
-                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Nama Kamar</th>
-                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-right" dir="rtl">الغرفة (Arab)</th>
-                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center">Kapasitas</th>
-                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Okupansi</th>
-                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-36">Aksi</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[20%]">Nama Kamar</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-right w-[12%]" dir="rtl">الغرفة (Arab)</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[10%]">Kapasitas</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[18%]">Okupansi</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[10%]">Status</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[18%]">PJ Musyrif</th>
+                                                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-[var(--color-border)]">
@@ -1965,7 +2869,14 @@ export default function DormsPage() {
                                                                 <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center flex-shrink-0">
                                                                     <Bed className="w-4 h-4" />
                                                                 </div>
-                                                                <span className="text-sm font-black text-[var(--color-text)]">{room.id}</span>
+                                                                <div>
+                                                                    <span className="text-sm font-black text-[var(--color-text)] block leading-tight">{room.id}</span>
+                                                                    {(room.building || room.gender) && (
+                                                                        <span className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-65 block mt-1">
+                                                                            {room.building || '—'} • {room.gender === 'putra' ? 'Putra' : room.gender === 'putri' ? 'Putri' : 'Semua'}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </td>
                                                         <td className="px-5 py-4 text-right text-xs font-black text-[var(--color-text-muted)] tracking-wider" dir="rtl">
@@ -1990,22 +2901,69 @@ export default function DormsPage() {
                                                             </div>
                                                         </td>
                                                         <td className="px-5 py-4 text-center">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingDorm(room);
-                                                                    setNewDorm({ id: room.id, ar: room.ar || '', capacity: room.capacity });
-                                                                    setIsDormModalOpen(true);
-                                                                }}
-                                                                className="w-8 h-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] inline-flex items-center justify-center flex-shrink-0 transition shadow-sm"
-                                                            >
-                                                                <Edit2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleOpenDeleteDormModal(room)}
-                                                                className="w-8 h-8 rounded-xl bg-red-500/5 hover:bg-red-500/10 text-red-500 inline-flex items-center justify-center flex-shrink-0 transition border border-red-500/10 ml-2"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
+                                                            {room.status === 'maintenance' ? (
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 border border-rose-500/25">
+                                                                    Perbaikan
+                                                                </span>
+                                                            ) : room.status === 'full' ? (
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/25">
+                                                                    Terkunci
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/25">
+                                                                    Aktif
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            {(() => {
+                                                                const musyrif = musyrifList.find(m => m.id === room.musyrif_id)
+                                                                return musyrif ? (
+                                                                    <span className="text-xs font-bold text-[var(--color-text)]">
+                                                                        {musyrif.name}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-xs text-[var(--color-text-muted)] italic opacity-60">
+                                                                        — Tidak Ada —
+                                                                    </span>
+                                                                )
+                                                            })()}
+                                                        </td>
+                                                        <td className="px-5 py-4 text-center">
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                {/* Tombol baru — Lihat Inventori */}
+                                                                <button
+                                                                    onClick={() => setInventoryModalDorm(room)}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-indigo-500/5 transition-all"
+                                                                    title="Lihat Inventori"
+                                                                >
+                                                                    <ClipboardList className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingDorm(room);
+                                                                        setNewDorm({
+                                                                            id: room.id,
+                                                                            ar: room.ar || '',
+                                                                            capacity: room.capacity,
+                                                                            gender: room.gender || '',
+                                                                            building: room.building || '',
+                                                                            status: room.status || 'active',
+                                                                            musyrif_id: room.musyrif_id || ''
+                                                                        });
+                                                                        setIsDormModalOpen(true);
+                                                                    }}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all"
+                                                                >
+                                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleOpenDeleteDormModal(room)}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 )
@@ -2089,6 +3047,64 @@ export default function DormsPage() {
                                 onChange={(e) => setNewDorm(prev => ({ ...prev, capacity: Number(e.target.value) }))}
                                 placeholder="30"
                                 className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">Jenis Kelamin</label>
+                                <RichSelect
+                                    usePortal={true}
+                                    value={newDorm.gender || ''}
+                                    onChange={(val) => setNewDorm(prev => ({ ...prev, gender: val }))}
+                                    placeholder="Semua"
+                                    options={[
+                                        { id: '', name: 'Semua' },
+                                        { id: 'putra', name: 'Putra' },
+                                        { id: 'putri', name: 'Putri' }
+                                    ]}
+                                    icon={VenusAndMars}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">Status Kamar</label>
+                                <RichSelect
+                                    usePortal={true}
+                                    value={newDorm.status || 'active'}
+                                    onChange={(val) => setNewDorm(prev => ({ ...prev, status: val }))}
+                                    placeholder="Aktif"
+                                    options={[
+                                        { id: 'active', name: 'Aktif' },
+                                        { id: 'maintenance', name: 'Perbaikan' },
+                                        { id: 'full', name: 'Terkunci' }
+                                    ]}
+                                    icon={Info}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">Gedung / Blok (Optional)</label>
+                            <input
+                                type="text"
+                                value={newDorm.building}
+                                onChange={(e) => setNewDorm(prev => ({ ...prev, building: e.target.value }))}
+                                placeholder="Contoh: Gedung A, Blok Tahfidz"
+                                className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">PJ Musyrif</label>
+                            <RichSelect
+                                usePortal={true}
+                                value={newDorm.musyrif_id || ''}
+                                onChange={(val) => setNewDorm(prev => ({ ...prev, musyrif_id: val }))}
+                                placeholder="— Tidak Ada Musyrif —"
+                                searchable
+                                options={musyrifList.map(m => ({ id: m.id, name: m.name }))}
+                                extraOption={{ id: '', name: '— Tidak Ada Musyrif —' }}
+                                icon={User2Icon}
                             />
                         </div>
                     </form>

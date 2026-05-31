@@ -71,5 +71,6 @@
   "ui.search_hint_navigate": "↑↓ navigasi",
   "ui.search_hint_open": "↵ buka",
   "ui.search_hint_close": "esc tutup",
-  "ui.detail": "Detail"
+  "ui.detail": "Detail",
+  "ui.more": "Lainnya"
 }

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { useAuth } from "../../context/AuthContext"
 import { useFeatureFlags } from "../../context/FeatureFlagsContext"
+import { useLanguage } from "../../context/LanguageContext"
 import {
     ACADEMIC_ITEMS, FINANCE_ITEMS, BOARDING_ITEMS, MASTER_ITEMS, ADMIN_ITEMS,
     SECTION_TITLES, filterNavItems,
@@ -35,14 +36,6 @@ function NavIcon({ icon, className = "" }) {
     return <FontAwesomeIcon icon={icon} className={className} />
 }
 
-// ─── Section titles (mobile-specific, slightly different from sidebar) ────────
-const SECTION_TITLE = {
-    boarding: "Kesantrian & Kedisiplinan",
-    academic: "Mesin Akademik",
-    finance: "Manajemen Keuangan",
-    master: "Master Data",
-    admin: "Admin Panel",
-}
 
 function Section({ title, items, onNavigate }) {
     return (
@@ -78,6 +71,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
     const navigate = useNavigate()
     const { profile } = useAuth()
     const { flags } = useFeatureFlags()
+    const { t, tNav, tNavDesc } = useLanguage()
 
     const container = getPortalContainer('portal-sheet')
 
@@ -85,9 +79,19 @@ export default function MasterSheet({ isOpen, onClose, section }) {
     const isSatpam = role === 'satpam'
     const isAdminUp = ['developer', 'admin'].includes(role)
 
+    // Translate helper: map raw navItems → { label, desc } via t()
+    const translate = (items) => items.map(it => ({
+        ...it,
+        label: tNav(it),
+        desc: tNavDesc(it),
+    }))
+
     // Filter items berdasarkan role + feature flags (using shared utility)
-    const visibleBoarding = filterNavItems(BOARDING_ITEMS, flags, role)
-    const visibleMaster = isSatpam ? [] : filterNavItems(MASTER_ITEMS, flags, role)
+    const visibleBoarding = translate(filterNavItems(BOARDING_ITEMS, flags, role))
+    const visibleMaster = isSatpam ? [] : translate(filterNavItems(MASTER_ITEMS, flags, role))
+    const visibleAcademic = translate(ACADEMIC_ITEMS)
+    const visibleFinance = translate(FINANCE_ITEMS)
+    const visibleAdmin = translate(ADMIN_ITEMS)
 
     // 'more' = Master + Admin gabungan (untuk tombol Lainnya di BottomNav)
     const isMore = section === 'more'
@@ -141,7 +145,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                             {/* ── Kesantrian (Boarding) ── */}
                             {show.boarding && (
                                 <Section
-                                    title={SECTION_TITLE.boarding}
+                                    title={t('section.sheet.boarding')}
                                     items={visibleBoarding}
                                     onNavigate={handleNav}
                                 />
@@ -152,8 +156,8 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                                 <>
                                     {show.boarding && <Divider />}
                                     <Section
-                                        title={SECTION_TITLE.academic}
-                                        items={ACADEMIC_ITEMS}
+                                        title={t('section.sheet.academic')}
+                                        items={visibleAcademic}
                                         onNavigate={handleNav}
                                     />
                                 </>
@@ -164,8 +168,8 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                                 <>
                                     {(show.boarding || show.academic) && <Divider />}
                                     <Section
-                                        title={SECTION_TITLE.finance}
-                                        items={FINANCE_ITEMS}
+                                        title={t('section.sheet.finance')}
+                                        items={visibleFinance}
                                         onNavigate={handleNav}
                                     />
                                 </>
@@ -176,7 +180,7 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                                 <>
                                     {(show.boarding || show.academic || show.finance) && <Divider />}
                                     <Section
-                                        title={SECTION_TITLE.master}
+                                        title={t('section.sheet.master')}
                                         items={visibleMaster}
                                         onNavigate={handleNav}
                                     />
@@ -188,8 +192,8 @@ export default function MasterSheet({ isOpen, onClose, section }) {
                                 <div className="mt-2">
                                     {(show.boarding || show.academic || show.finance || show.master) && <Divider />}
                                     <Section
-                                        title="Infrastructure & Control"
-                                        items={ADMIN_ITEMS}
+                                        title={t('section.sheet.admin')}
+                                        items={visibleAdmin}
                                         onNavigate={handleNav}
                                     />
                                 </div>

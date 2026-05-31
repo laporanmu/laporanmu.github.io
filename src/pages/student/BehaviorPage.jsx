@@ -8,16 +8,16 @@ import {
 } from 'lucide-react'
 import { useBehaviorImportExport } from '../../hooks/students/useBehaviorImportExport'
 
-const LazyBehaviorExportModal = React.lazy(() => import('../../components/students/BehaviorExportModal'))
-const LazyBehaviorImportModal = React.lazy(() => import('../../components/students/BehaviorImportModal'))
+const LazyBehaviorExportModal = React.lazy(() => import('../../components/behavior/BehaviorExportModal'))
+const LazyBehaviorImportModal = React.lazy(() => import('../../components/behavior/BehaviorImportModal'))
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import StatsCarousel from '../../components/StatsCarousel'
 import Breadcrumb from '../../components/ui/Breadcrumb'
 import PageHeader from '../../components/ui/PageHeader'
 import { StatCard, EmptyState } from '../../components/ui/DataDisplay'
 import Modal from '../../components/ui/Modal'
-import BehaviorFormModal from '../../components/students/BehaviorFormModal'
-import BehaviorDetailModal from '../../components/students/BehaviorDetailModal'
+import BehaviorFormModal from '../../components/behavior/BehaviorFormModal'
+import BehaviorDetailModal from '../../components/behavior/BehaviorDetailModal'
 import RichSelect from '../../components/ui/RichSelect'
 import { TableSkeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../context/ToastContext'
@@ -165,6 +165,8 @@ export default function BehaviorPage() {
     const colMenuRef = useRef(null)
     const importFileInputRef = useRef(null)
     const shortcutRef = useRef(null)
+    const pressTimerRef = useRef(null)
+    const [pressingId, setPressingId] = useState(null)
 
     // columns
     const [visibleCols, setVisibleCols] = useState({ type: true, points: true, time: true, teacher: true })
@@ -525,7 +527,7 @@ export default function BehaviorPage() {
                 student_id: modalFormData.student_id,
                 violation_type_id: modalFormData.violation_type_id,
                 reporter_id: profile?.id ?? null,
-                teacher_name: profile?.name ?? 'Unknown',
+                teacher_name: profile?.name ?? tp('unknown'),
                 points: vt?.points ?? 0,
                 notes: modalFormData.notes || null,
                 reported_at: modalFormData.reported_at
@@ -586,13 +588,61 @@ export default function BehaviorPage() {
         finally { setSubmitting(false) }
     }
 
+    const handleCardPressStart = useCallback((e, id) => {
+        // Only trigger behavior on mobile
+        if (window.innerWidth >= 640) return;
+        // Ignore buttons, checkboxes, input elements
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
 
+        if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
+        setPressingId(id);
+        pressTimerRef.current = setTimeout(() => {
+            setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            setPressingId(null);
+        }, 800);
+    }, []);
 
+    const handleCardPressEnd = useCallback((e, id, report) => {
+        if (window.innerWidth >= 640) return;
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
 
+        if (pressTimerRef.current) {
+            clearTimeout(pressTimerRef.current);
+            pressTimerRef.current = null;
+        }
+        if (pressingId === id) {
+            // It was a short tap
+            setSelectedIds(prev => {
+                if (prev.length > 0) {
+                    return prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+                } else {
+                    handleOpenDetail(report);
+                    return prev;
+                }
+            });
+        }
+        setPressingId(null);
+    }, [pressingId, handleOpenDetail]);
+
+    const handleCardPressCancel = useCallback(() => {
+        if (pressTimerRef.current) {
+            clearTimeout(pressTimerRef.current);
+            pressTimerRef.current = null;
+        }
+        setPressingId(null);
+    }, []);
 
     return (
         <DashboardLayout title={tp('title')}>
-            {/* TAMBAH INI: */}
+            <style>{`
+                @keyframes longpress-progress {
+                    0% { width: 0%; }
+                    100% { width: 100%; }
+                }
+            `}</style>
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
 
                 {/* Privasi Banner */}
@@ -739,7 +789,7 @@ export default function BehaviorPage() {
                                     ref={shortcutBtnRef}
                                     onClick={() => { if (!isShortcutOpen) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setIsShortcutOpen(v => !v) }}
                                     className={`h-9 w-9 rounded-lg border flex items-center justify-center transition-all ${isShortcutOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                                    title="Keyboard Shortcuts (?)"
+                                    title={tp('shortcutTitle')}
                                 >
                                     <Keyboard className="w-4 h-4 text-sm" />
                                 </button>
@@ -797,7 +847,7 @@ export default function BehaviorPage() {
                             <button
                                 onClick={() => setIsPrivacyMode(!isPrivacyMode)}
                                 className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
-                                title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}
+                                title={isPrivacyMode ? tp('disablePrivacy') : tp('enablePrivacy')}
                             >
                                 {isPrivacyMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
@@ -810,7 +860,7 @@ export default function BehaviorPage() {
                                 className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10"
                             >
                                 <Plus className="w-3.5 h-3.5" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">{canInput ? tp('createReport') : 'Read-only'}</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest">{canInput ? tp('createReport') : tp('readOnly')}</span>
                             </button>
                         </>
                     }
@@ -831,9 +881,9 @@ export default function BehaviorPage() {
                 {/* ── SEARCH + FILTER ── */}
                 <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
                     {/* Row 1: Search + Quick Filters + Action Buttons */}
-                    <div className="flex items-center gap-2 p-2.5 lg:p-3">
+                    <div className="flex items-center gap-1.5 p-2 xs:gap-2 xs:p-2.5 lg:p-3">
                         {/* Search Bar - Dynamic & Responsive */}
-                        <div className="flex-1 min-w-[140px] transition-all duration-300">
+                        <div className="flex-1 min-w-[80px] sm:min-w-[140px] transition-all duration-300">
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm group-focus-within:text-[var(--color-primary)] transition-colors">
                                     <Search className="w-4 h-4" />
@@ -843,7 +893,7 @@ export default function BehaviorPage() {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder={`${tp('searchPlaceholder')} (Ctrl+K)`}
+                                    placeholder={tp('searchPlaceholder')}
                                     className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-[var(--color-surface-alt)]/50 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all rounded-xl font-bold placeholder:font-normal placeholder:opacity-40"
                                 />
                                 {searchQuery && (
@@ -902,18 +952,18 @@ export default function BehaviorPage() {
                         <div className="hidden lg:block w-px h-4 bg-[var(--color-border)] mx-2 shrink-0" />
 
                         {/* Action Buttons */}
-                        <div className="flex items-center justify-end gap-2 shrink-0 lg:ml-auto">
+                        <div className="flex items-center justify-end gap-1.5 xs:gap-2 shrink-0 lg:ml-auto">
                             {/* View Mode Switcher */}
                             <div className="bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)] flex gap-0.5">
                                 <button onClick={() => setViewMode('timeline')}
                                     title={tp('timeline')}
-                                    className={`h-7 px-2.5 sm:px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'timeline' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                    className={`h-7 px-2 xs:px-2.5 sm:px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'timeline' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                                     <LayoutList className="w-3.5 h-3.5" />
                                     <span className="hidden xl:inline">{tp('timeline')}</span>
                                 </button>
                                 <button onClick={() => setViewMode('table')}
                                     title={tp('tableView')}
-                                    className={`h-7 px-2.5 sm:px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                    className={`h-7 px-2 xs:px-2.5 sm:px-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
                                     <Table className="w-3.5 h-3.5" />
                                     <span className="hidden xl:inline">{tp('tableView')}</span>
                                 </button>
@@ -922,28 +972,28 @@ export default function BehaviorPage() {
                             {/* Pilih Semua / Batal */}
                             <button
                                 onClick={() => setSelectedIds(allSelected ? [] : reports.map(r => r.id))}
-                                className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
+                                className={`h-9 px-2.5 xs:px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white shadow-md shadow-indigo-500/20' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
                                 title={tp('selectAll')}
                             >
                                 <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span className="hidden xs:inline">${selectedIds.length > 0 ? tp('selected') : tp('select')}</span>
+                                <span className="hidden sm:inline">{selectedIds.length > 0 ? tp('selected') : tp('selectAll')}</span>
                                 {selectedIds.length > 0 && (
                                     <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">
-                                        {selectedIds.length}
+                                        {tNum(selectedIds.length)}
                                     </span>
                                 )}
                             </button>
 
                             {/* Advanced Filter Sliders */}
                             <button onClick={() => setShowAdvFilter(v => !v)}
-                                className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${showAdvFilter || activeFilters.length > 0
+                                className={`h-9 px-2.5 xs:px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${showAdvFilter || activeFilters.length > 0
                                     ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30'
                                     : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
                                 <Sliders className="w-3.5 h-3.5" />
-                                <span className="hidden xs:inline">{tp('moreFilters')}</span>
+                                <span className="hidden sm:inline">{tp('filterShort')}</span>
                                 {activeFilters.length > 0 && (
                                     <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
-                                        {activeFilters.length}
+                                        {tNum(activeFilters.length)}
                                     </span>
                                 )}
                             </button>
@@ -955,7 +1005,7 @@ export default function BehaviorPage() {
                         <div className="px-3 pb-3 -mt-1 flex flex-wrap gap-2">
                             {activeFilters.map((f, i) => (
                                 <button key={i} type="button" onClick={f.clear}
-                                    className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus filter">
+                                    className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title={tp('deleteFilter')}>
                                     {f.label}
                                     <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
                                         <X className="w-3.5 h-3.5" />
@@ -979,7 +1029,8 @@ export default function BehaviorPage() {
                                     <div className="w-1 h-3.5 bg-[var(--color-primary)] rounded-full" />
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-primary)] flex items-center gap-2">
                                         <Sliders className="w-3 h-3 opacity-60" />
-                                        {tp('advancedFilter')}
+                                        <span className="sm:hidden">{tp('filterShort')}</span>
+                                        <span className="hidden sm:inline">{tp('advancedFilter')}</span>
                                     </span>
                                 </div>
                                 <button
@@ -987,7 +1038,8 @@ export default function BehaviorPage() {
                                     className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/5 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-500/10"
                                 >
                                     <RotateCcw className="w-3 h-3" />
-                                    {tp('resetAllFilters')}
+                                    <span className="sm:hidden">{tp('resetShort')}</span>
+                                    <span className="hidden sm:inline">{tp('resetAllFilters')}</span>
                                 </button>
                             </div>
 
@@ -1018,6 +1070,7 @@ export default function BehaviorPage() {
                                         placeholder={tp('allClasses')}
                                         small
                                         searchable
+                                        maxHeight={200}
                                     />
                                 </div>
                                 <div>
@@ -1095,7 +1148,7 @@ export default function BehaviorPage() {
                             {tp('noReportsDesc')}
                         </p>
                         <button onClick={handleAdd} disabled={!canInput} className="btn btn-primary h-10 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed">
-                            {canInput ? tp('createNow') : 'Read-only'}
+                            {canInput ? tp('createNow') : tp('readOnly')}
                         </button>
                     </div>
                 ) : viewMode === 'timeline' ? (
@@ -1170,79 +1223,150 @@ export default function BehaviorPage() {
 
                                                         {/* Card — z=2 so it renders over the line/dot visually */}
                                                         <div style={{ position: 'relative', zIndex: 2 }}
-                                                            className={`rounded-2xl border px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.015] ${selectedIds.includes(r.id)
+                                                            onTouchStart={(e) => handleCardPressStart(e, r.id)}
+                                                            onTouchEnd={(e) => handleCardPressEnd(e, r.id, r)}
+                                                            onTouchMove={handleCardPressCancel}
+                                                            onMouseDown={(e) => handleCardPressStart(e, r.id)}
+                                                            onMouseUp={(e) => handleCardPressEnd(e, r.id, r)}
+                                                            onMouseLeave={handleCardPressCancel}
+                                                            onContextMenu={(e) => { if (window.innerWidth < 640) e.preventDefault(); }}
+                                                            className={`rounded-2xl border px-4 py-3.5 transition-all duration-200 select-none sm:select-text ${
+                                                                pressingId === r.id ? 'scale-[0.98]' : 'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.015]'
+                                                            } ${selectedIds.includes(r.id)
                                                                 ? 'bg-[var(--color-primary)]/[0.03] border-[var(--color-primary)]/40 ring-2 ring-[var(--color-primary)]/10 shadow-sm shadow-[var(--color-primary)]/5'
                                                                 : isPos
                                                                     ? 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-emerald-500/30 hover:bg-emerald-500/[0.01]'
                                                                     : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-rose-500/30 hover:bg-rose-500/[0.01]'
                                                                 }`}>
 
-                                                            <div className="flex items-center gap-3">
+                                                            {/* ── DESKTOP layout ─────────────────────── */}
+                                                            {pressingId === r.id && (
+                                                                <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-primary)]/10 overflow-hidden rounded-t-2xl z-[10]">
+                                                                    <div className="h-full bg-gradient-to-r from-[var(--color-primary)]/60 to-[var(--color-primary)]"
+                                                                        style={{
+                                                                            animation: 'longpress-progress 800ms linear forwards'
+                                                                        }} />
+                                                                </div>
+                                                            )}
+
+                                                            <div className="hidden sm:flex items-center gap-3">
                                                                 {/* Checkbox */}
                                                                 <input type="checkbox"
                                                                     checked={selectedIds.includes(r.id)}
                                                                     onChange={() => toggleSelect(r.id)}
                                                                     className="w-4 h-4 flex-shrink-0 rounded-md border-[var(--color-border)]/80 text-[var(--color-primary)] focus:ring-[var(--color-primary)]/20 cursor-pointer transition-all hover:scale-105" />
-
-                                                                {/* Avatar fallback gradient */}
-                                                                <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xs shadow-inner transition-transform duration-200 group-hover/item:scale-105 ${isPos ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 text-emerald-600 ring-2 ring-emerald-500/10' : 'bg-gradient-to-br from-rose-500/20 to-rose-500/5 text-rose-600 ring-2 ring-rose-500/10'}`}>
+                                                                {/* Avatar */}
+                                                                <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xs shadow-inner ${isPos ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 text-emerald-600 ring-2 ring-emerald-500/10' : 'bg-gradient-to-br from-rose-500/20 to-rose-500/5 text-rose-600 ring-2 ring-rose-500/10'}`}>
                                                                     {(tDb(stud?.name) || '?')[0].toUpperCase()}
                                                                 </div>
+                                                                {/* Info */}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <span className="text-sm font-black text-[var(--color-text)] tracking-tight leading-none group-hover/item:text-[var(--color-primary)] transition-colors">
+                                                                            {mask(tDb(stud?.name) || '—')}
+                                                                        </span>
+                                                                        {stud?.class_name && (
+                                                                            <span className="px-2 py-0.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest flex-shrink-0 shadow-sm">
+                                                                                {stud.class_name}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="text-[11px] font-bold text-[var(--color-text)] mt-1.5 flex items-center gap-2 leading-none">
+                                                                        <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${isPos ? 'bg-emerald-500 shadow-[0_0_4px_#10b981]' : 'bg-rose-500 shadow-[0_0_4px_#f43f5e]'}`} />
+                                                                        {getTypeName(r.violation_type_id)}
+                                                                    </p>
+                                                                    {r.notes && (
+                                                                        <div className={`mt-2 py-1 px-3 border-l-2 ${isPos ? 'border-emerald-500/40 bg-emerald-500/[0.02]' : 'border-rose-500/40 bg-rose-500/[0.02]'} rounded-r-xl max-w-xl shadow-inner`}>
+                                                                            <p className="text-[10px] italic font-semibold text-[var(--color-text-muted)] opacity-85 leading-relaxed break-words">
+                                                                                "{mask(tDb(r.notes))}"
+                                                                            </p>
+                                                                        </div>
+                                                                    )}
 
-                                                                {/* Body */}
-                                                                <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                                            <span className="text-sm font-black text-[var(--color-text)] tracking-tight leading-none group-hover/item:text-[var(--color-primary)] transition-colors duration-200">
+                                                                </div>
+                                                                {/* Points + Actions */}
+                                                                <div className="flex items-center gap-2 shrink-0">
+                                                                    <div className={`flex items-center justify-center min-w-[46px] h-6 rounded-full text-[11px] font-black tracking-tight border ${isPos
+                                                                        ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-500/20 text-emerald-600 border-emerald-500/30 shadow-sm shadow-emerald-500/5'
+                                                                        : 'bg-gradient-to-r from-rose-500/10 to-rose-500/20 text-rose-600 border-rose-500/30 shadow-sm shadow-rose-500/5'}`}>
+                                                                        {isPos ? '+' : ''}{tNum(r.points)}
+                                                                    </div>
+                                                                    <button onClick={() => handleOpenDetail(r)} className="w-8 h-8 flex items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:scale-105 active:scale-95 transition-all">
+                                                                        <Eye className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button onClick={() => handleEdit(r)} className="w-8 h-8 flex items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:scale-105 active:scale-95 transition-all">
+                                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button onClick={() => { setItemToDelete(r); setIsDeleteModalOpen(true) }} className="w-8 h-8 flex items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:text-rose-600 hover:bg-rose-600/10 hover:scale-105 active:scale-95 transition-all">
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* ── MOBILE layout ──────────────────────── */}
+                                                            <div className="flex sm:hidden flex-col gap-3">
+                                                                {/* Top: Avatar + Name/Class + Points */}
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                                        <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xs transition-all duration-200 ${selectedIds.includes(r.id) ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 rotate-0 scale-100' : isPos ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 text-emerald-600 ring-2 ring-emerald-500/10' : 'bg-gradient-to-br from-rose-500/20 to-rose-500/5 text-rose-600 ring-2 ring-rose-500/10'}`}>
+                                                                            {selectedIds.includes(r.id) ? (
+                                                                                <CheckCircle2 className="w-4 h-4 animate-in zoom-in-50 duration-200" />
+                                                                            ) : (
+                                                                                (tDb(stud?.name) || '?')[0].toUpperCase()
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="min-w-0">
+                                                                            <span className="block text-[13px] font-black text-[var(--color-text)] tracking-tight leading-tight truncate">
                                                                                 {mask(tDb(stud?.name) || '—')}
                                                                             </span>
                                                                             {stud?.class_name && (
-                                                                                <span className="px-2 py-0.5 rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest flex-shrink-0 shadow-sm">
+                                                                                <span className="block text-[10px] text-[var(--color-text-muted)] mt-0.5 font-medium truncate">
                                                                                     {stud.class_name}
                                                                                 </span>
                                                                             )}
                                                                         </div>
-
-                                                                        <p className="text-[11px] font-bold text-[var(--color-text)] mt-1.5 flex items-center gap-2 leading-none">
-                                                                            <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${isPos ? 'bg-emerald-500 shadow-[0_0_4px_#10b981]' : 'bg-rose-500 shadow-[0_0_4px_#f43f5e]'}`} />
-                                                                            {getTypeName(r.violation_type_id)}
-                                                                        </p>
-
-                                                                        {r.notes && (
-                                                                            <div className={`mt-2 py-1 px-3 border-l-2 ${isPos ? 'border-emerald-500/40 bg-emerald-500/[0.02]' : 'border-rose-500/40 bg-rose-500/[0.02]'} rounded-r-xl max-w-xl shadow-inner`}>
-                                                                                <p className="text-[10px] italic font-semibold text-[var(--color-text-muted)] opacity-85 leading-relaxed break-words">
-                                                                                    "{mask(tDb(r.notes))}"
-                                                                                </p>
-                                                                            </div>
-                                                                        )}
-
-                                                                        <div className="flex items-center gap-1.5 mt-2 text-[var(--color-text-muted)] opacity-55">
-                                                                            <span className="text-[9px] font-medium leading-none">{tp('recordedBy')}</span>
-                                                                            <span className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text)] leading-none">
-                                                                                {mask(tDb(r.teacher_name) || tp('system'))}
-                                                                            </span>
-                                                                        </div>
                                                                     </div>
 
-                                                                    <div className={`shrink-0 flex items-center justify-center min-w-[46px] h-6 rounded-full text-[11px] font-black tracking-tight border sm:self-center ${isPos
-                                                                        ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-500/20 text-emerald-600 border-emerald-500/30 shadow-sm shadow-emerald-500/5'
-                                                                        : 'bg-gradient-to-r from-rose-500/10 to-rose-500/20 text-rose-600 border-rose-500/30 shadow-sm shadow-rose-500/5'
-                                                                        }`}>
-                                                                        {isPos ? '+' : ''}{r.points}
+                                                                    <div className={`shrink-0 flex items-center justify-center min-w-[34px] h-5 rounded-full text-[10px] font-black border ${isPos
+                                                                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                                                        : 'bg-rose-500/10 text-rose-600 border-rose-500/20'}`}>
+                                                                        {isPos ? '+' : ''}{tNum(r.points)}
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Action Menu for Mobile/Timeline */}
-                                                                <div className="flex items-center gap-1 ml-2 self-center">
-                                                                    <button onClick={() => handleOpenDetail(r)} className="w-8 h-8 flex items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:scale-105 active:scale-95 transition-all shadow-sm">
-                                                                        <Eye className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                    <button onClick={() => handleEdit(r)} className="w-8 h-8 flex items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:scale-105 active:scale-95 transition-all shadow-sm">
-                                                                        <Edit2 className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                    <button onClick={() => { setItemToDelete(r); setIsDeleteModalOpen(true) }} className="w-8 h-8 flex items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:text-rose-600 hover:bg-rose-600/10 hover:scale-105 active:scale-95 transition-all shadow-sm">
-                                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                                    </button>
+                                                                {/* Type */}
+                                                                <div className="pl-[42px]">
+                                                                    <p className="text-[11px] font-bold text-[var(--color-text)] flex items-center gap-1.5 leading-snug">
+                                                                        <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${isPos ? 'bg-emerald-500 shadow-[0_0_4px_#10b981]' : 'bg-rose-500 shadow-[0_0_4px_#f43f5e]'}`} />
+                                                                        {getTypeName(r.violation_type_id)}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Notes */}
+                                                                {r.notes && (
+                                                                    <div className="ml-[42px] py-1 px-2.5 border-l-2 border-[var(--color-border)] bg-[var(--color-surface-alt)]/35 rounded-r-lg">
+                                                                        <p className="text-[10px] italic font-semibold text-[var(--color-text-muted)] opacity-85 leading-relaxed break-words">
+                                                                            "{mask(tDb(r.notes))}"
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Footer: Date/Reporter & Actions */}
+                                                                <div className="flex items-center justify-between gap-2 mt-1 pt-2.5 border-t border-[var(--color-border)]/40 pl-[42px]">
+                                                                    <div className="text-[10px] text-[var(--color-text-muted)] font-medium truncate leading-none">
+                                                                        {fmtTime(r.reported_at)}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                                        <button onClick={() => handleOpenDetail(r)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 active:scale-95 transition-all">
+                                                                            <Eye className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                        <button onClick={() => handleEdit(r)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 active:scale-95 transition-all">
+                                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                        <button onClick={() => { setItemToDelete(r); setIsDeleteModalOpen(true) }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-rose-600 hover:border-rose-500/40 active:scale-95 transition-all">
+                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1278,7 +1402,7 @@ export default function BehaviorPage() {
                             </div>
                         )}
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                            <table className="w-full text-left border-collapse min-w-[750px]">
                                 <thead className="bg-[var(--color-surface-alt)]/60 border-b border-[var(--color-border)]">
                                     <tr>
                                         <th className="px-4 py-3.5 w-10 text-center">
@@ -1380,7 +1504,7 @@ export default function BehaviorPage() {
                                                 {visibleCols.points && (
                                                     <td className="px-4 py-3 text-center">
                                                         <span className={`inline-flex items-center justify-center min-w-[40px] px-2 py-0.5 rounded-full text-[11px] font-black border ${isP ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
-                                                            {r.points > 0 ? '+' : ''}{r.points}
+                                                            {r.points > 0 ? '+' : ''}{tNum(r.points)}
                                                         </span>
                                                     </td>
                                                 )}
@@ -1510,7 +1634,29 @@ export default function BehaviorPage() {
                 >
                     <div className="px-1">
                         <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                            Laporan untuk santri <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{mask(students.find(s => s.id === itemToDelete?.student_id)?.name || '')}</span> {tp('deleteWarning')} <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToDelete?.points > 0 ? `+${itemToDelete.points}` : itemToDelete?.points}</span> {tp('deleteWarning2')}
+                            {(() => {
+                                const deleteConfirmText = tp('deleteConfirmTemplate')
+                                    .replace('{student}', '___STUDENT___')
+                                    .replace('{points}', '___POINTS___');
+                                const parts = deleteConfirmText.split(/(___STUDENT___|___POINTS___)/);
+                                return parts.map((part, i) => {
+                                    if (part === '___STUDENT___') {
+                                        return (
+                                            <span key={i} className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">
+                                                {mask(students.find(s => s.id === itemToDelete?.student_id)?.name || '')}
+                                            </span>
+                                        );
+                                    }
+                                    if (part === '___POINTS___') {
+                                        return (
+                                            <span key={i} className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">
+                                                {itemToDelete?.points > 0 ? `+${tNum(itemToDelete.points)}` : tNum(itemToDelete?.points)}
+                                            </span>
+                                        );
+                                    }
+                                    return part;
+                                });
+                            })()}
                         </p>
                     </div>
                 </Modal>
@@ -1578,7 +1724,7 @@ export default function BehaviorPage() {
                                         </div>
                                         {/* Points badge */}
                                         <span className={`shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded-lg border ${isPos ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
-                                            {isPos ? '+' : ''}{r.points}
+                                            {isPos ? '+' : ''}{tNum(r.points)}
                                         </span>
                                     </div>
                                 )

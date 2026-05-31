@@ -39,7 +39,8 @@ const RichSelect = memo(({
     allowCustom = false,
     compact = false,
     usePortal = true,
-    buttonClassName = ""
+    buttonClassName = "",
+    maxHeight
 }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [search, setSearch] = useState('')
@@ -279,7 +280,7 @@ const RichSelect = memo(({
             {/* Options List */}
             <div
                 className="py-1 overflow-y-auto custom-scrollbar flex-1 min-h-0"
-                style={{ maxHeight: compact ? 200 : Math.max(60, Math.min(searchable ? 280 : 240, coords.maxHeight - (searchable ? (uniqueGroups.length > 0 ? 92 : 52) : 8))) }}
+                style={{ maxHeight: compact ? 200 : Math.max(60, Math.min(maxHeight || (searchable ? 280 : 240), coords.maxHeight - (searchable ? (uniqueGroups.length > 0 ? 92 : 52) : 8))) }}
             >
                 {extraOption && (
                     <button
