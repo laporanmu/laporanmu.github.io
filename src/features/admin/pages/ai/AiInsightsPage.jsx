@@ -16,8 +16,8 @@ import {
     PieChart, Pie, Cell
 } from 'recharts'
 import Papa from 'papaparse'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import { Breadcrumb } from '@components/ui'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import { Breadcrumb } from '@shared/components'
 import { supabase } from '@lib/supabase'
 
 const PAGE_SIZE = 10

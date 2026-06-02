@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, memo } from 'react'
 import { createPortal } from 'react-dom'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faChevronLeft, faChevronRight, faCheck, faMagnifyingGlass, faLightbulb,

@@ -5,8 +5,8 @@ import {
     faSpinner, faCircleCheck, faTriangleExclamation, faFolderOpen,
     faMagnifyingGlass, faArrowsRotate, faDatabase
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import Breadcrumb from '@components/ui/Breadcrumb'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import Breadcrumb from '@shared/components/Breadcrumb'
 import { useToast } from '@context/ToastContext'
 import { useAuth } from '@context/AuthContext'
 import { supabase } from '@lib/supabase'

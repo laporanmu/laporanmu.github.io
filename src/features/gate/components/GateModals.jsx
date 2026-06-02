@@ -3,14 +3,14 @@ import {
   Clock, Edit2, Trash2, Loader2, Check, Send, Settings, X, Tag,
   Printer, FileText, ClipboardList
 } from 'lucide-react'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 import { useLanguage } from '@context'
 import {
   PAGE_T, presetTranslations, getVisitorTypes,
   PRESETS_GURU, PRESETS_KARYAWAN, PRESETS_SANTRI, PRESETS_TAMU
 } from '@features/gate/utils/gateConstants'
 import { fmtTime, timeStrToISO } from '@features/gate/hooks/useGateCore'
-import RichTimePicker from '@components/ui/RichTimePicker'
+import RichTimePicker from '@shared/components/RichTimePicker'
 
 // ─── Local Components ─────────────────────────────────────────────────────────
 

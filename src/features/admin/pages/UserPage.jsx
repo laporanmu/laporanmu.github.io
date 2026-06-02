@@ -11,14 +11,14 @@ import {
     faSliders, faCopy, faArrowRotateRight, faExclamationTriangle,
     faUserShield, faDatabase, faCode, faWifi
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import Breadcrumb from '@components/ui/Breadcrumb'
-import Modal from '@components/ui/Modal'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import Breadcrumb from '@shared/components/Breadcrumb'
+import Modal from '@shared/components/Modal'
 import { useToast } from '@context/ToastContext'
 import { useAuth } from '@context/AuthContext'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
-import Pagination from '@components/ui/Pagination'
+import Pagination from '@shared/components/Pagination'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

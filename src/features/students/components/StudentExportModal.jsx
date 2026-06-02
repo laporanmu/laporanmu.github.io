@@ -38,7 +38,7 @@ import {
     faUserShield
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 
 const COLUMN_DEFS = [
     { key: 'id', label: 'ID', icon: faHashtag },

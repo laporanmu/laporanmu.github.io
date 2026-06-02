@@ -14,7 +14,7 @@ import {
     faSpinner,
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 
 const LazyQRCodeCanvas = React.lazy(() =>
     import('qrcode.react').then((m) => ({ default: m.QRCodeCanvas }))

@@ -37,10 +37,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@components/layout': path.resolve(__dirname, './src/core/layouts'),
-      '@components/ui': path.resolve(__dirname, './src/shared/components'),
-      [path.resolve(__dirname, './src/components/ui')]: path.resolve(__dirname, './src/shared/components'),
-      '@components': path.resolve(__dirname, './src/components'),
       '@hooks/students': path.resolve(__dirname, './src/features/students/hooks'),
       '@hooks/enrollment': path.resolve(__dirname, './src/features/enrollment/hooks'),
       '@hooks/reports': path.resolve(__dirname, './src/hooks/reports'),

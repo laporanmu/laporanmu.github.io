@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faPlus, faEdit, faSpinner, faCheckCircle, faChevronDown, faSchool, faBuilding, faBed, faMars, faVenus, faIdBadge, faUserTie, faCalendarAlt, faTriangleExclamation
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, RichSelect } from '@components/ui'
+import { Modal, RichSelect } from '@shared/components'
 
 const ClassFormModal = memo(function ClassFormModal({
     isOpen,

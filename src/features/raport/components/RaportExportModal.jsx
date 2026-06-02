@@ -39,7 +39,7 @@ import {
     faFileZipper,
     faPrint
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 
 const COLUMN_DEFS = [
     { key: 'nama', label: 'Nama Santri', icon: faUser },

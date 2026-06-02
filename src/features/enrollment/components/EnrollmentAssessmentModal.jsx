@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Modal, RichSelect } from '@components/ui'
+import { Modal, RichSelect } from '@shared/components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBookQuran, faClipboardCheck, faSave, faUser, faComments, faStar } from '@fortawesome/free-solid-svg-icons'
 import { QURAN_LEVELS, TEST_SCORES } from '@features/enrollment/utils/enrollmentConstants'

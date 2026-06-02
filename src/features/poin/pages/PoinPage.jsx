@@ -9,10 +9,10 @@ import {
     faInfoCircle, faEdit, faFileExport, faLayerGroup, faGraduationCap
 } from '@fortawesome/free-solid-svg-icons'
 
-import DashboardLayout from '@components/layout/DashboardLayout'
-import Modal from '@components/ui/Modal'
-import Breadcrumb from '@components/ui/Breadcrumb'
-import Pagination from '@components/ui/Pagination'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import Modal from '@shared/components/Modal'
+import Breadcrumb from '@shared/components/Breadcrumb'
+import Pagination from '@shared/components/Pagination'
 
 import { useToast } from '@context/ToastContext'
 import { useAuth } from '@context/AuthContext'
@@ -20,7 +20,7 @@ import { useFlag } from '@context/FeatureFlagsContext'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 import { useDebounce } from '@hooks/useDebounce'
-import { TableSkeleton, CardSkeleton } from '@components/ui/Skeleton'
+import { TableSkeleton, CardSkeleton } from '@shared/components/Skeleton'
 
 // Library for Export
 import Papa from 'papaparse'

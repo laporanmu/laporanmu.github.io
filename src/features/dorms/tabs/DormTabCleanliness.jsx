@@ -1,7 +1,7 @@
 import React from 'react'
-import { EmptyState } from '@components/ui/DataDisplay'
-import RichSelect from '@components/ui/RichSelect'
-import RichDatePicker from '@components/ui/RichDatePicker'
+import { EmptyState } from '@shared/components/DataDisplay'
+import RichSelect from '@shared/components/RichSelect'
+import RichDatePicker from '@shared/components/RichDatePicker'
 import {
     Bed, Plus, X, ClipboardList, Trash2, Award, ShieldAlert
 } from 'lucide-react'

@@ -83,7 +83,7 @@ import {
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { LIST_KAMAR } from '@utils/reports/raportConstants'
 
-import DashboardLayout from '@components/layout/DashboardLayout'
+import DashboardLayout from '@core/layouts/DashboardLayout'
 import {
     Breadcrumb,
     PageHeader,
@@ -93,7 +93,7 @@ import {
     StatCard,
     EmptyState,
     Pagination
-} from '@components/ui'
+} from '@shared/components'
 import { useToast, useFlag, useLanguage } from '@context'
 import { supabase } from '@lib/supabase'
 import mbsLogo from '@assets/mbs.png'
@@ -102,7 +102,7 @@ import { useStudentsImportExport } from '@features/students/hooks/useStudentsImp
 import { generateStudentPDF as _generateStudentPDF, handlePrintThermal as _handlePrintThermal, handleSavePNG as _handleSavePNG } from '@features/students/utils/studentPdfUtils'
 import { useStudentsCore } from '@features/students/hooks/useStudentsCore'
 import StudentClassHistoryModal from '@features/students/components/StudentClassHistoryModal'
-import { MobileListSkeleton, MobileCardSkeleton } from '@components/ui/Skeleton'
+import { MobileListSkeleton, MobileCardSkeleton } from '@shared/components/Skeleton'
 
 // NOTE(perf): library import/export di-load on-demand via dynamic import
 // NOTE(perf): jsPDF/html2canvas/qrcode/autotable di-load on-demand via dynamic import

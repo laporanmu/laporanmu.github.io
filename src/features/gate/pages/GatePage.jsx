@@ -9,7 +9,7 @@ import {
   Bell, X, Tag, Keyboard, Download, Filter, IdCard, Car,
   FileSpreadsheet, FileText, CheckCircle2, CircleDot, Undo2, Settings, Monitor
 } from 'lucide-react'
-import DashboardLayout from '@components/layout/DashboardLayout'
+import DashboardLayout from '@core/layouts/DashboardLayout'
 import {
   StatsCarousel,
   Breadcrumb,
@@ -18,7 +18,7 @@ import {
   EmptyState,
   Modal,
   BulkActionsBar
-} from '@components/ui'
+} from '@shared/components'
 import { useToast } from '@context/ToastContext'
 import { useAuth } from '@context/AuthContext'
 import { logAudit } from '@utils/auditLogger'

@@ -9,7 +9,7 @@ import {
     faTrash,
     faTriangleExclamation
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, EmptyState } from '@components/ui'
+import { Modal, EmptyState } from '@shared/components'
 import { supabase } from '@lib/supabase'
 
 export default function TeacherArchiveModal({

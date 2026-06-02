@@ -11,7 +11,7 @@ import {
     faClock, faCalendarDay, faTableList, faHistory, faFileImport,
     faFingerprint, faTimeline, faTimes, faFileExport, faEye, faEyeSlash
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
+import DashboardLayout from '@core/layouts/DashboardLayout'
 import { useToast } from '@context/ToastContext'
 import { useLanguage } from '@context/LanguageContext'
 import { useAuth } from '@context/AuthContext'
@@ -30,7 +30,7 @@ import {
     StatsCarousel,
     StatCard,
     EmptyState
-} from '@components/ui'
+} from '@shared/components'
 import AcademicYearFormModal from '@features/academic-years/components/AcademicYearFormModal'
 import { ArchiveModal, DeactivateModal } from '@features/academic-years/components/AcademicYearActionModals'
 import AcademicYearArchiveModal from '@features/academic-years/components/AcademicYearArchiveModal'

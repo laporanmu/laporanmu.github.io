@@ -1,5 +1,5 @@
 import React from 'react'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 import { Search, X, Check, Bed, User } from 'lucide-react'
 
 export default function DormsAssignModal({

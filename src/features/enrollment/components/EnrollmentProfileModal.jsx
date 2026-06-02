@@ -8,7 +8,7 @@ import {
     faTShirt, faCalendarDay, faUsers, faBoxArchive,
     faUserGraduate, faHistory, faClock, faSpinner, faStar, faMoneyBillWave, faBell
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 import { supabase } from '@lib/supabase'
 import {
     getStatusConfig, getQuranLevelConfig, getProgramLabel,

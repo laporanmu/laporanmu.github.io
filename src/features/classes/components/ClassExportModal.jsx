@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faCheckCircle, faSliders, faSpinner, faUsers, faFileExport, faSchool, faGraduationCap, faBuilding, faUserTie, faCalendarAlt, faFileExcel, faFileCsv, faFilePdf, faGear, faHeading, faArrowsLeftRight, faArrowsUpDown, faTriangleExclamation, faTags
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 
 const COLUMN_DEFS = [
     { key: 'nama_kelas', label: 'Nama Kelas', icon: faSchool },

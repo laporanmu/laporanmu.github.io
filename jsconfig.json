@@ -3,10 +3,6 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@components/layout/*": ["src/core/layouts/*"],
-      "@components/ui": ["src/shared/components"],
-      "@components/ui/*": ["src/shared/components/*"],
-      "@components/*": ["src/components/*"],
       "@hooks/students/*": ["src/hooks/students/*"],
       "@hooks/teachers/*": ["src/hooks/teachers/*"],
       "@hooks/enrollment/*": ["src/features/enrollment/hooks/*"],

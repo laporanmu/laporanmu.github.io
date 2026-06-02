@@ -16,8 +16,8 @@ import {
     faFilePdf, faTable, faLink, faUsers, faClipboardList, faGaugeHigh,
     faArrowUpFromBracket
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import { Breadcrumb, Modal, Pagination, Skeleton } from '@components/ui'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import { Breadcrumb, Modal, Pagination, Skeleton } from '@shared/components'
 import { useToast } from '@context'
 
 // ─── VS Code Syntax Highlighter ────────────────────────────────────────────────

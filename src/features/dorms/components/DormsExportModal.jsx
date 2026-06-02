@@ -1,6 +1,6 @@
 import React from 'react'
-import Modal from '@components/ui/Modal'
-import RichSelect from '@components/ui/RichSelect'
+import Modal from '@shared/components/Modal'
+import RichSelect from '@shared/components/RichSelect'
 import { Download } from 'lucide-react'
 
 export default function DormsExportModal({

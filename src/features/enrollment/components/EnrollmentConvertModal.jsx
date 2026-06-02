@@ -4,7 +4,7 @@ import {
     faUsers, faSpinner, faCheck, faTimes, faUserGraduate,
     faSchool, faCalendarAlt, faIdCard
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 
 const selectClass = "w-full px-3.5 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-sm font-medium text-[var(--color-text)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all outline-none cursor-pointer"
 

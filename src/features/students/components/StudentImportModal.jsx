@@ -26,8 +26,8 @@ import {
     faTableList,
     faChevronUp
 } from '@fortawesome/free-solid-svg-icons'
-import Modal from '@components/ui/Modal'
-import RichSelect from '@components/ui/RichSelect'
+import Modal from '@shared/components/Modal'
+import RichSelect from '@shared/components/RichSelect'
 import { useLanguage } from '@context'
 
 export default function StudentImportModal(props) {

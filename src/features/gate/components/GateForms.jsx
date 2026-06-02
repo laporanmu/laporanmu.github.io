@@ -9,8 +9,8 @@ import {
 } from '@features/gate/utils/gateConstants'
 import { PresetPills } from './GateModals'
 import { nowDateStr, nowTimeStr, dateTimeToISO } from '@features/gate/hooks/useGateCore'
-import RichDatePicker from '@components/ui/RichDatePicker'
-import RichTimePicker from '@components/ui/RichTimePicker'
+import RichDatePicker from '@shared/components/RichDatePicker'
+import RichTimePicker from '@shared/components/RichTimePicker'
 
 // ─── DateTimeInput ────────────────────────────────────────────────────────────
 
@@ -159,7 +159,7 @@ export function QuickGuide({ mode = 'internal' }) {
   )
 }
 
-import RichSelect from '@components/ui/RichSelect'
+import RichSelect from '@shared/components/RichSelect'
 
 // ─── TeacherSearch ────────────────────────────────────────────────────────────
 

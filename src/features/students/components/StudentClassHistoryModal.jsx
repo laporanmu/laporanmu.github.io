@@ -11,8 +11,8 @@ import {
     faCheckCircle,
     faTimeline
 } from '@fortawesome/free-solid-svg-icons'
-import Modal from '@components/ui/Modal'
-import { EmptyState } from '@components/ui/DataDisplay'
+import Modal from '@shared/components/Modal'
+import { EmptyState } from '@shared/components/DataDisplay'
 import { formatRelativeDate } from '@features/students/utils/studentsConstants'
 
 /**

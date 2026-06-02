@@ -28,7 +28,7 @@ import { useTheme } from '@context/ThemeContext'
 import { useAuth } from '@context/AuthContext'
 import { supabase } from '@lib/supabase'
 
-const ChatAssistant = lazy(() => import('@components/layout/ChatAssistant'))
+const ChatAssistant = lazy(() => import('@core/layouts/ChatAssistant'))
 
 // Strip HTML tags + decode common entities for clean excerpt display
 const stripHtml = (html = '') => html

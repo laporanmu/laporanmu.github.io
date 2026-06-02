@@ -5,7 +5,7 @@ import {
     faToggleOn, faToggleOff, faPen, faCheckCircle, faSpinner, faSave, faTimes, faChevronRight,
     faTrash, faMoneyBillWave
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 

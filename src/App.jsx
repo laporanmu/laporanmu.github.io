@@ -7,10 +7,10 @@ import {
   LanguageProvider,
   FeatureFlagsProvider, useFeatureFlags
 } from '@context'
-import DashboardLayout from '@components/layout/DashboardLayout'
+import DashboardLayout from '@core/layouts/DashboardLayout'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLock, faSpinner, faTools, faTriangleExclamation, faDoorOpen, faChevronLeft, faCircleQuestion } from '@fortawesome/free-solid-svg-icons'
-import { GlobalErrorBoundary } from '@components/ui'
+import { GlobalErrorBoundary } from '@shared/components'
 import { Component } from 'react'
 
 // ─── Lazy Loading Guard ───────────────────────────────────────────────────────

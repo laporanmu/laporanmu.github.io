@@ -3,10 +3,10 @@ import {
     Plus, Search, Loader2, ArrowUp, ArrowDown, AlertTriangle,
     ChevronRight, ArrowRight, ArrowLeft, RotateCcw, Edit2, Clock
 } from 'lucide-react'
-import Modal from '@components/ui/Modal'
-import RichSelect from '@components/ui/RichSelect'
-import RichDatePicker from '@components/ui/RichDatePicker'
-import RichTimePicker from '@components/ui/RichTimePicker'
+import Modal from '@shared/components/Modal'
+import RichSelect from '@shared/components/RichSelect'
+import RichDatePicker from '@shared/components/RichDatePicker'
+import RichTimePicker from '@shared/components/RichTimePicker'
 import { faBook } from '@fortawesome/free-solid-svg-icons'
 import { useToast } from '@context'
 import { useLanguage } from '@context'

@@ -10,7 +10,7 @@ import {
     faLocationDot, faBriefcase, faClock, faGraduationCap, faBookOpen, faCalendarCheck
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 
 const COLUMN_DEFS = [
     { key: 'nama', label: 'Nama Lengkap', icon: faUser },

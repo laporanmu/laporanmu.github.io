@@ -8,10 +8,10 @@ import {
     faMapMarkerAlt, faCalendarAlt, faPrayingHands, faIdBadge, faDoorOpen,
     faHeart, faAddressCard, faUsers
 } from '@fortawesome/free-solid-svg-icons'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import { AuditTimeline } from '@components/ui'
-import { EmptyState, StatCard } from '@components/ui/DataDisplay'
+import { AuditTimeline } from '@shared/components'
+import { EmptyState, StatCard } from '@shared/components/DataDisplay'
 
 export default memo(function StudentProfileModal({
     isOpen, onClose, selectedStudent, isPrivacyMode, maskInfo, calculateCompleteness,

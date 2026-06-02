@@ -7,7 +7,7 @@ import {
     faSave, faPlus, faEdit, faCamera, faFingerprint,
     faBriefcase
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, RichSelect } from '@components/ui'
+import { Modal, RichSelect } from '@shared/components'
 
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
 

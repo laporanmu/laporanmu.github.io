@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faMoneyBillWave, faCheckCircle, faXmarkCircle, faClock,

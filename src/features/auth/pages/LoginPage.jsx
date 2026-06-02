@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faEnvelope, faLock, faArrowRight, faSpinner, faEye, faEyeSlash, faSun, faMoon, faTriangleExclamation, faKey, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useAuth, useToast, useTheme } from '@context'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 import { Laptop, Shield, GraduationCap, IdCard, Eye } from 'lucide-react'
 
 export default function LoginPage() {

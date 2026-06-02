@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCamera, faCheck, faSpinner, faTrash, faCompress, faUser } from '@fortawesome/free-solid-svg-icons'
-import Modal from '@components/ui/Modal'
-import RichSelect from '@components/ui/RichSelect'
+import Modal from '@shared/components/Modal'
+import RichSelect from '@shared/components/RichSelect'
 
 export default function StudentBulkPhotoModal({
     isOpen,

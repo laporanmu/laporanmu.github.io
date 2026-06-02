@@ -9,7 +9,7 @@ import {
     faTrash,
     faTriangleExclamation
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, EmptyState } from '@components/ui'
+import { Modal, EmptyState } from '@shared/components'
 import { getProgramLabel } from '@features/enrollment/utils/enrollmentConstants'
 
 export default function EnrollmentArchiveModal({

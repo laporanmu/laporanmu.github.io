@@ -5,7 +5,7 @@ import { useToast } from '@context/ToastContext'
 import { useLanguage } from '@context/LanguageContext'
 import { useGateCore } from '@features/gate/hooks/useGateCore'
 import { logAudit } from '@utils/auditLogger'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 import {
   ArrowLeft, Clock, QrCode, Sparkles, CheckCircle2, XCircle,
   Volume2, VolumeX, Keyboard, RefreshCw, LogOut, LogIn,

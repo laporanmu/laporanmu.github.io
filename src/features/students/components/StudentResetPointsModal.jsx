@@ -10,7 +10,7 @@ import {
     faXmark,
     faCircleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 
 export default function StudentResetPointsModal({
     isOpen,

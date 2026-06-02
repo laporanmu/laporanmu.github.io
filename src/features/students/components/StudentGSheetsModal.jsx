@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleCheck, faCircleExclamation, faDownload, faLink, faSpinner, faTable, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 import { useLanguage } from '@context'
 
 export default function StudentGSheetsModal({

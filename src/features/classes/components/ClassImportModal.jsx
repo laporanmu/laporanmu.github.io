@@ -7,7 +7,7 @@ import {
     faCheckCircle, faCopy, faCircleExclamation, faTriangleExclamation,
     faPen, faTrash, faSchool, faTableList
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, RichSelect } from '@components/ui'
+import { Modal, RichSelect } from '@shared/components'
 
 const PROGRAMS = ['Boarding', 'Reguler']
 const LEVELS = ['7', '8', '9', '10', '11', '12']

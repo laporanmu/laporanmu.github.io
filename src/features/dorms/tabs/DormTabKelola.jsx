@@ -1,5 +1,5 @@
 import React from 'react'
-import { EmptyState } from '@components/ui/DataDisplay'
+import { EmptyState } from '@shared/components/DataDisplay'
 import {
     Plus, Bed, ClipboardList, Edit2, Trash2
 } from 'lucide-react'

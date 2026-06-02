@@ -40,7 +40,7 @@ import {
     faClock,
     faFileSignature
 } from '@fortawesome/free-solid-svg-icons'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 import { useLanguage } from '@context'
 
 const COLUMN_DEFS = [

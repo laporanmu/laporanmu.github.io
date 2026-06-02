@@ -16,8 +16,8 @@ import {
     faCheckDouble, faSquareCheck, faSortAlphaDown, faArrowUp91
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import { Modal, Breadcrumb, PageHeader, Pagination, StatsCarousel, StatCard, ActionBadge, DiffViewer, AuditTimeline, RichSelect } from '@components/ui'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import { Modal, Breadcrumb, PageHeader, Pagination, StatsCarousel, StatCard, ActionBadge, DiffViewer, AuditTimeline, RichSelect } from '@shared/components'
 import { useToast } from '@context/ToastContext'
 import { useAuth } from '@context/AuthContext'
 import { useFlag } from '@context/FeatureFlagsContext'

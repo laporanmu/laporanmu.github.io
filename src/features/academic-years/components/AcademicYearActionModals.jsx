@@ -7,7 +7,7 @@ import {
     faTrash,
     faSpinner
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 
 export const ArchiveModal = memo(function ArchiveModal({
     isOpen,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@lib/supabase'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import Breadcrumb from '@components/ui/Breadcrumb'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import Breadcrumb from '@shared/components/Breadcrumb'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faShieldHalved, faRotateRight, faFilter, faSearch,
@@ -23,7 +23,7 @@ import {
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import { fmtDate, fmtTime, fmtDateTime, fmtRelative } from '@utils/formatters'
-import { ActionBadge, JsonVisualizer, DiffViewer, DeleteTombstone, InsertViewer, AuditTimeline } from '@components/ui'
+import { ActionBadge, JsonVisualizer, DiffViewer, DeleteTombstone, InsertViewer, AuditTimeline } from '@shared/components'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 1: CONSTANTS
@@ -63,7 +63,7 @@ const TABLE_LABELS = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 2 & 3: Migrated to @components/ui (shared/components/AuditTimeline.jsx)
+// SECTION 2 & 3: Migrated to @shared/components (shared/components/AuditTimeline.jsx)
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────────

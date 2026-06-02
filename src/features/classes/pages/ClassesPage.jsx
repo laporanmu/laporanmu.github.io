@@ -10,32 +10,32 @@ import {
     faCheckDouble, faSquareCheck
 } from '@fortawesome/free-solid-svg-icons'
 
-import DashboardLayout from '@components/layout/DashboardLayout'
-import Modal from '@components/ui/Modal'
-import Breadcrumb from '@components/ui/Breadcrumb'
-import PageHeader from '@components/ui/PageHeader'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import Modal from '@shared/components/Modal'
+import Breadcrumb from '@shared/components/Breadcrumb'
+import PageHeader from '@shared/components/PageHeader'
 import { useToast } from '@context/ToastContext'
 import { useAuth } from '@context/AuthContext'
 import { useFlag } from '@context/FeatureFlagsContext'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 import { useDebounce } from '@hooks/useDebounce'
-import { TableSkeleton, CardSkeleton } from '@components/ui/Skeleton'
-import RichSelect from '@components/ui/RichSelect'
-import StatsCarousel from '@components/ui/StatsCarousel'
-import { StatCard } from '@components/ui/DataDisplay'
+import { TableSkeleton, CardSkeleton } from '@shared/components/Skeleton'
+import RichSelect from '@shared/components/RichSelect'
+import StatsCarousel from '@shared/components/StatsCarousel'
+import { StatCard } from '@shared/components/DataDisplay'
 
 // Library for Export/Import
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
 // Components
-import { ClassRow, ClassMobileCard } from '@components/classes/ClassRow'
-import ClassFormModal from '@components/classes/ClassFormModal'
-import ClassExportModal from '@components/classes/ClassExportModal'
-import ClassArchiveModal from '@components/classes/ClassArchiveModal'
-import ClassImportModal from '@components/classes/ClassImportModal'
-import Pagination from '@components/ui/Pagination'
+import { ClassRow, ClassMobileCard } from '@features/classes/components/ClassRow'
+import ClassFormModal from '@features/classes/components/ClassFormModal'
+import ClassExportModal from '@features/classes/components/ClassExportModal'
+import ClassArchiveModal from '@features/classes/components/ClassArchiveModal'
+import ClassImportModal from '@features/classes/components/ClassImportModal'
+import Pagination from '@shared/components/Pagination'
 
 
 const LEVELS = ['7', '8', '9', '10', '11', '12']

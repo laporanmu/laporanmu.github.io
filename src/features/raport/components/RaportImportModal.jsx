@@ -25,7 +25,7 @@ import {
     faTableList,
     faChevronUp
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, RichSelect } from '@components/ui'
+import { Modal, RichSelect } from '@shared/components'
 import { supabase } from '@lib/supabase'
 import { useToast } from '@context'
 

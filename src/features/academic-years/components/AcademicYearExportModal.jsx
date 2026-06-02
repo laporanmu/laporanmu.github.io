@@ -24,7 +24,7 @@ import {
     faArrowsUpDown,
     faTags
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 
 const COLUMN_DEFS = [
     { key: 'name', label: 'Tahun Pelajaran', icon: faCalendar },

@@ -9,7 +9,7 @@ import {
     faCheckCircle,
     faEdit
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal } from '@components/ui'
+import { Modal } from '@shared/components'
 
 const AcademicYearFormModal = memo(function AcademicYearFormModal({
     isOpen,

@@ -8,7 +8,7 @@ import {
     faCopy, faNoteSticky, faBriefcase, faFingerprint,
     faCalendarCheck, faCheckCircle, faGraduationCap, faBook
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, StatCard, EmptyState, AuditTimeline } from '@components/ui'
+import { Modal, StatCard, EmptyState, AuditTimeline } from '@shared/components'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 
 const STATUS_CONFIG = {

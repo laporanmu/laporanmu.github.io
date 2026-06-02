@@ -7,7 +7,7 @@ import {
     faChartPie, faUsers, faVenusMars, faGraduationCap, faSchool, faWaveSquare, faCheckCircle, faFilter, faCalendarDays, faPercent,
     faChevronRight, faPrint, faInbox, faFileExcel, faMapMarkerAlt
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, RichSelect } from '@components/ui'
+import { Modal, RichSelect } from '@shared/components'
 
 export default function EnrollmentStatsModal({ isOpen, onClose, enrollments, waves }) {
     const [selectedWave, setSelectedWave] = useState('all')

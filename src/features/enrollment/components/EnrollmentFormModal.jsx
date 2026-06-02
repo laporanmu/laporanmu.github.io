@@ -6,7 +6,7 @@ import {
     faSchool, faBookQuran, faHeart, faGraduationCap, faMapMarkerAlt,
     faCalendarAlt, faIdCard, faPhone, faCamera, faSuitcase, faCheck, faCalendarDay
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, RichSelect } from '@components/ui'
+import { Modal, RichSelect } from '@shared/components'
 import {
     PROGRAM_OPTIONS, QURAN_LEVELS, UNIFORM_SIZES, TEST_SCORES, REQUIRED_DOCUMENTS
 } from '@features/enrollment/utils/enrollmentConstants'

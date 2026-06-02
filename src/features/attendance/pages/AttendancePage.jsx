@@ -21,9 +21,9 @@ import {
     faSearch, faPerson, faArrowRight, faLinkSlash,
     faClockRotateLeft, faLink, faClock, faMoneyBillWave
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import Breadcrumb from '@components/ui/Breadcrumb'
-import { EmptyState } from '@components/ui/DataDisplay'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import Breadcrumb from '@shared/components/Breadcrumb'
+import { EmptyState } from '@shared/components/DataDisplay'
 import { useToast } from '@context/ToastContext'
 import { useLanguage } from '@context/LanguageContext'
 import { useAuth } from '@context/AuthContext'

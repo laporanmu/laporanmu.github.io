@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback, memo, lazy, Suspense, useRef } from 'react'
-import StatsCarousel from '@components/ui/StatsCarousel'
+import StatsCarousel from '@shared/components/StatsCarousel'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faUsers,
@@ -12,10 +12,10 @@ import {
     faSearch
 } from '@fortawesome/free-solid-svg-icons'
 import { Link, useNavigate } from 'react-router-dom'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import Breadcrumb from '@components/ui/Breadcrumb'
-import PageHeader from '@components/ui/PageHeader'
-import { StatCard, EmptyState } from '@components/ui/DataDisplay'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import Breadcrumb from '@shared/components/Breadcrumb'
+import PageHeader from '@shared/components/PageHeader'
+import { StatCard, EmptyState } from '@shared/components/DataDisplay'
 
 // Modular Components
 const AnalyticsRow = lazy(() => import('@features/dashboard/components/AnalyticsRow'))

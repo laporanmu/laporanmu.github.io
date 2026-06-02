@@ -26,7 +26,7 @@ import {
     faSchool,
     faTableList
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, RichSelect } from '@components/ui'
+import { Modal, RichSelect } from '@shared/components'
 
 export default function TeacherImportModal(props) {
     const {

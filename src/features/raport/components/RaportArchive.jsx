@@ -7,7 +7,7 @@ import {
     faChartPie, faBoxArchive, faBolt, faMagnifyingGlass, faCircleExclamation
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import { EmptyState, Skeleton } from '@components/ui'
+import { EmptyState, Skeleton } from '@shared/components'
 import RaportPrintCard from './RaportPrintCard'
 
 import {

@@ -48,8 +48,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { supabase } from '@lib/supabase'
-import Modal from '@components/ui/Modal'
-import RichSelect from '@components/ui/RichSelect'
+import Modal from '@shared/components/Modal'
+import RichSelect from '@shared/components/RichSelect'
 import { LIST_KAMAR } from '@utils/reports/raportConstants'
 import {
     EDUCATION_LEVELS,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { StatsCarousel, Breadcrumb } from '@components/ui'
+import { StatsCarousel, Breadcrumb } from '@shared/components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faDatabase, faShieldHalved, faRotateRight, faSpinner,
@@ -11,7 +11,7 @@ import {
     faDownload, faArrowsRotate, faCheckDouble,
     faLinkSlash, faCalendarWeek, faCircleInfo, faFloppyDisk,
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
+import DashboardLayout from '@core/layouts/DashboardLayout'
 import { useToast, useAuth } from '@context'
 import { supabase } from '@lib/supabase'
 

@@ -1,8 +1,8 @@
 import React from 'react'
-import { EmptyState } from '@components/ui/DataDisplay'
-import RichSelect from '@components/ui/RichSelect'
-import Pagination from '@components/ui/Pagination'
-import BulkActionsBar from '@components/ui/BulkActionsBar'
+import { EmptyState } from '@shared/components/DataDisplay'
+import RichSelect from '@shared/components/RichSelect'
+import Pagination from '@shared/components/Pagination'
+import BulkActionsBar from '@shared/components/BulkActionsBar'
 import {
     Search, X, Sliders, RotateCcw, LayoutGrid, Table,
     CheckCircle2, User, UserMinus, ArrowRightLeft, Bed, AlertCircle, Users

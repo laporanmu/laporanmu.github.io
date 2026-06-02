@@ -9,7 +9,7 @@ import {
     faDoorOpen, faBookOpen, faFileLines, faClipboardList, faCopy
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import { EmptyState, Modal } from '@components/ui'
+import { EmptyState, Modal } from '@shared/components'
 import StudentRow, { ExtraInput, ExtraTextarea } from './RaportRecordRow'
 import BulkActionBar from './BulkActionBar'
 import { RadarChart } from './RaportCharts'

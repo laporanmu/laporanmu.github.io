@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@lib/supabase'
 import { useToast, useLanguage } from '@context'
-import DashboardLayout from '@components/layout/DashboardLayout'
+import DashboardLayout from '@core/layouts/DashboardLayout'
 import {
     PageHeader,
     EmptyState, StatCard,
@@ -11,7 +11,7 @@ import {
     RichTimePicker,
     RichSelect,
     Modal
-} from '@components/ui'
+} from '@shared/components'
 import { askAi } from '@lib/ai'
 import {
     HeartPulse, Search, Plus, Trash2, X, Edit2,

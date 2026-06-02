@@ -10,8 +10,8 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     BarChart, Bar, Cell, PieChart, Pie
 } from 'recharts'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import { Breadcrumb } from '@components/ui'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import { Breadcrumb } from '@shared/components'
 import { supabase } from '@lib/supabase'
 
 const TOKEN_RATE = 0.0012

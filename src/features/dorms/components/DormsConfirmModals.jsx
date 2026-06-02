@@ -1,5 +1,5 @@
 import React from 'react'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 import { UserMinus, Trash2 } from 'lucide-react'
 
 export function ConfirmEvictModal({

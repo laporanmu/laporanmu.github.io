@@ -13,8 +13,8 @@ import {
     faBackward, faPlay, faPause, faForward, faMusic, faKeyboard, faRepeat,
     faArrowRight, faCircleInfo, faMaximize
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import Breadcrumb from '@components/ui/Breadcrumb'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import Breadcrumb from '@shared/components/Breadcrumb'
 import { useToast } from '@context/ToastContext'
 import { useAuth } from '@context/AuthContext'
 import { supabase } from '@lib/supabase'
@@ -23,7 +23,7 @@ import ReactQuill from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
 import { useSchoolSettings } from '@context/SchoolSettingsContext'
 import MediaLibraryModal from '@features/news/components/MediaLibraryModal'
-import Modal from '@components/ui/Modal'
+import Modal from '@shared/components/Modal'
 import { askAi } from '@lib/ai'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────

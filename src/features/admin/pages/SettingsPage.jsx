@@ -11,9 +11,9 @@ import {
     faHistory, faCheckCircle, faCircleInfo, faChartPie
 } from '@fortawesome/free-solid-svg-icons'
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import Breadcrumb from '@components/ui/Breadcrumb'
-import Pagination from '@components/ui/Pagination'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import Breadcrumb from '@shared/components/Breadcrumb'
+import Pagination from '@shared/components/Pagination'
 import { useToast } from '@context/ToastContext'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'

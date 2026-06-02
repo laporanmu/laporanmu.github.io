@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useToast } from '@context/ToastContext'
-import DashboardLayout from '@components/layout/DashboardLayout'
-import PageHeader from '@components/ui/PageHeader'
-import { StatCard } from '@components/ui/DataDisplay'
-import StatsCarousel from '@components/ui/StatsCarousel'
+import DashboardLayout from '@core/layouts/DashboardLayout'
+import PageHeader from '@shared/components/PageHeader'
+import { StatCard } from '@shared/components/DataDisplay'
+import StatsCarousel from '@shared/components/StatsCarousel'
 import {
     Bed, Users, Star, ClipboardList, Sparkles, CheckSquare, ShieldAlert,
     Sliders, Download, FileSpreadsheet, Eye, EyeOff, Plus

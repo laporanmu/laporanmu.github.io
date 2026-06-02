@@ -9,7 +9,7 @@ import {
     faFileExport, faFileExcel, faFilePdf, faChartPie, faFileImport,
     faClipboardCheck, faGraduationCap, faBell, faSpinner
 } from '@fortawesome/free-solid-svg-icons'
-import DashboardLayout from '@components/layout/DashboardLayout'
+import DashboardLayout from '@core/layouts/DashboardLayout'
 import {
     Breadcrumb,
     Modal,
@@ -19,7 +19,7 @@ import {
     Pagination,
     RichSelect,
     RichDatePicker
-} from '@components/ui'
+} from '@shared/components'
 import { useToast, useLanguage } from '@context'
 import { useEnrollmentCore } from '@features/enrollment/hooks/useEnrollmentCore'
 import { EnrollmentRow, EnrollmentMobileCard, EnrollmentSkeletonRow, EnrollmentSkeletonCard } from '@features/enrollment/components/EnrollmentRow'

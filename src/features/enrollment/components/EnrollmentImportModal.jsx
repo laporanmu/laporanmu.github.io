@@ -26,7 +26,7 @@ import {
     faChevronUp,
     faWaveSquare
 } from '@fortawesome/free-solid-svg-icons'
-import { Modal, RichSelect } from '@components/ui'
+import { Modal, RichSelect } from '@shared/components'
 
 export default function EnrollmentImportModal(props) {
     const [showWavesDropdown, setShowWavesDropdown] = useState(false)

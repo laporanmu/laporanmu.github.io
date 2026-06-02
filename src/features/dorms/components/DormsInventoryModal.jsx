@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import Modal from '@components/ui/Modal'
-import { EmptyState } from '@components/ui/DataDisplay'
-import RichSelect from '@components/ui/RichSelect'
+import Modal from '@shared/components/Modal'
+import { EmptyState } from '@shared/components/DataDisplay'
+import RichSelect from '@shared/components/RichSelect'
 import { Search, ClipboardList, Edit2, Trash2, Plus, Check, X } from 'lucide-react'
 
 // Private Helper sub-component
