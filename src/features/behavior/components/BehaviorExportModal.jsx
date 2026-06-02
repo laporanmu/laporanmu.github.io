@@ -40,8 +40,8 @@ import {
     faClock,
     faFileSignature
 } from '@fortawesome/free-solid-svg-icons'
-import Modal from '../ui/Modal'
-import { useLanguage } from '../../context/LanguageContext'
+import Modal from '@components/ui/Modal'
+import { useLanguage } from '@context'
 
 const COLUMN_DEFS = [
     { key: 'reported_at', label: 'colDate', icon: faCalendarAlt },

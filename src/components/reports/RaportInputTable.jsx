@@ -19,6 +19,7 @@ import {
     KRITERIA, GRADE, BULAN, FISIK_FIELDS, HAFALAN_FIELDS, MAX_SCORE, calcAvg
 } from '../../utils/reports/raportConstants'
 import { isComplete, generateAutoComment } from '../../utils/reports/raportHelpers'
+import { supabase } from '@lib/supabase'
 
 const ROW_HEIGHT = 188
 

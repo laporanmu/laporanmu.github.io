@@ -1,15 +1,16 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import { ToastProvider } from './context/ToastContext'
-import { ThemeProvider } from './context/ThemeContext'
-import { LanguageProvider } from './context/LanguageContext'
-import { FeatureFlagsProvider, useFeatureFlags } from './context/FeatureFlagsContext'
-import { useTheme } from './context/ThemeContext'
-import DashboardLayout from './components/layout/DashboardLayout'
+import {
+  AuthProvider, useAuth,
+  ToastProvider,
+  ThemeProvider, useTheme,
+  LanguageProvider,
+  FeatureFlagsProvider, useFeatureFlags
+} from '@context'
+import DashboardLayout from '@components/layout/DashboardLayout'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLock, faSpinner, faTools, faTriangleExclamation, faDoorOpen, faChevronLeft, faCircleQuestion } from '@fortawesome/free-solid-svg-icons'
-import GlobalErrorBoundary from './components/ui/GlobalErrorBoundary'
+import { GlobalErrorBoundary } from '@components/ui'
 import { Component } from 'react'
 
 // ─── Lazy Loading Guard ───────────────────────────────────────────────────────
@@ -34,46 +35,46 @@ function lazyRetry(componentImport) {
 
 // ─── Lazy-loaded Pages ────────────────────────────────────────────────────────
 // Public
-const LandingPage = lazyRetry(() => import('./pages/LandingPage.jsx'))
-const LoginPage = lazyRetry(() => import('./pages/auth/LoginPage.jsx'))
-const ParentCheckPage = lazyRetry(() => import('./pages/auth/ParentCheckPage.jsx'))
-const InformationPage = lazyRetry(() => import('./pages/InformationPage.jsx'))
-const PublicVerifyPage = lazyRetry(() => import('./pages/PublicVerifyPage.jsx'))
+const LandingPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.LandingPage })))
+const LoginPage = lazyRetry(() => import('@features/auth').then(m => ({ default: m.LoginPage })))
+const ParentCheckPage = lazyRetry(() => import('@features/auth').then(m => ({ default: m.ParentCheckPage })))
+const InformationPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.InformationPage })))
+const PublicVerifyPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.PublicVerifyPage })))
 
 // Core
-const DashboardPage = lazyRetry(() => import('./pages/DashboardPage.jsx'))
-const RaportPage = lazyRetry(() => import('./pages/academic/RaportPage.jsx'))
-const BehaviorPage = lazyRetry(() => import('./pages/student/BehaviorPage.jsx'))
-const DormsPage = lazyRetry(() => import('./pages/student/DormsPage.jsx'))
-const HealthPage = lazyRetry(() => import('./pages/student/HealthPage.jsx'))
-const CounselingPage = lazyRetry(() => import('./pages/student/CounselingPage.jsx'))
-const AttendancePage = lazyRetry(() => import('./pages/academic/AttendancePage.jsx'))
-const GatePage = lazyRetry(() => import('./pages/student/GatePage.jsx'))
-const GateKioskPage = lazyRetry(() => import('./pages/student/GateKioskPage.jsx'))
-const SettingsPage = lazyRetry(() => import('./pages/SettingsPage.jsx'))
+const DashboardPage = lazyRetry(() => import('@features/dashboard'))
+const RaportPage = lazyRetry(() => import('@features/raport'))
+const BehaviorPage = lazyRetry(() => import('@features/behavior/pages/BehaviorPage.jsx'))
+const DormsPage = lazyRetry(() => import('@features/dorms/pages/DormsPage.jsx'))
+const HealthPage = lazyRetry(() => import('@features/health'))
+const CounselingPage = lazyRetry(() => import('@features/counseling'))
+const AttendancePage = lazyRetry(() => import('@features/attendance'))
+const GatePage = lazyRetry(() => import('@features/gate/pages/GatePage.jsx'))
+const GateKioskPage = lazyRetry(() => import('@features/gate/pages/GateKioskPage.jsx'))
+const SettingsPage = lazyRetry(() => import('@features/settings'))
 
 // Admin-only
-const UserPage = lazyRetry(() => import('./pages/admin/UserPage.jsx'))
-const LogsPage = lazyRetry(() => import('./pages/admin/LogsPage.jsx'))
-const AdminSettingsPage = lazyRetry(() => import('./pages/admin/SettingsPage.jsx'))
-const DatabasePage = lazyRetry(() => import('./pages/admin/DatabasePage.jsx'))
-const StoragePage = lazyRetry(() => import('./pages/admin/StoragePage.jsx'))
-const TasksPage = lazyRetry(() => import('./pages/admin/TasksPage.jsx'))
-const PlaygroundPage = lazyRetry(() => import('./pages/admin/PlaygroundPage.jsx'))
-const NewsListPage = lazyRetry(() => import('./pages/admin/news/NewsListPage.jsx'))
-const NewsEditorPage = lazyRetry(() => import('./pages/admin/news/NewsEditorPage.jsx'))
-const AiInsightsPage = lazyRetry(() => import('./pages/admin/ai/AiInsightsPage.jsx'))
-const AdminDashboardPage = lazyRetry(() => import('./pages/admin/AdminDashboardPage.jsx'))
+const UserPage = lazyRetry(() => import('@features/admin/pages/UserPage.jsx'))
+const LogsPage = lazyRetry(() => import('@features/admin/pages/LogsPage.jsx'))
+const AdminSettingsPage = lazyRetry(() => import('@features/admin/pages/SettingsPage.jsx'))
+const DatabasePage = lazyRetry(() => import('@features/admin/pages/DatabasePage.jsx'))
+const StoragePage = lazyRetry(() => import('@features/admin/pages/StoragePage.jsx'))
+const TasksPage = lazyRetry(() => import('@features/admin/pages/TasksPage.jsx'))
+const PlaygroundPage = lazyRetry(() => import('@features/admin/pages/PlaygroundPage.jsx'))
+const NewsListPage = lazyRetry(() => import('@features/news/pages/NewsListPage.jsx'))
+const NewsEditorPage = lazyRetry(() => import('@features/news/pages/NewsEditorPage.jsx'))
+const AiInsightsPage = lazyRetry(() => import('@features/admin/pages/ai/AiInsightsPage.jsx'))
+const AdminDashboardPage = lazyRetry(() => import('@features/admin/pages/AdminDashboardPage.jsx'))
 
 // Master Data
-const StudentsPage = lazyRetry(() => import('./pages/master/StudentsPage.jsx'))
-const TeachersPage = lazyRetry(() => import('./pages/master/TeachersPage.jsx'))
-const ClassesPage = lazyRetry(() => import('./pages/master/ClassesPage.jsx'))
-const PoinPage = lazyRetry(() => import('./pages/master/PoinPage.jsx'))
-const AcademicYearsPage = lazyRetry(() => import('./pages/master/AcademicYearsPage.jsx'))
-const EnrollmentPage = lazyRetry(() => import('./pages/master/EnrollmentPage.jsx'))
-const PublicEnrollmentPage = lazyRetry(() => import('./pages/PublicEnrollmentPage.jsx'))
-const PublicStatusCheckPage = lazyRetry(() => import('./pages/PublicStatusCheckPage.jsx'))
+const StudentsPage = lazyRetry(() => import('@features/students/pages/StudentsPage.jsx'))
+const TeachersPage = lazyRetry(() => import('@features/teachers'))
+const ClassesPage = lazyRetry(() => import('@features/classes'))
+const PoinPage = lazyRetry(() => import('@features/poin'))
+const AcademicYearsPage = lazyRetry(() => import('@features/academic-years'))
+const EnrollmentPage = lazyRetry(() => import('@features/enrollment'))
+const PublicEnrollmentPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.PublicEnrollmentPage })))
+const PublicStatusCheckPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.PublicStatusCheckPage })))
 
 // ─── Role Hierarchy ───────────────────────────────────────────────────────────
 // developer > admin > guru = satpam > viewer

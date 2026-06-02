@@ -1,7 +1,7 @@
 import React, { memo, useCallback } from 'react'
 import { ClipboardList, MessageSquare, Edit2, Trash2 } from 'lucide-react'
-import Modal from '../ui/Modal'
-import { useLanguage } from '../../context/LanguageContext'
+import Modal from '@components/ui/Modal'
+import { useLanguage } from '@context'
 
 const DB_TRANSLATIONS = {
     en: {

@@ -3,13 +3,13 @@ import {
     Plus, Search, Loader2, ArrowUp, ArrowDown, AlertTriangle,
     ChevronRight, ArrowRight, ArrowLeft, RotateCcw, Edit2, Clock
 } from 'lucide-react'
-import Modal from '../ui/Modal'
-import RichSelect from '../ui/RichSelect'
-import RichDatePicker from '../ui/RichDatePicker'
-import RichTimePicker from '../ui/RichTimePicker'
+import Modal from '@components/ui/Modal'
+import RichSelect from '@components/ui/RichSelect'
+import RichDatePicker from '@components/ui/RichDatePicker'
+import RichTimePicker from '@components/ui/RichTimePicker'
 import { faBook } from '@fortawesome/free-solid-svg-icons'
-import { useToast } from '../../context/ToastContext'
-import { useLanguage } from '../../context/LanguageContext'
+import { useToast } from '@context'
+import { useLanguage } from '@context'
 
 const DB_TRANSLATIONS = {
     en: {

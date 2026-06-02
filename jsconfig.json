@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/layout/*": ["src/core/layouts/*"],
+      "@components/ui": ["src/shared/components"],
+      "@components/ui/*": ["src/shared/components/*"],
+      "@components/*": ["src/components/*"],
+      "@hooks/students/*": ["src/hooks/students/*"],
+      "@hooks/teachers/*": ["src/hooks/teachers/*"],
+      "@hooks/enrollment/*": ["src/features/enrollment/hooks/*"],
+      "@hooks/reports/*": ["src/hooks/reports/*"],
+      "@hooks/gate/*": ["src/hooks/gate/*"],
+      "@hooks/dorms/*": ["src/hooks/dorms/*"],
+      "@hooks/*": ["src/shared/hooks/*"],
+      "@pages/*": ["src/pages/*"],
+      "@utils/dorms/*": ["src/utils/dorms/*"],
+      "@utils/enrollment/*": ["src/features/enrollment/utils/*"],
+      "@utils/gate/*": ["src/utils/gate/*"],
+      "@utils/reports/*": ["src/utils/reports/*"],
+      "@utils/students/*": ["src/utils/students/*"],
+      "@utils/*": ["src/shared/utils/*"],
+      "@services/*": ["src/services/*"],
+      "@context/*": ["src/core/context/*"],
+      "@lib/*": ["src/core/lib/*"],
+      "@styles/*": ["src/styles/*"],
+      "@assets/*": ["src/assets/*"],
+      "@features/*": ["src/features/*"],
+      "@core/*": ["src/core/*"],
+      "@shared/*": ["src/shared/*"]
+    },
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ESNext",
+    "allowImportingTsExtensions": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

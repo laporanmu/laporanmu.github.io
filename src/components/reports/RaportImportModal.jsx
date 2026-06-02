@@ -27,8 +27,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import RichSelect from '../ui/RichSelect'
-import { supabase } from '../../lib/supabase'
-import { useToast } from '../../context/ToastContext'
+import { supabase } from '@lib/supabase'
+import { useToast } from '@context'
 
 const SYSTEM_COLS = [
     { key: 'name', label: 'Nama Siswa', required: true, desc: 'Untuk mencocokkan dengan database siswa' },

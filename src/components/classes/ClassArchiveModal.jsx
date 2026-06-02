@@ -12,7 +12,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '../ui/Modal'
 import { EmptyState } from '../ui/DataDisplay'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '@lib/supabase'
 
 export default function ClassArchiveModal({
     isOpen,
