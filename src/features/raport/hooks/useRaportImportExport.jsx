@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef } from 'react'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
-import { BULAN, KRITERIA, STORAGE_BUCKET, GRADE, calcAvg } from '../../utils/reports/raportConstants'
-import { buildWaLines, escapeCsvCell } from '../../utils/reports/raportHelpers'
+import { BULAN, KRITERIA, STORAGE_BUCKET, GRADE, calcAvg } from '@utils/reports/raportConstants'
+import { buildWaLines, escapeCsvCell } from '@utils/reports/raportHelpers'
 
 // Helper withTimeout agar html2canvas tidak hang selamanya
 const withTimeout = (promise, ms, label = 'Operasi') =>

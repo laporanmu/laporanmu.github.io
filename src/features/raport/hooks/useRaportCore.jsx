@@ -5,9 +5,9 @@ import { useToast } from '@context/ToastContext'
 import { useSchoolSettings } from '@context/SchoolSettingsContext'
 import { useAuth } from '@context/AuthContext'
 import { useFlag } from '@context/FeatureFlagsContext'
-import { BULAN, KRITERIA } from '../../utils/reports/raportConstants'
-import { isComplete } from '../../utils/reports/raportHelpers'
-import { loadTranslitData } from '../../utils/reports/translitData'
+import { BULAN, KRITERIA } from '@utils/reports/raportConstants'
+import { isComplete } from '@utils/reports/raportHelpers'
+import { loadTranslitData } from '@utils/reports/translitData'
 
 const ROW_HEIGHT = 188
 const OVERSCAN = 5

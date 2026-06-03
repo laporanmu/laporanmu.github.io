@@ -3,10 +3,12 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 export default defineConfig({
   plugins: [
     react(),
+    visualizer({ open: false, gzipSize: true }),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -39,21 +41,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@hooks/students': path.resolve(__dirname, './src/features/students/hooks'),
       '@hooks/enrollment': path.resolve(__dirname, './src/features/enrollment/hooks'),
-      '@hooks/reports': path.resolve(__dirname, './src/hooks/reports'),
-      '@hooks/gate': path.resolve(__dirname, './src/hooks/gate'),
+      '@hooks/reports': path.resolve(__dirname, './src/features/raport/hooks'),
       '@hooks/dorms': path.resolve(__dirname, './src/features/dorms/hooks'),
       '@hooks': path.resolve(__dirname, './src/shared/hooks'),
-      '@pages': path.resolve(__dirname, './src/pages'),
       '@utils/dorms': path.resolve(__dirname, './src/features/dorms/utils'),
       '@utils/enrollment': path.resolve(__dirname, './src/features/enrollment/utils'),
-      '@utils/gate': path.resolve(__dirname, './src/utils/gate'),
-      '@utils/reports': path.resolve(__dirname, './src/utils/reports'),
+      '@utils/reports': path.resolve(__dirname, './src/features/raport/utils'),
       '@utils/students': path.resolve(__dirname, './src/features/students/utils'),
       '@utils': path.resolve(__dirname, './src/shared/utils'),
-      '@services': path.resolve(__dirname, './src/services'),
       '@context': path.resolve(__dirname, './src/core/context'),
       '@lib': path.resolve(__dirname, './src/core/lib'),
-      '@styles': path.resolve(__dirname, './src/styles'),
       '@assets': path.resolve(__dirname, './src/assets'),
       '@features': path.resolve(__dirname, './src/features'),
       '@core': path.resolve(__dirname, './src/core'),

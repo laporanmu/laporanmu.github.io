@@ -35,3 +35,5 @@ tasks.md
 src/assets/*.pdf
 src/assets/*.xlsx
 
+# Visualizer stats
+stats.html
