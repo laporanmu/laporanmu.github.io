@@ -295,7 +295,7 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                             )}
 
                             {/* Full search bar: always visible on sm+, expands on mobile when focused */}
-                            <div className={`${searchFocused ? 'flex' : 'hidden sm:flex'} items-center gap-2 h-8 px-3 rounded-xl border transition-all
+                            <div className={`w-full ${searchFocused ? 'flex' : 'hidden sm:flex'} items-center gap-2 h-8 px-3 rounded-xl border transition-all
                                 ${searchFocused
                                     ? 'border-[var(--color-primary)] bg-[var(--color-surface)] shadow-sm ring-2 ring-[var(--color-primary)]/20'
                                     : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] hover:bg-[var(--color-surface)]'}`}
@@ -363,7 +363,7 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                     {/* ── Right: Language (sm+) + Theme (sm+) + Bell + Avatar ── */}
                     <div className="flex items-center gap-1 shrink-0">
                         {/* Language Selector */}
-                        <div className="relative" ref={langRef}>
+                        <div className={`relative ${searchFocused ? 'hidden sm:block' : 'block'}`} ref={langRef}>
                             <button
                                 onClick={() => setLangOpen(v => !v)}
                                 className={`h-8 flex items-center gap-1.5 px-2.5 rounded-xl border border-[var(--color-border)]/80 hover:bg-[var(--color-surface-alt)] transition text-[11px] font-extrabold uppercase tracking-tight
@@ -416,7 +416,7 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                         <button
                             onClick={toggleTheme}
                             aria-label={isDark ? "Aktifkan Mode Terang" : "Aktifkan Mode Gelap"}
-                            className="flex w-8 h-8 items-center justify-center rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition"
+                            className={`flex w-8 h-8 items-center justify-center rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition ${searchFocused ? 'hidden sm:flex' : 'flex'}`}
                             type="button"
                         >
                             {isDark ? (

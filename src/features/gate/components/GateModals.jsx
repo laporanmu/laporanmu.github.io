@@ -82,6 +82,7 @@ export function ConfirmTimeModal({ log, onConfirm, onCancel }) {
       iconBg={isInternal ? 'bg-emerald-500/10' : 'bg-red-500/10'}
       iconColor={isInternal ? 'text-emerald-500' : 'text-red-500'}
       size="sm"
+      mobileVariant="bottom-sheet"
       footer={
         <div className="flex items-center w-full gap-3">
           <button onClick={onCancel} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-wider hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all shrink-0">{tp('modalConfirmCancel').toUpperCase()}</button>
@@ -148,6 +149,7 @@ export function EditLogModal({ log, onSave, onDelete, onCancel, saving }) {
       iconBg={meta.bg}
       iconColor={meta.color}
       size="md"
+      mobileVariant="bottom-sheet"
       footer={
         (() => {
           const saveWords = tp('modalEditSave').toUpperCase().split(' ')
@@ -271,6 +273,7 @@ export function ConfigModal({ onSave, onCancel, testNotification }) {
       iconBg="bg-indigo-500/10"
       iconColor="text-indigo-500"
       size="sm"
+      mobileVariant="bottom-sheet"
       footer={
         <div className="flex items-center w-full gap-3">
           <button onClick={onCancel} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-wider hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all shrink-0">{tp('modalConfigCancel').toUpperCase()}</button>
@@ -368,6 +371,7 @@ export function PrintOptionsModal({
       iconBg="bg-indigo-500/10"
       iconColor="text-indigo-500"
       size="sm"
+      mobileVariant="bottom-sheet"
       footer={
         <div className="flex items-center w-full gap-3">
           <button onClick={onClose} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-wider hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all shrink-0">
@@ -517,6 +521,7 @@ export function BulkCheckoutModal({ logs = [], onConfirm, onCancel }) {
       iconBg="bg-indigo-500/10"
       iconColor="text-indigo-500"
       size="sm"
+      mobileVariant="bottom-sheet"
       footer={
         <div className="flex items-center w-full gap-3">
           <button onClick={onCancel} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-wider hover:bg-[var(--color-surface-alt)] transition-all shrink-0">
@@ -601,6 +606,7 @@ export function BulkDeleteModal({ logs = [], onConfirm, onCancel }) {
       iconBg="bg-red-500/10"
       iconColor="text-red-500"
       size="sm"
+      mobileVariant="bottom-sheet"
       footer={
         <div className="flex items-center w-full gap-3">
           <button onClick={onCancel} className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black uppercase tracking-wider hover:bg-[var(--color-surface-alt)] transition-all shrink-0">

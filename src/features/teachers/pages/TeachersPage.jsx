@@ -1072,164 +1072,164 @@ export default function TeachersPage() {
                     subtitle={`Kelola ${stats.total} data ${filterType === 'karyawan' ? 'karyawan' : filterType === 'guru' ? 'guru' : 'guru dan karyawan'} dalam sistem.`}
                     actions={
                         <>
-                        {/* Header Menu Button */}
-                        <button
-                            ref={headerMenuBtnRef}
-                            onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
-                            className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
-                            title="Aksi lainnya"
-                        >
-                            <FontAwesomeIcon icon={faSliders} />
-                        </button>
+                            {/* Header Menu Button */}
+                            <button
+                                ref={headerMenuBtnRef}
+                                onClick={() => { if (!isHeaderMenuOpen) setHeaderMenuRect(headerMenuBtnRef.current?.getBoundingClientRect()); setIsHeaderMenuOpen(v => !v) }}
+                                className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
+                                title="Aksi lainnya"
+                            >
+                                <FontAwesomeIcon icon={faSliders} />
+                            </button>
 
-                        {/* Portaled Header Menu Dropdown */}
-                        {headerMenuMounted && headerMenuRect && createPortal(
-                            <>
-                                <div
-                                    className={`fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px] transition-opacity duration-200 ${isHeaderMenuOpen ? 'opacity-100' : 'opacity-0'}`}
-                                    onClick={() => setIsHeaderMenuOpen(false)}
-                                />
-                                <div
-                                    className={`fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-all duration-200 ease-out origin-top-right
+                            {/* Portaled Header Menu Dropdown */}
+                            {headerMenuMounted && headerMenuRect && createPortal(
+                                <>
+                                    <div
+                                        className={`fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px] transition-opacity duration-200 ${isHeaderMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+                                        onClick={() => setIsHeaderMenuOpen(false)}
+                                    />
+                                    <div
+                                        className={`fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-all duration-200 ease-out origin-top-right
                                         ${isHeaderMenuOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'}`}
-                                    style={{
-                                        top: headerMenuRect.bottom + 8,
-                                        left: Math.max(10, headerMenuRect.right - 224)
-                                    }}
-                                >
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); setImportStep(1); setImportPreview([]); setImportFileName(''); setIsImportModalOpen(true) }}
-                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
-                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <FontAwesomeIcon icon={faFileImport} className="text-xs" />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-[11px] font-black leading-tight">Import CSV / Excel</p>
-                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Unggah data guru masal dari file Excel/CSV</p>
-                                        </div>
-                                    </button>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
-                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
-                                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <FontAwesomeIcon icon={faFileExport} className="text-xs" />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-[11px] font-black leading-tight">Export Data</p>
-                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Cadangkan seluruh database ke format Excel</p>
-                                        </div>
-                                    </button>
-                                    <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
-                                    <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
-                                    <button onClick={() => { setIsHeaderMenuOpen(false); fetchArchived(); setIsArchivedOpen(true) }}
-                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
-                                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-[11px] font-black leading-tight">Arsip Guru</p>
-                                            <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data guru tidak aktif</p>
-                                        </div>
-                                    </button>
-                                </div>
-                            </>,
-                            getPortalContainer('portal-teacher-header-menu')
-                        )}
-
-                        {/* Keyboard Shortcuts Button - hidden on mobile */}
-                        <button
-                            ref={shortcutBtnRef}
-                            onClick={() => { if (!isShortcutOpen) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setIsShortcutOpen(v => !v) }}
-                            className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center transition-all active:scale-95
-                                ${isShortcutOpen
-                                    ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
-                                    : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-                                }`}
-                            title="Keyboard Shortcuts (?)"
-                        >
-                            <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
-                        </button>
-
-                        {/* Portaled Keyboard Shortcuts Dropdown */}
-                        {isShortcutOpen && shortcutRect && createPortal(
-                            <>
-                                <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsShortcutOpen(false)} />
-                                <div
-                                    className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200"
-                                    style={{
-                                        top: shortcutRect.bottom + 8,
-                                        left: Math.max(10, shortcutRect.right - 288)
-                                    }}
-                                >
-                                    <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
-                                        <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
-                                        <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
-                                    </div>
-                                    <div className="p-3 space-y-0.5">
-                                        {[
-                                            { section: 'Navigasi' },
-                                            { keys: ['Ctrl', 'K'], label: 'Fokus ke search' },
-                                            { keys: ['Ctrl', 'F'], label: 'Toggle filter lanjutan' },
-                                            { keys: ['Esc'], label: 'Tutup / clear / deselect' },
-                                            { section: 'Aksi' },
-                                            { keys: ['N'], label: 'Tambah guru baru' },
-                                            { keys: ['Ctrl', 'A'], label: 'Pilih semua / deselect' },
-                                            { keys: ['Ctrl', 'E'], label: 'Buka export' },
-                                            { section: 'Tampilan' },
-                                            { keys: ['P'], label: 'Toggle privacy mode' },
-                                            { keys: ['R'], label: 'Refresh data' },
-                                            { keys: ['X'], label: 'Reset semua filter' },
-                                            { keys: ['?'], label: 'Tampilkan shortcut ini' },
-                                        ].map((item, i) => item.section ? (
-                                            <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
-                                        ) : (
-                                            <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
-                                                <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
-                                                <div className="flex items-center gap-1">
-                                                    {item.keys.map((k, ki) => (
-                                                        <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>
-                                                    ))}
-                                                </div>
+                                        style={{
+                                            top: headerMenuRect.bottom + 8,
+                                            left: Math.max(10, headerMenuRect.right - 224)
+                                        }}
+                                    >
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Data</p>
+                                        <button onClick={() => { setIsHeaderMenuOpen(false); setImportStep(1); setImportPreview([]); setImportFileName(''); setIsImportModalOpen(true) }}
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faFileImport} className="text-xs" />
                                             </div>
-                                        ))}
+                                            <div className="text-left">
+                                                <p className="text-[11px] font-black leading-tight">Import CSV / Excel</p>
+                                                <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Unggah data guru masal dari file Excel/CSV</p>
+                                            </div>
+                                        </button>
+                                        <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-[11px] font-black leading-tight">Export Data</p>
+                                                <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Cadangkan seluruh database ke format Excel</p>
+                                            </div>
+                                        </button>
+                                        <div className="h-px bg-[var(--color-border)] my-1 mx-2" />
+                                        <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Manajemen</p>
+                                        <button onClick={() => { setIsHeaderMenuOpen(false); fetchArchived(); setIsArchivedOpen(true) }}
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
+                                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-[11px] font-black leading-tight">Arsip Guru</p>
+                                                <p className="text-[9px] opacity-60 font-medium leading-tight mt-0.5">Lihat & pulihkan data guru tidak aktif</p>
+                                            </div>
+                                        </button>
                                     </div>
-                                </div>
-                            </>,
-                            getPortalContainer('portal-teacher-shortcut-menu')
-                        )}
+                                </>,
+                                getPortalContainer('portal-teacher-header-menu')
+                            )}
 
-                        <input
-                            type="file"
-                            ref={importFileRef}
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) processImportFile(file);
-                                e.target.value = '';
-                            }}
-                            className="hidden"
-                            accept=".csv,.xlsx"
-                        />
+                            {/* Keyboard Shortcuts Button - hidden on mobile */}
+                            <button
+                                ref={shortcutBtnRef}
+                                onClick={() => { if (!isShortcutOpen) setShortcutRect(shortcutBtnRef.current?.getBoundingClientRect()); setIsShortcutOpen(v => !v) }}
+                                className={`hidden sm:flex h-9 w-9 rounded-lg border items-center justify-center transition-all active:scale-95
+                                ${isShortcutOpen
+                                        ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
+                                        : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                                    }`}
+                                title="Keyboard Shortcuts (?)"
+                            >
+                                <FontAwesomeIcon icon={faKeyboard} className="text-sm" />
+                            </button>
 
-                        {/* Privasi toggle */}
-                        <button
-                            onClick={() => {
-                                const next = !isPrivacyMode
-                                setIsPrivacyMode(next)
-                                addToast(next ? 'Mode privasi diaktifkan — Data sensitif disembunyikan' : 'Mode privasi dinonaktifkan', next ? 'info' : 'success')
-                            }}
-                            className={`h-9 w-9 sm:w-auto sm:px-3 rounded-lg border flex items-center justify-center sm:justify-start gap-2 transition-all active:scale-95 ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
-                            title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}
-                        >
-                            <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
-                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
-                                Privasi
-                            </span>
-                        </button>
+                            {/* Portaled Keyboard Shortcuts Dropdown */}
+                            {isShortcutOpen && shortcutRect && createPortal(
+                                <>
+                                    <div className="fixed inset-0 z-[9990] bg-black/5 backdrop-blur-[1px]" onClick={() => setIsShortcutOpen(false)} />
+                                    <div
+                                        className="fixed z-[9991] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl shadow-black/10 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200"
+                                        style={{
+                                            top: shortcutRect.bottom + 8,
+                                            left: Math.max(10, shortcutRect.right - 288)
+                                        }}
+                                    >
+                                        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+                                            <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text)]">Keyboard Shortcuts</p>
+                                            <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Tekan ? untuk toggle</span>
+                                        </div>
+                                        <div className="p-3 space-y-0.5">
+                                            {[
+                                                { section: 'Navigasi' },
+                                                { keys: ['Ctrl', 'K'], label: 'Fokus ke search' },
+                                                { keys: ['Ctrl', 'F'], label: 'Toggle filter lanjutan' },
+                                                { keys: ['Esc'], label: 'Tutup / clear / deselect' },
+                                                { section: 'Aksi' },
+                                                { keys: ['N'], label: 'Tambah guru baru' },
+                                                { keys: ['Ctrl', 'A'], label: 'Pilih semua / deselect' },
+                                                { keys: ['Ctrl', 'E'], label: 'Buka export' },
+                                                { section: 'Tampilan' },
+                                                { keys: ['P'], label: 'Toggle privacy mode' },
+                                                { keys: ['R'], label: 'Refresh data' },
+                                                { keys: ['X'], label: 'Reset semua filter' },
+                                                { keys: ['?'], label: 'Tampilkan shortcut ini' },
+                                            ].map((item, i) => item.section ? (
+                                                <p key={i} className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] pt-2 pb-1 px-1">{item.section}</p>
+                                            ) : (
+                                                <div key={i} className="flex items-center justify-between px-1 py-1 rounded-lg hover:bg-[var(--color-surface-alt)] transition-all">
+                                                    <span className="text-[11px] font-semibold text-[var(--color-text)]">{item.label}</span>
+                                                    <div className="flex items-center gap-1">
+                                                        {item.keys.map((k, ki) => (
+                                                            <span key={ki} className="px-1.5 py-0.5 rounded-md bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black text-[var(--color-text-muted)] font-mono">{k}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>,
+                                getPortalContainer('portal-teacher-shortcut-menu')
+                            )}
 
-                        {/* Add button */}
-                        <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10">
-                            <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                            <span>{canEdit ? 'Tambah Guru' : 'Read-only'}</span>
-                        </button>
+                            <input
+                                type="file"
+                                ref={importFileRef}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) processImportFile(file);
+                                    e.target.value = '';
+                                }}
+                                className="hidden"
+                                accept=".csv,.xlsx"
+                            />
+
+                            {/* Privasi toggle */}
+                            <button
+                                onClick={() => {
+                                    const next = !isPrivacyMode
+                                    setIsPrivacyMode(next)
+                                    addToast(next ? 'Mode privasi diaktifkan — Data sensitif disembunyikan' : 'Mode privasi dinonaktifkan', next ? 'info' : 'success')
+                                }}
+                                className={`h-9 w-9 sm:w-auto sm:px-3 rounded-lg border flex items-center justify-center sm:justify-start gap-2 transition-all active:scale-95 ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
+                                title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}
+                            >
+                                <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                                    Privasi
+                                </span>
+                            </button>
+
+                            {/* Add button */}
+                            <button onClick={handleAdd} disabled={!canEdit} className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10">
+                                <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                                <span>{canEdit ? 'Tambah Guru' : 'Read-only'}</span>
+                            </button>
                         </>
                     }
                 />
