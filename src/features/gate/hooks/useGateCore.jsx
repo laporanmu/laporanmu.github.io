@@ -173,6 +173,7 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
   const { addToast, addUndoToast } = useToast()
   const { profile } = useAuth()
   const { t, tNum } = useLanguage()
+  const refreshActiveRef = useRef(false)
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -310,16 +311,23 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
   // ── handleRefresh ──────────────────────────────────────────────────────────
 
   const handleRefresh = useCallback(async () => {
-    if (isRefreshing) return
+    if (refreshActiveRef.current) return
+    refreshActiveRef.current = true
     setIsRefreshing(true)
-    const promises = [loadTodayLogs(true)]
-    if (activeTab === 'rekap') promises.push(loadRekap())
-    await Promise.all(promises)
-    setLastRefresh(Date.now())
-    setIsRefreshing(false)
-    addToast(t('toastSuccessUpdate'), 'success')
-    logAudit({ action: 'REFRESH', source: 'OPERATIONAL', tableName: 'gate_logs', newData: { tab: activeTab } })
-  }, [loadTodayLogs, loadRekap, activeTab, addToast, t, isRefreshing])
+    try {
+      const promises = [loadTodayLogs(true)]
+      if (activeTab === 'rekap') promises.push(loadRekap())
+      await Promise.all(promises)
+      setLastRefresh(Date.now())
+      addToast(t('toastSuccessUpdate'), 'success')
+      logAudit({ action: 'REFRESH', source: 'OPERATIONAL', tableName: 'gate_logs', newData: { tab: activeTab } })
+    } catch (err) {
+      console.error('[useGateCore] handleRefresh error:', err)
+    } finally {
+      setIsRefreshing(false)
+      refreshActiveRef.current = false
+    }
+  }, [loadTodayLogs, loadRekap, activeTab, addToast, t])
 
   // ── handleSubmit ───────────────────────────────────────────────────────────
 
