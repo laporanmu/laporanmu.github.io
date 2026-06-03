@@ -4,6 +4,7 @@ import {
     faCheckCircle, faExclamationTriangle, faXmarkCircle,
     faXmark, faRotateLeft, faCircleInfo, faFilePdf, faCloudArrowUp
 } from '@fortawesome/free-solid-svg-icons'
+import { useLanguage } from './LanguageContext'
 
 const ToastContext = createContext({})
 
@@ -20,6 +21,7 @@ const TOAST_TYPES = {
 export function ToastProvider({ children }) {
     const [toasts, setToasts] = useState([])
     const timerRefs = useRef({})
+    const { t } = useLanguage()
 
     const removeToast = useCallback((id) => {
         setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t))
@@ -106,7 +108,7 @@ export function ToastProvider({ children }) {
                                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 transition-colors text-[10px] font-black uppercase tracking-widest shrink-0"
                                 >
                                     <FontAwesomeIcon icon={faRotateLeft} className="text-[9px]" />
-                                    Batalkan
+                                    {t('toastUndoMsg') || 'Batalkan'}
                                 </button>
                             )}
 

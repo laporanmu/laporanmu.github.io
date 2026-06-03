@@ -3,6 +3,7 @@ import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 import { useToast } from '@context/ToastContext'
 import { useAuth } from '@context/AuthContext'
+import { useLanguage } from '@context/LanguageContext'
 
 // ─── Pure utils (no React deps, safe to import anywhere) ─────────────────────
 
@@ -171,6 +172,7 @@ export const sendDailySummary = async (logs) => {
 export function useGateCore({ activeTab, rekapMode, rekapDate }) {
   const { addToast, addUndoToast } = useToast()
   const { profile } = useAuth()
+  const { t, tNum } = useLanguage()
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -308,15 +310,16 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
   // ── handleRefresh ──────────────────────────────────────────────────────────
 
   const handleRefresh = useCallback(async () => {
+    if (isRefreshing) return
     setIsRefreshing(true)
     const promises = [loadTodayLogs(true)]
     if (activeTab === 'rekap') promises.push(loadRekap())
     await Promise.all(promises)
     setLastRefresh(Date.now())
     setIsRefreshing(false)
-    addToast('Data berhasil diperbarui', 'success')
+    addToast(t('toastSuccessUpdate'), 'success')
     logAudit({ action: 'REFRESH', source: 'OPERATIONAL', tableName: 'gate_logs', newData: { tab: activeTab } })
-  }, [loadTodayLogs, loadRekap, activeTab, addToast])
+  }, [loadTodayLogs, loadRekap, activeTab, addToast, t, isRefreshing])
 
   // ── handleSubmit ───────────────────────────────────────────────────────────
 
@@ -355,17 +358,17 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
       const { data, error } = await supabase.from('gate_logs').insert(payload).select()
 
       if (error) {
-        addToast(`Gagal simpan: ${error.message}`, 'error')
+        addToast(`${t('toastErrorSave')}: ${error.message}`, 'error')
       } else {
         const insertedRow = data?.[0]
-        const who = form.flow === 'internal' ? form.name : `Tamu ${form.name}`
-        const act = form.flow === 'internal' ? 'keluar' : 'masuk'
+        const who = form.flow === 'internal' ? form.name : `${t('toastGuest')} ${form.name}`
+        const act = form.flow === 'internal' ? t('toastExit') : t('toastEntry')
 
-        addUndoToast(`${who} ${act} berhasil dicatat`, async () => {
+        addUndoToast(`${who} (${act}) ${t('toastSuccessSave')}`, async () => {
           if (insertedRow?.id) {
             const { error: delErr } = await supabase.from('gate_logs').delete().eq('id', insertedRow.id)
-            if (delErr) addToast('Gagal membatalkan log', 'error')
-            else { addToast('Pencatatan dibatalkan', 'info'); loadTodayLogs(true) }
+            if (delErr) addToast(`${t('toastErrorUndo')}: ${delErr.message}`, 'error')
+            else { addToast(t('toastSuccessUndo'), 'info'); loadTodayLogs(true) }
           }
         })
 
@@ -377,10 +380,10 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
         sendLogNotification(insertedRow || payload, 'OUT')
       }
     } catch (err) {
-      addToast(`Error tidak terduga: ${err.message}`, 'error')
+      addToast(`${t('toastErrorUnexpected')}: ${err.message}`, 'error')
     }
     setSubmitting(false)
-  }, [profile, loadTodayLogs, addToast, addUndoToast])
+  }, [profile, loadTodayLogs, addToast, addUndoToast, t])
 
   // ── handleConfirmTime ──────────────────────────────────────────────────────
 
@@ -400,9 +403,11 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
     }
 
     const { error } = await supabase.from('gate_logs').update({ check_out: checkOutISO }).eq('id', log.id)
-    if (error) addToast('Gagal: ' + error.message, 'error')
-    else {
-      addToast(action === 'return' ? 'Kembali dicatat' : 'Tamu keluar dicatat', 'success')
+    if (error) {
+      const errPrefix = action === 'return' ? t('toastErrorReturn') : t('toastErrorCheckout')
+      addToast(`${errPrefix}: ${error.message}`, 'error')
+    } else {
+      addToast(action === 'return' ? t('toastSuccessReturn') : t('toastSuccessTamuOut'), 'success')
       await logAudit({
         action: 'UPDATE', source: 'SYSTEM', tableName: 'gate_logs',
         recordId: log.id, oldData: log, newData: { ...log, check_out: checkOutISO }
@@ -411,7 +416,7 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
       loadTodayLogs()
       if (activeTab === 'rekap') loadRekap()
     }
-  }, [confirmModal, loadTodayLogs, loadRekap, activeTab, addToast])
+  }, [confirmModal, loadTodayLogs, loadRekap, activeTab, addToast, t])
 
   // ── handleSaveEdit / handleDeleteLog ───────────────────────────────────────
 
@@ -419,9 +424,9 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
     setEditSaving(true)
     const { error } = await supabase.from('gate_logs').update(updates).eq('id', editLog.id)
     setEditSaving(false)
-    if (error) addToast('Gagal menyimpan: ' + error.message, 'error')
+    if (error) addToast(t('toastErrorSave') + ': ' + error.message, 'error')
     else {
-      addToast('Log diperbarui', 'success')
+      addToast(t('toastSuccessLogEdit'), 'success')
       await logAudit({
         action: 'UPDATE', source: 'SYSTEM', tableName: 'gate_logs',
         recordId: editLog.id, oldData: editLog, newData: { ...editLog, ...updates },
@@ -430,13 +435,13 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
       loadTodayLogs()
       if (activeTab === 'rekap') loadRekap()
     }
-  }, [editLog, loadTodayLogs, loadRekap, activeTab, addToast])
+  }, [editLog, loadTodayLogs, loadRekap, activeTab, addToast, t])
 
   const handleDeleteLog = useCallback(async () => {
     const { error } = await supabase.from('gate_logs').delete().eq('id', editLog.id)
-    if (error) addToast('Gagal hapus: ' + error.message, 'error')
+    if (error) addToast(t('toastErrorDelete') + ': ' + error.message, 'error')
     else {
-      addToast('Log dihapus', 'success')
+      addToast(t('toastSuccessLogDel'), 'success')
       await logAudit({
         action: 'DELETE', source: 'SYSTEM', tableName: 'gate_logs',
         recordId: editLog.id, oldData: editLog,
@@ -445,7 +450,7 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
       loadTodayLogs()
       if (activeTab === 'rekap') loadRekap()
     }
-  }, [editLog, loadTodayLogs, loadRekap, activeTab, addToast])
+  }, [editLog, loadTodayLogs, loadRekap, activeTab, addToast, t])
 
   // ── Bulk actions ───────────────────────────────────────────────────────────
 
@@ -459,7 +464,7 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
       if (reason) update.purpose_note = reason
       const { error } = await supabase.from('gate_logs').update(update).in('id', selectedIds)
       if (error) throw error
-      addToast(`${selectedIds.length} entri berhasil diproses`, 'success')
+      addToast(`${tNum(selectedIds.length)} ${t('toastBulkSuccess')}`, 'success')
       if (logsToUpdate) {
         logsToUpdate.forEach(log => {
           const actionType = log.visitor_type === 'tamu' ? 'OUT_TAMU' : 'IN'
@@ -474,10 +479,10 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
       setSelectedIds([])
       setSelectionMode(false)
     } catch (err) {
-      addToast('Gagal update massal: ' + err.message, 'error')
+      addToast(`${t('toastErrorBulkUpdate')}: ${err.message}`, 'error')
     }
     setSubmitting(false)
-  }, [selectedIds, loadTodayLogs, addToast])
+  }, [selectedIds, loadTodayLogs, addToast, t, tNum])
 
   const handleBulkDelete = useCallback(async () => {
     if (selectedIds.length === 0) return
@@ -485,7 +490,7 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
     try {
       const { error } = await supabase.from('gate_logs').delete().in('id', selectedIds)
       if (error) throw error
-      addToast(`${selectedIds.length} log berhasil dihapus`, 'success')
+      addToast(`${tNum(selectedIds.length)} ${t('toastBulkDelSuccess')}`, 'success')
       await logAudit({
         action: 'DELETE', source: 'OPERATIONAL', tableName: 'gate_logs',
         newData: { bulkCount: selectedIds.length, ids: selectedIds }
@@ -494,10 +499,10 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
       setSelectedIds([])
       setSelectionMode(false)
     } catch (err) {
-      addToast('Gagal hapus massal: ' + err.message, 'error')
+      addToast(`${t('toastErrorBulkDelete')}: ${err.message}`, 'error')
     }
     setSubmitting(false)
-  }, [selectedIds, loadTodayLogs, addToast])
+  }, [selectedIds, loadTodayLogs, addToast, t, tNum])
 
   const handleSelectAll = useCallback((list) => {
     const allIds = list.map(l => l.id)

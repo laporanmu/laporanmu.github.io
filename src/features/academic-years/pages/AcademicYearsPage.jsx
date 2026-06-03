@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
-import * as XLSX from 'xlsx'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -825,6 +824,7 @@ export default function AcademicYearsPage() {
         try {
             const rows = await getExportData()
             if (!rows.length) return addToast('Tidak ada data untuk diekspor', 'warning')
+            const XLSX = await import('xlsx')
             const ws = XLSX.utils.json_to_sheet(rows)
             ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 18) }))
             const wb = XLSX.utils.book_new()
@@ -938,6 +938,7 @@ export default function AcademicYearsPage() {
         setImportLoading(true)
         try {
             const data = await file.arrayBuffer()
+            const XLSX = await import('xlsx')
             const wb = XLSX.read(data, { type: 'array' })
             const wsname = wb.SheetNames[0]
             const ws = wb.Sheets[wsname]
@@ -1058,7 +1059,7 @@ export default function AcademicYearsPage() {
         addToast(`Berhasil merubah semua baris ke ${value}`, 'success')
     }
 
-    const handleDownloadTemplate = () => {
+    const handleDownloadTemplate = async () => {
         const headers = [
             'Tahun Pelajaran',
             'Semester',
@@ -1070,6 +1071,7 @@ export default function AcademicYearsPage() {
             ['2024/2025', 'Ganjil', '2024-07-01', '2024-12-31', 'Merdeka'],
             ['2024/2025', 'Genap', '2025-01-01', '2025-06-30', 'Merdeka']
         ]
+        const XLSX = await import('xlsx')
         const ws = XLSX.utils.aoa_to_sheet([headers, ...data])
 
         ws['!cols'] = [

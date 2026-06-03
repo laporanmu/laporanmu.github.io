@@ -21,7 +21,7 @@ import {
     CartesianGrid
 } from 'recharts'
 import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
+
 import { fmtDate, fmtTime, fmtDateTime, fmtRelative } from '@utils/formatters'
 import { ActionBadge, JsonVisualizer, DiffViewer, DeleteTombstone, InsertViewer, AuditTimeline } from '@shared/components'
 
@@ -683,6 +683,7 @@ export default function LogsPage() {
                 link.setAttribute('download', `audit_logs_${new Date().toISOString().slice(0, 10)}.csv`)
                 link.click()
             } else {
+                const XLSX = await import('xlsx')
                 const ws = XLSX.utils.json_to_sheet(exportData)
                 const wb = XLSX.utils.book_new()
                 XLSX.utils.book_append_sheet(wb, ws, 'Audit Logs')

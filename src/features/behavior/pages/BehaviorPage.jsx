@@ -30,7 +30,7 @@ import { supabase } from '@lib/supabase'
 import { logAudit, logAuditBatch } from '@utils/auditLogger'
 
 import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
+
 
 const DB_TRANSLATIONS = {
     en: {

@@ -29,7 +29,7 @@ import { useLanguage } from '@context/LanguageContext'
 import { useAuth } from '@context/AuthContext'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
-import * as XLSX from 'xlsx'
+
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -501,14 +501,7 @@ function ImportModal({ studentList, tahun, bulan, daysInMonth, onImport, onClose
     const [error, setError] = useState(null)
 
     const loadXLSX = async () => {
-        if (window.XLSX) return window.XLSX
-        return new Promise((res, rej) => {
-            const s = document.createElement('script')
-            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-            s.onload = () => res(window.XLSX)
-            s.onerror = () => rej(new Error('Gagal memuat XLSX'))
-            document.head.appendChild(s)
-        })
+        return await import('xlsx')
     }
 
     const handleFile = async (f) => {
@@ -1453,15 +1446,7 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
     }, [studentList, rekapData, lastMonthMap, weekdays, bulan, tahun, profile, classId])
 
     const handleExport = async () => {
-        if (!window.XLSX) {
-            addToast('Memuat library export...', 'info')
-            await new Promise((res, rej) => {
-                const s = document.createElement('script')
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                s.onload = res; s.onerror = () => rej(new Error('Gagal memuat XLSX'))
-                document.head.appendChild(s)
-            })
-        }
+        const XLSX = await import('xlsx')
         const dim = getDaysInMonth(tahun, bulan)
         const rows = studentList.map((s, i) => {
             const row = { No: i + 1, Nama: s.name, NISN: s.nisn || '' }
@@ -1471,14 +1456,14 @@ function RekapBulananPanel({ classId, tahun, bulan, studentList, dataMap }) {
             row['%'] = weekdays > 0 ? `${Math.round(((r.H || 0) / weekdays) * 100)}%` : '0%'
             return row
         })
-        const ws = window.XLSX.utils.json_to_sheet(rows)
+        const ws = XLSX.utils.json_to_sheet(rows)
         ws['!cols'] = [{ wch: 4 }, { wch: 24 }, { wch: 14 },
         ...Array.from({ length: dim }, () => ({ wch: 3 })),
         ...Array.from({ length: 6 }, () => ({ wch: 5 })),
         ]
-        const wb = window.XLSX.utils.book_new()
-        window.XLSX.utils.book_append_sheet(wb, ws, `${BULAN_NAMA[bulan]} ${tahun}`)
-        window.XLSX.writeFile(wb, `Absensi_${BULAN_NAMA[bulan]}_${tahun}.xlsx`)
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, `${BULAN_NAMA[bulan]} ${tahun}`)
+        XLSX.writeFile(wb, `Absensi_${BULAN_NAMA[bulan]}_${tahun}.xlsx`)
         addToast('Export Excel berhasil ✓', 'success')
 
         logAudit({
@@ -2221,7 +2206,8 @@ function earlyLeaveMins(scanOut) {
 }
 
 // Parse Fingerspot XLS — returns array of { name, date, scan1, scan2, scan3, scan4 }
-function parseFingerspotXLS(file) {
+async function parseFingerspotXLS(file) {
+    const XLSX = await import('xlsx')
     return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = (e) => {

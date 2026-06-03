@@ -170,7 +170,7 @@ export default function GatePage() {
   const { addToast } = useToast()
   const { profile } = useAuth()
   const navigate = useNavigate()
-  const { language, tNum, dir } = useLanguage()
+  const { language, tNum, dir, t } = useLanguage()
   const tp = (key) => PAGE_T[language]?.[key] || PAGE_T["id"]?.[key] || key
 
   const VISITOR_TYPES = useMemo(() => getVisitorTypes(language), [language])
@@ -457,7 +457,7 @@ export default function GatePage() {
     if (source === 'rekap' && rekapView === 'ringkasan') {
       const { csv, filename, count } = buildCSVRingkasan(rekapRingkasan, label, TYPE_META, language)
       downloadCSV(csv, filename)
-      addToast(`CSV Ringkasan berhasil diunduh (${count} orang)`, 'success')
+      addToast(`${t('toastCsvSummarySuccess')} (${tNum(count)} ${t('toastPeopleCount')})`, 'success')
       logAudit({ action: 'EXPORT', source: 'OPERATIONAL', tableName: 'gate_logs', newData: { format: 'CSV', source, view: 'ringkasan', count, period: label } })
       return
     }
@@ -465,9 +465,9 @@ export default function GatePage() {
     const src = source === 'rekap' ? filteredRekapData : filteredLogs
     const { csv, filename, count } = buildCSVDetail(src, label, TYPE_META, language)
     downloadCSV(csv, filename)
-    addToast(`CSV berhasil diunduh (${count} baris)`, 'success')
+    addToast(`${t('toastCsvSuccess')} (${tNum(count)} ${t('toastRowCount')})`, 'success')
     logAudit({ action: 'EXPORT', source: 'OPERATIONAL', tableName: 'gate_logs', newData: { format: 'CSV', source, view: 'rekapView', count, period: label } })
-  }, [rekapView, rekapRingkasan, filteredRekapData, filteredLogs, rekapMode, rekapDate, rekapLabel, addToast, TYPE_META, language])
+  }, [rekapView, rekapRingkasan, filteredRekapData, filteredLogs, rekapMode, rekapDate, rekapLabel, addToast, TYPE_META, language, t])
 
 
   const TABS = [
@@ -1106,8 +1106,8 @@ export default function GatePage() {
                   </button>
                   <button onClick={async () => {
                     const res = await sendDailySummary(rekapData)
-                    if (res.success) addToast('Rekapan berhasil dikirim ke Telegram', 'success')
-                    else addToast('Gagal: ' + res.error, 'error')
+                    if (res.success) addToast(t('toastTelegramSuccess'), 'success')
+                    else addToast(t('toastErrorUnexpected') + ': ' + res.error, 'error')
                   }} className="h-7.5 px-3 rounded-lg border border-indigo-500/30 bg-indigo-500/5 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all text-[9.5px] font-black flex items-center gap-1.5 whitespace-nowrap">
                     <Send className="w-3 h-3" />
                     <span>{tp('sendTelegram') || 'Telegram'}</span>
@@ -1181,8 +1181,8 @@ export default function GatePage() {
                   </button>
                   <button onClick={async () => {
                     const res = await sendDailySummary(rekapData)
-                    if (res.success) addToast('Rekapan berhasil dikirim ke Telegram', 'success')
-                    else addToast('Gagal: ' + res.error, 'error')
+                    if (res.success) addToast(t('toastTelegramSuccess'), 'success')
+                    else addToast(t('toastErrorUnexpected') + ': ' + res.error, 'error')
                   }} className="h-8 w-8 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-indigo-600 flex items-center justify-center transition-all" title="Kirim ke Telegram">
                     <Send className="w-3.5 h-3.5" />
                   </button>
@@ -1593,12 +1593,12 @@ export default function GatePage() {
       )}
       {showConfig && (
         <ConfigModal
-          onSave={() => { setShowConfig(false); addToast('Webhook URL berhasil disimpan', 'success') }}
+          onSave={() => { setShowConfig(false); addToast(t('toastWebhookSaved'), 'success') }}
           onCancel={() => setShowConfig(false)}
           testNotification={async () => {
             const res = await sendLogNotification({ visitor_name: 'Developer', purpose: 'Uji Coba Sistem', visitor_type: 'developer' }, 'OUT')
-            if (res?.success) addToast('Pesan test berhasil dikirim!', 'success')
-            else addToast('Gagal: ' + (res?.error || 'Unknown error'), 'error')
+            if (res?.success) addToast(t('toastTestMsgSent'), 'success')
+            else addToast(t('toastErrorUnexpected') + ': ' + (res?.error || 'Unknown error'), 'error')
             return res?.success
           }}
         />

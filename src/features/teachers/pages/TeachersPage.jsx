@@ -32,7 +32,6 @@ import TeacherArchiveModal from '@features/teachers/components/TeacherArchiveMod
 
 
 import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
 import { useDebounce } from '@hooks/useDebounce'
 
 // STATUS_CONFIG imported from TeacherRow component
@@ -594,7 +593,10 @@ export default function TeachersPage() {
         try {
             let rows = []
             if (ext.endsWith('.csv')) rows = await new Promise(res => Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => res(r.data) }))
-            else rows = await new Promise(res => { const reader = new FileReader(); reader.onload = e => { const wb = XLSX.read(e.target.result, { type: 'array' }); res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })) }; reader.readAsArrayBuffer(file) })
+            else {
+                const XLSX = await import('xlsx')
+                rows = await new Promise(res => { const reader = new FileReader(); reader.onload = e => { const wb = XLSX.read(e.target.result, { type: 'array' }); res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })) }; reader.readAsArrayBuffer(file) })
+            }
 
             if (!rows.length) { addToast('File kosong atau tidak terbaca', 'error'); return }
 
@@ -718,7 +720,8 @@ export default function TeachersPage() {
         addToast(`Berhasil merubah semua baris ke ${value}`, 'success')
     }
 
-    const handleDownloadTemplate = () => {
+    const handleDownloadTemplate = async () => {
+        const XLSX = await import('xlsx')
         const headers = [
             'Nama Lengkap',
             'NBM',
@@ -932,6 +935,7 @@ export default function TeachersPage() {
         try {
             const rows = await getExportData()
             if (!rows.length) return addToast('Tidak ada data', 'warning')
+            const XLSX = await import('xlsx')
             const ws = XLSX.utils.json_to_sheet(rows)
             ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 14) }))
             const wb = XLSX.utils.book_new()

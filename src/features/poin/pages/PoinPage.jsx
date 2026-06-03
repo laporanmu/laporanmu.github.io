@@ -24,7 +24,7 @@ import { TableSkeleton, CardSkeleton } from '@shared/components/Skeleton'
 
 // Library for Export
 import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
+
 
 const CATEGORIES = ['Kedisiplinan', 'Akademik', 'Tata Tertib', 'Sikap', 'Prestasi', 'Lainnya']
 const LS_COLS = 'Poin_columns'
@@ -388,6 +388,7 @@ export default function PoinPage() {
                 const blob = new Blob([Papa.unparse(mapped)], { type: 'text/csv;charset=utf-8;' })
                 const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `data_poin_${new Date().toISOString().slice(0, 10)}.csv`); link.click()
             } else {
+                const XLSX = await import('xlsx')
                 const ws = XLSX.utils.json_to_sheet(mapped); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Data Poin')
                 XLSX.writeFile(wb, `data_poin_${new Date().toISOString().slice(0, 10)}.xlsx`)
             }
