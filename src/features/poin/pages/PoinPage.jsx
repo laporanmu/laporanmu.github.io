@@ -413,15 +413,6 @@ export default function PoinPage() {
             <style>{isAnyModalOpen ? ` .top-nav, .sidebar, .floating-dock { display: none !important; } main { padding-top: 0 !important; } ` : ''}</style>
             {/* TAMBAH INI: */}
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
-                {/* Privasi Banner */}
-                {isPrivacyMode && (
-                    <div className="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-amber-600 text-xs font-bold">
-                            <FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Nilai poin sensitif disensor
-                        </div>
-                        <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">Matikan</button>
-                    </div>
-                )}
 
                 {/* Read-only Banner */}
                 {!canEdit && (
@@ -477,7 +468,11 @@ export default function PoinPage() {
                                 </div>
                             )}
                         </div>
-                        <button onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+                        <button onClick={() => {
+                            const next = !isPrivacyMode
+                            setIsPrivacyMode(next)
+                            addToast(next ? 'Mode privasi diaktifkan — Data sensitif disembunyikan' : 'Mode privasi dinonaktifkan', next ? 'info' : 'success')
+                        }}
                             className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}>
                             <FontAwesomeIcon icon={isPrivacyMode ? faEyeSlash : faEye} className="text-sm" />

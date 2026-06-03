@@ -558,15 +558,6 @@ export default function UserManagementPage() {
         <DashboardLayout title="Manajemen User">
             <div className="p-4 md:p-6 space-y-5 max-w-[1800px] mx-auto">
 
-                {/* ── Privasi Banner ── */}
-                {isPrivacyMode && (
-                    <div className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-amber-600 text-[11px] font-bold">
-                            <FontAwesomeIcon icon={faEyeSlash} /> Mode Privasi Aktif — Data sensitif disembunyikan
-                        </div>
-                        <button onClick={() => setIsPrivacyMode(false)} className="text-amber-600 text-[10px] font-black hover:underline uppercase tracking-widest">Matikan</button>
-                    </div>
-                )}
 
                 {/* ── Banner: profile_id belum ada ── */}
                 {!profileIdExists && (
@@ -599,7 +590,11 @@ export default function UserManagementPage() {
                     <div className="flex items-center gap-2">
                         {/* Privasi toggle */}
                         <button
-                            onClick={() => setIsPrivacyMode(v => !v)}
+                            onClick={() => {
+                                const next = !isPrivacyMode
+                                setIsPrivacyMode(next)
+                                addToast(next ? 'Mode privasi diaktifkan — Data sensitif disembunyikan' : 'Mode privasi dinonaktifkan', next ? 'info' : 'success')
+                            }}
                             className={`h-9 px-3 rounded-xl border flex items-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest
                                 ${isPrivacyMode
                                     ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
