@@ -14,9 +14,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'Laporanmu - Portal Kedisiplinan',
+        name: 'Laporanmu - Portal Kepesantrenan',
         short_name: 'Laporanmu',
-        description: 'Aplikasi monitoring kedisiplinan dan poin siswa MBS Tanggul.',
+        description: 'Aplikasi Kepesantrenan Muhammadiyah Boarding School Tanggul.',
         theme_color: '#4f46e5',
         background_color: '#ffffff',
         display: 'standalone',
