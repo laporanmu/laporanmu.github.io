@@ -8,13 +8,13 @@ import {
     faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
-import Tutorial_1 from '@assets/Tutorial_1.png'
-import Tutorial_2 from '@assets/Tutorial_2.png'
-import Tutorial_3 from '@assets/Tutorial_3.png'
-import Tutorial_4 from '@assets/Tutorial_4.png'
-import Tutorial_5 from '@assets/Tutorial_5.png'
-import Tutorial_6 from '@assets/Tutorial_6.png'
-import Tutorial_7 from '@assets/Tutorial_7.png'
+import Tutorial_1 from '@assets/images/tutorials/tutorial-step-1.png'
+import Tutorial_2 from '@assets/images/tutorials/tutorial-step-2.png'
+import Tutorial_3 from '@assets/images/tutorials/tutorial-step-3.png'
+import Tutorial_4 from '@assets/images/tutorials/tutorial-step-4.png'
+import Tutorial_5 from '@assets/images/tutorials/tutorial-step-5.png'
+import Tutorial_6 from '@assets/images/tutorials/tutorial-step-6.png'
+import Tutorial_7 from '@assets/images/tutorials/tutorial-step-7.png'
 
 const TUTORIAL_IMAGES = [
     Tutorial_1,

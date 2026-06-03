@@ -10,7 +10,7 @@ import {
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { useToast, useTheme } from '@context'
 import { supabase } from '@lib/supabase'
-import mbsLogo from '@assets/mbs.png'
+import mbsLogo from '@assets/images/logos/logo-mbs.png'
 import { BULAN, KRITERIA, GRADE, LABEL, toArabicNum, calcAvg, MAX_SCORE } from '@utils/reports/raportConstants'
 import { translitToAr } from '@utils/reports/translitData'
 import RaportPrintCard from '@features/raport/components/RaportPrintCard'

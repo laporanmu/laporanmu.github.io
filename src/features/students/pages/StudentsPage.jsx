@@ -96,7 +96,7 @@ import {
 } from '@shared/components'
 import { useToast, useFlag, useLanguage } from '@context'
 import { supabase } from '@lib/supabase'
-import mbsLogo from '@assets/mbs.png'
+import mbsLogo from '@assets/images/logos/logo-mbs.png'
 import { SortOptions, RiskThreshold, AvailableTags, getTagColor, calculateCompleteness, maskInfo, formatRelativeDate } from '@features/students/utils/studentsConstants'
 import { useStudentsImportExport } from '@features/students/hooks/useStudentsImportExport'
 import { generateStudentPDF as _generateStudentPDF, handlePrintThermal as _handlePrintThermal, handleSavePNG as _handleSavePNG } from '@features/students/utils/studentPdfUtils'

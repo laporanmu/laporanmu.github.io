@@ -20,7 +20,7 @@ import { logAudit } from '@utils/auditLogger'
 import { useSchoolSettings, DEFAULT_SETTINGS } from '@context/SchoolSettingsContext'
 import { useAuth } from '@context/AuthContext'
 import { fmtRelative } from '@utils/formatters'
-import mbsLogo from '@assets/mbs.png'
+import mbsLogo from '@assets/images/logos/logo-mbs.png'
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 const TABS = [
