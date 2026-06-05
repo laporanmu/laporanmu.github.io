@@ -18,9 +18,12 @@
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
+  --color-app-bg: #f8fafc;
+  /* Slate 50 - page background */
   --color-surface: #ffffff;
-  --color-surface-alt: #f8fafc;
-  /* Slate 50 */
+  /* Pure White - cards, sidebars, panels */
+  --color-surface-alt: #f1f5f9;
+  /* Slate 100 - hovers, inactive inputs, section tabs */
   --color-text: #0f172a;
   /* Slate 900 */
   --color-text-muted: #64748b;
@@ -38,10 +41,12 @@
 }
 
 .dark {
-  --color-surface: #020617;
-  /* Slate 950 - premium dark */
-  --color-surface-alt: #0f172a;
-  /* Slate 900 */
+  --color-app-bg: #020617;
+  /* Slate 950 - page background */
+  --color-surface: #0f172a;
+  /* Slate 900 - card background */
+  --color-surface-alt: #1e293b;
+  /* Slate 800 - inputs, panel hover states */
   --color-text: #f8fafc;
   /* Slate 50 */
   --color-text-muted: #94a3b8;
@@ -60,7 +65,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: var(--color-surface);
+  background-color: var(--color-app-bg);
   color: var(--color-text);
   margin: 0;
   min-height: 100vh;
@@ -173,7 +178,7 @@ html[dir="rtl"] .font-extrabold {
 .glass {
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 4px 20px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
   isolation: isolate;
 }
 
@@ -187,17 +192,19 @@ html[dir="rtl"] .font-extrabold {
 /* Only enable heavy backdrop blur on desktop screens where GPU is powerful */
 @media (min-width: 1024px) {
   .glass {
-    background: rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
   }
 
   .dark .glass {
-    background: rgba(2, 6, 23, 0.45);
+    background: rgba(15, 23, 42, 0.7);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
   }
 }
 
