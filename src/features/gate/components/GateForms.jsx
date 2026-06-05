@@ -163,7 +163,7 @@ import RichSelect from '@shared/components/RichSelect'
 
 // ─── TeacherSearch ────────────────────────────────────────────────────────────
 
-export function TeacherSearch({ teacherList, value, onChange, label }) {
+export function TeacherSearch({ teacherList, value, onChange, label, icon }) {
   const { language } = useLanguage()
   const options = useMemo(() => {
     return teacherList.map(t => ({
@@ -188,6 +188,7 @@ export function TeacherSearch({ teacherList, value, onChange, label }) {
         placeholder={placeholderText}
         searchable={true}
         small={true}
+        icon={icon}
         className="w-full"
       />
     </div>
@@ -268,7 +269,13 @@ export function FormInternal({ internalList, onSubmit, loading }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
-        <TeacherSearch teacherList={filteredList} value={personId} onChange={setPersonId} label={typeMeta[visitorType].label} />
+        <TeacherSearch
+          teacherList={filteredList}
+          value={personId}
+          onChange={setPersonId}
+          label={typeMeta[visitorType].label}
+          icon={typeMeta[visitorType].icon}
+        />
 
         <PurposeInput
           value={purpose}

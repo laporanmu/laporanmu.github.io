@@ -373,10 +373,16 @@ const RichSelect = memo(({
                 type="button"
                 onClick={disabled ? undefined : toggle}
                 disabled={disabled}
-                className={`w-full flex items-center justify-between gap-2 ${compact ? 'px-2.5 h-8' : small ? 'px-3 h-8 sm:h-9' : 'pl-9 pr-3 h-10 sm:h-10'} rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
+                className={`w-full flex items-center justify-between gap-2 ${
+                    compact 
+                        ? 'px-2.5 h-8' 
+                        : (small 
+                            ? (icon ? 'pl-8 pr-3 rtl:pl-3 rtl:pr-8 h-8 sm:h-9' : 'px-3 h-8 sm:h-9') 
+                            : (icon ? 'pl-9 pr-3 rtl:pl-3 rtl:pr-9 h-10 sm:h-10' : 'px-3 h-10 sm:h-10'))
+                } rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
             >
                 <div className="flex items-center gap-2 truncate">
-                    {icon && !small && !compact && renderIcon(icon, `absolute left-3.5 top-1/2 -translate-y-1/2 text-xs w-3.5 h-3.5 transition-colors ${iconStatusClasses[status]}`)}
+                    {icon && !compact && renderIcon(icon, `absolute ${small ? 'left-3 rtl:left-auto rtl:right-3 w-3 h-3 text-[10px]' : 'left-3.5 rtl:left-auto rtl:right-3.5 w-3.5 h-3.5 text-xs'} top-1/2 -translate-y-1/2 transition-colors ${iconStatusClasses[status]}`)}
                     <span className={selectedOption ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)] opacity-60'}>
                         {selectedOption ? (selectedOption.render ? selectedOption.render : selectedOption.name) : placeholder}
                     </span>
