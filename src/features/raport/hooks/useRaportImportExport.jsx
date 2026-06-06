@@ -126,9 +126,9 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
 
     // ── Generate PDF Blob ──
     const generatePDFBlob = useCallback(async (student, contextOverride = {}) => {
-        await Promise.all([
-            new Promise((res, rej) => { if (window.html2canvas) { res(); return }; const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s) }),
-            new Promise((res, rej) => { if (window.jspdf?.jsPDF || window.jsPDF) { res(); return }; const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s) }),
+        const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+            import('html2canvas'),
+            import('jspdf')
         ])
         const activeBulanObj = contextOverride.bulanObj ?? bulanObj
         const activeYear = contextOverride.year ?? selectedYear
@@ -161,11 +161,10 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         await new Promise(r => setTimeout(r, 700))
         try {
             const canvas = await withTimeout(
-                window.html2canvas(wrapper, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', width: A4W, height: A4H, scrollX: 0, scrollY: 0, logging: false }),
+                html2canvas(wrapper, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', width: A4W, height: A4H, scrollX: 0, scrollY: 0, logging: false }),
                 15000,
                 'Render PDF'
             )
-            const jsPDF = window.jspdf?.jsPDF || window.jsPDF
             const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
             pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297)
             const blob = pdf.output('blob')
@@ -292,17 +291,10 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
 
     // ── Run ZIP Blast ──
     const runZipBlast = useCallback(async (stuList, archEntry) => {
-        if (!window.JSZip) {
-            await new Promise((res, rej) => {
-                const s = document.createElement('script')
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
-                s.onload = res; s.onerror = rej
-                document.head.appendChild(s)
-            })
-        }
+        const { default: JSZip } = await import('jszip')
         zipAbortRef.current = false
         setZipBlast({ queue: stuList, idx: 0, done: 0, failed: 0, total: stuList.length, active: true })
-        const zip = new window.JSZip()
+        const zip = new JSZip()
         let done = 0, failed = 0
         const bulanStr = archEntry ? (BULAN.find(b => b.id === archEntry.month)?.id_str || '') : (BULAN.find(b => b.id === selectedMonth)?.id_str || '')
         const yearStr = archEntry ? archEntry.year : selectedYear
@@ -473,14 +465,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                 return
             }
 
-            if (!window.XLSX) {
-                await new Promise((res, rej) => {
-                    const s = document.createElement('script')
-                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                    s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
-                    document.head.appendChild(s)
-                })
-            }
+            const XLSX = await import('xlsx')
 
             const headerMap = {
                 nama: 'Nama',
@@ -533,7 +518,6 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                 return rowData
             })
 
-            const XLSX = window.XLSX
             const allRows = options.includeHeader !== false ? [headers, ...rows] : rows
             const ws = XLSX.utils.aoa_to_sheet(allRows)
             ws['!cols'] = [{ wch: 4 }, ...activeColumns.map(col => ({ wch: col === 'nama' || col === 'catatan' ? 28 : 12 }))]
@@ -560,14 +544,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
     const handleExportAllClassesModal = useCallback(async (customFileName) => {
         setExporting(true)
         try {
-            if (!window.XLSX) {
-                await new Promise((res, rej) => {
-                    const s = document.createElement('script')
-                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                    s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
-                    document.head.appendChild(s)
-                })
-            }
+            const XLSX = await import('xlsx')
 
             const { data: allCls, error: clsErr } = await supabase.from('classes').select('id, name')
             if (clsErr) throw clsErr
@@ -578,7 +555,6 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
             const { data: allRep, error: repErr } = await supabase.from('student_monthly_reports').select('*').eq('month', selectedMonth).eq('year', selectedYear)
             if (repErr) throw repErr
 
-            const XLSX = window.XLSX
             const wb = XLSX.utils.book_new()
             const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
 

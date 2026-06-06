@@ -694,12 +694,6 @@ export default function RaportPage() {
         return () => window.removeEventListener('keydown', handler)
     }, [step, addToast])
 
-    // ── Preload print libs
-    useEffect(() => {
-        const load = (src, check) => new Promise(res => { if (check()) { res(); return }; const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = res; document.head.appendChild(s) })
-        load('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => !!window.html2canvas)
-        load('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => !!(window.jspdf?.jsPDF || window.jsPDF))
-    }, [])
 
     // ── Export methods mapped from hooks ──
     const exportCSV = useCallback(() => {
@@ -747,14 +741,7 @@ export default function RaportPage() {
         // Reset input agar bisa pilih file yang sama lagi
         e.target.value = ''
 
-        if (!window.XLSX) {
-            await new Promise((res, rej) => {
-                const s = document.createElement('script')
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
-                document.head.appendChild(s)
-            })
-        }
+        const XLSX = await import('xlsx')
 
         setLoading(true)
         try {
@@ -765,7 +752,6 @@ export default function RaportPage() {
                 reader.readAsArrayBuffer(file)
             })
 
-            const XLSX = window.XLSX
             const wb = XLSX.read(data, { type: 'array' })
 
             // 1. Ambil data master untuk mapping

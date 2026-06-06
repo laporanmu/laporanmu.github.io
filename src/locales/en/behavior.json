@@ -121,7 +121,7 @@
   "behavior.allClassesShort": "All",
   "behavior.searchName": "Search Name",
   "behavior.searchPlaceholderModal": "Student name...",
-  "behavior.searchPlaceholderBehavior": "Search violations or achievements...",
+  "behavior.searchPlaceholderBehavior": "Search violations/achievements...",
   "behavior.recentlyReported": "Recently Reported",
   "behavior.loadingData": "Loading data...",
   "behavior.notFound": "Not found",

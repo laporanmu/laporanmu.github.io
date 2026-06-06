@@ -45,6 +45,14 @@ const RichSelect = memo(({
     const [isOpen, setIsOpen] = useState(false)
     const [search, setSearch] = useState('')
     const [activeGroup, setActiveGroup] = useState('All')
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 640)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
     
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, placement: 'bottom', maxHeight: 240 })
     const [compactPlacement, setCompactPlacement] = useState('bottom')
@@ -280,7 +288,7 @@ const RichSelect = memo(({
             {/* Options List */}
             <div
                 className="py-1 overflow-y-auto custom-scrollbar flex-1 min-h-0"
-                style={{ maxHeight: compact ? 200 : Math.max(60, Math.min(maxHeight || (searchable ? 280 : 240), coords.maxHeight - (searchable ? (uniqueGroups.length > 0 ? 92 : 52) : 8))) }}
+                style={{ maxHeight: isMobile ? 'calc(75vh - 120px)' : (compact ? 200 : Math.max(60, Math.min(maxHeight || (searchable ? 280 : 240), coords.maxHeight - (searchable ? (uniqueGroups.length > 0 ? 92 : 52) : 8)))) }}
             >
                 {extraOption && (
                     <button
@@ -409,22 +417,45 @@ const RichSelect = memo(({
             ) : (
                 /* ─── Full: portal dropdown ─── */
                 createPortal(
-                    <div
-                        className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl shadow-2xl animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'} flex flex-col`}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        style={{
-                            width: 'max-content',
-                            minWidth: coords.width,
-                            maxWidth: small ? Math.max(200, coords.width) : Math.max(300, coords.width),
-                            maxHeight: Math.max(80, coords.maxHeight),
-                            overflow: 'hidden',
-                            left: coords.left,
-                            top: coords.placement === 'top' ? 'auto' : coords.bottom + 8,
-                            bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
-                        }}
-                    >
-                        {renderDropdown()}
-                    </div>,
+                    isMobile ? (
+                        <>
+                            <div
+                                className="fixed inset-0 bg-black/40 z-[99998] animate-in fade-in duration-200"
+                                onMouseDown={(e) => {
+                                    e.stopPropagation()
+                                    setIsOpen(false)
+                                }}
+                            />
+                            <div
+                                className="fixed bottom-0 left-0 right-0 z-[99999] bg-[var(--color-surface)] border-t border-[var(--color-border)] rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-200 flex flex-col pb-safe"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                style={{
+                                    maxHeight: '75vh',
+                                    width: '100%',
+                                }}
+                            >
+                                <div className="w-12 h-1 bg-[var(--color-border)] rounded-full mx-auto my-2.5 shrink-0" />
+                                {renderDropdown()}
+                            </div>
+                        </>
+                    ) : (
+                        <div
+                            className={`fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl sm:rounded-2xl shadow-2xl animate-in fade-in ${coords.placement === 'top' ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'} flex flex-col`}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            style={{
+                                width: 'max-content',
+                                minWidth: coords.width,
+                                maxWidth: small ? Math.max(200, coords.width) : Math.max(300, coords.width),
+                                maxHeight: Math.max(80, coords.maxHeight),
+                                overflow: 'hidden',
+                                left: coords.left,
+                                top: coords.placement === 'top' ? 'auto' : coords.bottom + 8,
+                                bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
+                            }}
+                        >
+                            {renderDropdown()}
+                        </div>
+                    ),
                     document.body
                 )
             ))}

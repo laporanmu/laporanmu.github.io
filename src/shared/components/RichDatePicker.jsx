@@ -146,6 +146,14 @@ const RichDatePicker = memo(({
     const [isOpen, setIsOpen] = useState(false)
     const [isFocused, setIsFocused] = useState(false)
     const [typedValue, setTypedValue] = useState('')
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 640)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
 
     const [currentDate, setCurrentDate] = useState(() => {
         if (value) {
@@ -362,7 +370,7 @@ const RichDatePicker = memo(({
     }, [value, currentLocale, tNum])
 
     const renderCalendar = () => (
-        <div className="p-2.5 bg-[var(--color-surface)] w-[230px] sm:w-[240px]">
+        <div className={`p-2.5 bg-[var(--color-surface)] ${isMobile ? 'w-full max-w-sm px-4' : 'w-[230px] sm:w-[240px]'}`}>
             {/* Header: Month & Year Selector */}
             <div className="flex items-center justify-between mb-2 pb-1 border-b border-[var(--color-border)]/40 select-none">
                 <button
@@ -408,7 +416,7 @@ const RichDatePicker = memo(({
                             key={`day-${day}`}
                             type="button"
                             onClick={() => handleSelectDay(day)}
-                            className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-[10px] font-bold transition-all relative ${selected
+                            className={`w-full aspect-square max-w-[40px] max-h-[40px] mx-auto rounded-lg text-[10.5px] font-bold transition-all relative flex items-center justify-center ${selected
                                 ? 'bg-[var(--color-primary)] text-white font-black shadow-md shadow-[var(--color-primary)]/10 scale-105'
                                 : activeToday
                                     ? 'border-2 border-[var(--color-primary)]/50 text-[var(--color-primary)] font-black'
@@ -455,6 +463,8 @@ const RichDatePicker = memo(({
                 onBlur={handleBlur}
                 disabled={disabled}
                 placeholder={defaultPlaceholder}
+                inputMode={isMobile ? 'none' : undefined}
+                readOnly={isMobile || disabled}
                 className={`w-full pl-9 pr-8 h-[40px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] outline-none transition-all text-xs font-black shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
 
@@ -470,20 +480,44 @@ const RichDatePicker = memo(({
 
             {/* Portal Dropdown Calendar */}
             {isOpen && createPortal(
-                <div
-                    className="fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-3"
-                    onMouseDown={(e) => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                    }}
-                    style={{
-                        left: Math.max(16, Math.min(coords.left, window.innerWidth - 240 - 16)),
-                        top: coords.placement === 'top' ? 'auto' : coords.top + 48,
-                        bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
-                    }}
-                >
-                    {renderCalendar()}
-                </div>,
+                isMobile ? (
+                    <>
+                        <div
+                            className="fixed inset-0 bg-black/40 z-[99998] animate-in fade-in duration-200"
+                            onMouseDown={(e) => {
+                                e.stopPropagation()
+                                setIsOpen(false)
+                            }}
+                        />
+                        <div
+                            className="fixed bottom-0 left-0 right-0 z-[99999] bg-[var(--color-surface)] border-t border-[var(--color-border)] rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-200 flex flex-col pb-4"
+                            onMouseDown={(e) => {
+                                e.stopPropagation()
+                                e.preventDefault()
+                            }}
+                        >
+                            <div className="w-12 h-1 bg-[var(--color-border)] rounded-full mx-auto my-2.5 shrink-0" />
+                            <div className="flex justify-center w-full">
+                                {renderCalendar()}
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div
+                        className="fixed z-[99999] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-3"
+                        onMouseDown={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                        }}
+                        style={{
+                            left: Math.max(16, Math.min(coords.left, window.innerWidth - 240 - 16)),
+                            top: coords.placement === 'top' ? 'auto' : coords.top + 48,
+                            bottom: coords.placement === 'top' ? (window.innerHeight - coords.top) + 8 : 'auto',
+                        }}
+                    >
+                        {renderCalendar()}
+                    </div>
+                ),
                 document.body
             )}
         </div>

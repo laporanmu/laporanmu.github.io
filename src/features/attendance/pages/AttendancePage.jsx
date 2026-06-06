@@ -144,7 +144,7 @@ const StudentRow = memo(({ student, idx, days, tahun, bulan, daysInMonth, todayD
     const hasNote = !!note
 
     return (
-        <tr className={alertAlpa ? 'bg-red-500/[0.02]' : ''}>
+        <tr className={`table-row-lazy ${alertAlpa ? 'bg-red-500/[0.02]' : ''}`}>
             {/* No — sticky */}
             <td style={{
                 position: 'sticky', left: 0, zIndex: 4,

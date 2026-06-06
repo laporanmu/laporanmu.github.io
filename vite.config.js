@@ -30,6 +30,10 @@ export default defineConfig({
           }
         ]
       },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024 // 6MB to cache jsPDF, html2canvas, xlsx, jszip
+      },
       devOptions: {
         enabled: false
       }

@@ -1136,17 +1136,21 @@ export default function BehaviorPage() {
                         </div>
                     )
                 ) : totalRows === 0 && !debouncedSearch && !filterType && !filterClass ? (
-                    <div className="text-center py-20 rounded-2xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)]/20">
-                        <div className="w-14 h-14 bg-[var(--color-surface-alt)] rounded-2xl flex items-center justify-center mx-auto mb-4 opacity-30 text-2xl">
-                            <ClipboardList className="w-8 h-8" />
+                    <div className="glass rounded-2xl border border-[var(--color-border)] overflow-hidden">
+                        <div className="p-4 sm:p-5">
+                            <EmptyState
+                                variant="plain"
+                                color="slate"
+                                icon={ClipboardList}
+                                title={tp('noReports')}
+                                description={tp('noReportsDesc')}
+                                action={
+                                    <button onClick={handleAdd} disabled={!canInput} className="btn btn-primary h-10 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed">
+                                        {canInput ? tp('createNow') : tp('readOnly')}
+                                    </button>
+                                }
+                            />
                         </div>
-                        <h3 className="text-lg font-black text-[var(--color-text)] mb-2">{tp('noReports')}</h3>
-                        <p className="text-sm text-[var(--color-text-muted)] max-w-xs mx-auto mb-6 opacity-70">
-                            {tp('noReportsDesc')}
-                        </p>
-                        <button onClick={handleAdd} disabled={!canInput} className="btn btn-primary h-10 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed">
-                            {canInput ? tp('createNow') : tp('readOnly')}
-                        </button>
                     </div>
                 ) : viewMode === 'timeline' ? (
 
@@ -1160,6 +1164,7 @@ export default function BehaviorPage() {
                             {reports.length === 0 ? (
                                 <EmptyState
                                     variant="plain"
+                                    color="slate"
                                     icon={Search}
                                     title={tp('noSearchResult')}
                                     description={tp('noSearchResultDesc')}
@@ -1167,7 +1172,7 @@ export default function BehaviorPage() {
                                         <button
                                             type="button"
                                             onClick={resetAllFilters}
-                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-all"
+                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all"
                                         >
                                             {tp('resetAllFilters')}
                                         </button>
@@ -1398,154 +1403,155 @@ export default function BehaviorPage() {
                                 <div className="h-full bg-[var(--color-primary)] animate-pulse w-full" />
                             </div>
                         )}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[750px]">
-                                <thead className="bg-[var(--color-surface-alt)]/60 border-b border-[var(--color-border)]">
-                                    <tr>
-                                        <th className="px-4 py-3.5 w-10 text-center">
-                                            <input type="checkbox" checked={allSelected}
-                                                onChange={() => setSelectedIds(allSelected ? [] : reports.map(r => r.id))}
-                                                className="w-4 h-4 rounded border-[var(--color-border)] cursor-pointer" />
-                                        </th>
-                                        <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[25%]">{tp('studentCol')}</th>
-                                        {visibleCols.type && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[35%]">{tp('reportType')}</th>}
-                                        {visibleCols.points && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[10%]">{tp('points')}</th>}
-                                        {visibleCols.time && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[15%]">{tp('time')}</th>}
-                                        {visibleCols.teacher && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[15%]">{tp('recordedBy')}</th>}
-                                        <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28 relative">
-                                            <span>{tp('actions')}</span>
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                                <button
-                                                    onClick={(e) => {
-                                                        const rect = e.currentTarget.getBoundingClientRect()
-                                                        setMenuPos({ top: rect.bottom + window.scrollY + 8, right: window.innerWidth - rect.right - window.scrollX })
-                                                        setIsColMenuOpen(p => !p)
-                                                    }}
-                                                    className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}
-                                                >
-                                                    <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
-                                                </button>
-                                                {isColMenuOpen && createPortal(
-                                                    <div ref={colMenuRef} className="fixed z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95 slide-in-from-top-2"
-                                                        style={{ top: menuPos.top, right: menuPos.right }}>
-                                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('manageColumns')}</p>
-                                                        {[
-                                                            { key: 'type', label: tp('reportType') },
-                                                            { key: 'points', label: tp('points') },
-                                                            { key: 'time', label: tp('time') },
-                                                            { key: 'teacher', label: tp('recordedBy') }
-                                                        ].map(({ key, label }) => (
-                                                            <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
-                                                                <span className="text-[10px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)]">{label}</span>
-                                                                <div className={`w-7 h-4 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
-                                                                    <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-all ${visibleCols[key] ? 'translate-x-[12px]' : 'translate-x-0'}`} />
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </div>,
-                                                    document.body
-                                                )}
-                                            </div>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[var(--color-border)]">
-                                    {reports.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="100%" className="px-6 py-4">
-                                                <EmptyState
-                                                    variant="plain"
-                                                    icon={Search}
-                                                    title={tp('noSearchResult')}
-                                                    description={tp('noSearchResultDesc')}
-                                                    action={
-                                                        <button
-                                                            type="button"
-                                                            onClick={resetAllFilters}
-                                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-all"
-                                                        >
-                                                            {tp('resetAllFilters')}
-                                                        </button>
-                                                    }
-                                                />
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        reports.map(r => {
-                                        const isP = (r.points ?? 0) > 0
-                                        const s = students.find(x => x.id === r.student_id)
-                                        return (
-                                            <tr key={r.id} className={`transition-colors group/row ${selectedIds.includes(r.id) ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-alt)]/40'}`}>
-                                                <td className="px-4 py-3 text-center">
-                                                    <input type="checkbox" checked={selectedIds.includes(r.id)}
-                                                        onChange={() => toggleSelect(r.id)}
+                        {reports.length === 0 ? (
+                            <div className="p-4 sm:p-5">
+                                <EmptyState
+                                    variant="plain"
+                                    color="slate"
+                                    icon={Search}
+                                    title={tp('noSearchResult')}
+                                    description={tp('noSearchResultDesc')}
+                                    action={
+                                        <button
+                                            type="button"
+                                            onClick={resetAllFilters}
+                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all"
+                                        >
+                                            {tp('resetAllFilters')}
+                                        </button>
+                                    }
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse min-w-[750px]">
+                                        <thead className="bg-[var(--color-surface-alt)]/60 border-b border-[var(--color-border)]">
+                                            <tr>
+                                                <th className="px-4 py-3.5 w-10 text-center">
+                                                    <input type="checkbox" checked={allSelected}
+                                                        onChange={() => setSelectedIds(allSelected ? [] : reports.map(r => r.id))}
                                                         className="w-4 h-4 rounded border-[var(--color-border)] cursor-pointer" />
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center gap-2.5">
-                                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-[11px] flex-shrink-0 ${isP ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
-                                                            {(tDb(s?.name) || '?')[0].toUpperCase()}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-black text-[var(--color-text)] leading-tight truncate max-w-[200px]">{mask(tDb(s?.name) || '—')}</p>
-                                                            {s?.class_name && <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-50">{s.class_name}</p>}
-                                                        </div>
+                                                </th>
+                                                <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[25%]">{tp('studentCol')}</th>
+                                                {visibleCols.type && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[35%]">{tp('reportType')}</th>}
+                                                {visibleCols.points && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[10%]">{tp('points')}</th>}
+                                                {visibleCols.time && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[15%]">{tp('time')}</th>}
+                                                {visibleCols.teacher && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[15%]">{tp('recordedBy')}</th>}
+                                                <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28 relative">
+                                                    <span>{tp('actions')}</span>
+                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                const rect = e.currentTarget.getBoundingClientRect()
+                                                                setMenuPos({ top: rect.bottom + window.scrollY + 8, right: window.innerWidth - rect.right - window.scrollX })
+                                                                setIsColMenuOpen(p => !p)
+                                                            }}
+                                                            className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}
+                                                        >
+                                                            <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
+                                                        </button>
+                                                        {isColMenuOpen && createPortal(
+                                                            <div ref={colMenuRef} className="fixed z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95 slide-in-from-top-2"
+                                                                style={{ top: menuPos.top, right: menuPos.right }}>
+                                                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('manageColumns')}</p>
+                                                                {[
+                                                                    { key: 'type', label: tp('reportType') },
+                                                                    { key: 'points', label: tp('points') },
+                                                                    { key: 'time', label: tp('time') },
+                                                                    { key: 'teacher', label: tp('recordedBy') }
+                                                                ].map(({ key, label }) => (
+                                                                    <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
+                                                                        <span className="text-[10px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)]">{label}</span>
+                                                                        <div className={`w-7 h-4 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                                                            <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-all ${visibleCols[key] ? 'translate-x-[12px]' : 'translate-x-0'}`} />
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>,
+                                                            document.body
+                                                        )}
                                                     </div>
-                                                </td>
-                                                {visibleCols.type && (
-                                                    <td className="px-4 py-3">
-                                                        <p className="text-xs font-bold text-[var(--color-text)]">{getTypeName(r.violation_type_id)}</p>
-                                                        {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 truncate max-w-[280px]">{mask(tDb(r.notes))}</p>}
-                                                    </td>
-                                                )}
-                                                {visibleCols.points && (
-                                                    <td className="px-4 py-3 text-center">
-                                                        <span className={`inline-flex items-center justify-center min-w-[40px] px-2 py-0.5 rounded-full text-[11px] font-black border ${isP ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
-                                                            {r.points > 0 ? '+' : ''}{tNum(r.points)}
-                                                        </span>
-                                                    </td>
-                                                )}
-                                                {visibleCols.time && (
-                                                    <td className="px-4 py-3">
-                                                        <p className="text-xs font-bold text-[var(--color-text)]">{fmtDate(r.reported_at)}</p>
-                                                        <p className="text-[10px] text-[var(--color-text-muted)] opacity-50 tabular-nums">{fmtTime(r.reported_at)}</p>
-                                                    </td>
-                                                )}
-                                                {visibleCols.teacher && (
-                                                    <td className="px-4 py-3">
-                                                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide opacity-50 truncate max-w-[140px]">{mask(r.teacher_name || '—')}</p>
-                                                    </td>
-                                                )}
-                                                <td className="px-4 py-3 text-center relative">
-                                                    <div className="flex items-center justify-center gap-1 transition-opacity duration-150">
-                                                        <button onClick={() => handleOpenDetail(r)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all" title="Lihat detail">
-                                                            <Eye className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <button onClick={() => handleEdit(r)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all">
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <button onClick={() => { setItemToDelete(r); setIsDeleteModalOpen(true) }} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all">
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                                </th>
                                             </tr>
-                                        )
-                                    })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        <Pagination
-                            totalRows={totalRows}
-                            page={page}
-                            pageSize={pageSize}
-                            setPage={setPage}
-                            setPageSize={setPageSize}
-                            label={tp('reportCount')}
-                            jumpPage={jumpPage}
-                            setJumpPage={setJumpPage}
-                        />
+                                        </thead>
+                                        <tbody className="divide-y divide-[var(--color-border)]">
+                                            {reports.map(r => {
+                                                const isP = (r.points ?? 0) > 0
+                                                const s = students.find(x => x.id === r.student_id)
+                                                return (
+                                                    <tr key={r.id} className={`transition-colors group/row ${selectedIds.includes(r.id) ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-alt)]/40'}`}>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <input type="checkbox" checked={selectedIds.includes(r.id)}
+                                                                onChange={() => toggleSelect(r.id)}
+                                                                className="w-4 h-4 rounded border-[var(--color-border)] cursor-pointer" />
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-[11px] flex-shrink-0 ${isP ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                                                                    {(tDb(s?.name) || '?')[0].toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-black text-[var(--color-text)] leading-tight truncate max-w-[200px]">{mask(tDb(s?.name) || '—')}</p>
+                                                                    {s?.class_name && <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-50">{s.class_name}</p>}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        {visibleCols.type && (
+                                                            <td className="px-4 py-3">
+                                                                <p className="text-xs font-bold text-[var(--color-text)]">{getTypeName(r.violation_type_id)}</p>
+                                                                {r.notes && <p className="text-[10px] text-[var(--color-text-muted)] opacity-60 truncate max-w-[280px]">{mask(tDb(r.notes))}</p>}
+                                                            </td>
+                                                        )}
+                                                        {visibleCols.points && (
+                                                            <td className="px-4 py-3 text-center">
+                                                                <span className={`inline-flex items-center justify-center min-w-[40px] px-2 py-0.5 rounded-full text-[11px] font-black border ${isP ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
+                                                                    {r.points > 0 ? '+' : ''}{tNum(r.points)}
+                                                                </span>
+                                                            </td>
+                                                        )}
+                                                        {visibleCols.time && (
+                                                            <td className="px-4 py-3">
+                                                                <p className="text-xs font-bold text-[var(--color-text)]">{fmtDate(r.reported_at)}</p>
+                                                                <p className="text-[10px] text-[var(--color-text-muted)] opacity-50 tabular-nums">{fmtTime(r.reported_at)}</p>
+                                                            </td>
+                                                        )}
+                                                        {visibleCols.teacher && (
+                                                            <td className="px-4 py-3">
+                                                                <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide opacity-50 truncate max-w-[140px]">{mask(r.teacher_name || '—')}</p>
+                                                            </td>
+                                                        )}
+                                                        <td className="px-4 py-3 text-center relative">
+                                                            <div className="flex items-center justify-center gap-1 transition-opacity duration-150">
+                                                                <button onClick={() => handleOpenDetail(r)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all" title="Lihat detail">
+                                                                    <Eye className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button onClick={() => handleEdit(r)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all">
+                                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button onClick={() => { setItemToDelete(r); setIsDeleteModalOpen(true) }} className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all">
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <Pagination
+                                    totalRows={totalRows}
+                                    page={page}
+                                    pageSize={pageSize}
+                                    setPage={setPage}
+                                    setPageSize={setPageSize}
+                                    label={tp('reportCount')}
+                                    jumpPage={jumpPage}
+                                    setJumpPage={setJumpPage}
+                                />
+                            </>
+                        )}
                     </div>
                 )}
 

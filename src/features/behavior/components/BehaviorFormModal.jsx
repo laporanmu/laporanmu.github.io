@@ -441,7 +441,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                     <div className="space-y-2 animate-in fade-in">
                         <div className="grid grid-cols-[120px_1fr] gap-2">
                             <div>
-                                <label className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1">
+                                <label className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1">
                                     {tp('classLabel')}
                                 </label>
                                 <RichSelect
@@ -451,11 +451,11 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                     placeholder={tp('allClassesShort')}
                                     extraOption={{ id: '', name: tp('allClassesShort') }}
                                     small={true}
-                                    buttonClassName="!h-8 sm:!h-8 rounded-xl px-3 text-[11px]"
+                                    buttonClassName="!h-8 sm:!h-8 rounded-xl px-3 text-xs"
                                 />
                             </div>
                             <div>
-                                <label className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1">
+                                <label className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1">
                                     {tp('searchName')}
                                 </label>
                                 <div className="relative">
@@ -466,7 +466,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                         value={modalSearch}
                                         onChange={e => setModalSearch(e.target.value)}
                                         placeholder={tp('searchPlaceholderModal')}
-                                        className="input-field w-full h-8 pl-8 rounded-xl border-[var(--color-border)] bg-[var(--color-surface-alt)] text-xs font-bold focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-text-muted)]/50 outline-none"
+                                        className="input-field w-full h-8 pl-8 pr-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface-alt)] text-xs font-bold focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-text-muted)]/50 outline-none"
                                     />
                                 </div>
                             </div>
@@ -474,7 +474,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
 
                         {recentStudents.length > 0 && (
                             <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                                <div className="flex items-center gap-1 text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest opacity-80">
+                                <div className="flex items-center gap-1 text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest opacity-80">
                                     <Clock className="w-2.5 h-2.5 text-[var(--color-primary)]" />
                                     <span>{tp('recentlyReported')}</span>
                                 </div>
@@ -484,9 +484,9 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                             key={s.id}
                                             type="button"
                                             onClick={() => nextStep(s.id)}
-                                            className="h-6 px-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-95 text-[9px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all flex items-center gap-1 shadow-sm"
+                                            className="h-6 px-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-95 text-[10px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all flex items-center gap-1 shadow-sm"
                                         >
-                                            <div className="w-3.5 h-3.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-black text-[7px] leading-none">
+                                            <div className="w-3.5 h-3.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-black text-[9px] leading-none">
                                                 {s.name[0].toUpperCase()}
                                             </div>
                                             <span>{s.name.split(' ').slice(0, 2).join(' ')}</span>
@@ -501,7 +501,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                 {filteredStudentsForModal.length === 0 ? (
                                     <div className="py-8 text-center opacity-40">
                                         <Search className="w-4 h-4 mx-auto mb-1.5" />
-                                        <p className="text-[9px] font-black uppercase tracking-widest">
+                                        <p className="text-[10px] font-black uppercase tracking-widest">
                                             {students.length === 0 ? tp('loadingData') : tp('notFound')}
                                         </p>
                                     </div>
@@ -518,7 +518,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                             >
                                                 <div className="flex items-center gap-2.5">
                                                     <div
-                                                        className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] flex-shrink-0 ${formData.student_id === s.id
+                                                        className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs flex-shrink-0 ${formData.student_id === s.id
                                                             ? 'bg-white/20 text-white'
                                                             : 'bg-[var(--color-surface-alt)] text-[var(--color-primary)]'
                                                             }`}
@@ -526,19 +526,19 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                                         {s.name[0].toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs font-bold leading-tight">
+                                                        <p className="text-sm font-bold leading-tight">
                                                             {highlightText(s.name, modalSearch)}
                                                         </p>
                                                         <div className="flex items-center gap-1.5 mt-0.5 leading-none">
                                                             {s.class_name && (
-                                                                <span className={`text-[8px] font-extrabold uppercase tracking-wider ${formData.student_id === s.id
+                                                                <span className={`text-[10px] font-extrabold uppercase tracking-wider ${formData.student_id === s.id
                                                                     ? 'text-white/80'
                                                                     : 'text-[var(--color-text-muted)] opacity-60'
                                                                     }`}>
                                                                     {s.class_name}
                                                                 </span>
                                                             )}
-                                                            <span className={`text-[8px] font-black ${formData.student_id === s.id
+                                                            <span className={`text-[10px] font-black ${formData.student_id === s.id
                                                                 ? 'text-white/90'
                                                                 : (s.total_points ?? 0) >= 100
                                                                     ? 'text-emerald-500'
@@ -558,7 +558,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                             </button>
                                         ))}
                                         {filteredStudentsForModal.length > displayedStudents.length && (
-                                            <div className="py-1.5 text-center text-[8px] font-bold text-[var(--color-text-muted)] opacity-50 bg-[var(--color-surface)] rounded-xl border border-dashed border-[var(--color-border)]/60 my-1 mx-0.5">
+                                            <div className="py-1.5 text-center text-[10px] font-bold text-[var(--color-text-muted)] opacity-50 bg-[var(--color-surface)] rounded-xl border border-dashed border-[var(--color-border)]/60 my-1 mx-0.5">
                                                 {tp('showingCount').replace('{total}', tNum(filteredStudentsForModal.length))}
                                             </div>
                                         )}
@@ -576,21 +576,21 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                             const s = students.find(st => st.id === formData.student_id)
                             return (
                                 <div className="p-1.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl flex items-center gap-2">
-                                    <div className="w-6.5 h-6.5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-black text-[10px] flex-shrink-0">
+                                    <div className="w-6.5 h-6.5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-black text-xs flex-shrink-0">
                                         {(s?.name || '?')[0].toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[7px] font-black uppercase text-[var(--color-text-muted)] tracking-widest leading-none">
+                                        <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest leading-none">
                                             {tp('recipient')}
                                         </p>
-                                        <p className="text-[11px] font-bold text-[var(--color-text)] truncate leading-tight mt-0.5">
+                                        <p className="text-sm font-bold text-[var(--color-text)] truncate leading-tight mt-1">
                                             {s?.name}
+                                            {s?.class_name && (
+                                                <span className="text-[10px] font-bold text-[var(--color-text-muted)] ml-1.5 opacity-80">
+                                                    - {s.class_name}
+                                                </span>
+                                            )}
                                         </p>
-                                        {s?.class_name && (
-                                            <p className="text-[8px] font-bold text-[var(--color-primary)] uppercase tracking-wide opacity-80 mt-0.5 leading-none">
-                                                {s?.class_name}
-                                            </p>
-                                        )}
                                     </div>
                                     {!selectedItem && (
                                         <button
@@ -610,7 +610,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                         <div className="space-y-1.5">
                             <div className="grid grid-cols-[230px_1fr] gap-2">
                                 <div>
-                                    <label className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1">
+                                    <label className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1">
                                         {tp('category')}
                                     </label>
                                     <div className="flex gap-1 bg-[var(--color-surface-alt)] p-0.5 rounded-xl border border-[var(--color-border)] h-8">
@@ -634,7 +634,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1">
+                                    <label className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-1">
                                         {tp('colRule')}
                                     </label>
                                     <div className="relative">
@@ -644,7 +644,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                             value={vtSearch}
                                             onChange={e => setVtSearch(e.target.value)}
                                             placeholder={tp('searchPlaceholderBehavior')}
-                                            className="input-field w-full h-8 pl-8 rounded-xl border-[var(--color-border)] bg-[var(--color-surface-alt)] text-xs font-bold focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-text-muted)]/50 outline-none"
+                                            className="input-field w-full h-8 pl-8 pr-3 rounded-xl border-[var(--color-border)] bg-[var(--color-surface-alt)] text-xs font-bold focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-text-muted)]/50 outline-none"
                                         />
                                     </div>
                                 </div>
@@ -656,7 +656,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                     {filteredViolationTypes.length === 0 ? (
                                         <div className="py-8 text-center opacity-40">
                                             <Search className="w-4 h-4 mx-auto mb-1.5" />
-                                            <p className="text-[9px] font-black uppercase tracking-widest">
+                                            <p className="text-[10px] font-black uppercase tracking-widest">
                                                 {tp('notFound')}
                                             </p>
                                         </div>
@@ -665,7 +665,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                             {/* Violations Group */}
                                             {groupedVT.violations.length > 0 && (
                                                 <div className="space-y-1">
-                                                    <p className="text-[7px] font-black text-rose-500 uppercase tracking-wider px-1">
+                                                    <p className="text-[9px] font-black text-rose-500 uppercase tracking-wider px-1">
                                                         {tp('violation')}
                                                     </p>
                                                     {groupedVT.violations.map(vt => {
@@ -688,10 +688,10 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                                                     <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${formData.violation_type_id === vt.id ? 'bg-white/20 text-white' : 'bg-rose-500/10 text-rose-500'}`}>
                                                                         <ArrowDown className="w-2.5 h-2.5" />
                                                                     </div>
-                                                                    <span className={`text-[8px] font-black px-1.2 py-0.2 rounded flex-shrink-0 ${formData.violation_type_id === vt.id ? 'bg-white/20 text-white' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded flex-shrink-0 ${formData.violation_type_id === vt.id ? 'bg-white/20 text-white' : 'bg-rose-500/10 text-rose-500'}`}>
                                                                         {ptsVal}
                                                                     </span>
-                                                                    <span className="text-[11px] font-bold truncate">
+                                                                    <span className="text-xs font-bold truncate">
                                                                         {highlightText(tDb(vt.name), vtSearch)}
                                                                     </span>
                                                                 </div>
@@ -705,7 +705,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                             {/* Achievements Group */}
                                             {groupedVT.achievements.length > 0 && (
                                                 <div className="space-y-1 mt-1.5">
-                                                    <p className="text-[7px] font-black text-emerald-500 uppercase tracking-wider px-1">
+                                                    <p className="text-[9px] font-black text-emerald-500 uppercase tracking-wider px-1">
                                                         {tp('achievement')}
                                                     </p>
                                                     {groupedVT.achievements.map(vt => {
@@ -728,10 +728,10 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                                                     <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${formData.violation_type_id === vt.id ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-500'}`}>
                                                                         <ArrowUp className="w-2.5 h-2.5" />
                                                                     </div>
-                                                                    <span className={`text-[8px] font-black px-1.2 py-0.2 rounded flex-shrink-0 ${formData.violation_type_id === vt.id ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded flex-shrink-0 ${formData.violation_type_id === vt.id ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-500'}`}>
                                                                         {ptsVal}
                                                                     </span>
-                                                                    <span className="text-[11px] font-bold truncate">
+                                                                    <span className="text-xs font-bold truncate">
                                                                         {highlightText(tDb(vt.name), vtSearch)}
                                                                     </span>
                                                                 </div>
@@ -756,21 +756,21 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                             const s = students.find(st => st.id === formData.student_id)
                             return (
                                 <div className="p-1.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl flex items-center gap-2">
-                                    <div className="w-6.5 h-6.5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-black text-[10px] flex-shrink-0 animate-in fade-in">
+                                    <div className="w-6.5 h-6.5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-black text-xs flex-shrink-0 animate-in fade-in">
                                         {(s?.name || '?')[0].toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[7px] font-black uppercase text-[var(--color-text-muted)] tracking-widest leading-none">
+                                        <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest leading-none">
                                             {tp('recipient')}
                                         </p>
-                                        <p className="text-[11px] font-bold text-[var(--color-text)] truncate leading-tight mt-0.5 animate-in fade-in">
+                                        <p className="text-sm font-bold text-[var(--color-text)] truncate leading-tight mt-1 animate-in fade-in">
                                             {s?.name}
+                                            {s?.class_name && (
+                                                <span className="text-[10px] font-bold text-[var(--color-text-muted)] ml-1.5 opacity-80">
+                                                    - {s.class_name}
+                                                </span>
+                                            )}
                                         </p>
-                                        {s?.class_name && (
-                                            <p className="text-[8px] font-bold text-[var(--color-primary)] uppercase tracking-wide opacity-80 mt-0.5 leading-none">
-                                                {s?.class_name}
-                                            </p>
-                                        )}
                                     </div>
                                     {!selectedItem && (
                                         <button
@@ -797,14 +797,14 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                         {isNegative ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[7px] font-black uppercase text-[var(--color-text-muted)] tracking-widest leading-none">
+                                        <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest leading-none">
                                             {tp('behaviorType')}
                                         </p>
                                         <div className="flex items-center gap-1.5 flex-wrap mt-0.5 leading-none">
-                                            <span className={`text-[8px] font-black px-1.2 py-0.2 rounded ${isNegative ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${isNegative ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                                                 {ptsText}
                                             </span>
-                                            <span className="text-[11px] font-bold text-[var(--color-text)] truncate animate-in fade-in">
+                                            <span className="text-sm font-bold text-[var(--color-text)] truncate animate-in fade-in">
                                                 {tDb(selectedVT?.name)}
                                             </span>
                                         </div>
@@ -825,7 +825,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
 
                         {/* Waktu Kejadian Section */}
                         <div className="space-y-1.5 border-t border-[var(--color-border)]/50 pt-3 animate-in fade-in duration-200">
-                            <label className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-0.5">
+                            <label className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block mb-0.5">
                                 {tp('dateTime')}
                             </label>
                             <div className="grid grid-cols-[1fr_110px] gap-2">
@@ -853,14 +853,14 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
 
                         {/* Catatan Section */}
                         <div className="space-y-1.5 border-t border-[var(--color-border)]/50 pt-3">
-                            <label className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block">
+                            <label className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest block">
                                 {tp('notes')} <span className="normal-case font-medium opacity-50">({tp('optional')})</span>
                             </label>
                             <textarea
                                 value={formData.notes || ''}
                                 onChange={e => setFormData({ ...formData, notes: e.target.value })}
                                 placeholder={tp('notesPlaceholder')}
-                                className="w-full bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl p-2.5 text-xs font-bold text-[var(--color-text)] outline-none min-h-[70px] focus:ring-2 ring-[var(--color-primary)]/20 transition-all resize-none placeholder:text-[var(--color-text-muted)]/50"
+                                className="w-full bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl p-2.5 text-sm font-bold text-[var(--color-text)] outline-none min-h-[70px] focus:ring-2 ring-[var(--color-primary)]/20 transition-all resize-none placeholder:text-[var(--color-text-muted)]/50"
                             />
                         </div>
                     </div>

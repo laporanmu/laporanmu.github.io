@@ -132,7 +132,7 @@ const StudentRow = memo(({
 }) => {
     const avg = calcAvg(sc)
     return (
-        <tr className="border-t border-[var(--color-border)] transition-colors hover:bg-[var(--color-primary)]/[0.02]" style={{ background: isChecked ? 'var(--color-primary, #6366f1)08' : si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)' }}>
+        <tr className="border-t border-[var(--color-border)] transition-colors hover:bg-[var(--color-primary)]/[0.02] table-row-lazy" style={{ background: isChecked ? 'var(--color-primary, #6366f1)08' : si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)' }}>
             {bulkMode && (
                 <td className="text-center px-1" style={{ verticalAlign: 'middle' }}>
                     <input type="checkbox" checked={isChecked} onChange={e => onBulkToggle(student.id, e.target.checked)} aria-label={`Pilih ${student.name}`} className="w-3.5 h-3.5 accent-violet-500 cursor-pointer" />

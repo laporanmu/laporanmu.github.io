@@ -305,9 +305,9 @@ export default function ParentCheckPage() {
     const handlePrintRaport = async (r) => {
         setPdfLoading(r.id)
         try {
-            await Promise.all([
-                new Promise((res, rej) => { if (window.html2canvas) { res(); return }; const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s) }),
-                new Promise((res, rej) => { if (window.jspdf?.jsPDF || window.jsPDF) { res(); return }; const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s) }),
+            const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+                import('html2canvas'),
+                import('jspdf')
             ])
             // Set data → trigger JSX render
             setPrintRaportData({ r, student })
@@ -334,10 +334,9 @@ export default function ParentCheckPage() {
             await new Promise(res => setTimeout(res, 700))
             try {
                 const canvas = await withTimeout(
-                    window.html2canvas(wrapper, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', width: A4W, height: A4H, scrollX: 0, scrollY: 0, logging: false }),
+                    html2canvas(wrapper, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', width: A4W, height: A4H, scrollX: 0, scrollY: 0, logging: false }),
                     15000, 'Render PDF'
                 )
-                const jsPDF = window.jspdf?.jsPDF || window.jsPDF
                 const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
                 pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297)
                 const bulanObj = BULAN.find(b => b.id === r.month)

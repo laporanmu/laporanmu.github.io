@@ -53,7 +53,7 @@ const LogCard = memo(function LogCard({ log, onReturn, onCheckout, onEdit, isSel
   else if (isActive && !isInternal) cardClass = 'border-emerald-500/20 bg-emerald-500/[0.03]'
 
   return (
-    <div className={`flex items-start gap-3 p-3 rounded-xl border transition-colors group relative ${isSelected ? 'ring-2 ring-[var(--color-primary)] border-[var(--color-primary)]' : ''} ${cardClass}`}>
+    <div className={`flex items-start gap-3 p-3 rounded-xl border transition-colors group relative gpu-card ${isSelected ? 'ring-2 ring-[var(--color-primary)] border-[var(--color-primary)]' : ''} ${cardClass}`}>
 
       {/* Multi-select check */}
       {selectionMode && (

@@ -207,7 +207,7 @@ export default function GatePage() {
   const {
     teacherList, studentList, internalList,
     todayLogs, rekapData,
-    loadingLogs, loadingRekap, submitting, isRefreshing, editSaving,
+    loadingLogs, loadingRekap, submitting, isRefreshing, cooldown, editSaving,
     lastRefresh,
     confirmModal, setConfirmModal,
     editLog, setEditLog,
@@ -526,8 +526,8 @@ export default function GatePage() {
                   title="Buka Mode Kios Mandiri (Self-Service)">
                   <Monitor className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={handleRefresh} disabled={isRefreshing}
-                  className={`h-9 w-10 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] ${isRefreshing ? 'opacity-50' : ''}`}
+                <button onClick={handleRefresh} disabled={isRefreshing || cooldown}
+                  className="h-9 w-10 rounded-lg border flex items-center justify-center text-sm transition-all bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] enabled:hover:text-[var(--color-text)] enabled:hover:bg-[var(--color-border)] enabled:active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   title={tp('btnRefresh')}>
                   <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </button>
@@ -756,11 +756,13 @@ export default function GatePage() {
                   <MultiSelectIcon className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={() => handleExportCSV('log')}
-                  className="h-7 w-7 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center justify-center transition-all" title="Export CSV">
+                  disabled={filteredLogs.length === 0}
+                  className="h-7 w-7 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={handlePrint}
-                  className="h-7 w-7 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center justify-center transition-all" title="Export PDF / Cetak">
+                  disabled={filteredLogs.length === 0}
+                  className="h-7 w-7 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export PDF / Cetak">
                   <FileText className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -789,11 +791,13 @@ export default function GatePage() {
                     <MultiSelectIcon className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={() => handleExportCSV('log')}
-                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 flex items-center justify-center transition-all" title="Export CSV">
+                    disabled={filteredLogs.length === 0}
+                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
                     <FileSpreadsheet className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={handlePrint}
-                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 flex items-center justify-center transition-all" title="Export PDF / Cetak">
+                    disabled={filteredLogs.length === 0}
+                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export PDF / Cetak">
                     <FileText className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1097,18 +1101,22 @@ export default function GatePage() {
                 {/* Actions di kanan */}
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button onClick={() => handleExportCSV('rekap')}
-                    className="h-7.5 w-7.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center justify-center transition-all bg-[var(--color-surface)]" title="Export CSV">
+                    disabled={filteredRekapData.length === 0}
+                    className="h-7.5 w-7.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center justify-center transition-all bg-[var(--color-surface)] disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
                     <FileSpreadsheet className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={handlePrint}
-                    className="h-7.5 w-7.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center justify-center transition-all bg-[var(--color-surface)]" title="Export PDF / Cetak">
+                    disabled={filteredRekapData.length === 0}
+                    className="h-7.5 w-7.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center justify-center transition-all bg-[var(--color-surface)] disabled:opacity-40 disabled:pointer-events-none" title="Export PDF / Cetak">
                     <FileText className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={async () => {
                     const res = await sendDailySummary(rekapData)
                     if (res.success) addToast(t('toastTelegramSuccess'), 'success')
                     else addToast(t('toastErrorUnexpected') + ': ' + res.error, 'error')
-                  }} className="h-7.5 px-3 rounded-lg border border-indigo-500/30 bg-indigo-500/5 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all text-[9.5px] font-black flex items-center gap-1.5 whitespace-nowrap">
+                  }}
+                    disabled={rekapData.length === 0}
+                    className="h-7.5 px-3 rounded-lg border border-indigo-500/30 bg-indigo-500/5 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all text-[9.5px] font-black flex items-center gap-1.5 whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none">
                     <Send className="w-3 h-3" />
                     <span>{tp('sendTelegram') || 'Telegram'}</span>
                   </button>
@@ -1172,18 +1180,22 @@ export default function GatePage() {
 
                 <div className="flex items-center gap-1 shrink-0">
                   <button onClick={() => handleExportCSV('rekap')}
-                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] flex items-center justify-center transition-all" title="Export CSV">
+                    disabled={filteredRekapData.length === 0}
+                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
                     <FileSpreadsheet className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={handlePrint}
-                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] flex items-center justify-center transition-all" title="Export PDF">
+                    disabled={filteredRekapData.length === 0}
+                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export PDF">
                     <FileText className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={async () => {
                     const res = await sendDailySummary(rekapData)
                     if (res.success) addToast(t('toastTelegramSuccess'), 'success')
                     else addToast(t('toastErrorUnexpected') + ': ' + res.error, 'error')
-                  }} className="h-8 w-8 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-indigo-600 flex items-center justify-center transition-all" title="Kirim ke Telegram">
+                  }}
+                    disabled={rekapData.length === 0}
+                    className="h-8 w-8 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-indigo-600 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Kirim ke Telegram">
                     <Send className="w-3.5 h-3.5" />
                   </button>
                 </div>

@@ -73,7 +73,7 @@ export function PurposeInput({ value, onChange, presets, placeholder, label, req
           onFocus={() => setOpen(true)}
           onClick={() => setOpen(true)}
           placeholder={placeholder}
-          className="w-full h-9 pl-8 pr-3 rtl:pl-3 rtl:pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all"
+          className="w-full h-10 pl-8 pr-3 rtl:pl-3 rtl:pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all"
         />
       </div>
 
@@ -187,7 +187,6 @@ export function TeacherSearch({ teacherList, value, onChange, label, icon }) {
         options={options}
         placeholder={placeholderText}
         searchable={true}
-        small={true}
         icon={icon}
         className="w-full"
       />
@@ -287,24 +286,28 @@ export function FormInternal({ internalList, onSubmit, loading }) {
       </div>
 
       {/* Datetime: tanggal + jam keluar + estimasi */}
-      <div className="space-y-1">
-        <div className="flex gap-1.5 items-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">{tp('formTimeOut')}</p>
-          <span className="text-[9px] font-medium normal-case text-[var(--color-text-muted)] opacity-50">({tp('formEtaDesc')})</span>
-        </div>
-        {/* Row 1: Tanggal + Jam Keluar */}
+      <div className="space-y-3 pt-1">
         <div className="grid grid-cols-2 gap-2">
-          <RichDatePicker value={dateOut} onChange={setDateOut} clearable={false} />
-          <RichTimePicker value={timeOut} onChange={setTimeOut} />
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">
+              {tanggalLabel}
+            </label>
+            <RichDatePicker value={dateOut} onChange={setDateOut} clearable={false} />
+          </div>
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">
+              {jamKeluarLabel}
+            </label>
+            <RichTimePicker value={timeOut} onChange={setTimeOut} />
+          </div>
         </div>
-        {/* Labels row 1 */}
-        <div className="grid grid-cols-2 gap-2 px-0.5">
-          <span className="text-[9px] text-[var(--color-text-muted)] opacity-40 font-bold">{tanggalLabel}</span>
-          <span className="text-[9px] text-[var(--color-text-muted)] opacity-40 font-bold">{jamKeluarLabel}</span>
+
+        <div>
+          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">
+            {tp('formEta')} <span className="normal-case font-medium opacity-65">({opsionalText})</span>
+          </label>
+          <RichTimePicker value={timeEst} onChange={setTimeEst} clearable={true} />
         </div>
-        {/* Row 2: Estimasi Kembali (optional) */}
-        <RichTimePicker value={timeEst} onChange={setTimeEst} clearable={true} />
-        <span className="text-[9px] text-[var(--color-text-muted)] opacity-40 font-bold px-0.5">{tp('formEta')} <span className="normal-case opacity-60">{opsionalText}</span></span>
       </div>
 
 
@@ -374,7 +377,7 @@ export function FormTamu({ onSubmit, loading }) {
           <div className="relative">
             <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none rtl:left-auto rtl:right-3" />
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Nama lengkap..."
-              className="w-full h-9 pl-8 pr-3 rtl:pl-3 rtl:pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+              className="w-full h-10 pl-8 pr-3 rtl:pl-3 rtl:pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
           </div>
         </div>
         <div>
@@ -382,7 +385,7 @@ export function FormTamu({ onSubmit, loading }) {
           <div className="relative">
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none rtl:left-auto rtl:right-3" />
             <input value={institution} onChange={e => setInstitution(e.target.value)} placeholder="Asal/Desa..."
-              className="w-full h-9 pl-8 pr-3 rtl:pl-3 rtl:pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+              className="w-full h-10 pl-8 pr-3 rtl:pl-3 rtl:pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
           </div>
         </div>
       </div>
@@ -400,37 +403,41 @@ export function FormTamu({ onSubmit, loading }) {
         <div className="col-span-2 sm:col-span-1">
           <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1 block">{destLabel}</label>
           <input value={destination} onChange={e => setDestination(e.target.value)} placeholder="Ustadz X, TU..."
-            className="w-full h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+            className="w-full h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
         </div>
         <div className="col-span-2 sm:col-span-1">
           <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1 block">{tp('tableVehicle')}</label>
           <div className="relative">
             <Car className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none rtl:left-auto rtl:right-3" />
             <input value={vehicle} onChange={e => setVehicle(e.target.value)} placeholder="Nopol opsional..."
-              className="w-full h-9 pl-8 pr-3 rtl:pl-3 rtl:pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+              className="w-full h-10 pl-8 pr-3 rtl:pl-3 rtl:pr-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/40 focus:outline-none focus:border-[var(--color-primary)] transition-all" />
           </div>
         </div>
       </div>
 
       {/* Datetime: tanggal + jam masuk + estimasi */}
-      <div className="space-y-1">
-        <div className="flex gap-1.5 items-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60">{tp('formTimeIn')}</p>
-          <span className="text-[9px] font-medium normal-case text-[var(--color-text-muted)] opacity-50">({tp('formEtaDesc')})</span>
-        </div>
-        {/* Row 1: Tanggal + Jam Masuk */}
+      <div className="space-y-3 pt-1">
         <div className="grid grid-cols-2 gap-2">
-          <RichDatePicker value={dateIn} onChange={setDateIn} clearable={false} />
-          <RichTimePicker value={timeIn} onChange={setTimeIn} />
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">
+              {tanggalLabel}
+            </label>
+            <RichDatePicker value={dateIn} onChange={setDateIn} clearable={false} />
+          </div>
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">
+              {jamMasukLabel}
+            </label>
+            <RichTimePicker value={timeIn} onChange={setTimeIn} />
+          </div>
         </div>
-        {/* Labels row 1 */}
-        <div className="grid grid-cols-2 gap-2 px-0.5">
-          <span className="text-[9px] text-[var(--color-text-muted)] opacity-40 font-bold">{tanggalLabel}</span>
-          <span className="text-[9px] text-[var(--color-text-muted)] opacity-40 font-bold">{jamMasukLabel}</span>
+
+        <div>
+          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 mb-1.5 block">
+            {tp('formEtaTamu')} <span className="normal-case font-medium opacity-65">({opsionalText})</span>
+          </label>
+          <RichTimePicker value={timeEst} onChange={setTimeEst} clearable={true} />
         </div>
-        {/* Row 2: Estimasi Keluar (optional) */}
-        <RichTimePicker value={timeEst} onChange={setTimeEst} clearable={true} />
-        <span className="text-[9px] text-[var(--color-text-muted)] opacity-40 font-bold px-0.5">{tp('formEtaTamu')} <span className="normal-case opacity-60">{opsionalText}</span></span>
       </div>
 
       <div className="p-2.5 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex items-center justify-between">

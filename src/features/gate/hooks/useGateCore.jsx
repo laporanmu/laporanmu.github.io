@@ -185,6 +185,7 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
   const [loadingRekap, setLoadingRekap] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [cooldown, setCooldown] = useState(false)
   const [lastRefresh, setLastRefresh] = useState(Date.now())
   const [confirmModal, setConfirmModal] = useState(null)
   const [editLog, setEditLog] = useState(null)
@@ -311,9 +312,10 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
   // ── handleRefresh ──────────────────────────────────────────────────────────
 
   const handleRefresh = useCallback(async () => {
-    if (refreshActiveRef.current) return
+    if (refreshActiveRef.current || cooldown) return
     refreshActiveRef.current = true
     setIsRefreshing(true)
+    setCooldown(true)
     try {
       const promises = [loadTodayLogs(true)]
       if (activeTab === 'rekap') promises.push(loadRekap())
@@ -326,8 +328,11 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
     } finally {
       setIsRefreshing(false)
       refreshActiveRef.current = false
+      setTimeout(() => {
+        setCooldown(false)
+      }, 3000)
     }
-  }, [loadTodayLogs, loadRekap, activeTab, addToast, t])
+  }, [loadTodayLogs, loadRekap, activeTab, addToast, t, cooldown])
 
   // ── handleSubmit ───────────────────────────────────────────────────────────
 
@@ -534,7 +539,7 @@ export function useGateCore({ activeTab, rekapMode, rekapDate }) {
     teacherList, studentList, internalList,
     todayLogs, rekapData,
     // Loading flags
-    loadingLogs, loadingRekap, submitting, isRefreshing, editSaving,
+    loadingLogs, loadingRekap, submitting, isRefreshing, cooldown, editSaving,
     // Timestamps
     lastRefresh,
     // Modal state

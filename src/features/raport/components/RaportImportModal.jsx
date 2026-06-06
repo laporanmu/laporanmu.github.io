@@ -136,24 +136,17 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
 
         try {
             // Lazy load XLSX
-            if (!window.XLSX) {
-                await new Promise((res, rej) => {
-                    const s = document.createElement('script')
-                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                    s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
-                    document.head.appendChild(s)
-                })
-            }
+            const XLSX = await import('xlsx')
 
             const data = await file.arrayBuffer()
-            const wb = window.XLSX.read(data, { type: 'array' })
+            const wb = XLSX.read(data, { type: 'array' })
 
             const sheetsData = {}
             let allHeaders = new Set()
 
             wb.SheetNames.forEach(sheetName => {
                 const ws = wb.Sheets[sheetName]
-                const rawJson = window.XLSX.utils.sheet_to_json(ws, { header: 1 })
+                const rawJson = XLSX.utils.sheet_to_json(ws, { header: 1 })
                 if (rawJson.length >= 2) {
                     sheetsData[sheetName] = rawJson
                     // Ambil header dari baris pertama
@@ -541,16 +534,7 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
 
     const handleDownloadTemplate = async () => {
         try {
-            if (!window.XLSX) {
-                await new Promise((res, rej) => {
-                    const s = document.createElement('script')
-                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-                    s.onload = res; s.onerror = () => rej(new Error('Gagal memuat library XLSX'))
-                    document.head.appendChild(s)
-                })
-            }
-
-            const XLSX = window.XLSX
+            const XLSX = await import('xlsx')
             const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
             const data = [
                 [1, 'Budi Santoso', 8, 9, 8, 9, 7, '', '', 45, 155, 'Juz 30 Selesai', 'Murojaah lancar', 0, 1, 0, 2, 'Perkembangan baik.'],

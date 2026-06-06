@@ -320,7 +320,7 @@ export const StudentRow = memo(({
     ]
 
     return (
-        <tr className={`border-t border-[var(--color-border)] transition-colors group/row
+        <tr className={`border-t border-[var(--color-border)] transition-colors group/row table-row-lazy
             ${isRisk ? 'bg-red-500/[0.03] hover:bg-red-500/[0.06]' : 'hover:bg-[var(--color-surface-alt)]/40'}
             ${editingField ? 'bg-[var(--color-primary)]/[0.02]' : ''}
             ${student.is_pinned ? 'bg-amber-500/[0.04] border-l-2 border-l-amber-400' : ''}

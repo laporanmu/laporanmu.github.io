@@ -25,7 +25,8 @@ const Modal = memo(function Modal({
     noPadding = false, contentClassName = "",
     icon, iconBg, iconColor, description,
     closeOnOutsideClick = true,
-    maxMobileHeight = '70vh'
+    maxMobileHeight = '70vh',
+    aspectSquare = false
 }) {
     const [mounted, setMounted] = useState(false)
     const [visible, setVisible] = useState(false)
@@ -95,6 +96,12 @@ const Modal = memo(function Modal({
         xl: 'max-w-4xl',
         xxl: 'max-w-5xl',
         xxxl: 'max-w-7xl',
+        '2xl': 'max-w-2xl',
+        '3xl': 'max-w-3xl',
+        '4xl': 'max-w-4xl',
+        '5xl': 'max-w-5xl',
+        '6xl': 'max-w-6xl',
+        '7xl': 'max-w-7xl',
         full: 'max-w-[98vw]',
     }
 
@@ -130,7 +137,7 @@ const Modal = memo(function Modal({
                  - Inner: handle overflow-hidden untuk clip rounded corner (TIDAK boleh punya transform/contain agar portal picker tidak terurung)
             */}
             <div
-                className={`w-full z-10 ${sizeClasses[size]}`}
+                className={`w-full z-10 ${sizeClasses[size] || 'max-w-lg'} ${aspectSquare ? 'md:aspect-square md:flex md:flex-col md:max-h-[calc(100vh-4rem)]' : ''}`}
                 style={{
                     transform: !visible
                         ? (isBottomSheet ? 'translateY(100%)' : 'scale(0.96) translateY(10px)')
@@ -143,6 +150,7 @@ const Modal = memo(function Modal({
             >
                 <div
                     className={`bg-[var(--color-surface)] shadow-2xl w-full relative overflow-hidden flex flex-col border border-[var(--color-border)]/60
+                    ${aspectSquare ? 'md:!h-full md:!max-h-full md:flex-1' : ''}
                     ${isBottomSheet
                             ? 'rounded-t-[2.25rem] md:rounded-[2.25rem] md:max-h-[calc(100vh-6rem)]'
                             : 'rounded-[2.25rem] max-h-[calc(100vh-6rem)]'
