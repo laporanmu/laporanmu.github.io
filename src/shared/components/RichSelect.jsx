@@ -53,7 +53,7 @@ const RichSelect = memo(({
         window.addEventListener('resize', checkMobile)
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
-    
+
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, placement: 'bottom', maxHeight: 240 })
     const [compactPlacement, setCompactPlacement] = useState('bottom')
     const ref = useRef(null)
@@ -202,7 +202,7 @@ const RichSelect = memo(({
     // Group options dynamically
     const groupedOptions = useMemo(() => {
         if (uniqueGroups.length === 0) return null
-        
+
         const map = {}
         filteredOptions.forEach(opt => {
             const g = opt.group || 'Lainnya'
@@ -250,11 +250,10 @@ const RichSelect = memo(({
                     <button
                         type="button"
                         onClick={() => setActiveGroup('All')}
-                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${
-                            activeGroup === 'All'
+                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${activeGroup === 'All'
                                 ? 'bg-[var(--color-primary)] text-white border-transparent shadow-sm'
                                 : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'
-                        }`}
+                            }`}
                     >
                         Semua
                     </button>
@@ -262,21 +261,20 @@ const RichSelect = memo(({
                         const isPelanggaran = g.toLowerCase().includes('pelanggaran')
                         const isPrestasi = g.toLowerCase().includes('prestasi')
                         const isActive = activeGroup === g
-                        
+
                         let activeClasses = 'bg-[var(--color-primary)] text-white border-transparent'
                         if (isPelanggaran) activeClasses = 'bg-rose-500 text-white border-transparent shadow-sm shadow-rose-500/10'
                         if (isPrestasi) activeClasses = 'bg-emerald-500 text-white border-transparent shadow-sm shadow-emerald-500/10'
-                        
+
                         return (
                             <button
                                 key={g}
                                 type="button"
                                 onClick={() => setActiveGroup(g)}
-                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border shrink-0 ${
-                                    isActive
+                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border shrink-0 ${isActive
                                         ? activeClasses
                                         : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'
-                                }`}
+                                    }`}
                             >
                                 {g}
                             </button>
@@ -327,16 +325,15 @@ const RichSelect = memo(({
                     Object.keys(groupedOptions).map(groupName => (
                         <div key={groupName} className="flex flex-col">
                             {/* Sticky Color-coded Group Header */}
-                            <div className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border-y border-[var(--color-border)]/35 sticky top-0 backdrop-blur-md z-10 select-none ${
-                                groupName.toLowerCase().includes('pelanggaran')
+                            <div className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border-y border-[var(--color-border)]/35 sticky top-0 backdrop-blur-md z-10 select-none ${groupName.toLowerCase().includes('pelanggaran')
                                     ? 'text-rose-500 bg-rose-50/90 dark:bg-rose-950/20'
                                     : groupName.toLowerCase().includes('prestasi')
                                         ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50/90 dark:bg-emerald-950/20'
                                         : 'text-[var(--color-text-muted)] bg-[var(--color-surface-alt)]/90'
-                            }`}>
+                                }`}>
                                 {groupName}
                             </div>
-                            
+
                             {/* Group Options */}
                             {groupedOptions[groupName].map(opt => (
                                 <button
@@ -381,13 +378,12 @@ const RichSelect = memo(({
                 type="button"
                 onClick={disabled ? undefined : toggle}
                 disabled={disabled}
-                className={`w-full flex items-center justify-between gap-2 ${
-                    compact 
-                        ? 'px-2.5 h-8' 
-                        : (small 
-                            ? (icon ? 'pl-8 pr-3 rtl:pl-3 rtl:pr-8 h-8 sm:h-9' : 'px-3 h-8 sm:h-9') 
+                className={`w-full flex items-center justify-between gap-2 ${compact
+                        ? 'px-2.5 h-8'
+                        : (small
+                            ? (icon ? 'pl-8 pr-3 rtl:pl-3 rtl:pr-8 h-8 sm:h-9' : 'px-3 h-8 sm:h-9')
                             : (icon ? 'pl-9 pr-3 rtl:pl-3 rtl:pr-9 h-10 sm:h-10' : 'px-3 h-10 sm:h-10'))
-                } rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
+                    } rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
             >
                 <div className="flex items-center gap-2 truncate">
                     {icon && !compact && renderIcon(icon, `absolute ${small ? 'left-3 rtl:left-auto rtl:right-3 w-3 h-3 text-[10px]' : 'left-3.5 rtl:left-auto rtl:right-3.5 w-3.5 h-3.5 text-xs'} top-1/2 -translate-y-1/2 transition-colors ${iconStatusClasses[status]}`)}

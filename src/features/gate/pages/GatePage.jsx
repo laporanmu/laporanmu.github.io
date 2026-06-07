@@ -1059,94 +1059,202 @@ export default function GatePage() {
         {activeTab === 'rekap' && (
           <div className="space-y-4 animate-in fade-in duration-200">
             <div className="glass rounded-[1.5rem] overflow-hidden">
-            {/* === DESKTOP TOOLBAR (1 Baris Top, 1 Baris Bottom) === */}
-            <div className="hidden sm:block border-b border-[var(--color-border)]">
-              {/* Baris 1: Mode + View Toggle + Date Navigation + Actions */}
-              <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-[var(--color-border)]/60 bg-[var(--color-surface-alt)]/20">
-                <div className="flex items-center gap-3">
-                  {/* Mode: Harian / Mingguan / Bulanan */}
-                  <div className="flex gap-1 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0">
+              {/* === DESKTOP TOOLBAR (1 Baris Top, 1 Baris Bottom) === */}
+              <div className="hidden sm:block border-b border-[var(--color-border)]">
+                {/* Baris 1: Mode + View Toggle + Date Navigation + Actions */}
+                <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-[var(--color-border)]/60 bg-[var(--color-surface-alt)]/20">
+                  <div className="flex items-center gap-3">
+                    {/* Mode: Harian / Mingguan / Bulanan */}
+                    <div className="flex gap-1 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0">
+                      {[{ k: 'harian', l: tp('modeHarian') }, { k: 'mingguan', l: tp('modeMingguan') }, { k: 'bulanan', l: tp('modeBulanan') }].map(m => (
+                        <button key={m.k} onClick={() => setRekapMode(m.k)}
+                          className={`h-7 px-3 rounded-md text-[10px] font-black transition-all whitespace-nowrap ${rekapMode === m.k ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                          {m.l}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="w-px h-4 bg-[var(--color-border)] shrink-0" />
+
+                    {/* View: Detail Log / Ringkasan */}
+                    <div className="flex gap-1 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0">
+                      {[{ k: 'log', l: tp('viewDetailLog') || 'Detail Log' }, { k: 'ringkasan', l: tp('viewRingkasan') || 'Ringkasan' }].map(v => (
+                        <button key={v.k} onClick={() => setRekapView(v.k)}
+                          className={`h-7 px-3 rounded-md text-[10px] font-black transition-all ${rekapView === v.k ? 'bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                          {v.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Navigasi tanggal di tengah */}
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => navRekap(-1)} className="w-7.5 h-7.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all active:scale-95">
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[12.5px] font-black text-[var(--color-text)] min-w-[120px] text-center tracking-tight">{rekapLabel}</span>
+                    <button onClick={() => navRekap(1)} className="w-7.5 h-7.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all active:scale-95">
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Actions di kanan */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button onClick={() => handleExportCSV('rekap')}
+                      disabled={filteredRekapData.length === 0}
+                      className="h-7.5 w-7.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center justify-center transition-all bg-[var(--color-surface)] disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={handlePrint}
+                      disabled={filteredRekapData.length === 0}
+                      className="h-7.5 w-7.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center justify-center transition-all bg-[var(--color-surface)] disabled:opacity-40 disabled:pointer-events-none" title="Export PDF / Cetak">
+                      <FileText className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={async () => {
+                      const res = await sendDailySummary(rekapData)
+                      if (res.success) addToast(t('toastTelegramSuccess'), 'success')
+                      else addToast(t('toastErrorUnexpected') + ': ' + res.error, 'error')
+                    }}
+                      disabled={rekapData.length === 0}
+                      className="h-7.5 px-3 rounded-lg border border-indigo-500/30 bg-indigo-500/5 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all text-[9.5px] font-black flex items-center gap-1.5 whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none">
+                      <Send className="w-3 h-3" />
+                      <span>{tp('sendTelegram') || 'Telegram'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Baris 2: Search + Role Filter Pills */}
+                <div className="flex items-center gap-3 px-3 py-2.5 bg-[var(--color-surface)]">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none" />
+                    <input value={searchRekap} onChange={e => setSearchRekap(e.target.value)}
+                      placeholder={tp('placeholderSearch')}
+                      className="w-full h-8 pl-8 pr-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+                    {searchRekap && (
+                      <button onClick={() => setSearchRekap('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide min-w-0 shrink-0">
+                    {[{ k: 'all', l: tp('presetFilterAll') }, ...VISITOR_TYPES.map(t => ({ k: t.key, l: TYPE_META[t.key]?.label || t.label }))].map(f => {
+                      const count = f.k === 'all' ? rekapSummary.total : rekapSummary[f.k] || 0
+                      return (
+                        <button key={f.k} onClick={() => setFilterRekap(f.k)}
+                          className={`h-7 px-2.5 rounded-lg text-[9.5px] font-black flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 ${filterRekap === f.k
+                            ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                            : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                          <span>{f.l}</span>
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded transition-all leading-none ${filterRekap === f.k
+                            ? 'bg-white/20 text-white'
+                            : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
+                            {tNum(count)}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <span className="text-[10px] font-bold text-[var(--color-text-muted)] ml-auto shrink-0 select-none">
+                    {rekapView === 'log'
+                      ? `${tNum(filteredRekapData.length)} ${language === 'en' ? 'entries' : language === 'ar' ? 'سجلات' : 'entri'}`
+                      : `${tNum(rekapRingkasan.length)} ${language === 'en' ? 'people' : language === 'ar' ? 'أشخاص' : 'orang'}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* === MOBILE TOOLBAR (4 Baris Stacked) === */}
+              <div className="sm:hidden border-b border-[var(--color-border)]">
+                {/* Baris 1: Date Navigation + Telegram/Export Icons */}
+                <div className="flex items-center justify-between gap-3 px-3 pt-2.5 pb-2 border-b border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/10">
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => navRekap(-1)} className="w-8 h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[11.5px] font-black text-[var(--color-text)] min-w-[95px] text-center tracking-tight">{rekapLabel}</span>
+                    <button onClick={() => navRekap(1)} className="w-8 h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => handleExportCSV('rekap')}
+                      disabled={filteredRekapData.length === 0}
+                      className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={handlePrint}
+                      disabled={filteredRekapData.length === 0}
+                      className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export PDF">
+                      <FileText className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={async () => {
+                      const res = await sendDailySummary(rekapData)
+                      if (res.success) addToast(t('toastTelegramSuccess'), 'success')
+                      else addToast(t('toastErrorUnexpected') + ': ' + res.error, 'error')
+                    }}
+                      disabled={rekapData.length === 0}
+                      className="h-8 w-8 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-indigo-600 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Kirim ke Telegram">
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Baris 2: Mode Toggle & View Toggle (Split Half-Half) */}
+                <div className="grid grid-cols-2 gap-2 px-3 py-2 border-b border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/5">
+                  {/* Mode Selector */}
+                  <div className="flex gap-0.5 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full">
                     {[{ k: 'harian', l: tp('modeHarian') }, { k: 'mingguan', l: tp('modeMingguan') }, { k: 'bulanan', l: tp('modeBulanan') }].map(m => (
                       <button key={m.k} onClick={() => setRekapMode(m.k)}
-                        className={`h-7 px-3 rounded-md text-[10px] font-black transition-all whitespace-nowrap ${rekapMode === m.k ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                        className={`h-6.5 flex-1 rounded-md text-[8.5px] font-black transition-all whitespace-nowrap ${rekapMode === m.k ? 'bg-[var(--color-primary)] text-white shadow-xs' : 'text-[var(--color-text-muted)]'}`}>
                         {m.l}
                       </button>
                     ))}
                   </div>
 
-                  <div className="w-px h-4 bg-[var(--color-border)] shrink-0" />
-
-                  {/* View: Detail Log / Ringkasan */}
-                  <div className="flex gap-1 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0">
-                    {[{ k: 'log', l: tp('viewDetailLog') || 'Detail Log' }, { k: 'ringkasan', l: tp('viewRingkasan') || 'Ringkasan' }].map(v => (
+                  {/* View Toggle */}
+                  <div className="flex gap-0.5 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full">
+                    {[{ k: 'log', l: tp('viewDetailLog') || 'Log' }, { k: 'ringkasan', l: tp('viewRingkasan') || 'Ringkas' }].map(v => (
                       <button key={v.k} onClick={() => setRekapView(v.k)}
-                        className={`h-7 px-3 rounded-md text-[10px] font-black transition-all ${rekapView === v.k ? 'bg-[var(--color-surface)] shadow-sm text-[var(--color-text)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                        className={`h-6.5 flex-1 rounded-md text-[8.5px] font-black transition-all ${rekapView === v.k ? 'bg-[var(--color-surface)] shadow-xs text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>
                         {v.l}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Navigasi tanggal di tengah */}
-                <div className="flex items-center gap-2">
-                  <button onClick={() => navRekap(-1)} className="w-7.5 h-7.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all active:scale-95">
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="text-[12.5px] font-black text-[var(--color-text)] min-w-[120px] text-center tracking-tight">{rekapLabel}</span>
-                  <button onClick={() => navRekap(1)} className="w-7.5 h-7.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all active:scale-95">
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                {/* Baris 3: Search Bar */}
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--color-border)]/40">
+                  <div className="relative flex-1 min-w-0">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none" />
+                    <input value={searchRekap} onChange={e => setSearchRekap(e.target.value)}
+                      placeholder={tp('placeholderSearch')}
+                      className="w-full h-8 pl-8 pr-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
+                    {searchRekap && (
+                      <button onClick={() => setSearchRekap('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <span className="text-[9.5px] font-black text-[var(--color-text-muted)] shrink-0 select-none bg-[var(--color-surface-alt)] border border-[var(--color-border)] px-2 py-1.5 rounded-lg">
+                    {rekapView === 'log'
+                      ? `${tNum(filteredRekapData.length)} entri`
+                      : `${tNum(rekapRingkasan.length)} orang`}
+                  </span>
                 </div>
 
-                {/* Actions di kanan */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button onClick={() => handleExportCSV('rekap')}
-                    disabled={filteredRekapData.length === 0}
-                    className="h-7.5 w-7.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center justify-center transition-all bg-[var(--color-surface)] disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
-                    <FileSpreadsheet className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={handlePrint}
-                    disabled={filteredRekapData.length === 0}
-                    className="h-7.5 w-7.5 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center justify-center transition-all bg-[var(--color-surface)] disabled:opacity-40 disabled:pointer-events-none" title="Export PDF / Cetak">
-                    <FileText className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={async () => {
-                    const res = await sendDailySummary(rekapData)
-                    if (res.success) addToast(t('toastTelegramSuccess'), 'success')
-                    else addToast(t('toastErrorUnexpected') + ': ' + res.error, 'error')
-                  }}
-                    disabled={rekapData.length === 0}
-                    className="h-7.5 px-3 rounded-lg border border-indigo-500/30 bg-indigo-500/5 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all text-[9.5px] font-black flex items-center gap-1.5 whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none">
-                    <Send className="w-3 h-3" />
-                    <span>{tp('sendTelegram') || 'Telegram'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Baris 2: Search + Role Filter Pills */}
-              <div className="flex items-center gap-3 px-3 py-2.5 bg-[var(--color-surface)]">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none" />
-                  <input value={searchRekap} onChange={e => setSearchRekap(e.target.value)}
-                    placeholder={tp('placeholderSearch')}
-                    className="w-full h-8 pl-8 pr-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
-                  {searchRekap && (
-                    <button onClick={() => setSearchRekap('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide min-w-0 shrink-0">
+                {/* Baris 4: Role filter pills (grid 5 columns) */}
+                <div className="grid grid-cols-5 gap-1 px-3 py-2 bg-[var(--color-surface)]">
                   {[{ k: 'all', l: tp('presetFilterAll') }, ...VISITOR_TYPES.map(t => ({ k: t.key, l: TYPE_META[t.key]?.label || t.label }))].map(f => {
                     const count = f.k === 'all' ? rekapSummary.total : rekapSummary[f.k] || 0
                     return (
                       <button key={f.k} onClick={() => setFilterRekap(f.k)}
-                        className={`h-7 px-2.5 rounded-lg text-[9.5px] font-black flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 ${filterRekap === f.k
-                          ? 'bg-[var(--color-primary)] text-white shadow-sm'
-                          : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                        <span>{f.l}</span>
-                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded transition-all leading-none ${filterRekap === f.k
+                        className={`h-7.5 rounded-lg text-[8.5px] font-black flex flex-col items-center justify-center transition-all ${filterRekap === f.k
+                          ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                          : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
+                        <span className="leading-none scale-90">{f.l}</span>
+                        <span className={`text-[7px] font-black px-1.5 mt-0.5 rounded leading-none ${filterRekap === f.k
                           ? 'bg-white/20 text-white'
                           : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
                           {tNum(count)}
@@ -1155,115 +1263,7 @@ export default function GatePage() {
                     )
                   })}
                 </div>
-
-                <span className="text-[10px] font-bold text-[var(--color-text-muted)] ml-auto shrink-0 select-none">
-                  {rekapView === 'log'
-                    ? `${tNum(filteredRekapData.length)} ${language === 'en' ? 'entries' : language === 'ar' ? 'سجلات' : 'entri'}`
-                    : `${tNum(rekapRingkasan.length)} ${language === 'en' ? 'people' : language === 'ar' ? 'أشخاص' : 'orang'}`}
-                </span>
               </div>
-            </div>
-
-            {/* === MOBILE TOOLBAR (4 Baris Stacked) === */}
-            <div className="sm:hidden border-b border-[var(--color-border)]">
-              {/* Baris 1: Date Navigation + Telegram/Export Icons */}
-              <div className="flex items-center justify-between gap-3 px-3 pt-2.5 pb-2 border-b border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/10">
-                <div className="flex items-center gap-1.5">
-                  <button onClick={() => navRekap(-1)} className="w-8 h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="text-[11.5px] font-black text-[var(--color-text)] min-w-[95px] text-center tracking-tight">{rekapLabel}</span>
-                  <button onClick={() => navRekap(1)} className="w-8 h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => handleExportCSV('rekap')}
-                    disabled={filteredRekapData.length === 0}
-                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
-                    <FileSpreadsheet className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={handlePrint}
-                    disabled={filteredRekapData.length === 0}
-                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export PDF">
-                    <FileText className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={async () => {
-                    const res = await sendDailySummary(rekapData)
-                    if (res.success) addToast(t('toastTelegramSuccess'), 'success')
-                    else addToast(t('toastErrorUnexpected') + ': ' + res.error, 'error')
-                  }}
-                    disabled={rekapData.length === 0}
-                    className="h-8 w-8 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-indigo-600 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Kirim ke Telegram">
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Baris 2: Mode Toggle & View Toggle (Split Half-Half) */}
-              <div className="grid grid-cols-2 gap-2 px-3 py-2 border-b border-[var(--color-border)]/40 bg-[var(--color-surface-alt)]/5">
-                {/* Mode Selector */}
-                <div className="flex gap-0.5 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full">
-                  {[{ k: 'harian', l: tp('modeHarian') }, { k: 'mingguan', l: tp('modeMingguan') }, { k: 'bulanan', l: tp('modeBulanan') }].map(m => (
-                    <button key={m.k} onClick={() => setRekapMode(m.k)}
-                      className={`h-6.5 flex-1 rounded-md text-[8.5px] font-black transition-all whitespace-nowrap ${rekapMode === m.k ? 'bg-[var(--color-primary)] text-white shadow-xs' : 'text-[var(--color-text-muted)]'}`}>
-                      {m.l}
-                    </button>
-                  ))}
-                </div>
-
-                {/* View Toggle */}
-                <div className="flex gap-0.5 p-0.5 rounded-lg bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full">
-                  {[{ k: 'log', l: tp('viewDetailLog') || 'Log' }, { k: 'ringkasan', l: tp('viewRingkasan') || 'Ringkas' }].map(v => (
-                    <button key={v.k} onClick={() => setRekapView(v.k)}
-                      className={`h-6.5 flex-1 rounded-md text-[8.5px] font-black transition-all ${rekapView === v.k ? 'bg-[var(--color-surface)] shadow-xs text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>
-                      {v.l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Baris 3: Search Bar */}
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--color-border)]/40">
-                <div className="relative flex-1 min-w-0">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none" />
-                  <input value={searchRekap} onChange={e => setSearchRekap(e.target.value)}
-                    placeholder={tp('placeholderSearch')}
-                    className="w-full h-8 pl-8 pr-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
-                  {searchRekap && (
-                    <button onClick={() => setSearchRekap('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-                <span className="text-[9.5px] font-black text-[var(--color-text-muted)] shrink-0 select-none bg-[var(--color-surface-alt)] border border-[var(--color-border)] px-2 py-1.5 rounded-lg">
-                  {rekapView === 'log'
-                    ? `${tNum(filteredRekapData.length)} entri`
-                    : `${tNum(rekapRingkasan.length)} orang`}
-                </span>
-              </div>
-
-              {/* Baris 4: Role filter pills (grid 5 columns) */}
-              <div className="grid grid-cols-5 gap-1 px-3 py-2 bg-[var(--color-surface)]">
-                {[{ k: 'all', l: tp('presetFilterAll') }, ...VISITOR_TYPES.map(t => ({ k: t.key, l: TYPE_META[t.key]?.label || t.label }))].map(f => {
-                  const count = f.k === 'all' ? rekapSummary.total : rekapSummary[f.k] || 0
-                  return (
-                    <button key={f.k} onClick={() => setFilterRekap(f.k)}
-                      className={`h-7.5 rounded-lg text-[8.5px] font-black flex flex-col items-center justify-center transition-all ${filterRekap === f.k
-                        ? 'bg-[var(--color-primary)] text-white shadow-xs'
-                        : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'}`}>
-                      <span className="leading-none scale-90">{f.l}</span>
-                      <span className={`text-[7px] font-black px-1.5 mt-0.5 rounded leading-none ${filterRekap === f.k
-                        ? 'bg-white/20 text-white'
-                        : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'}`}>
-                        {tNum(count)}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
 
               {/* ── VIEW: DETAIL LOG ── */}
               {rekapView === 'log' && (
@@ -1285,108 +1285,108 @@ export default function GatePage() {
                         )}
                       />
                       : <>
-                          {/* Desktop View Table */}
-                          <div className="hidden sm:block overflow-x-auto w-full max-w-full">
-                            <table className="w-full min-w-[750px]">
-                              <thead>
-                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-                                  {[
-                                    '#',
-                                    language === 'en' ? 'Name' : language === 'ar' ? 'الاسم' : 'Nama',
-                                    language === 'en' ? 'Type' : language === 'ar' ? 'النوع' : 'Jenis',
-                                    language === 'en' ? 'NIP / Institution' : language === 'ar' ? 'الرقم الوظيفي / المؤسسة' : 'NIP / Instansi',
-                                    language === 'en' ? 'Purpose' : language === 'ar' ? 'الغرض' : 'Keperluan',
-                                    language === 'en' ? 'Out Time' : language === 'ar' ? 'وقت الخروج' : 'Jam Keluar',
-                                    language === 'en' ? 'Return / Entry' : language === 'ar' ? 'العودة / الدخول' : 'Jam Kembali / Masuk',
-                                    language === 'en' ? 'Exit Time (Guest)' : language === 'ar' ? 'وقت الخروج (للضيوف)' : 'Jam Keluar (Tamu)',
-                                    language === 'en' ? 'Duration' : language === 'ar' ? 'المدة' : 'Durasi',
-                                    language === 'en' ? 'Vehicle' : language === 'ar' ? 'المركبة' : 'Kendaraan'
-                                  ].map(h => (
-                                    <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {filteredRekapData.map((log, i) => {
-                                  const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
-                                  const isG = log.visitor_type !== 'tamu'
-                                  const dur = durasi(log.check_in, log.check_out, language)
-                                  return (
-                                    <tr key={log.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors cursor-pointer"
-                                      onClick={() => setEditLog(log)}>
-                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
-                                      <td className="px-3 py-2.5 text-[12px] font-black text-[var(--color-text)]">{log.visitor_name}</td>
-                                      <td className="px-3 py-2.5"><span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span></td>
-                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.visitor_nip || '-'}</td>
-                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text)]">{translatePurpose(log.purpose, language)}</td>
-                                      <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{isG ? fmtTime(log.check_in) : '-'}</td>
-                                      <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-600">{isG ? fmtTime(log.check_out) : fmtTime(log.check_in)}</td>
-                                      <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{!isG ? fmtTime(log.check_out) : '-'}</td>
-                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)] font-bold">{dur || '-'}</td>
-                                      <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.vehicle_plate || '-'}</td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
+                        {/* Desktop View Table */}
+                        <div className="hidden sm:block overflow-x-auto w-full max-w-full">
+                          <table className="w-full min-w-[750px]">
+                            <thead>
+                              <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                {[
+                                  '#',
+                                  language === 'en' ? 'Name' : language === 'ar' ? 'الاسم' : 'Nama',
+                                  language === 'en' ? 'Type' : language === 'ar' ? 'النوع' : 'Jenis',
+                                  language === 'en' ? 'NIP / Institution' : language === 'ar' ? 'الرقم الوظيفي / المؤسسة' : 'NIP / Instansi',
+                                  language === 'en' ? 'Purpose' : language === 'ar' ? 'الغرض' : 'Keperluan',
+                                  language === 'en' ? 'Out Time' : language === 'ar' ? 'وقت الخروج' : 'Jam Keluar',
+                                  language === 'en' ? 'Return / Entry' : language === 'ar' ? 'العودة / الدخول' : 'Jam Kembali / Masuk',
+                                  language === 'en' ? 'Exit Time (Guest)' : language === 'ar' ? 'وقت الخروج (للضيوف)' : 'Jam Keluar (Tamu)',
+                                  language === 'en' ? 'Duration' : language === 'ar' ? 'المدة' : 'Durasi',
+                                  language === 'en' ? 'Vehicle' : language === 'ar' ? 'المركبة' : 'Kendaraan'
+                                ].map(h => (
+                                  <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredRekapData.map((log, i) => {
+                                const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
+                                const isG = log.visitor_type !== 'tamu'
+                                const dur = durasi(log.check_in, log.check_out, language)
+                                return (
+                                  <tr key={log.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/40 transition-colors cursor-pointer"
+                                    onClick={() => setEditLog(log)}>
+                                    <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
+                                    <td className="px-3 py-2.5 text-[12px] font-black text-[var(--color-text)]">{log.visitor_name}</td>
+                                    <td className="px-3 py-2.5"><span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span></td>
+                                    <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.visitor_nip || '-'}</td>
+                                    <td className="px-3 py-2.5 text-[11px] text-[var(--color-text)]">{translatePurpose(log.purpose, language)}</td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{isG ? fmtTime(log.check_in) : '-'}</td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-600">{isG ? fmtTime(log.check_out) : fmtTime(log.check_in)}</td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-red-500">{!isG ? fmtTime(log.check_out) : '-'}</td>
+                                    <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)] font-bold">{dur || '-'}</td>
+                                    <td className="px-3 py-2.5 text-[11px] text-[var(--color-text-muted)]">{log.vehicle_plate || '-'}</td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
 
-                          {/* Mobile View Cards */}
-                          <div className="block sm:hidden flex flex-col gap-2 p-2 bg-[var(--color-surface-alt)]/20">
-                            {filteredRekapData.map((log, i) => {
-                              const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
-                              const isG = log.visitor_type !== 'tamu'
-                              const dur = durasi(log.check_in, log.check_out, language)
-                              
-                              // Display appropriate times depending on guest type
-                              const showExit = isG ? fmtTime(log.check_in) : fmtTime(log.check_out)
-                              const showEntry = isG ? fmtTime(log.check_out) : fmtTime(log.check_in)
-                              
-                              const timeLabel = isG ? showEntry : showExit
-                              const IconComp = meta.icon || LogIn
+                        {/* Mobile View Cards */}
+                        <div className="block sm:hidden flex flex-col gap-2 p-2 bg-[var(--color-surface-alt)]/20">
+                          {filteredRekapData.map((log, i) => {
+                            const meta = TYPE_META[log.visitor_type] || TYPE_META.tamu
+                            const isG = log.visitor_type !== 'tamu'
+                            const dur = durasi(log.check_in, log.check_out, language)
 
-                              return (
-                                <div key={log.id}
-                                  className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl flex items-center gap-3 shadow-xs">
-                                  
-                                  {/* Left: Icon circle */}
-                                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${meta.bg}`}>
-                                    <IconComp className={`w-4 h-4 ${meta.color}`} />
-                                  </div>
+                            // Display appropriate times depending on guest type
+                            const showExit = isG ? fmtTime(log.check_in) : fmtTime(log.check_out)
+                            const showEntry = isG ? fmtTime(log.check_out) : fmtTime(log.check_in)
 
-                                  {/* Middle: Text and details */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="text-[12.5px] font-bold text-[var(--color-text)] truncate leading-none">
-                                        {log.visitor_name}
-                                      </h4>
-                                      <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${meta.bg} ${meta.color} leading-none`}>
-                                        {meta.label}
-                                      </span>
-                                    </div>
-                                    <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 leading-tight truncate">
-                                      <span className="font-semibold text-[var(--color-text)]">{translatePurpose(log.purpose, language)}</span>
-                                      <span className="mx-1.5 opacity-60">·</span>
-                                      <span className="font-medium tabular-nums">{timeLabel}</span>
-                                      {dur && (
-                                        <>
-                                          <span className="mx-1.5 opacity-60">·</span>
-                                          <span className="font-semibold text-[var(--color-text)] tabular-nums">{dur}</span>
-                                        </>
-                                      )}
-                                    </p>
-                                  </div>
+                            const timeLabel = isG ? showEntry : showExit
+                            const IconComp = meta.icon || LogIn
 
-                                  {/* Right: Circle Edit Button */}
-                                  <button onClick={() => setEditLog(log)}
-                                    className="h-8 w-8 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center justify-center transition-colors shrink-0">
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
+                            return (
+                              <div key={log.id}
+                                className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl flex items-center gap-3 shadow-xs">
+
+                                {/* Left: Icon circle */}
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${meta.bg}`}>
+                                  <IconComp className={`w-4 h-4 ${meta.color}`} />
                                 </div>
-                              )
-                            })}
-                          </div>
-                        </>
+
+                                {/* Middle: Text and details */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-[12.5px] font-bold text-[var(--color-text)] truncate leading-none">
+                                      {log.visitor_name}
+                                    </h4>
+                                    <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${meta.bg} ${meta.color} leading-none`}>
+                                      {meta.label}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 leading-tight truncate">
+                                    <span className="font-semibold text-[var(--color-text)]">{translatePurpose(log.purpose, language)}</span>
+                                    <span className="mx-1.5 opacity-60">·</span>
+                                    <span className="font-medium tabular-nums">{timeLabel}</span>
+                                    {dur && (
+                                      <>
+                                        <span className="mx-1.5 opacity-60">·</span>
+                                        <span className="font-semibold text-[var(--color-text)] tabular-nums">{dur}</span>
+                                      </>
+                                    )}
+                                  </p>
+                                </div>
+
+                                {/* Right: Circle Edit Button */}
+                                <button onClick={() => setEditLog(log)}
+                                  className="h-8 w-8 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center justify-center transition-colors shrink-0">
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
                   }
                 </div>
               )}
@@ -1405,141 +1405,141 @@ export default function GatePage() {
                         description={language === 'en' ? 'No summary recorded for this period.' : language === 'ar' ? 'لم يتم تسجيل أي ملخص لهذه الفترة.' : `Belum ada ringkasan orang yang tercatat untuk periode ${rekapLabel}.`}
                       />
                       : <>
-                          {/* Desktop View Table */}
-                          <div className="hidden sm:block overflow-x-auto w-full max-w-full">
-                            <table className="w-full min-w-[600px]">
-                              <thead>
-                                <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-                                  {['#', 'Nama', 'Jenis', 'Jml Keluar', 'Total Durasi Keluar', 'Rata-rata', 'Belum Kembali', 'Keperluan'].map(h => (
-                                    <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
-                                  ))}
-                                  <th className="px-3 py-2.5 border-b border-[var(--color-border)]">
-                                    <span className="text-[8px] text-[var(--color-text-muted)]/50 font-bold normal-case tracking-normal">klik baris → detail log</span>
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {rekapRingkasan.map((r, i) => {
-                                  const meta = TYPE_META[r.type] || TYPE_META.tamu
-                                  const isInternal = r.type !== 'tamu'
-                                  const totalH = Math.floor(r.totalMs / 3600000)
-                                  const totalM = Math.floor((r.totalMs % 3600000) / 60000)
-                                  const totalStr = r.totalMs > 0 ? (totalH > 0 ? `${totalH}j ${totalM}m` : `${totalM}m`) : '-'
-                                  const completedCount = r.count - r.belumKembali
-                                  const avgMs = completedCount > 0 ? r.totalMs / completedCount : 0
-                                  const avgH = Math.floor(avgMs / 3600000)
-                                  const avgM = Math.floor((avgMs % 3600000) / 60000)
-                                  const avgStr = avgMs > 0 ? (avgH > 0 ? `${avgH}j ${avgM}m` : `${avgM}m`) : '-'
-                                  const maxMs = rekapRingkasan[0]?.totalMs || 1
-                                  const barPct = maxMs > 0 ? Math.round((r.totalMs / maxMs) * 100) : 0
-                                  return (
-                                    <tr key={r.id}
-                                      onClick={() => { setRekapView('log'); setSearchRekap(r.name) }}
-                                      className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/60 transition-colors cursor-pointer group"
-                                      title={`Klik untuk lihat detail log ${r.name}`}>
-                                      <td className="px-3 py-3 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
-                                      <td className="px-3 py-3">
-                                        <p className="text-[12px] font-black text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{r.name}</p>
-                                        {r.nip !== '-' && <p className="text-[9px] text-[var(--color-text-muted)]">{r.nip}</p>}
-                                      </td>
-                                      <td className="px-3 py-3">
-                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span>
-                                      </td>
-                                      <td className="px-3 py-3 text-[13px] font-black text-[var(--color-text)] tabular-nums">{r.count}×</td>
-                                      <td className="px-3 py-3">
-                                        {isInternal ? (
-                                          <div className="flex items-center gap-2">
-                                            <span className={`text-[12px] font-black tabular-nums ${r.totalMs > 0 ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>{totalStr}</span>
-                                            {barPct > 0 && (
-                                              <div className="flex-1 max-w-[60px] h-1.5 rounded-full bg-[var(--color-surface-alt)]">
-                                                <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${barPct}%` }} />
-                                              </div>
-                                            )}
-                                          </div>
-                                        ) : <span className="text-[11px] text-[var(--color-text-muted)]">-</span>}
-                                      </td>
-                                      <td className="px-3 py-3 text-[11px] font-bold text-[var(--color-text-muted)] tabular-nums">{isInternal ? avgStr : '-'}</td>
-                                      <td className="px-3 py-3">
-                                        {r.belumKembali > 0
-                                          ? <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600">{r.belumKembali}×</span>
-                                          : <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">-</span>}
-                                      </td>
-                                      <td className="px-3 py-3 text-[10px] text-[var(--color-text-muted)] max-w-[180px]">
-                                        <p className="truncate">{r.purposes.slice(0, 3).map(p => translatePurpose(p, language)).join(', ')}{r.purposes.length > 3 ? ` +${r.purposes.length - 3}` : ''}</p>
-                                      </td>
-                                      <td className="px-3 py-3">
-                                        <span className="text-[9px] text-[var(--color-primary)]/50 font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Detail →</span>
-                                      </td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
+                        {/* Desktop View Table */}
+                        <div className="hidden sm:block overflow-x-auto w-full max-w-full">
+                          <table className="w-full min-w-[600px]">
+                            <thead>
+                              <tr style={{ backgroundColor: 'var(--color-surface-alt)' }}>
+                                {['#', 'Nama', 'Jenis', 'Jml Keluar', 'Total Durasi Keluar', 'Rata-rata', 'Belum Kembali', 'Keperluan'].map(h => (
+                                  <th key={h} className="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-border)] whitespace-nowrap">{h}</th>
+                                ))}
+                                <th className="px-3 py-2.5 border-b border-[var(--color-border)]">
+                                  <span className="text-[8px] text-[var(--color-text-muted)]/50 font-bold normal-case tracking-normal">klik baris → detail log</span>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rekapRingkasan.map((r, i) => {
+                                const meta = TYPE_META[r.type] || TYPE_META.tamu
+                                const isInternal = r.type !== 'tamu'
+                                const totalH = Math.floor(r.totalMs / 3600000)
+                                const totalM = Math.floor((r.totalMs % 3600000) / 60000)
+                                const totalStr = r.totalMs > 0 ? (totalH > 0 ? `${totalH}j ${totalM}m` : `${totalM}m`) : '-'
+                                const completedCount = r.count - r.belumKembali
+                                const avgMs = completedCount > 0 ? r.totalMs / completedCount : 0
+                                const avgH = Math.floor(avgMs / 3600000)
+                                const avgM = Math.floor((avgMs % 3600000) / 60000)
+                                const avgStr = avgMs > 0 ? (avgH > 0 ? `${avgH}j ${avgM}m` : `${avgM}m`) : '-'
+                                const maxMs = rekapRingkasan[0]?.totalMs || 1
+                                const barPct = maxMs > 0 ? Math.round((r.totalMs / maxMs) * 100) : 0
+                                return (
+                                  <tr key={r.id}
+                                    onClick={() => { setRekapView('log'); setSearchRekap(r.name) }}
+                                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]/60 transition-colors cursor-pointer group"
+                                    title={`Klik untuk lihat detail log ${r.name}`}>
+                                    <td className="px-3 py-3 text-[11px] text-[var(--color-text-muted)]">{i + 1}</td>
+                                    <td className="px-3 py-3">
+                                      <p className="text-[12px] font-black text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{r.name}</p>
+                                      {r.nip !== '-' && <p className="text-[9px] text-[var(--color-text-muted)]">{r.nip}</p>}
+                                    </td>
+                                    <td className="px-3 py-3">
+                                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>{meta.label}</span>
+                                    </td>
+                                    <td className="px-3 py-3 text-[13px] font-black text-[var(--color-text)] tabular-nums">{r.count}×</td>
+                                    <td className="px-3 py-3">
+                                      {isInternal ? (
+                                        <div className="flex items-center gap-2">
+                                          <span className={`text-[12px] font-black tabular-nums ${r.totalMs > 0 ? 'text-red-500' : 'text-[var(--color-text-muted)]'}`}>{totalStr}</span>
+                                          {barPct > 0 && (
+                                            <div className="flex-1 max-w-[60px] h-1.5 rounded-full bg-[var(--color-surface-alt)]">
+                                              <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${barPct}%` }} />
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : <span className="text-[11px] text-[var(--color-text-muted)]">-</span>}
+                                    </td>
+                                    <td className="px-3 py-3 text-[11px] font-bold text-[var(--color-text-muted)] tabular-nums">{isInternal ? avgStr : '-'}</td>
+                                    <td className="px-3 py-3">
+                                      {r.belumKembali > 0
+                                        ? <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600">{r.belumKembali}×</span>
+                                        : <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">-</span>}
+                                    </td>
+                                    <td className="px-3 py-3 text-[10px] text-[var(--color-text-muted)] max-w-[180px]">
+                                      <p className="truncate">{r.purposes.slice(0, 3).map(p => translatePurpose(p, language)).join(', ')}{r.purposes.length > 3 ? ` +${r.purposes.length - 3}` : ''}</p>
+                                    </td>
+                                    <td className="px-3 py-3">
+                                      <span className="text-[9px] text-[var(--color-primary)]/50 font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Detail →</span>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
 
-                          {/* Mobile View Cards */}
-                          <div className="block sm:hidden flex flex-col gap-2 p-2 bg-[var(--color-surface-alt)]/20">
-                            {rekapRingkasan.map((r, i) => {
-                              const meta = TYPE_META[r.type] || TYPE_META.tamu
-                              const isInternal = r.type !== 'tamu'
-                              const totalH = Math.floor(r.totalMs / 3600000)
-                              const totalM = Math.floor((r.totalMs % 3600000) / 60000)
-                              const totalStr = r.totalMs > 0 ? (totalH > 0 ? `${totalH}j ${totalM}m` : `${totalM}m`) : '-'
-                              const completedCount = r.count - r.belumKembali
-                              const avgMs = completedCount > 0 ? r.totalMs / completedCount : 0
-                              const avgH = Math.floor(avgMs / 3600000)
-                              const avgM = Math.floor((avgMs % 3600000) / 60000)
-                              const avgStr = avgMs > 0 ? (avgH > 0 ? `${avgH}j ${avgM}m` : `${avgM}m`) : '-'
-                              const IconComp = meta.icon || Users
+                        {/* Mobile View Cards */}
+                        <div className="block sm:hidden flex flex-col gap-2 p-2 bg-[var(--color-surface-alt)]/20">
+                          {rekapRingkasan.map((r, i) => {
+                            const meta = TYPE_META[r.type] || TYPE_META.tamu
+                            const isInternal = r.type !== 'tamu'
+                            const totalH = Math.floor(r.totalMs / 3600000)
+                            const totalM = Math.floor((r.totalMs % 3600000) / 60000)
+                            const totalStr = r.totalMs > 0 ? (totalH > 0 ? `${totalH}j ${totalM}m` : `${totalM}m`) : '-'
+                            const completedCount = r.count - r.belumKembali
+                            const avgMs = completedCount > 0 ? r.totalMs / completedCount : 0
+                            const avgH = Math.floor(avgMs / 3600000)
+                            const avgM = Math.floor((avgMs % 3600000) / 60000)
+                            const avgStr = avgMs > 0 ? (avgH > 0 ? `${avgH}j ${avgM}m` : `${avgM}m`) : '-'
+                            const IconComp = meta.icon || Users
 
-                              return (
-                                <div key={i}
-                                  className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl flex items-center gap-3 shadow-xs">
-                                  
-                                  {/* Left: Icon circle */}
-                                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${meta.bg}`}>
-                                    <IconComp className={`w-4 h-4 ${meta.color}`} />
-                                  </div>
+                            return (
+                              <div key={i}
+                                className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl flex items-center gap-3 shadow-xs">
 
-                                  {/* Middle: Text and details */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="text-[12.5px] font-bold text-[var(--color-text)] truncate leading-none">
-                                        {r.name}
-                                      </h4>
-                                      <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${meta.bg} ${meta.color} leading-none`}>
-                                        {meta.label}
-                                      </span>
-                                    </div>
-                                    <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 leading-tight truncate font-medium">
-                                      <span>Keluar: <span className="font-bold text-[var(--color-text)]">{r.count}×</span></span>
-                                      {isInternal && (
-                                        <>
-                                          <span className="mx-1.5 opacity-60">·</span>
-                                          <span>Avg: <span className="font-bold text-[var(--color-text)] tabular-nums">{avgStr}</span></span>
-                                        </>
-                                      )}
-                                      {r.belumKembali > 0 && (
-                                        <>
-                                          <span className="mx-1.5 opacity-60">·</span>
-                                          <span className="font-bold text-amber-600 bg-amber-500/10 px-1 py-0.2 rounded text-[9px] uppercase">
-                                            {r.belumKembali}× Aktif
-                                          </span>
-                                        </>
-                                      )}
-                                    </p>
-                                  </div>
-
-                                  {/* Right: Circle Navigation Button */}
-                                  <button onClick={() => { setRekapView('log'); setSearchRekap(r.name) }}
-                                    className="h-8 w-8 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center justify-center transition-colors shrink-0">
-                                    <ChevronRight className="w-4 h-4" />
-                                  </button>
+                                {/* Left: Icon circle */}
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${meta.bg}`}>
+                                  <IconComp className={`w-4 h-4 ${meta.color}`} />
                                 </div>
-                              )
-                            })}
-                          </div>
-                        </>
+
+                                {/* Middle: Text and details */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-[12.5px] font-bold text-[var(--color-text)] truncate leading-none">
+                                      {r.name}
+                                    </h4>
+                                    <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${meta.bg} ${meta.color} leading-none`}>
+                                      {meta.label}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 leading-tight truncate font-medium">
+                                    <span>Keluar: <span className="font-bold text-[var(--color-text)]">{r.count}×</span></span>
+                                    {isInternal && (
+                                      <>
+                                        <span className="mx-1.5 opacity-60">·</span>
+                                        <span>Avg: <span className="font-bold text-[var(--color-text)] tabular-nums">{avgStr}</span></span>
+                                      </>
+                                    )}
+                                    {r.belumKembali > 0 && (
+                                      <>
+                                        <span className="mx-1.5 opacity-60">·</span>
+                                        <span className="font-bold text-amber-600 bg-amber-500/10 px-1 py-0.2 rounded text-[9px] uppercase">
+                                          {r.belumKembali}× Aktif
+                                        </span>
+                                      </>
+                                    )}
+                                  </p>
+                                </div>
+
+                                {/* Right: Circle Navigation Button */}
+                                <button onClick={() => { setRekapView('log'); setSearchRekap(r.name) }}
+                                  className="h-8 w-8 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center justify-center transition-colors shrink-0">
+                                  <ChevronRight className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
                   }
                 </div>
               )}

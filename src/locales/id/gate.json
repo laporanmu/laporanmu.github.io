@@ -5,62 +5,50 @@
   "siswaGuruKeluar": "Siswa/Guru Keluar",
   "tamuDiDalam": "Tamu di Dalam",
   "kunjunganTamu": "Kunjungan Tamu",
-
   "tabInput": "Input",
   "tabLogHariIni": "Log Hari Ini",
   "tabRekap": "Rekap",
-
   "sedangKeluarTitle": "Sedang Keluar",
   "sedangKeluarSub": "Guru & karyawan belum kembali",
   "tamuDiDalamTitle": "Tamu di Dalam",
   "tamuDiDalamSub": "Kunjungan masih aktif",
-
   "emptyHadirTitle": "Semua Hadir & Terdata",
   "emptyHadirDesc": "Tidak ada catatan guru atau karyawan yang sedang berada di luar area sekolah saat ini.",
   "emptyTamuTitle": "Belum Ada Tamu",
   "emptyTamuDesc": "Tidak ada kunjungan tamu eksternal yang terdaftar aktif di sistem saat ini.",
   "noResults": "Data tidak ditemukan",
-
   "btnRefresh": "Refresh Data",
+  "btnKiosk": "Mode Kios",
   "btnConfig": "Konfigurasi Bot",
   "btnCetak": "CETAK",
-
   "internalLabel": "Internal",
   "tamuLabel": "Tamu",
   "internalDesc": "Keluar masuk warga sekolah",
   "tamuDesc": "Masuk dari luar",
-
   "placeholderSearch": "Cari nama atau keperluan...",
   "presetFilterAll": "Semua",
   "filterStatusAll": "Semua Status",
   "filterStatusActive": "Masih Aktif",
   "filterStatusCompleted": "Sudah Selesai",
-
   "btnMultiSelect": "Pilih Multiple",
   "btnCancelSelect": "Batal Pilih",
   "btnSelectAll": "Pilih Semua",
   "btnDeselectAll": "Batal Semua",
-
   "exportCsv": "CSV",
   "exportPdf": "PDF",
   "sendTelegram": "Kirim ke Telegram",
-
   "modeHarian": "Harian",
   "modeMingguan": "Mingguan",
   "modeBulanan": "Bulanan",
-
   "viewDetailLog": "Detail Log",
   "viewRingkasan": "Ringkasan",
-
   "bulkTitle": "Terpilih",
   "bulkAction": "Aksi Massal",
   "bulkCheckout": "Check-out Massal",
   "bulkDelete": "Hapus",
   "bulkClose": "Tutup & Batal",
-
   "alertTitle": "Guru Lama Keluar",
   "alertDismiss": "Klik × untuk sembunyikan sementara",
-
   "formName": "Nama",
   "formInstitution": "Instansi",
   "formPurpose": "Keperluan Keluar",
@@ -77,7 +65,6 @@
   "formEnterHint": "Tekan Enter untuk Catat",
   "formIdentityPhoto": "Foto Identitas (Opsional)",
   "formIdentityPhotoDesc": "Fitur di versi Enterprise",
-
   "modalConfigTitle": "Konfigurasi Notifikasi",
   "modalConfigDesc": "Telegram / Discord Webhook URL",
   "modalConfigHelp": "Pastikan URL webhook sudah benar (Telegram atau Discord).",
@@ -85,18 +72,15 @@
   "modalConfigCancel": "Batal",
   "modalConfigTesting": "Mengirim...",
   "modalConfigTest": "Test",
-
   "modalConfirmTitle": "Konfirmasi",
   "modalConfirmCancel": "Batal",
   "modalConfirmSave": "Catat",
   "modalConfirmTimeLabel": "Jam",
-
   "modalEditTitle": "Edit Log",
   "modalEditSave": "Simpan Perubahan",
   "modalEditCancel": "Tutup",
   "modalEditDelete": "Hapus",
   "modalEditDeleteConfirm": "Yakin Hapus?",
-
   "toastSuccessUpdate": "Data berhasil diperbarui",
   "toastSuccessSave": "berhasil dicatat",
   "toastSuccessUndo": "Pencatatan dibatalkan",
@@ -107,7 +91,6 @@
   "toastSuccessLogDel": "Log dihapus",
   "toastBulkSuccess": "entri berhasil diproses",
   "toastBulkDelSuccess": "log berhasil dihapus",
-
   "tableNo": "#",
   "tableName": "Nama",
   "tableType": "Jenis",
@@ -118,19 +101,16 @@
   "tableTimeTamuOut": "Jam Keluar (Tamu)",
   "tableDuration": "Durasi",
   "tableVehicle": "Kendaraan",
-
   "tableCountOut": "Jml Keluar",
   "tableTotalDuration": "Total Durasi Keluar",
   "tableAvgDuration": "Rata-rata",
   "tableBelumKembali": "Belum Kembali",
   "tableClickDetailHint": "klik baris → detail log",
   "tableDetailLabel": "Detail →",
-
   "guruLabel": "Guru",
   "karyawanLabel": "Karyawan",
   "santriLabel": "Santri",
   "visitorTamuLabel": "Tamu",
-
   "guideTitle": "Cara Penggunaan & Panduan",
   "guideInt1": "Pilih orang dari daftar (Guru/Karyawan/Santri)",
   "guideInt2": "Pilih atau ketik keperluan keluar dari preset",
@@ -139,7 +119,6 @@
   "guideTamu1": "Isi nama & keperluan tamu, lalu Catat Masuk",
   "guideTamu2": "Saat tamu keluar, klik tombol Keluar di panel kanan",
   "guideTamu3": "No. kendaraan opsional, untuk keamanan pesantren",
-
   "printModalTitle": "Pengaturan Cetak Laporan",
   "printModalDesc": "Sesuaikan format dan informasi sebelum mencetak ke printer atau PDF",
   "printFormatLabel": "Format Laporan",

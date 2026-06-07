@@ -18,6 +18,7 @@
   "emptyTamuDesc": "There are currently no active external guest visits registered in the system.",
   "noResults": "No results found",
   "btnRefresh": "Refresh Data",
+  "btnKiosk": "Kiosk Mode",
   "btnConfig": "Bot Settings",
   "btnCetak": "PRINT",
   "internalLabel": "Internal",
