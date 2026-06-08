@@ -6,7 +6,7 @@ import {
     faCalendarAlt, faWeightScale, faUser
 } from '@fortawesome/free-solid-svg-icons'
 import { supabase } from '@lib/supabase'
-import { useTheme } from '@context/ThemeContext'
+import { useTheme } from '@context/Theme'
 import { KRITERIA, GRADE } from '@utils/reports/raportConstants'
 
 const MONTH_NAMES_ID = [

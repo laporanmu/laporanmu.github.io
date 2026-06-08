@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
-import { useToast } from '@context/ToastContext'
-import { useAuth } from '@context/AuthContext'
-import { useLanguage } from '@context/LanguageContext'
+import { useToast } from '@context/Toast'
+import { useAuth } from '@context/Auth'
+import { useLanguage } from '@context/Language'
 
 // ─── Pure utils (no React deps, safe to import anywhere) ─────────────────────
 

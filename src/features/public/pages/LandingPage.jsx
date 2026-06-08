@@ -24,8 +24,8 @@ import {
     faLocationDot,
     faChevronDown
 } from '@fortawesome/free-solid-svg-icons'
-import { useTheme } from '@context/ThemeContext'
-import { useAuth } from '@context/AuthContext'
+import { useTheme } from '@context/Theme'
+import { useAuth } from '@context/Auth'
 import { supabase } from '@lib/supabase'
 
 const ChatAssistant = lazy(() => import('@core/layouts/ChatAssistant'))

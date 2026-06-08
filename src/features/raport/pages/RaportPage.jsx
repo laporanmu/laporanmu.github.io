@@ -25,10 +25,10 @@ import RaportImportModal from '@features/raport/components/RaportImportModal'
 import RaportExportModal from '@features/raport/components/RaportExportModal'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
-import { useToast } from '@context/ToastContext'
-import { useSchoolSettings } from '@context/SchoolSettingsContext'
-import { useAuth } from '@context/AuthContext'
-import { useFlag } from '@context/FeatureFlagsContext'
+import { useToast } from '@context/Toast'
+import { useSchoolSettings } from '@context/SchoolSettings'
+import { useAuth } from '@context/Auth'
+import { useFlag } from '@context/FeatureFlags'
 
 // Raport Components & Utils
 import {

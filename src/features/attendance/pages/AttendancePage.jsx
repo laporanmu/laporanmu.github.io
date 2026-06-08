@@ -24,9 +24,9 @@ import {
 import DashboardLayout from '@core/layouts/DashboardLayout'
 import Breadcrumb from '@shared/components/Breadcrumb'
 import { EmptyState } from '@shared/components/DataDisplay'
-import { useToast } from '@context/ToastContext'
-import { useLanguage } from '@context/LanguageContext'
-import { useAuth } from '@context/AuthContext'
+import { useToast } from '@context/Toast'
+import { useLanguage } from '@context/Language'
+import { useAuth } from '@context/Auth'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 

@@ -1,6 +1,7 @@
 export { default as Breadcrumb } from './Breadcrumb'
 export { default as BulkActionsBar } from './BulkActionsBar'
 export { StatCard, DataTable, EmptyState } from './DataDisplay'
+export { default as ConfirmDialog } from './ConfirmDialog'
 export { default as Modal } from './Modal'
 export { default as PageHeader } from './PageHeader'
 export { default as Pagination } from './Pagination'

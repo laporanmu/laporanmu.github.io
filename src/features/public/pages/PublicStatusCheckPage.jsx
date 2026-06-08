@@ -8,7 +8,7 @@ import {
     faInfoCircle, faExclamationTriangle, faCalendarAlt, faMoon, faSun
 } from '@fortawesome/free-solid-svg-icons'
 import { supabase } from '@lib/supabase'
-import { useTheme } from '@context/ThemeContext'
+import { useTheme } from '@context/Theme'
 
 // Confetti-like animations CSS
 const CONFETTI_STYLE = `

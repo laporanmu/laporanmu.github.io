@@ -19,10 +19,10 @@ import {
   Modal,
   BulkActionsBar
 } from '@shared/components'
-import { useToast } from '@context/ToastContext'
-import { useAuth } from '@context/AuthContext'
+import { useToast } from '@context/Toast'
+import { useAuth } from '@context/Auth'
 import { logAudit } from '@utils/auditLogger'
-import { useLanguage } from '@context/LanguageContext'
+import { useLanguage } from '@context/Language'
 import {
   useGateCore,
   fmtDate, fmtTime, fmtDateTime,

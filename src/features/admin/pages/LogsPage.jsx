@@ -13,8 +13,8 @@ import {
     faUserShield, faCheckCircle, faExclamationTriangle,
     faStopwatch, faFingerprint
 } from '@fortawesome/free-solid-svg-icons'
-import { useToast } from '@context/ToastContext'
-import { useAuth } from '@context/AuthContext'
+import { useToast } from '@context/Toast'
+import { useAuth } from '@context/Auth'
 import { logAudit } from '@utils/auditLogger'
 import {
     ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip,

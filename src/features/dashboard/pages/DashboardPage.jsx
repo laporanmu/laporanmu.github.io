@@ -26,7 +26,7 @@ const RecentReports = lazy(() => import('@features/dashboard/components/widgets/
 const PointsConfigPie = lazy(() => import('@features/dashboard/components/widgets/PointsConfigPie').then(m => ({ default: m.PointsConfigPie })))
 const QuickActions = lazy(() => import('@features/dashboard/components/widgets/QuickActions').then(m => ({ default: m.QuickActions })))
 const GatePresence = lazy(() => import('@features/dashboard/components/widgets/GatePresence').then(m => ({ default: m.GatePresence })))
-import { useAuth } from '@context/AuthContext'
+import { useAuth } from '@context/Auth'
 import { supabase } from '@lib/supabase'
 
 function startOfDay(d = new Date()) {

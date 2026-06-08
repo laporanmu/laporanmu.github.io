@@ -5,7 +5,7 @@ import {
     faUser, faUsers, faCheckCircle, faInfoCircle, faArrowRight, faArrowLeft, faMapMarkerAlt, faMoon, faSun
 } from '@fortawesome/free-solid-svg-icons'
 import { supabase } from '@lib/supabase'
-import { useTheme } from '@context/ThemeContext'
+import { useTheme } from '@context/Theme'
 
 const generateRegNumber = () => {
     return `PSB-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`

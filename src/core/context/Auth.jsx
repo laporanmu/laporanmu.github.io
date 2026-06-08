@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { supabase, isDemoMode } from '@lib/supabase'
-import { useLanguage } from './LanguageContext'
+import { useLanguage } from './Language'
 
 const AuthContext = createContext({})
 

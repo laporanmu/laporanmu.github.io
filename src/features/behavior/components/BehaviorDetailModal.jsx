@@ -3,33 +3,6 @@ import { ClipboardList, MessageSquare, Edit2, Trash2 } from 'lucide-react'
 import Modal from '@shared/components/Modal'
 import { useLanguage } from '@context'
 
-const DB_TRANSLATIONS = {
-    en: {
-        "Berbicara Di Dalam Kelas": "Talking in Class",
-        "Makan di Dalam Kelas": "Eating in Class",
-        "Terlambat Masuk Kelas": "Late to Class",
-        "Juara Lomba Tahfidz": "Tahfidz Competition Winner",
-        "Tidak Membawa Buku": "Not Bringing Books",
-        "Membuang Sampah Sembarangan": "Littering",
-        "Membantu Teman": "Helping Friends",
-        "Membaca Al-Qur'an": "Reading Al-Qur'an",
-        "Melanggar Aturan Asrama": "Violating Dorm Rules",
-        "Berpakaian Rapi": "Dressed Neatly"
-    },
-    ar: {
-        "Berbicara Di Dalam Kelas": "التحدث في الفصل",
-        "Makan di Dalam Kelas": "الأكل في الفصل",
-        "Terlambat Masuk Kelas": "التأخر عن الفصل",
-        "Juara Lomba Tahfidz": "الفائز في مسابقة التحفيظ",
-        "Tidak Membawa Buku": "عدم إحضار الكتب",
-        "Membuang Sampah Sembarangan": "رمي النفايات في غير مكانها",
-        "Membantu Teman": "مساعدة الأصدقاء",
-        "Membaca Al-Qur'an": "قراءة القرآن",
-        "Melanggar Aturan Asrama": "مخالفة قوانين السكن",
-        "Berpakaian Rapi": "حسن المظهر"
-    }
-}
-
 const BehaviorDetailModal = memo(function BehaviorDetailModal({
     isOpen,
     onClose,
@@ -46,8 +19,10 @@ const BehaviorDetailModal = memo(function BehaviorDetailModal({
 
     const tDb = useCallback((text) => {
         if (!text) return text
-        return DB_TRANSLATIONS[language]?.[text] || text
-    }, [language])
+        const key = `db.${text}`
+        const val = t(key)
+        return val === key ? text : val
+    }, [t])
 
     const getTypeName = (id) => {
         const name = violationTypes.find(vt => vt.id === id)?.name ?? '—'

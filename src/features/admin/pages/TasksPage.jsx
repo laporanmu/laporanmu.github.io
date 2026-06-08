@@ -9,8 +9,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import DashboardLayout from '@core/layouts/DashboardLayout'
 import Breadcrumb from '@shared/components/Breadcrumb'
-import { useToast } from '@context/ToastContext'
-import { useAuth } from '@context/AuthContext'
+import { useToast } from '@context/Toast'
+import { useAuth } from '@context/Auth'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 

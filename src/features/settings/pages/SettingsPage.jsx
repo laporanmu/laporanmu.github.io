@@ -9,9 +9,9 @@ import {
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import DashboardLayout from '@core/layouts/DashboardLayout'
 import Breadcrumb from '@shared/components/Breadcrumb'
-import { useTheme } from '@context/ThemeContext'
-import { useToast } from '@context/ToastContext'
-import { useAuth } from '@context/AuthContext'
+import { useTheme } from '@context/Theme'
+import { useToast } from '@context/Toast'
+import { useAuth } from '@context/Auth'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 

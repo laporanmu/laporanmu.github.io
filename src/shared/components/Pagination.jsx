@@ -7,9 +7,9 @@ import RichSelect from './RichSelect'
 import { useLanguage } from '@context'
 
 const PAGINATION_STRINGS = {
-    id: { totalData: 'Total Data', showing: 'Menampilkan', of: 'dari', rows: 'Baris:', page: 'Halaman', jump: 'Tujuan', jumpTip: 'Jump ke hal...', statusPrefix: 'Status' },
-    en: { totalData: 'Total Data', showing: 'Showing', of: 'of', rows: 'Rows:', page: 'Page', jump: 'Go to', jumpTip: 'Jump to page...', statusPrefix: 'Status' },
-    ar: { totalData: 'إجمالي البيانات', showing: 'عرض', of: 'من', rows: 'صفوف:', page: 'صفحة', jump: 'اذهب', jumpTip: 'انتقل إلى صفحة...', statusPrefix: 'حالة' },
+    id: { totalData: 'Total Data', showing: 'Menampilkan', of: 'dari', rows: 'Baris:', page: 'Halaman', jump: 'Tujuan', jumpTip: 'Jump ke hal...', statusPrefix: 'Informasi' },
+    en: { totalData: 'Total Data', showing: 'Showing', of: 'of', rows: 'Rows:', page: 'Page', jump: 'Go to', jumpTip: 'Jump to page...', statusPrefix: 'Information' },
+    ar: { totalData: 'إجمالي البيانات', showing: 'عرض', of: 'من', rows: 'صفوف:', page: 'صفحة', jump: 'اذهب', jumpTip: 'انتقل إلى صفحة...', statusPrefix: 'معلومات' },
 }
 
 const PAGE_SIZE_OPTIONS = [

@@ -4,7 +4,7 @@ import {
     faCheckCircle, faExclamationTriangle, faXmarkCircle,
     faXmark, faRotateLeft, faCircleInfo, faFilePdf, faCloudArrowUp
 } from '@fortawesome/free-solid-svg-icons'
-import { useLanguage } from './LanguageContext'
+import { useLanguage } from './Language'
 
 const ToastContext = createContext({})
 

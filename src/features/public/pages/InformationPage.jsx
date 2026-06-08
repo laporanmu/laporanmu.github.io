@@ -7,8 +7,8 @@ import {
     faMoon, faSun, faBars, faChevronLeft, faChevronRight, faPrint
 } from '@fortawesome/free-solid-svg-icons'
 import { supabase } from '@lib/supabase'
-import { useTheme } from '@context/ThemeContext'
-import { useAuth } from '@context/AuthContext'
+import { useTheme } from '@context/Theme'
+import { useAuth } from '@context/Auth'
 
 const PAGE_SIZE = 9
 const CATEGORIES = ['Semua', 'Informasi', 'Kegiatan', 'Prestasi', 'Pengumuman']
