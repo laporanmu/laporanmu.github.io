@@ -44,7 +44,7 @@ const PublicVerifyPage = lazyRetry(() => import('@features/public').then(m => ({
 // Core
 const DashboardPage = lazyRetry(() => import('@features/dashboard'))
 const RaportPage = lazyRetry(() => import('@features/raport'))
-const BehaviorPage = lazyRetry(() => import('@features/behavior/pages/BehaviorPage.jsx'))
+const BehaviorPage = lazyRetry(() => import('@features/behavior').then(m => ({ default: m.BehaviorPage })))
 const DormsPage = lazyRetry(() => import('@features/dorms/pages/DormsPage.jsx'))
 const HealthPage = lazyRetry(() => import('@features/health'))
 const CounselingPage = lazyRetry(() => import('@features/counseling'))
@@ -70,7 +70,6 @@ const AdminDashboardPage = lazyRetry(() => import('@features/admin/pages/AdminDa
 const StudentsPage = lazyRetry(() => import('@features/students/pages/StudentsPage.jsx'))
 const TeachersPage = lazyRetry(() => import('@features/teachers'))
 const ClassesPage = lazyRetry(() => import('@features/classes'))
-const PoinPage = lazyRetry(() => import('@features/poin'))
 const AcademicYearsPage = lazyRetry(() => import('@features/academic-years'))
 const EnrollmentPage = lazyRetry(() => import('@features/enrollment'))
 const PublicEnrollmentPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.PublicEnrollmentPage })))
@@ -570,11 +569,7 @@ function AppRoutes() {
                 <ClassesPage />
               </RoleFlagRoute>
             } />
-            <Route path="/master/poin" element={
-              <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.violation_types" label="Jenis Pelanggaran">
-                <PoinPage />
-              </RoleFlagRoute>
-            } />
+            <Route path="/master/poin" element={<Navigate to="/boarding/behavior?tab=rules" replace />} />
             <Route path="/master/academic-years" element={
               <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.academic_years" label="Tahun Pelajaran">
                 <AcademicYearsPage />

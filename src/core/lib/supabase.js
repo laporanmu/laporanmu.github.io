@@ -70,10 +70,10 @@ const MOCK_DATA = {
         { id: 'c3', name: '11A Boarding Putra' }
     ],
     point_rules: [
-        { id: 'r1', name: 'Terlambat Masuk Kelas', points: -5, is_negative: true },
-        { id: 'r2', name: 'Membantu Membersihkan Masjid', points: 10, is_negative: false },
-        { id: 'r3', name: 'Merusak Fasilitas Sekolah', points: -50, is_negative: true },
-        { id: 'r4', name: 'Selesai Hafalan Juz 30', points: 30, is_negative: false }
+        { id: 'r1', name: 'Terlambat Masuk Kelas', points: -5, is_negative: true, status: 'active', category: 'Kedisiplinan', description: 'Terlambat memasuki ruang kelas setelah bel masuk berbunyi' },
+        { id: 'r2', name: 'Membantu Membersihkan Masjid', points: 10, is_negative: false, status: 'active', category: 'Sikap', description: 'Secara sukarela membantu membersihkan area masjid pesantren' },
+        { id: 'r3', name: 'Merusak Fasilitas Sekolah', points: -50, is_negative: true, status: 'active', category: 'Tata Tertib', description: 'Merusak sarana prasarana sekolah secara sengaja maupun tidak sengaja' },
+        { id: 'r4', name: 'Selesai Hafalan Juz 30', points: 30, is_negative: false, status: 'active', category: 'Prestasi', description: 'Berhasil menyelesaikan hafalan Juz 30 dengan lancar' }
     ],
     reports: [
         { id: 'rep1', student_id: 's1', violation_type_id: 'r1', points: -5, notes: 'Terlambat 15 menit', reported_at: new Date().toISOString(), teacher_name: 'Ustadz Ahmad' },

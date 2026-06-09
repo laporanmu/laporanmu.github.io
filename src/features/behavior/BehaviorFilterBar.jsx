@@ -44,10 +44,10 @@ export default function BehaviorFilterBar({
     return (
         <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
             {/* Visual Grouping: Search (Left), Filters (Center), Actions (Right) */}
-            <div className="flex flex-col md:flex-row md:items-center gap-3 p-3 lg:p-4 divide-y md:divide-y-0 md:divide-x divide-[var(--color-border)]">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-0 p-3 lg:p-4 divide-y lg:divide-y-0 divide-[var(--color-border)]">
                 
                 {/* Group 1: Search Bar (Left) */}
-                <div className="flex-1 w-full min-w-[180px] md:max-w-[260px] md:pr-3">
+                <div className="flex-1 w-full min-w-[140px] lg:pr-0">
                     <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm group-focus-within:text-[var(--color-primary)] transition-colors">
                             <Search className="w-4 h-4" />
@@ -71,9 +71,12 @@ export default function BehaviorFilterBar({
                     </div>
                 </div>
 
+                {/* Divider 1 (Desktop) */}
+                <div className="hidden lg:block w-[1px] h-5 bg-[var(--color-border)] lg:mx-2.5 xl:mx-4 shrink-0" />
+
                 {/* Group 2: Quick Filters & Sorting (Center) */}
-                <div className="flex md:flex-nowrap flex-wrap items-center gap-2 pt-3 md:pt-0 md:px-3 min-w-0 flex-initial">
-                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-0.5">
+                <div className="flex lg:flex-nowrap flex-wrap items-center gap-2 pt-3 lg:pt-0 lg:px-0 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 py-0.5">
                         {[
                             { id: '', label: tp('all'), icon: ClipboardList, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },
                             { id: 'positive', label: tp('positive'), icon: CheckCircle2, activeCls: 'bg-emerald-500 border-emerald-500' },
@@ -102,7 +105,7 @@ export default function BehaviorFilterBar({
                             setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')
                             setPage(1)
                         }}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shrink-0 ${
                             sortBy === 'oldest'
                                 ? 'bg-amber-500 border-amber-500 text-white'
                                 : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-amber-500/30 hover:bg-amber-500/5 hover:text-amber-600'
@@ -113,8 +116,11 @@ export default function BehaviorFilterBar({
                     </button>
                 </div>
 
+                {/* Divider 2 (Desktop) */}
+                <div className="hidden lg:block w-[1px] h-5 bg-[var(--color-border)] lg:mx-2.5 xl:mx-4 shrink-0" />
+
                 {/* Group 3: Action Buttons (Right) */}
-                <div className="flex flex-wrap items-center justify-start md:justify-end gap-2 pt-3 md:pt-0 md:pl-3 shrink-0 md:ml-auto">
+                <div className="flex flex-wrap items-center justify-start lg:justify-end gap-2 pt-3 lg:pt-0 lg:pl-0 shrink-0">
                     {/* View Mode Switcher */}
                     <div className="bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)] flex gap-0.5">
                         <button
@@ -148,7 +154,7 @@ export default function BehaviorFilterBar({
                         title={tp('selectAll')}
                     >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>{selectedIds.length > 0 ? tp('selected') : tp('selectAll')}</span>
+                        <span className="hidden xl:inline">{selectedIds.length > 0 ? tp('selected') : tp('selectAll')}</span>
                         {selectedIds.length > 0 && (
                             <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">
                                 {tNum(selectedIds.length)}
@@ -164,9 +170,10 @@ export default function BehaviorFilterBar({
                                 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30'
                                 : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'
                         }`}
+                        title={tp('advancedFilter')}
                     >
                         <Sliders className="w-3.5 h-3.5" />
-                        <span>{tp('filterShort')}</span>
+                        <span className="hidden xl:inline">{tp('filterShort')}</span>
                         {activeFilters.length > 0 && (
                             <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
                                 {tNum(activeFilters.length)}
@@ -227,7 +234,7 @@ export default function BehaviorFilterBar({
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                         <div>
                             <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{tp('filterCategory')}</label>
                             <RichSelect

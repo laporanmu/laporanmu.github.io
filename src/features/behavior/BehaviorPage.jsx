@@ -1,14 +1,19 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
     Plus, Search, Loader2, ArrowUp, ArrowDown, AlertTriangle,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2,
     Calendar, ClipboardList, Table, LayoutList, Upload, Download, FileSpreadsheet, FileText,
-    Keyboard, Eye, EyeOff, Archive, RotateCcw, Sliders, Trash2, Edit2, X, AlertCircle, FileEdit
+    Keyboard, Eye, EyeOff, Archive, RotateCcw, Sliders, Trash2, Edit2, X, AlertCircle, FileEdit,
+    Shield, Gavel, Trophy, Info
 } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { useAuth } from '@context/Auth'
+import { useFlag } from '@context/FeatureFlags'
+import PointRulesTab from './PointRulesTab'
 
-const LazyBehaviorExportModal = React.lazy(() => import('@features/behavior/components/BehaviorExportModal'))
-const LazyBehaviorImportModal = React.lazy(() => import('@features/behavior/components/BehaviorImportModal'))
+const LazyBehaviorExportModal = React.lazy(() => import('./BehaviorExportModal'))
+const LazyBehaviorImportModal = React.lazy(() => import('./BehaviorImportModal'))
 import DashboardLayout from '@core/layouts/DashboardLayout'
 import StatsCarousel from '@shared/components/StatsCarousel'
 import Breadcrumb from '@shared/components/Breadcrumb'
@@ -16,17 +21,17 @@ import PageHeader from '@shared/components/PageHeader'
 import { StatCard, EmptyState } from '@shared/components/DataDisplay'
 import Modal from '@shared/components/Modal'
 import ConfirmDialog from '@shared/components/ConfirmDialog'
-import BehaviorFormModal from '@features/behavior/components/BehaviorFormModal'
-import BehaviorDetailModal from '@features/behavior/components/BehaviorDetailModal'
-import BehaviorFilterBar from '@features/behavior/components/BehaviorFilterBar'
-import TimelineCard from '@features/behavior/components/TimelineCard'
-import BehaviorTableRow from '@features/behavior/components/BehaviorTableRow'
+import BehaviorFormModal from './BehaviorFormModal'
+import BehaviorDetailModal from './BehaviorDetailModal'
+import BehaviorFilterBar from './BehaviorFilterBar'
+import TimelineCard from './TimelineCard'
+import BehaviorTableRow from './BehaviorTableRow'
 import RichSelect from '@shared/components/RichSelect'
 import { TableSkeleton } from '@shared/components/Skeleton'
 import { useLanguage } from '@context/Language'
 import Pagination from '@shared/components/Pagination'
 import BulkActionsBar from '@shared/components/BulkActionsBar'
-import { useBehaviorCore } from '@features/behavior/hooks/useBehaviorCore'
+import { useBehaviorCore } from './useBehaviorCore'
 
 function getPortalContainer(id) {
     let el = document.getElementById(id);
@@ -154,6 +159,36 @@ export default function BehaviorPage() {
         handleRemoveImportRow
     } = useBehaviorCore()
 
+    const { profile } = useAuth()
+    const { enabled: showPoinTab } = useFlag('module.violation_types')
+    const isDevAdminTeacher = profile ? ['developer', 'admin', 'guru'].includes(profile.role?.toLowerCase()) : false
+
+    const rulesStats = React.useMemo(() => {
+        const activeRules = violationTypes.filter(v => (v.status || 'active') === 'active')
+        const total = activeRules.length
+        const violations = activeRules.filter(v => v.points < 0).length
+        const achievements = activeRules.filter(v => v.points > 0).length
+        const avgPoints = total ? Math.round(activeRules.reduce((acc, v) => acc + Math.abs(v.points), 0) / total) : 0
+        return { total, violations, achievements, avgPoints }
+    }, [violationTypes])
+
+    const [searchParams, setSearchParams] = useSearchParams()
+    const tabParam = searchParams.get('tab')
+    const [activeTab, setActiveTab] = useState(tabParam === 'rules' || tabParam === 'poin' ? 'rules' : 'reports')
+
+    useEffect(() => {
+        if (tabParam === 'rules' || tabParam === 'poin') {
+            setActiveTab('rules')
+        } else {
+            setActiveTab('reports')
+        }
+    }, [tabParam])
+
+    const handleTabChange = (newTab) => {
+        setActiveTab(newTab)
+        setSearchParams({ tab: newTab })
+    }
+
     const tDb = useCallback((text) => {
         if (!text) return text
         const key = `db.${text}`
@@ -268,7 +303,7 @@ export default function BehaviorPage() {
                     breadcrumbs={[tp('analytics')]}
                     title={tp('title')}
                     subtitle={tp('subtitle')}
-                    actions={
+                    actions={activeTab === 'reports' ? (
                         <>
 
                             {/* Tombol opsi dropdown */}
@@ -408,26 +443,66 @@ export default function BehaviorPage() {
                                 <span className="text-[10px] font-black uppercase tracking-widest">{canInput ? tp('createReport') : tp('readOnly')}</span>
                             </button>
                         </>
-                    }
+                    ) : null}
                 />
 
-                {/* ── STATS ── */}
-                <StatsCarousel count={4} cols={4}>
-                    <StatCard key="total" icon={ClipboardList} label={tp('total')} value={stats.total} color="primary"
-                        subValue={tp('statTotalSub').replace('{count}', students.length)} />
-                    <StatCard key="positive" icon={CheckCircle2} label={tp('positive')} value={stats.positive} color="emerald"
-                        subValue={`${stats.total > 0 ? Math.round((stats.positive / stats.total) * 100) : 0}% ${tp('statRatio')}`}
-                        onClick={() => setFilterType(prev => prev === 'positive' ? '' : 'positive')}
-                        className={filterType === 'positive' ? 'ring-2 ring-[var(--color-primary)]/30' : ''} />
-                    <StatCard key="negative" icon={AlertCircle} label={tp('negative')} value={stats.negative} color="rose"
-                        subValue={`${stats.total > 0 ? Math.round((stats.negative / stats.total) * 100) : 0}% ${tp('statRatio')}`}
-                        onClick={() => setFilterType(prev => prev === 'negative' ? '' : 'negative')}
-                        className={filterType === 'negative' ? 'ring-2 ring-[var(--color-primary)]/30' : ''} />
-                    <StatCard key="today" icon={Calendar} label={tp('today')} value={stats.today} color="amber"
-                        subValue={`${tp('yesterday')}: ${stats.yesterday}`}
-                        trend={trendValue}
-                        trendUp={trendUp} />
-                </StatsCarousel>
+                {/* ── STATS OVERVIEW (Top Level) ── */}
+                {activeTab === 'reports' ? (
+                    <StatsCarousel count={4} cols={4}>
+                        <StatCard key="total" icon={ClipboardList} label={tp('total')} value={stats.total} color="primary"
+                            subValue={tp('statTotalSub').replace('{count}', students.length)} />
+                        <StatCard key="positive" icon={CheckCircle2} label={tp('positive')} value={stats.positive} color="emerald"
+                            subValue={`${stats.total > 0 ? Math.round((stats.positive / stats.total) * 100) : 0}% ${tp('statRatio')}`}
+                            onClick={() => setFilterType(prev => prev === 'positive' ? '' : 'positive')}
+                            className={filterType === 'positive' ? 'ring-2 ring-[var(--color-primary)]/30' : ''} />
+                        <StatCard key="negative" icon={AlertCircle} label={tp('negative')} value={stats.negative} color="rose"
+                            subValue={`${stats.total > 0 ? Math.round((stats.negative / stats.total) * 100) : 0}% ${tp('statRatio')}`}
+                            onClick={() => setFilterType(prev => prev === 'negative' ? '' : 'negative')}
+                            className={filterType === 'negative' ? 'ring-2 ring-[var(--color-primary)]/30' : ''} />
+                        <StatCard key="today" icon={Calendar} label={tp('today')} value={stats.today} color="amber"
+                            subValue={`${tp('yesterday')}: ${stats.yesterday}`}
+                            trend={trendValue}
+                            trendUp={trendUp} />
+                    </StatsCarousel>
+                ) : (
+                    <StatsCarousel count={4} cols={4}>
+                        <StatCard key="total-rules" icon={Shield} label="Total Tipe" value={rulesStats.total} color="primary"
+                            subValue="Aturan aktif terdaftar" />
+                        <StatCard key="violations-rules" icon={Gavel} label="Pelanggaran" value={rulesStats.violations} color="rose"
+                            subValue="Tipe poin pelanggaran" />
+                        <StatCard key="achievements-rules" icon={Trophy} label="Prestasi" value={rulesStats.achievements} color="emerald"
+                            subValue="Tipe poin prestasi" />
+                        <StatCard key="avg-rules" icon={Info} label="Rata-rata Poin" value={rulesStats.avgPoints} color="amber"
+                            subValue="Bobot poin rata-rata" />
+                    </StatsCarousel>
+                )}
+
+                {/* ── TABS ── */}
+                {isDevAdminTeacher && showPoinTab && (
+                    <div className="flex gap-1 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full lg:w-fit overflow-x-auto scrollbar-hide">
+                        <button
+                            onClick={() => handleTabChange('reports')}
+                            className={`flex-1 lg:flex-none h-8 px-4 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'reports'
+                                ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20'
+                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        >
+                            <ClipboardList className="w-3.5 h-3.5" />
+                            <span>Laporan Perilaku</span>
+                        </button>
+                        <button
+                            onClick={() => handleTabChange('rules')}
+                            className={`flex-1 lg:flex-none h-8 px-4 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'rules'
+                                ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20'
+                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        >
+                            <Sliders className="w-3.5 h-3.5" />
+                            <span>Konfigurasi Poin</span>
+                        </button>
+                    </div>
+                )}
+
+                {activeTab === 'reports' ? (
+                    <>
 
                 {/* ── SEARCH + FILTER ── */}
                 <BehaviorFilterBar
@@ -861,6 +936,10 @@ export default function BehaviorPage() {
                     onEdit={(r) => { setSelectedItem(r); setIsModalOpen(true) }}
                     onDelete={(r) => { setItemToDelete(r); setIsDeleteModalOpen(true) }}
                 />
+                    </>
+                ) : (
+                    <PointRulesTab showStats={false} />
+                )}
 
             </div>
         </DashboardLayout >

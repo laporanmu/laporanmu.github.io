@@ -1,1 +1,1 @@
-export { default as BehaviorPage } from './pages/BehaviorPage'
+export { default as BehaviorPage } from './BehaviorPage'
