@@ -9,6 +9,7 @@ import {
 import Modal from '@shared/components/Modal'
 import RichSelect from '@shared/components/RichSelect'
 import Pagination from '@shared/components/Pagination'
+import RulesExportModal from './RulesExportModal'
 import { StatCard } from '@shared/components/DataDisplay'
 import { useToast } from '@context/Toast'
 import { useAuth } from '@context/Auth'
@@ -17,6 +18,7 @@ import { useLanguage } from '@context/Language'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 import Papa from 'papaparse'
+import { buildPrintHTML, openPrintWindow } from '@utils/printTemplate'
 
 const CATEGORIES = ['Kedisiplinan', 'Akademik', 'Tata Tertib', 'Sikap', 'Prestasi', 'Lainnya']
 const LS_COLS = 'Poin_columns'
@@ -29,7 +31,7 @@ export default function PointRulesTab({ showStats = true }) {
     const { enabled: canViolation } = useFlag('module.pelanggaran')
     const { enabled: canAchievement } = useFlag('module.prestasi')
 
-    const { t, tNum, dir } = useLanguage()
+    const { t, tNum, dir, language } = useLanguage()
     const tp = useCallback((key, params) => t(`behavior.${key}`, params), [t])
 
     const canEdit = profile?.role === 'guru' ? teacherPoinEnabled : true
@@ -88,6 +90,7 @@ export default function PointRulesTab({ showStats = true }) {
     const [itemToDelete, setItemToDelete] = useState(null)
     const [exporting, setExporting] = useState(false)
     const [exportScope, setExportScope] = useState('filtered')
+    const [exportColumns, setExportColumns] = useState(['name', 'type', 'category', 'points', 'status', 'description'])
 
     // Columns
     const defaultCols = { description: true, type: true, category: true, points: true, status: true }
@@ -367,33 +370,364 @@ export default function PointRulesTab({ showStats = true }) {
     }
 
     // Export Logic
-    const handleExport = async (format) => {
+    const handleExport = async (format, fileName, options = {}) => {
         setExporting(true)
         try {
             let q = supabase.from('point_rules').select('*').order('name')
-            if (exportScope === 'selected') q = q.in('id', selectedIds)
+            if (exportScope === 'selected') {
+                q = q.in('id', selectedIds)
+            } else if (exportScope === 'filtered') {
+                q = q.in('id', filteredPoin.map(x => x.id))
+            }
             const { data, error } = await q
             if (error) throw error
-            const mapped = (data || []).map(v => ({
-                [tp('rulesFieldName')]: v.name,
-                [tp('rulesColType')]: v.is_negative ? tp('violation') : tp('achievement'),
-                [tp('category')]: tp(`cat.${v.category}`) || v.category,
-                [tp('rulesColWeightPreset')]: v.points,
-                [tp('rulesFieldStatus')]: v.status === 'active' ? tp('rulesFieldStatusActive') : tp('rulesFieldStatusInactive'),
-                [tp('notes')]: v.description || '-'
-            }))
+            const mapped = (data || []).map(v => {
+                const row = {}
+                if (exportColumns.includes('name')) row[tp('rulesFieldName')] = v.name
+                if (exportColumns.includes('type')) row[tp('rulesColTypePreset')] = v.is_negative ? tp('rulesFieldTypeViolation') : tp('rulesFieldTypeAchievement')
+                if (exportColumns.includes('category')) row[tp('category')] = tp(`cat.${v.category}`) || v.category
+                if (exportColumns.includes('points')) row[tp('rulesColWeightPreset')] = v.points
+                if (exportColumns.includes('status')) row[tp('rulesFieldStatus')] = v.status === 'active' ? tp('rulesFieldStatusActive') : tp('rulesFieldStatusInactive')
+                if (exportColumns.includes('description')) row[tp('notes')] = v.description || '-'
+                return row
+            })
+
+            const finalFileName = fileName || `data_poin_${new Date().toISOString().slice(0, 10)}`
+
             if (format === 'csv') {
-                const blob = new Blob([Papa.unparse(mapped)], { type: 'text/csv;charset=utf-8;' })
+                const csvData = Papa.unparse(mapped, { header: options.includeHeader !== false })
+                const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' })
                 const link = document.createElement('a')
                 link.href = URL.createObjectURL(blob)
-                link.setAttribute('download', `data_poin_${new Date().toISOString().slice(0, 10)}.csv`)
+                link.setAttribute('download', `${finalFileName}.csv`)
                 link.click()
-            } else {
+            } else if (format === 'excel') {
                 const XLSX = await import('xlsx')
-                const ws = XLSX.utils.json_to_sheet(mapped)
+                const ws = XLSX.utils.json_to_sheet(mapped, { skipHeader: options.includeHeader === false })
                 const wb = XLSX.utils.book_new()
                 XLSX.utils.book_append_sheet(wb, ws, tp('tabRules'))
-                XLSX.writeFile(wb, `data_poin_${new Date().toISOString().slice(0, 10)}.xlsx`)
+                XLSX.writeFile(wb, `${finalFileName}.xlsx`)
+            } else if (format === 'pdf') {
+                const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+                    import('jspdf'),
+                    import('jspdf-autotable'),
+                ])
+                const autoTable = autoTableMod.default || autoTableMod
+                const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
+                
+                const width = doc.internal.pageSize.width
+                const height = doc.internal.pageSize.height
+                
+                // Draw Letterhead Box Logo
+                doc.setFillColor(30, 58, 95) // #1e3a5f
+                doc.roundedRect(14, 12, 12, 12, 2, 2, 'F')
+                
+                // Draw simple mortarboard cap symbol
+                doc.setDrawColor(255, 255, 255)
+                doc.setLineWidth(0.4)
+                doc.line(16, 17, 20, 15)
+                doc.line(20, 15, 24, 17)
+                doc.line(24, 17, 20, 19)
+                doc.line(20, 19, 16, 17)
+                doc.line(18, 18, 18, 20.5)
+                doc.line(22, 18, 22, 20.5)
+                doc.line(18, 20.5, 22, 20.5)
+
+                // School Name and Subtitle
+                doc.setTextColor(30, 58, 95) // #1e3a5f
+                doc.setFont('Helvetica', 'bold')
+                doc.setFontSize(11)
+                doc.text('SMP Muhammadiyah 04 Tanggul', 29, 16)
+                
+                doc.setTextColor(85, 85, 85) // #555
+                doc.setFont('Helvetica', 'normal')
+                doc.setFontSize(8)
+                doc.text('Muhammadiyah Boarding School', 29, 20)
+                
+                doc.setTextColor(136, 136, 136) // #888
+                doc.setFontSize(7.5)
+                doc.text('Jln. Pemandian No 88, Tanggul, Jember', 29, 23.5)
+                
+                // Right aligned doc badge & date
+                const now = new Date()
+                const dateLocale = language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID'
+                const docNo = `ATR/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String((now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) % 9999 + 1).padStart(4, '0')}`
+                const printDateStr = new Intl.DateTimeFormat(dateLocale, { dateStyle: 'medium', timeStyle: 'short' }).format(now) + ' WIB'
+                
+                // Badge rect
+                doc.setFillColor(30, 58, 95)
+                doc.roundedRect(width - 50, 11, 36, 5, 1, 1, 'F')
+                doc.setTextColor(255, 255, 255)
+                doc.setFont('Helvetica', 'bold')
+                doc.setFontSize(7)
+                doc.text('ATURAN POIN', width - 32, 14.5, { align: 'center' })
+                
+                doc.setTextColor(85, 85, 85)
+                doc.setFont('Helvetica', 'normal')
+                doc.setFontSize(8)
+                doc.text(`No. Dok: ${docNo}`, width - 14, 20, { align: 'right' })
+                doc.setTextColor(170, 170, 170)
+                doc.setFontSize(7.5)
+                doc.text(`Dicetak: ${printDateStr}`, width - 14, 23.5, { align: 'right' })
+                
+                // Blue line
+                doc.setDrawColor(30, 58, 95)
+                doc.setLineWidth(0.6)
+                doc.line(14, 27, width - 14, 27)
+                
+                // Title
+                doc.setTextColor(26, 26, 26) // #1a1a1a
+                doc.setFont('Helvetica', 'bold')
+                doc.setFontSize(13)
+                doc.text(tp('rulesExportTitle') || 'Konfigurasi Aturan Poin', 14, 34)
+                
+                doc.setTextColor(85, 85, 85)
+                doc.setFont('Helvetica', 'normal')
+                doc.setFontSize(8)
+                doc.text('Laporan Konfigurasi Aturan Poin Terdaftar', 14, 38)
+                
+                // Total Badge
+                doc.setTextColor(30, 58, 95)
+                doc.setFont('Helvetica', 'bold')
+                doc.setFontSize(18)
+                doc.text(String(data.length), width - 14, 35, { align: 'right' })
+                doc.setTextColor(170, 170, 170)
+                doc.setFontSize(7.5)
+                doc.text('TOTAL ATURAN', width - 14, 38.5, { align: 'right' })
+
+                // Stats Cards Y = 42
+                const totalViolations = data.filter(v => v.is_negative).length
+                const totalAchievements = data.filter(v => !v.is_negative).length
+                const avgWeight = data.length ? Math.round(data.reduce((acc, v) => acc + Math.abs(v.points), 0) / data.length) : 0
+                
+                const cardGap = 4
+                const cardW = (width - 28 - 3 * cardGap) / 4
+                const cardH = 15
+                const cardY = 42
+                
+                const drawCard = (x, title, val, sub, colorRGB) => {
+                    doc.setDrawColor(212, 212, 212)
+                    doc.setFillColor(255, 255, 255)
+                    doc.setLineWidth(0.25)
+                    doc.roundedRect(x, cardY, cardW, cardH, 1.5, 1.5, 'FD')
+                    
+                    // Left color accent bar
+                    doc.setFillColor(colorRGB[0], colorRGB[1], colorRGB[2])
+                    doc.rect(x, cardY, 1.5, cardH, 'F')
+                    
+                    // Texts
+                    doc.setTextColor(136, 136, 136)
+                    doc.setFont('Helvetica', 'bold')
+                    doc.setFontSize(7)
+                    doc.text(title.toUpperCase(), x + 4, cardY + 4)
+                    
+                    doc.setTextColor(26, 26, 26)
+                    doc.setFont('Helvetica', 'bold')
+                    doc.setFontSize(13)
+                    doc.text(String(val), x + 4, cardY + 10.5)
+                    
+                    if (sub) {
+                        doc.setTextColor(187, 187, 187)
+                        doc.setFont('Helvetica', 'normal')
+                        doc.setFontSize(6.5)
+                        doc.text(sub, x + 4, cardY + 13.5)
+                    }
+                }
+                
+                drawCard(14, 'Total Aturan', data.length, 'aktif terdaftar', [30, 58, 95])
+                drawCard(14 + cardW + cardGap, 'Poin Pelanggaran', totalViolations, 'tipe negatif (-)', [220, 38, 38])
+                drawCard(14 + (cardW + cardGap) * 2, 'Poin Prestasi', totalAchievements, 'tipe positif (+)', [16, 185, 129])
+                drawCard(14 + (cardW + cardGap) * 3, 'Rata-rata Poin', avgWeight, 'nilai bobot poin', [245, 158, 11])
+                
+                // Info Strip Y = 60
+                const stripY = 60
+                doc.setFillColor(240, 244, 248) // #f0f4f8
+                doc.setDrawColor(205, 214, 224) // #cdd6e0
+                doc.setLineWidth(0.2)
+                doc.roundedRect(14, stripY, width - 28, 6, 1, 1, 'FD')
+                
+                const itemGap = (width - 28) / 4
+                const scopeLabel = exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'
+                const operatorName = profile?.name || 'Sistem Otomatis'
+                
+                doc.setTextColor(136, 136, 136)
+                doc.setFont('Helvetica', 'normal')
+                doc.setFontSize(7.5)
+                
+                // Item 1
+                doc.text('Jangkauan: ', 18, stripY + 4.2)
+                doc.setFont('Helvetica', 'bold')
+                doc.setTextColor(26, 26, 26)
+                doc.text(scopeLabel, 33, stripY + 4.2)
+                
+                // Item 2
+                doc.setFont('Helvetica', 'normal')
+                doc.setTextColor(136, 136, 136)
+                doc.text('Operator: ', 18 + itemGap, stripY + 4.2)
+                doc.setFont('Helvetica', 'bold')
+                doc.setTextColor(26, 26, 26)
+                doc.text(operatorName, 18 + itemGap + 12, stripY + 4.2)
+                
+                // Item 3
+                doc.setFont('Helvetica', 'normal')
+                doc.setTextColor(136, 136, 136)
+                doc.text('Status: ', 18 + itemGap * 2, stripY + 4.2)
+                doc.setFont('Helvetica', 'bold')
+                doc.setTextColor(26, 26, 26)
+                doc.text('Aktif', 18 + itemGap * 2 + 10, stripY + 4.2)
+                
+                // Item 4
+                doc.setFont('Helvetica', 'normal')
+                doc.setTextColor(136, 136, 136)
+                doc.text('Aplikasi: ', 18 + itemGap * 3, stripY + 4.2)
+                doc.setFont('Helvetica', 'bold')
+                doc.setTextColor(26, 26, 26)
+                doc.text('LaporanMu', 18 + itemGap * 3 + 11, stripY + 4.2)
+
+                const headers = Object.keys(mapped[0] || {})
+                const rows = mapped.map(r => headers.map(h => String(r[h] ?? '')))
+
+                autoTable(doc, {
+                    head: [headers],
+                    body: rows,
+                    startY: 69,
+                    theme: 'grid',
+                    styles: { fontSize: 7.5, cellPadding: 2 },
+                    headStyles: { fillColor: [30, 58, 95], textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [248, 250, 252] }
+                })
+
+                // Signature block
+                let finalY = doc.lastAutoTable.finalY + 8
+                if (finalY + 30 > height) {
+                    doc.addPage()
+                    finalY = 20
+                }
+                doc.setTextColor(136, 136, 136)
+                doc.setFont('Helvetica', 'normal')
+                doc.setFontSize(7.5)
+                doc.text('Mengetahui,', width - 50, finalY)
+                doc.setTextColor(30, 58, 95)
+                doc.setFont('Helvetica', 'bold')
+                doc.setFontSize(8.5)
+                doc.text('Kepala Sekolah', width - 50, finalY + 4)
+                
+                doc.setDrawColor(200, 200, 200)
+                doc.setLineWidth(0.2)
+                doc.line(width - 50, finalY + 22, width - 14, finalY + 22)
+
+                const pageCount = doc.internal.getNumberOfPages()
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i)
+                    doc.setFontSize(7)
+                    doc.setTextColor(150)
+                    doc.setFont('Helvetica', 'normal')
+                    doc.text('laporanmu.my.id • LaporanMu', 14, height - 8)
+                    doc.text(`Halaman ${tNum(i)} dari ${tNum(pageCount)}`, width - 14, height - 8, { align: 'right' })
+                }
+
+                doc.save(`${finalFileName}.pdf`)
+            } else if (format === 'word') {
+                const headers = Object.keys(mapped[0] || {})
+                const htmlRows = mapped.map(r => `
+                    <tr>
+                        ${headers.map(h => `<td style="border: 1px solid #cbd5e1; padding: 8px;">${r[h]}</td>`).join('')}
+                    </tr>
+                `).join('')
+
+                const htmlContent = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head>
+                        <title>${tp('rulesExportTitle') || 'Konfigurasi Aturan Poin'}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; }
+                            table { width: 100%; border-collapse: collapse; }
+                            th { border: 1px solid #cbd5e1; background-color: #f8fafc; padding: 8px; text-align: left; font-weight: bold; }
+                            td { border: 1px solid #cbd5e1; padding: 8px; }
+                        </style>
+                    </head>
+                    <body>
+                        <h2>${tp('rulesExportTitle') || 'Konfigurasi Aturan Poin'}</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    ${headers.map(h => `<th>${h}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${htmlRows}
+                            </tbody>
+                        </table>
+                    </body>
+                    </html>
+                `
+                const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' })
+                const link = document.createElement('a')
+                link.href = URL.createObjectURL(blob)
+                link.setAttribute('download', `${finalFileName}.doc`)
+                link.click()
+            } else if (format === 'print') {
+                const totalViolations = data.filter(v => v.is_negative).length
+                const totalAchievements = data.filter(v => !v.is_negative).length
+                const avgWeight = data.length ? Math.round(data.reduce((acc, v) => acc + Math.abs(v.points), 0) / data.length) : 0
+
+                const headers = Object.keys(mapped[0] || {})
+                const tableHeaders = ['#', ...headers]
+
+                const htmlRows = mapped.map((r, i) => {
+                    const cells = headers.map(h => {
+                        const val = r[h] ?? '-'
+                        if (h === tp('rulesColTypePreset')) {
+                            const isViolation = val === tp('rulesFieldTypeViolation')
+                            const badgeClass = isViolation ? 'tag-visitor guru' : 'tag-visitor santri'
+                            return `<td><span class="${badgeClass}">${val}</span></td>`
+                        }
+                        if (h === tp('rulesFieldStatus')) {
+                            const isActive = val === tp('rulesFieldStatusActive')
+                            const badgeClass = isActive ? 'tag-status success' : 'tag-status warning'
+                            return `<td><span class="${badgeClass}">${val}</span></td>`
+                        }
+                        if (h === tp('rulesColWeightPreset')) {
+                            const points = Number(val)
+                            const color = points > 0 ? '#16a34a' : '#dc2626'
+                            return `<td style="color:${color};font-weight:700">${points > 0 ? '+' : ''}${tNum(points)}</td>`
+                        }
+                        return `<td>${val}</td>`
+                    }).join('')
+                    return `<tr><td>${tNum(i + 1)}</td>${cells}</tr>`
+                }).join('')
+
+                const scopeLabel = exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'
+                const operatorValue = profile?.name || 'Sistem Otomatis'
+
+                const htmlContent = buildPrintHTML({
+                    language,
+                    docBadge: 'ATURAN POIN',
+                    title: tp('rulesExportTitle') || 'Konfigurasi Aturan Poin',
+                    subtitle: 'Laporan Konfigurasi Aturan Poin Terdaftar',
+                    totalCount: data.length,
+                    totalLabel: 'Total Aturan',
+                    stats: [
+                        { label: 'Total Aturan', value: tNum(data.length), type: 'total', description: 'aktif terdaftar' },
+                        { label: 'Poin Pelanggaran', value: tNum(totalViolations), type: 'pelanggaran', description: 'tipe negatif (-)' },
+                        { label: 'Poin Prestasi', value: tNum(totalAchievements), type: 'prestasi', description: 'tipe positif (+)' },
+                        { label: 'Rata-rata Poin', value: tNum(avgWeight), type: 'avg', description: 'nilai bobot poin' },
+                    ],
+                    infoStrip: [
+                        { label: 'Jangkauan', value: scopeLabel },
+                        { label: 'Operator', value: operatorValue },
+                        { label: 'Status', value: 'Aktif' },
+                        { label: 'Aplikasi', value: 'LaporanMu' }
+                    ],
+                    tableHeaders,
+                    tableRowsHTML: htmlRows,
+                    showSignature: true,
+                    signatureTitle: 'Kepala Sekolah',
+                    signatureName: '',
+                    paperSize: options.orientation === 'portrait' ? 'A4 portrait' : 'A4 landscape'
+                })
+
+                openPrintWindow(htmlContent)
             }
 
             await logAudit({
@@ -403,17 +737,18 @@ export default function PointRulesTab({ showStats = true }) {
                 newData: {
                     format,
                     scope: exportScope,
-                    count: data.length
+                    count: data.length,
+                    columns: exportColumns
                 }
             })
 
             addToast(tp('rulesExportSuccess'), 'success')
+            setIsExportModalOpen(false)
         } catch (err) {
             console.error(err)
             addToast(tp('rulesExportFailed'), 'error')
         } finally {
             setExporting(false)
-            setIsExportModalOpen(false)
         }
     }
 
@@ -856,7 +1191,7 @@ export default function PointRulesTab({ showStats = true }) {
                 onClose={() => setIsModalOpen(false)}
                 title={selectedItem ? tp('rulesEditTitle') : tp('rulesAddTitle')}
                 description={selectedItem ? tp('rulesEditDesc') : tp('rulesAddDesc')}
-                size="lg"
+                size="md"
                 icon={selectedItem ? Edit2 : Plus}
                 iconBg="bg-[var(--color-primary)]/10"
                 iconColor="text-[var(--color-primary)]"
@@ -917,11 +1252,11 @@ export default function PointRulesTab({ showStats = true }) {
                             <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
                                 <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer">
                                     <input type="radio" name="type" value="violation" defaultChecked={selectedItem ? selectedItem.is_negative : true} className="hidden peer" />
-                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-red-500 peer-checked:text-white text-[var(--color-text-muted)] font-black text-[10px] uppercase transition-all">{tp('rulesFieldTypeViolation')}</div>
+                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-red-500 peer-checked:text-white text-[var(--color-text-muted)] font-bold text-[9.5px] transition-all">{tp('rulesFieldTypeViolation')}</div>
                                 </label>
                                 <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer">
                                     <input type="radio" name="type" value="achievement" defaultChecked={selectedItem ? !selectedItem.is_negative : false} className="hidden peer" />
-                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-emerald-500 peer-checked:text-white text-[var(--color-text-muted)] font-black text-[10px] uppercase transition-all">{tp('rulesFieldTypeAchievement')}</div>
+                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-emerald-500 peer-checked:text-white text-[var(--color-text-muted)] font-bold text-[9.5px] transition-all">{tp('rulesFieldTypeAchievement')}</div>
                                 </label>
                             </div>
                         </div>
@@ -997,22 +1332,18 @@ export default function PointRulesTab({ showStats = true }) {
             </Modal>
 
             {/* Export Modal */}
-            <Modal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} title={tp('rulesExportTitle')} size="sm">
-                <div className="space-y-5">
-                    <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-xl">
-                        <button onClick={() => setExportScope('filtered')} className={`py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${exportScope === 'filtered' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}>{tp('rulesExportScopeFiltered')}</button>
-                        <button onClick={() => setExportScope('selected')} disabled={selectedIds.length === 0} className={`py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-20 ${exportScope === 'selected' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}>{tp('rulesExportScopeSelected', { count: selectedIds.length })}</button>
-                    </div>
-                    <div className="space-y-2">
-                        <button onClick={() => handleExport('excel')} disabled={exporting} className="w-full h-12 rounded-xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-3 transition-all active:scale-95">
-                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> <span>{tp('rulesExportExcel')}</span></>}
-                        </button>
-                        <button onClick={() => handleExport('csv')} disabled={exporting} className="w-full h-12 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95">
-                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> <span>{tp('rulesExportCSV')}</span></>}
-                        </button>
-                    </div>
-                </div>
-            </Modal>
+            <RulesExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                rulesCount={totalRows}
+                selectedCount={selectedIds.length}
+                exportScope={exportScope}
+                setExportScope={setExportScope}
+                exportColumns={exportColumns}
+                setExportColumns={setExportColumns}
+                exporting={exporting}
+                handleExport={handleExport}
+            />
 
             {/* Reset Poin Siswa Modal */}
             <Modal

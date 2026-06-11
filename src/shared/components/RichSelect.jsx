@@ -382,7 +382,7 @@ const RichSelect = memo(({
                         ? 'px-2.5 h-8'
                         : (small
                             ? (icon ? 'pl-8 pr-3 rtl:pl-3 rtl:pr-8 h-8 sm:h-9' : 'px-3 h-8 sm:h-9')
-                            : (icon ? 'pl-9 pr-3 rtl:pl-3 rtl:pr-9 h-10 sm:h-10' : 'px-3 h-10 sm:h-10'))
+                            : (icon ? 'pl-9 pr-3 rtl:pl-3 rtl:pr-9 h-11' : 'px-3 h-11'))
                     } rounded-lg sm:rounded-xl border ${statusClasses[status]} bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/50 focus:ring-1 outline-none transition-all text-[11px] sm:text-[12px] font-bold relative group shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
             >
                 <div className="flex items-center gap-2 truncate">
