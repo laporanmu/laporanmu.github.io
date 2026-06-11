@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { 
-    Plus, Search, X, Loader2, Shield, Gavel, Trophy, Sliders, 
-    Trash2, Eye, EyeOff, Download, Archive, RotateCcw, Keyboard, 
-    Check, AlertTriangle, AlertCircle, Info, Edit2, Layers, 
+import {
+    Plus, Search, X, Loader2, Shield, Gavel, Trophy, Sliders,
+    Trash2, Eye, EyeOff, Download, Archive, RotateCcw, Keyboard,
+    Check, AlertTriangle, AlertCircle, Info, Edit2, Layers,
     GraduationCap, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight
 } from 'lucide-react'
 import Modal from '@shared/components/Modal'
+import RichSelect from '@shared/components/RichSelect'
 import Pagination from '@shared/components/Pagination'
 import { StatCard } from '@shared/components/DataDisplay'
 import { useToast } from '@context/Toast'
 import { useAuth } from '@context/Auth'
 import { useFlag } from '@context/FeatureFlags'
+import { useLanguage } from '@context/Language'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 import Papa from 'papaparse'
@@ -26,6 +28,9 @@ export default function PointRulesTab({ showStats = true }) {
     const { enabled: teacherPoinEnabled } = useFlag('access.teacher_poin')
     const { enabled: canViolation } = useFlag('module.pelanggaran')
     const { enabled: canAchievement } = useFlag('module.prestasi')
+
+    const { t, tNum, dir } = useLanguage()
+    const tp = useCallback((key, params) => t(`behavior.${key}`, params), [t])
 
     const canEdit = profile?.role === 'guru' ? teacherPoinEnabled : true
 
@@ -70,6 +75,16 @@ export default function PointRulesTab({ showStats = true }) {
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
     const [isExportModalOpen, setIsExportModalOpen] = useState(false)
     const [selectedItem, setSelectedItem] = useState(null)
+    const [formCategory, setFormCategory] = useState('Kedisiplinan')
+    const [formStatus, setFormStatus] = useState('active')
+
+    useEffect(() => {
+        if (isModalOpen) {
+            setFormCategory(selectedItem?.category || 'Kedisiplinan')
+            setFormStatus(selectedItem?.status || 'active')
+        }
+    }, [isModalOpen, selectedItem])
+
     const [itemToDelete, setItemToDelete] = useState(null)
     const [exporting, setExporting] = useState(false)
     const [exportScope, setExportScope] = useState('filtered')
@@ -113,7 +128,7 @@ export default function PointRulesTab({ showStats = true }) {
             }
         } catch (err) {
             console.error(err)
-            addToast('Gagal mengambil data poin', 'error')
+            addToast(tp('rulesToastMetaLoadError'), 'error')
         } finally {
             setLoading(false)
         }
@@ -219,8 +234,8 @@ export default function PointRulesTab({ showStats = true }) {
         const extremeCount = poin.filter(v => Math.abs(v.points) >= 20).length
         if (extremeCount > 0) res.push({
             id: 'extreme',
-            label: `${extremeCount} Poin Ekstrim`,
-            desc: 'Bobot poin ≥ 20 ditemukan',
+            label: tp('rulesExtremeInsight', { count: extremeCount }),
+            desc: tp('rulesExtremeInsightDesc'),
             icon: AlertTriangle,
             color: 'text-amber-500',
             bg: 'bg-amber-500/10',
@@ -231,8 +246,8 @@ export default function PointRulesTab({ showStats = true }) {
         const inactiveCount = poin.filter(v => v.status === 'inactive').length
         if (inactiveCount > 0) res.push({
             id: 'archived',
-            label: `${inactiveCount} Tipe Nonaktif`,
-            desc: 'Poin yang sedang dideaktifkan',
+            label: tp('rulesInactiveInsight', { count: inactiveCount }),
+            desc: tp('rulesInactiveInsightDesc'),
             icon: Archive,
             color: 'text-gray-500',
             bg: 'bg-gray-500/10',
@@ -258,17 +273,17 @@ export default function PointRulesTab({ showStats = true }) {
             if (selectedItem) {
                 const { error } = await supabase.from('point_rules').update(payload).eq('id', selectedItem.id)
                 if (error) throw error
-                addToast('Data berhasil diupdate', 'success')
+                addToast(tp('rulesToastUpdateSuccess'), 'success')
                 await logAudit({ action: 'UPDATE', source: 'SYSTEM', tableName: 'point_rules', recordId: selectedItem.id, oldData: selectedItem, newData: { ...selectedItem, ...payload } })
             } else {
                 const { data: insData, error } = await supabase.from('point_rules').insert(payload).select().single()
                 if (error) throw error
-                addToast('Data baru berhasil ditambahkan', 'success')
+                addToast(tp('rulesToastCreateSuccess'), 'success')
                 await logAudit({ action: 'INSERT', source: 'SYSTEM', tableName: 'point_rules', recordId: insData?.id, newData: payload })
             }
             setIsModalOpen(false)
             fetchData()
-        } catch (err) { addToast(err.message || 'Gagal menyimpan data', 'error') }
+        } catch (err) { addToast(err.message || tp('rulesToastSaveError'), 'error') }
         finally { setSubmitting(false) }
     }
 
@@ -278,11 +293,11 @@ export default function PointRulesTab({ showStats = true }) {
         try {
             const { error } = await supabase.from('point_rules').delete().eq('id', itemToDelete.id)
             if (error) throw error
-            addToast('Data berhasil dihapus', 'success')
+            addToast(tp('rulesToastDeleteSuccess'), 'success')
             await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'point_rules', recordId: itemToDelete.id, oldData: itemToDelete })
             setIsDeleteModalOpen(false)
             fetchData()
-        } catch { addToast('Gagal menghapus data', 'error') }
+        } catch { addToast(tp('rulesToastDeleteError'), 'error') }
         finally { setSubmitting(false) }
     }
 
@@ -292,19 +307,19 @@ export default function PointRulesTab({ showStats = true }) {
             const idsSnap = [...selectedIds]
             const { error } = await supabase.from('point_rules').delete().in('id', idsSnap)
             if (error) throw error
-            addToast(`${idsSnap.length} data berhasil dihapus`, 'success')
+            addToast(tp('rulesToastBulkDeleteSuccess', { count: idsSnap.length }), 'success')
             await logAudit({ action: 'DELETE', source: 'SYSTEM', tableName: 'point_rules', oldData: { bulk: true, count: idsSnap.length, ids: idsSnap } })
             setSelectedIds([])
             setIsBulkDeleteOpen(false)
             fetchData()
-        } catch { addToast('Gagal menghapus data', 'error') }
+        } catch { addToast(tp('rulesToastDeleteError'), 'error') }
         finally { setSubmitting(false) }
     }
 
     const handleBatchResetPoints = async () => {
         const msg = resetPointsClassId
-            ? `Reset semua poin siswa di kelas ini ke 0?`
-            : `Reset SEMUA poin siswa di SELURUH kelas ke 0? Tindakan ini tidak bisa dibatalkan.`
+            ? tp('resetPointsClassConfirm')
+            : tp('resetPointsAllConfirm')
 
         if (!window.confirm(msg)) return
 
@@ -325,11 +340,11 @@ export default function PointRulesTab({ showStats = true }) {
                 metadata: { class_id: resetPointsClassId }
             })
 
-            addToast('Berhasil mereset poin siswa', 'success')
+            addToast(tp('rulesToastResetSuccess'), 'success')
             setIsResetModalOpen(false)
         } catch (err) {
             console.error(err)
-            addToast('Gagal mereset poin', 'error')
+            addToast(tp('rulesToastResetError'), 'error')
         } finally {
             setResettingPoints(false)
         }
@@ -360,12 +375,12 @@ export default function PointRulesTab({ showStats = true }) {
             const { data, error } = await q
             if (error) throw error
             const mapped = (data || []).map(v => ({
-                'Nama Poin': v.name,
-                'Tipe': v.is_negative ? 'Pelanggaran' : 'Prestasi',
-                'Kategori': v.category,
-                'Bobot Poin': v.points,
-                'Status': v.status,
-                'Deskripsi': v.description || '-'
+                [tp('rulesFieldName')]: v.name,
+                [tp('rulesColType')]: v.is_negative ? tp('violation') : tp('achievement'),
+                [tp('category')]: tp(`cat.${v.category}`) || v.category,
+                [tp('rulesColWeightPreset')]: v.points,
+                [tp('rulesFieldStatus')]: v.status === 'active' ? tp('rulesFieldStatusActive') : tp('rulesFieldStatusInactive'),
+                [tp('notes')]: v.description || '-'
             }))
             if (format === 'csv') {
                 const blob = new Blob([Papa.unparse(mapped)], { type: 'text/csv;charset=utf-8;' })
@@ -377,7 +392,7 @@ export default function PointRulesTab({ showStats = true }) {
                 const XLSX = await import('xlsx')
                 const ws = XLSX.utils.json_to_sheet(mapped)
                 const wb = XLSX.utils.book_new()
-                XLSX.utils.book_append_sheet(wb, ws, 'Data Poin')
+                XLSX.utils.book_append_sheet(wb, ws, tp('tabRules'))
                 XLSX.writeFile(wb, `data_poin_${new Date().toISOString().slice(0, 10)}.xlsx`)
             }
 
@@ -392,10 +407,10 @@ export default function PointRulesTab({ showStats = true }) {
                 }
             })
 
-            addToast(`Export berhasil`, 'success')
+            addToast(tp('rulesExportSuccess'), 'success')
         } catch (err) {
             console.error(err)
-            addToast('Gagal export data', 'error')
+            addToast(tp('rulesExportFailed'), 'error')
         } finally {
             setExporting(false)
             setIsExportModalOpen(false)
@@ -408,63 +423,63 @@ export default function PointRulesTab({ showStats = true }) {
             {!canEdit && (
                 <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
                     <EyeOff className="text-rose-500 shrink-0 w-4 h-4" />
-                    <p className="text-[11px] font-bold text-rose-600">Mode Read-only — Edit konfigurasi poin dinonaktifkan oleh administrator.</p>
+                    <p className="text-[11px] font-bold text-rose-600">{tp('rulesReadOnlyBanner')}</p>
                 </div>
             )}
 
             {/* Sub-Header Actions */}
             <div className="glass rounded-[1.5rem] border border-[var(--color-border)] p-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[var(--color-surface-alt)]/10">
                 <div>
-                    <h3 className="text-sm font-black text-[var(--color-text)]">Konfigurasi Aturan Poin</h3>
+                    <h3 className="text-sm font-black text-[var(--color-text)]">{tp('rulesTitleConfig')}</h3>
                     <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                        Atur jenis pelanggaran, prestasi, bobot poin, dan reset periodik di sini.
+                        {tp('rulesSubtitleConfig')}
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center justify-end w-full sm:w-auto">
                     {/* Reset Button */}
                     {canEdit && (
-                        <button 
+                        <button
                             onClick={() => { setResetPointsClassId(''); setIsResetModalOpen(true) }}
                             className="h-9 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-orange-500 hover:border-orange-500/30 flex items-center gap-2 transition-all text-xs font-bold"
-                            title="Reset Poin Santri"
+                            title={tp('rulesResetPointsTitle')}
                         >
                             <RotateCcw className="w-3.5 h-3.5" />
-                            <span>Reset Poin Siswa</span>
+                            <span>{tp('rulesResetPoints')}</span>
                         </button>
                     )}
 
                     {/* Export Button */}
-                    <button 
+                    <button
                         onClick={() => setIsExportModalOpen(true)}
                         className="h-9 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center gap-2 transition-all text-xs font-bold"
-                        title="Export Aturan Poin"
+                        title={tp('rulesExportTitle')}
                     >
                         <Download className="w-3.5 h-3.5" />
-                        <span>Export</span>
+                        <span>{tp('rulesExport')}</span>
                     </button>
 
                     {/* Privacy Toggle */}
-                    <button 
+                    <button
                         onClick={() => {
                             const next = !isPrivacyMode
                             setIsPrivacyMode(next)
-                            addToast(next ? 'Mode privasi diaktifkan — Data sensitif disembunyikan' : 'Mode privasi dinonaktifkan', next ? 'info' : 'success')
+                            addToast(next ? tp('toastPrivacyOn') : tp('toastPrivacyOff'), next ? 'info' : 'success')
                         }}
                         className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all text-xs font-bold ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                        title={isPrivacyMode ? "Matikan Mode Privasi" : "Aktifkan Mode Privasi"}
+                        title={isPrivacyMode ? tp('disablePrivacy') : tp('enablePrivacy')}
                     >
                         {isPrivacyMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        <span className="hidden md:inline">{isPrivacyMode ? 'Privasi On' : 'Privasi Off'}</span>
+                        <span className="hidden md:inline">{tp('privacy')}</span>
                     </button>
 
                     {/* Add Button */}
                     {canEdit && (
-                        <button 
+                        <button
                             onClick={handleAdd}
                             className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 border border-white/10"
                         >
                             <Plus className="w-3.5 h-3.5" />
-                            <span>Tambah Aturan</span>
+                            <span>{tp('rulesAdd')}</span>
                         </button>
                     )}
                 </div>
@@ -473,10 +488,10 @@ export default function PointRulesTab({ showStats = true }) {
             {/* Stats Overview */}
             {showStats && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard icon={Shield} label="Total Tipe" value={stats.total} color="primary" loading={loading} />
-                    <StatCard icon={Gavel} label="Pelanggaran" value={stats.poin} color="rose" loading={loading} />
-                    <StatCard icon={Trophy} label="Prestasi" value={stats.achievements} color="emerald" loading={loading} />
-                    <StatCard icon={Info} label="Rata-rata Poin" value={stats.avgPoints} color="amber" loading={loading} />
+                    <StatCard icon={Shield} label={tp('rulesTotal')} value={stats.total} color="primary" loading={loading} />
+                    <StatCard icon={Gavel} label={tp('rulesViolations')} value={stats.poin} color="rose" loading={loading} />
+                    <StatCard icon={Trophy} label={tp('rulesAchievements')} value={stats.achievements} color="emerald" loading={loading} />
+                    <StatCard icon={Info} label={tp('rulesAvg')} value={stats.avgPoints} color="amber" loading={loading} />
                 </div>
             )}
 
@@ -493,7 +508,7 @@ export default function PointRulesTab({ showStats = true }) {
                             type="text"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            placeholder="Cari nama poin atau deskripsi... (Ctrl+K)"
+                            placeholder={tp('rulesSearchPlaceholder')}
                             className="w-full h-9 pl-10 pr-10 text-xs sm:text-sm bg-transparent border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl outline-none"
                         />
                         {searchQuery && (
@@ -508,7 +523,7 @@ export default function PointRulesTab({ showStats = true }) {
                             className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isFilterOpen || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
                         >
                             <Sliders className="w-3.5 h-3.5" />
-                            <span className="hidden xs:inline">Filter</span>
+                            <span className="hidden xs:inline">{tp('filterShort')}</span>
                             {activeFilterCount > 0 && <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">{activeFilterCount}</span>}
                         </button>
                     </div>
@@ -520,7 +535,7 @@ export default function PointRulesTab({ showStats = true }) {
                         <div className="flex flex-wrap gap-2">
                             {searchQuery && (
                                 <button type="button" onClick={() => setSearchQuery('')}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus pencarian">
+                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title={tp('rulesClearSearch')}>
                                     <Search className="w-3 h-3 opacity-60" />
                                     <span className="max-w-[220px] truncate">"{searchQuery}"</span>
                                     <span className="w-4 h-4 rounded bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
@@ -530,8 +545,8 @@ export default function PointRulesTab({ showStats = true }) {
                             )}
                             {filterCategory && (
                                 <button type="button" onClick={() => setFilterCategory('')}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[10px] font-black text-[var(--color-primary)]" title="Hapus filter kategori">
-                                    <span className="opacity-70">Kategori:</span> {filterCategory}
+                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[10px] font-black text-[var(--color-primary)]" title={tp('rulesClearCategory')}>
+                                    <span className="opacity-70">{tp('category')}:</span> {tp(`cat.${filterCategory}`) || filterCategory}
                                     <span className="w-4 h-4 rounded bg-white/70 dark:bg-[var(--color-surface)] border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] opacity-70 group-hover:opacity-100 transition-opacity">
                                         <X className="w-2.5 h-2.5" />
                                     </span>
@@ -539,8 +554,8 @@ export default function PointRulesTab({ showStats = true }) {
                             )}
                             {filterType && (
                                 <button type="button" onClick={() => setFilterType('')}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus filter tipe">
-                                    {filterType === 'violation' ? 'Pelanggaran' : 'Prestasi'}
+                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title={tp('rulesClearType')}>
+                                    {filterType === 'violation' ? tp('violation') : tp('achievement')}
                                     <span className="w-4 h-4 rounded bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
                                         <X className="w-2.5 h-2.5" />
                                     </span>
@@ -548,8 +563,8 @@ export default function PointRulesTab({ showStats = true }) {
                             )}
                             {filterStatus !== 'active' && (
                                 <button type="button" onClick={() => setFilterStatus('active')}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600" title="Hapus filter status">
-                                    Status: {filterStatus === 'inactive' ? 'Nonaktif' : filterStatus}
+                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600" title={tp('rulesClearStatus')}>
+                                    {tp('status')}: {filterStatus === 'inactive' ? tp('rulesStatusInactive') : filterStatus}
                                     <span className="w-4 h-4 rounded bg-white/70 dark:bg-[var(--color-surface)] border border-amber-500/20 flex items-center justify-center text-amber-600 opacity-70 group-hover:opacity-100 transition-opacity">
                                         <X className="w-2.5 h-2.5" />
                                     </span>
@@ -557,17 +572,17 @@ export default function PointRulesTab({ showStats = true }) {
                             )}
                             {filterExtreme && (
                                 <button type="button" onClick={() => setFilterExtreme(false)}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-red-500/20 bg-red-500/10 text-[10px] font-black text-red-600" title="Hapus filter poin ekstrim">
-                                    Poin Ekstrim
+                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-red-500/20 bg-red-500/10 text-[10px] font-black text-red-600" title={tp('rulesClearExtreme')}>
+                                    {tp('rulesExtremePoints')}
                                     <span className="w-4 h-4 rounded bg-white/70 dark:bg-[var(--color-surface)] border border-red-500/20 flex items-center justify-center text-red-600 opacity-70 group-hover:opacity-100 transition-opacity">
                                         <X className="w-2.5 h-2.5" />
                                     </span>
                                 </button>
                             )}
                             <button type="button" onClick={resetAllFilters}
-                                className="inline-flex items-center gap-1 px-3 py-1 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title="Reset semua filter">
+                                className="inline-flex items-center gap-1 px-3 py-1 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title={tp('resetAllFilters')}>
                                 <RotateCcw className="w-3 h-3" />
-                                <span>Reset semua</span>
+                                <span>{tp('resetAll')}</span>
                             </button>
                         </div>
                     </div>
@@ -577,32 +592,32 @@ export default function PointRulesTab({ showStats = true }) {
                     <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 animate-in slide-in-from-top-2 duration-300">
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                             <div className="space-y-1.5">
-                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">Kategori</label>
+                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">{tp('category')}</label>
                                 <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
-                                    <option value="">Semua Kategori</option>
-                                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                    <option value="">{tp('rulesAllCategories')}</option>
+                                    {CATEGORIES.map(c => <option key={c} value={c}>{tp(`cat.${c}`) || c}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">Tipe</label>
+                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">{tp('rulesType')}</label>
                                 <select value={filterType} onChange={e => setFilterType(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
-                                    <option value="">Pelanggaran & Prestasi</option>
-                                    <option value="violation">Hanya Pelanggaran</option>
-                                    <option value="achievement">Hanya Prestasi</option>
+                                    <option value="">{tp('rulesAllTypes')}</option>
+                                    <option value="violation">{tp('rulesViolationsOnly')}</option>
+                                    <option value="achievement">{tp('rulesAchievementsOnly')}</option>
                                 </select>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">Urutan</label>
+                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">{tp('rulesOrder')}</label>
                                 <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
-                                    <option value="name">Nama (A-Z)</option>
-                                    <option value="points">Poin Tertinggi</option>
-                                    <option value="newest">Terbaru</option>
+                                    <option value="name">{tp('rulesOrderName')}</option>
+                                    <option value="points">{tp('rulesOrderPoints')}</option>
+                                    <option value="newest">{tp('newest')}</option>
                                 </select>
                             </div>
                             <div className="flex items-end">
                                 <button onClick={resetAllFilters} className="w-full h-9 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10 transition-all flex items-center justify-center gap-2">
                                     <RotateCcw className="w-3.5 h-3.5" />
-                                    <span>Reset</span>
+                                    <span>{tp('resetShort')}</span>
                                 </button>
                             </div>
                         </div>
@@ -613,15 +628,15 @@ export default function PointRulesTab({ showStats = true }) {
             {/* Bulk Action Bar */}
             {selectedIds.length > 0 && (
                 <div className="px-4 py-3 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-between gap-3 flex-wrap animate-in slide-in-from-top-2">
-                    <p className="text-sm font-black text-[var(--color-primary)] tracking-tight">{selectedIds.length} tipe poin dipilih</p>
+                    <p className="text-sm font-black text-[var(--color-primary)] tracking-tight">{tp('rulesSelectedCount', { count: selectedIds.length })}</p>
                     <div className="flex items-center gap-2">
                         <button onClick={() => setIsBulkDeleteOpen(true)} className="h-8 px-4 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2">
                             <Trash2 className="w-3.5 h-3.5" />
-                            <span>Hapus</span>
+                            <span>{tp('delete')}</span>
                         </button>
                         <button onClick={() => setSelectedIds([])} className="h-8 px-4 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:text-[var(--color-text)] transition-all flex items-center gap-2">
                             <X className="w-3.5 h-3.5" />
-                            <span>Batal</span>
+                            <span>{tp('cancel')}</span>
                         </button>
                     </div>
                 </div>
@@ -648,14 +663,14 @@ export default function PointRulesTab({ showStats = true }) {
                                         <th className="px-6 py-4 w-16 text-center">
                                             <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] cursor-pointer" />
                                         </th>
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Identitas Poin</th>
-                                        {visibleCols.description && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Keterangan Aturan</th>}
-                                        {visibleCols.type && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">Tipe</th>}
-                                        {visibleCols.category && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">Kategori</th>}
-                                        {visibleCols.points && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">Bobot</th>}
+                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{tp('rulesColIdentity')}</th>
+                                        {visibleCols.description && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{tp('rulesColDescription')}</th>}
+                                        {visibleCols.type && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">{tp('rulesColType')}</th>}
+                                        {visibleCols.category && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">{tp('rulesColCategory')}</th>}
+                                        {visibleCols.points && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">{tp('rulesColWeight')}</th>}
                                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">
                                             <div className="flex items-center justify-center gap-2">
-                                                <span>Aksi</span>
+                                                <span>{tp('rulesColAction')}</span>
                                                 <div className="relative">
                                                     <button onClick={(e) => {
                                                         const rect = e.currentTarget.getBoundingClientRect()
@@ -668,15 +683,15 @@ export default function PointRulesTab({ showStats = true }) {
                                                             showUp
                                                         })
                                                         setIsColMenuOpen(p => !p)
-                                                    }} title="Atur tampilan kolom"
+                                                    }} title={tp('manageColumns')}
                                                         className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}>
                                                         <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
                                                     </button>
                                                     {isColMenuOpen && createPortal(
                                                         <div className={`fixed z-[9999] w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95`}
                                                             style={{ top: menuPos.top, right: menuPos.right }}>
-                                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Atur Kolom</p>
-                                                            {[{ key: 'description', label: 'Keterangan Aturan' }, { key: 'type', label: 'Tipe (Neg/Pos)' }, { key: 'category', label: 'Kategori' }, { key: 'points', label: 'Bobot Poin' }].map(({ key, label }) => (
+                                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('manageColumns')}</p>
+                                                            {[{ key: 'description', label: tp('rulesColDescription') }, { key: 'type', label: tp('rulesColTypePreset') }, { key: 'category', label: tp('rulesColCategory') }, { key: 'points', label: tp('rulesColWeightPreset') }].map(({ key, label }) => (
                                                                 <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
                                                                     <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
                                                                     <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
@@ -700,12 +715,12 @@ export default function PointRulesTab({ showStats = true }) {
                                                     <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] mb-4 text-xl">
                                                         <Search className="w-6 h-6 opacity-40" />
                                                     </div>
-                                                    <h3 className="text-sm font-black text-[var(--color-text)] mb-1">Pencarian Tidak Ditemukan</h3>
+                                                    <h3 className="text-sm font-black text-[var(--color-text)] mb-1">{tp('rulesNoResults')}</h3>
                                                     <p className="text-[11px] font-bold text-[var(--color-text-muted)] leading-relaxed mb-4">
-                                                        Tidak ditemukan tipe poin yang cocok dengan kriteria filter atau database masih kosong.
+                                                        {tp('rulesNoResultsDesc')}
                                                     </p>
                                                     <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition">
-                                                        Reset Semua Filter
+                                                        {tp('resetAllFilters')}
                                                     </button>
                                                 </div>
                                             </td>
@@ -733,13 +748,13 @@ export default function PointRulesTab({ showStats = true }) {
                                             {visibleCols.type && (
                                                 <td className="px-6 py-4 text-center">
                                                     <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border ${rule.is_negative ? 'bg-red-500/10 border-red-500/20 text-red-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
-                                                        {rule.is_negative ? 'Pelanggaran' : 'Prestasi'}
+                                                        {rule.is_negative ? tp('violation') : tp('achievement')}
                                                     </span>
                                                 </td>
                                             )}
                                             {visibleCols.category && (
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{rule.category}</span>
+                                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{tp(`cat.${rule.category}`) || rule.category}</span>
                                                 </td>
                                             )}
                                             {visibleCols.points && (
@@ -755,7 +770,7 @@ export default function PointRulesTab({ showStats = true }) {
                                                         <button
                                                             onClick={() => handleEdit(rule)}
                                                             className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm"
-                                                            title="Edit"
+                                                            title={tp('edit')}
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </button>
@@ -764,7 +779,7 @@ export default function PointRulesTab({ showStats = true }) {
                                                         <button
                                                             onClick={() => { setItemToDelete(rule); setIsDeleteModalOpen(true) }}
                                                             className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"
-                                                            title="Hapus"
+                                                            title={tp('delete')}
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
                                                         </button>
@@ -784,12 +799,12 @@ export default function PointRulesTab({ showStats = true }) {
                                     <div className="w-12 h-12 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] mx-auto mb-3 text-lg">
                                         <Search className="w-5 h-5 opacity-40" />
                                     </div>
-                                    <h3 className="text-xs font-black text-[var(--color-text)] mb-1">Pencarian Tidak Ditemukan</h3>
+                                    <h3 className="text-xs font-black text-[var(--color-text)] mb-1">{tp('rulesNoResults')}</h3>
                                     <p className="text-[10px] font-bold text-[var(--color-text-muted)] max-w-[280px] leading-relaxed mb-4 mx-auto">
-                                        Tidak ditemukan tipe poin yang cocok dengan kriteria filter.
+                                        {tp('rulesNoResultsDescMobile')}
                                     </p>
                                     <button onClick={resetAllFilters} className="h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition">
-                                        Reset Semua
+                                        {tp('resetAll')}
                                     </button>
                                 </div>
                             ) : pagedPoin.map(v => (
@@ -801,7 +816,7 @@ export default function PointRulesTab({ showStats = true }) {
                                             </div>
                                             <div>
                                                 <h4 className="text-xs font-black text-[var(--color-text)] leading-tight">{v.name}</h4>
-                                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">{v.category}</p>
+                                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">{tp(`cat.${v.category}`) || v.category}</p>
                                             </div>
                                         </div>
                                         <div className={`px-2 py-1 rounded-lg text-white text-[9px] font-black shadow-lg shrink-0 ${getPointStyle(v.points)}`}>
@@ -813,8 +828,8 @@ export default function PointRulesTab({ showStats = true }) {
                                     )}
                                     {canEdit && (
                                         <div className="flex items-center gap-2 mt-4">
-                                            <button onClick={() => handleEdit(v)} className="flex-1 h-8.5 rounded-xl bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest">Edit</button>
-                                            <button onClick={() => { setItemToDelete(v); setIsDeleteModalOpen(true) }} className="flex-1 h-8.5 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-widest">Hapus</button>
+                                            <button onClick={() => handleEdit(v)} className="flex-1 h-8.5 rounded-xl bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest">{tp('edit')}</button>
+                                            <button onClick={() => { setItemToDelete(v); setIsDeleteModalOpen(true) }} className="flex-1 h-8.5 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-widest">{tp('delete')}</button>
                                         </div>
                                     )}
                                 </div>
@@ -828,7 +843,7 @@ export default function PointRulesTab({ showStats = true }) {
                             pageSize={pageSize}
                             setPage={setPage}
                             setPageSize={setPageSize}
-                            label="aturan poin"
+                            label={tp('rulesPaginationLabel')}
                             jumpPage={jumpPage}
                             setJumpPage={setJumpPage}
                         />
@@ -836,9 +851,42 @@ export default function PointRulesTab({ showStats = true }) {
                 )}
             </div>
 
-            {/* Modal Form Add/Edit */}
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedItem ? 'Edit Konfigurasi Poin' : 'Tambah Konfigurasi Poin'} size="lg">
-                <form onSubmit={(e) => {
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title={selectedItem ? tp('rulesEditTitle') : tp('rulesAddTitle')}
+                description={selectedItem ? tp('rulesEditDesc') : tp('rulesAddDesc')}
+                size="lg"
+                icon={selectedItem ? Edit2 : Plus}
+                iconBg="bg-[var(--color-primary)]/10"
+                iconColor="text-[var(--color-primary)]"
+                footer={
+                    <div className="flex items-center w-full gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setIsModalOpen(false)}
+                            className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
+                        >
+                            {tp('cancel')}
+                        </button>
+                        <div className="flex-1" />
+                        <button
+                            type="submit"
+                            form="point-rule-form"
+                            disabled={submitting}
+                            className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center justify-center gap-2 shrink-0"
+                        >
+                            {submitting ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <Check className="w-3.5 h-3.5" />
+                            )}
+                            {selectedItem ? tp('rulesBtnUpdate') : tp('rulesBtnSave')}
+                        </button>
+                    </div>
+                }
+            >
+                <form id="point-rule-form" onSubmit={(e) => {
                     e.preventDefault()
                     const formData = new FormData(e.target)
                     handleSubmit({
@@ -849,104 +897,118 @@ export default function PointRulesTab({ showStats = true }) {
                         description: formData.get('description'),
                         status: formData.get('status')
                     })
-                }} className="space-y-6 pb-2">
+                }} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3 md:col-span-2">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Nama Aturan / Poin</label>
-                            <input name="name" defaultValue={selectedItem?.name} required placeholder="Contoh: Terlambat Masuk Kelas" className="w-full h-11 px-4 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl text-sm font-bold focus:border-[var(--color-primary)] outline-none" />
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldName')}</label>
+                            <input name="name" defaultValue={selectedItem?.name} required placeholder={tp('rulesFieldNamePlaceholder')} className="w-full px-4 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40" />
                         </div>
                         <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Kategori</label>
-                            <select name="category" defaultValue={selectedItem?.category || 'Kedisiplinan'} className="w-full h-11 px-4 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl text-sm font-bold focus:border-[var(--color-primary)] outline-none appearance-none">
-                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('category')}</label>
+                            <input type="hidden" name="category" value={formCategory} />
+                            <RichSelect
+                                value={formCategory}
+                                onChange={(val) => setFormCategory(val)}
+                                options={CATEGORIES.map(c => ({ id: c, name: tp(`cat.${c}`) || c }))}
+                            />
                         </div>
                         <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Tipe Akumulasi</label>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldType')}</label>
                             <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
                                 <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer">
                                     <input type="radio" name="type" value="violation" defaultChecked={selectedItem ? selectedItem.is_negative : true} className="hidden peer" />
-                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-red-500 peer-checked:text-white text-[var(--color-text-muted)] font-black text-[10px] uppercase transition-all">Pelanggaran (-)</div>
+                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-red-500 peer-checked:text-white text-[var(--color-text-muted)] font-black text-[10px] uppercase transition-all">{tp('rulesFieldTypeViolation')}</div>
                                 </label>
                                 <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer">
                                     <input type="radio" name="type" value="achievement" defaultChecked={selectedItem ? !selectedItem.is_negative : false} className="hidden peer" />
-                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-emerald-500 peer-checked:text-white text-[var(--color-text-muted)] font-black text-[10px] uppercase transition-all">Prestasi (+)</div>
+                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-emerald-500 peer-checked:text-white text-[var(--color-text-muted)] font-black text-[10px] uppercase transition-all">{tp('rulesFieldTypeAchievement')}</div>
                                 </label>
                             </div>
                         </div>
                         <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Bobot Poin (Angka Positif)</label>
-                            <input type="number" name="points" defaultValue={selectedItem ? Math.abs(selectedItem.points) : ''} required min="1" placeholder="Misal: 10" className="w-full h-11 px-4 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl text-sm font-bold focus:border-[var(--color-primary)] outline-none" />
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldPoints')}</label>
+                            <input type="number" name="points" defaultValue={selectedItem ? Math.abs(selectedItem.points) : ''} required min="1" placeholder={tp('rulesFieldPointsPlaceholder')} className="w-full px-4 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40" />
                         </div>
                         <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Status Keaktifan</label>
-                            <select name="status" defaultValue={selectedItem?.status || 'active'} className="w-full h-11 px-4 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl text-sm font-bold focus:border-[var(--color-primary)] outline-none appearance-none">
-                                <option value="active">Aktif</option>
-                                <option value="inactive">Nonaktif (Arsip)</option>
-                            </select>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldStatus')}</label>
+                            <input type="hidden" name="status" value={formStatus} />
+                            <RichSelect
+                                value={formStatus}
+                                onChange={(val) => setFormStatus(val)}
+                                options={[
+                                    { id: 'active', name: tp('rulesFieldStatusActive') },
+                                    { id: 'inactive', name: tp('rulesFieldStatusInactive') }
+                                ]}
+                            />
                         </div>
                         <div className="space-y-3 md:col-span-2">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Deskripsi & Dasar Aturan (Opsional)</label>
-                            <textarea name="description" defaultValue={selectedItem?.description} rows={3} placeholder="Tuliskan detail atau pasal yang berkaitan..." className="w-full p-4 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl text-sm font-bold focus:border-[var(--color-primary)] outline-none resize-none" />
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldDescription')}</label>
+                            <textarea name="description" defaultValue={selectedItem?.description} rows={3} placeholder={tp('rulesFieldDescriptionPlaceholder')} className="w-full p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl text-sm focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 resize-none" />
                         </div>
-                    </div>
-                    <div className="flex gap-3 pt-4 border-t border-[var(--color-border)]">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest transition-all">Batal</button>
-                        <button type="submit" disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-[var(--color-primary)] text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 active:scale-95 transition-all flex items-center justify-center">
-                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (selectedItem ? 'Update Poin' : 'Simpan Konfigurasi')}
-                        </button>
                     </div>
                 </form>
             </Modal>
 
             {/* Modal Delete Confirmation */}
-            <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Hapus Tipe Poin" size="sm">
+            <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title={tp('rulesDeleteTitle')} size="sm">
                 <div className="space-y-6">
                     <div className="p-4 bg-red-500/10 rounded-2xl border border-red-500/20 flex items-center gap-4 text-red-500">
                         <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30 animate-pulse"><Trash2 className="w-6 h-6" /></div>
                         <div>
-                            <h3 className="text-sm font-black uppercase tracking-wider">Hapus Permanen</h3>
-                            <p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest leading-tight">Berisiko pada relasi laporan siswa.</p>
+                            <h3 className="text-sm font-black uppercase tracking-wider">{tp('rulesDeletePermanent')}</h3>
+                            <p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest leading-tight">{tp('rulesDeleteRisk')}</p>
                         </div>
                     </div>
-                    <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">Yakin menghapus tipe poin <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToDelete?.name}</span>? Tindakan ini tidak dapat dibatalkan.</p>
+                    <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">
+                        {(() => {
+                            const deleteTemplate = tp('rulesDeleteWarningTemplate')
+                            const parts = deleteTemplate.includes('{name}') ? deleteTemplate.split('{name}') : [deleteTemplate, '']
+                            return (
+                                <>
+                                    {parts[0]}
+                                    <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToDelete?.name}</span>
+                                    {parts[1]}
+                                </>
+                            )
+                        })()}
+                    </p>
                     <div className="flex gap-3 pt-2">
-                        <button onClick={() => setIsDeleteModalOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">BATAL</button>
+                        <button onClick={() => setIsDeleteModalOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">{tp('cancel').toUpperCase()}</button>
                         <button onClick={handleDeleteConfirm} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all flex items-center justify-center">
-                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'HAPUS SEKARANG'}
+                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : tp('rulesBtnDeleteNow')}
                         </button>
                     </div>
                 </div>
             </Modal>
 
             {/* Modal Bulk Delete */}
-            <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title="Hapus Massal" size="sm">
+            <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title={tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })} size="sm">
                 <div className="space-y-6 text-center">
                     <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-red-500/20 shadow-xl"><Trash2 className="text-3xl w-10 h-10" /></div>
-                    <h3 className="text-lg font-black text-[var(--color-text)] uppercase tracking-tight">Hapus {selectedIds.length} Pilihan?</h3>
-                    <p className="text-[11px] text-[var(--color-text-muted)] font-black uppercase tracking-widest leading-relaxed">Semua konfigurasi yang dipilih akan dihapus permanen dari sistem.</p>
+                    <h3 className="text-lg font-black text-[var(--color-text)] uppercase tracking-tight">{tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })}</h3>
+                    <p className="text-[11px] text-[var(--color-text-muted)] font-black uppercase tracking-widest leading-relaxed">{tp('rulesBulkDeleteWarning')}</p>
                     <div className="flex gap-3 pt-4">
-                        <button onClick={() => setIsBulkDeleteOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">Batal</button>
+                        <button onClick={() => setIsBulkDeleteOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">{tp('cancel')}</button>
                         <button onClick={handleBulkDelete} disabled={submitting} className="h-11 flex-1 rounded-xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center">
-                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ya, Hapus Semua'}
+                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : tp('rulesBtnBulkDeleteConfirm')}
                         </button>
                     </div>
                 </div>
             </Modal>
 
             {/* Export Modal */}
-            <Modal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} title="Export Konfigurasi Poin" size="sm">
+            <Modal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} title={tp('rulesExportTitle')} size="sm">
                 <div className="space-y-5">
                     <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] rounded-xl">
-                        <button onClick={() => setExportScope('filtered')} className={`py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${exportScope === 'filtered' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}>Filter Aktif</button>
-                        <button onClick={() => setExportScope('selected')} disabled={selectedIds.length === 0} className={`py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-20 ${exportScope === 'selected' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}>Terpilih ({selectedIds.length})</button>
+                        <button onClick={() => setExportScope('filtered')} className={`py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${exportScope === 'filtered' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}>{tp('rulesExportScopeFiltered')}</button>
+                        <button onClick={() => setExportScope('selected')} disabled={selectedIds.length === 0} className={`py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-20 ${exportScope === 'selected' ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)]'}`}>{tp('rulesExportScopeSelected', { count: selectedIds.length })}</button>
                     </div>
                     <div className="space-y-2">
                         <button onClick={() => handleExport('excel')} disabled={exporting} className="w-full h-12 rounded-xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-3 transition-all active:scale-95">
-                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> <span>Export ke Excel (.XLSX)</span></>}
+                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> <span>{tp('rulesExportExcel')}</span></>}
                         </button>
                         <button onClick={() => handleExport('csv')} disabled={exporting} className="w-full h-12 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95">
-                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> <span>Export ke CSV (.CSV)</span></>}
+                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4" /> <span>{tp('rulesExportCSV')}</span></>}
                         </button>
                     </div>
                 </div>
@@ -956,8 +1018,8 @@ export default function PointRulesTab({ showStats = true }) {
             <Modal
                 isOpen={isResetModalOpen}
                 onClose={() => setIsResetModalOpen(false)}
-                title="Reset Poin Semester Baru"
-                description="Set semua poin siswa ke 0 untuk semester/tahun ajaran baru."
+                title={tp('resetPointsTitle')}
+                description={tp('resetPointsDesc')}
                 icon={RotateCcw}
                 iconBg="bg-orange-500/10"
                 iconColor="text-orange-500"
@@ -970,7 +1032,7 @@ export default function PointRulesTab({ showStats = true }) {
                             onClick={() => setIsResetModalOpen(false)}
                             className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all"
                         >
-                            Batal
+                            {tp('cancel')}
                         </button>
                         <button
                             type="button"
@@ -981,7 +1043,7 @@ export default function PointRulesTab({ showStats = true }) {
                             {resettingPoints ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                                 <>
                                     <RotateCcw className="w-3.5 h-3.5" />
-                                    <span>Reset Sekarang</span>
+                                    <span>{tp('resetPointsBtnConfirm')}</span>
                                 </>
                             )}
                         </button>
@@ -991,7 +1053,7 @@ export default function PointRulesTab({ showStats = true }) {
                 <div className="space-y-4">
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1 ml-1 flex items-center gap-2">
-                            <GraduationCap className="opacity-40 w-4 h-4" /> <span>Pilih Kelas</span>
+                            <GraduationCap className="opacity-40 w-4 h-4" /> <span>{tp('resetPointsSelectClass')}</span>
                         </label>
                         <div className="space-y-3">
                             <div className="relative group">
@@ -1000,7 +1062,7 @@ export default function PointRulesTab({ showStats = true }) {
                                 </div>
                                 <input
                                     type="text"
-                                    placeholder="Cari nama kelas..."
+                                    placeholder={tp('resetPointsSearchClassPlaceholder')}
                                     value={resetPointsSearch}
                                     onChange={(e) => setResetPointsSearch(e.target.value)}
                                     className="w-full h-10 pl-9 pr-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[11px] font-medium focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all outline-none"
@@ -1031,7 +1093,7 @@ export default function PointRulesTab({ showStats = true }) {
                                             <Layers className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-black text-[10px] uppercase tracking-wider leading-tight">Semua Kelas</p>
+                                            <p className="font-black text-[10px] uppercase tracking-wider leading-tight">{tp('resetPointsAllClasses')}</p>
                                         </div>
                                         {resetPointsClassId === '' && <Check className="w-3 h-3 opacity-60" />}
                                     </button>
@@ -1063,7 +1125,7 @@ export default function PointRulesTab({ showStats = true }) {
                                         <div className="w-8 h-8 rounded-full bg-[var(--color-surface-alt)] flex items-center justify-center mx-auto opacity-40">
                                             <Search className="w-4 h-4" />
                                         </div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-40">Kelas tidak ditemukan</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-40">{tp('resetPointsClassNotFound')}</p>
                                     </div>
                                 )}
                             </div>
@@ -1071,7 +1133,7 @@ export default function PointRulesTab({ showStats = true }) {
                     </div>
                     <div className="p-3 bg-red-500/5 rounded-2xl border border-red-500/10 text-[10px] text-red-600 dark:text-red-400 font-bold leading-relaxed">
                         <AlertCircle className="inline w-3.5 h-3.5 mr-1" />
-                        <span>Tindakan ini tidak bisa dibatalkan. Semua poin siswa akan direset ke 0 untuk rombongan kelas yang dipilih.</span>
+                        <span>{tp('resetPointsWarning')}</span>
                     </div>
                 </div>
             </Modal>

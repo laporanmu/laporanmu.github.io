@@ -466,14 +466,14 @@ export default function BehaviorPage() {
                     </StatsCarousel>
                 ) : (
                     <StatsCarousel count={4} cols={4}>
-                        <StatCard key="total-rules" icon={Shield} label="Total Tipe" value={rulesStats.total} color="primary"
-                            subValue="Aturan aktif terdaftar" />
-                        <StatCard key="violations-rules" icon={Gavel} label="Pelanggaran" value={rulesStats.violations} color="rose"
-                            subValue="Tipe poin pelanggaran" />
-                        <StatCard key="achievements-rules" icon={Trophy} label="Prestasi" value={rulesStats.achievements} color="emerald"
-                            subValue="Tipe poin prestasi" />
-                        <StatCard key="avg-rules" icon={Info} label="Rata-rata Poin" value={rulesStats.avgPoints} color="amber"
-                            subValue="Bobot poin rata-rata" />
+                        <StatCard key="total-rules" icon={Shield} label={tp('rulesTotal')} value={rulesStats.total} color="primary"
+                            subValue={tp('rulesTotalSub')} />
+                        <StatCard key="violations-rules" icon={Gavel} label={tp('rulesViolations')} value={rulesStats.violations} color="rose"
+                            subValue={tp('rulesViolationsSub')} />
+                        <StatCard key="achievements-rules" icon={Trophy} label={tp('rulesAchievements')} value={rulesStats.achievements} color="emerald"
+                            subValue={tp('rulesAchievementsSub')} />
+                        <StatCard key="avg-rules" icon={Info} label={tp('rulesAvg')} value={rulesStats.avgPoints} color="amber"
+                            subValue={tp('rulesAvgSub')} />
                     </StatsCarousel>
                 )}
 
@@ -487,7 +487,7 @@ export default function BehaviorPage() {
                                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                         >
                             <ClipboardList className="w-3.5 h-3.5" />
-                            <span>Laporan Perilaku</span>
+                            <span>{tp('tabReports')}</span>
                         </button>
                         <button
                             onClick={() => handleTabChange('rules')}
@@ -496,7 +496,7 @@ export default function BehaviorPage() {
                                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                         >
                             <Sliders className="w-3.5 h-3.5" />
-                            <span>Konfigurasi Poin</span>
+                            <span>{tp('tabRules')}</span>
                         </button>
                     </div>
                 )}
@@ -628,10 +628,10 @@ export default function BehaviorPage() {
                                             <div className="absolute pointer-events-none left-[9px] sm:left-[43px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center z-10 shadow-[0_0_8px_rgba(79,70,229,0.3)]">
                                                 <div className="w-2 h-2 rounded-full bg-[var(--color-primary)] ring-2 ring-[var(--color-surface)]" />
                                             </div>
-                                            <div className="flex items-center gap-3 bg-[var(--color-surface)]/95 backdrop-blur-md pl-4 pr-5 py-1.5 rounded-2xl border border-[var(--color-border)] w-fit shadow-md shadow-black/[0.02]">
-                                                <span className="text-[11px] font-black uppercase text-[var(--color-text)] tracking-wider leading-none">{fmtDayLabel(date)}</span>
-                                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] opacity-40 animate-pulse" />
-                                                <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider font-extrabold leading-none">{tNum(items.length)} {tp('reportCount')}</span>
+                                            <div className="flex items-center gap-3 bg-[var(--color-surface)]/95 backdrop-blur-md pl-4 pr-5 py-1.5 rounded-2xl border border-[var(--color-border)] w-fit shadow-md shadow-black/[0.02] shrink-0">
+                                                <span className="text-[11px] font-black uppercase text-[var(--color-text)] tracking-wider leading-none whitespace-nowrap">{fmtDayLabel(date)}</span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] opacity-40 animate-pulse shrink-0" />
+                                                <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider font-extrabold leading-none whitespace-nowrap">{tNum(items.length)} {tp('reportCount')}</span>
                                             </div>
                                         </div>
 

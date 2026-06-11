@@ -44,10 +44,10 @@ export default function BehaviorFilterBar({
     return (
         <div className="glass rounded-[1.5rem] mb-4 border border-[var(--color-border)] overflow-hidden">
             {/* Visual Grouping: Search (Left), Filters (Center), Actions (Right) */}
-            <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-0 p-3 lg:p-4 divide-y lg:divide-y-0 divide-[var(--color-border)]">
+            <div className="grid grid-cols-[minmax(0,_1fr)_auto] items-center gap-x-2 gap-y-3 p-3 lg:flex lg:flex-row lg:items-center lg:gap-0 lg:p-4">
                 
                 {/* Group 1: Search Bar (Left) */}
-                <div className="flex-1 w-full min-w-[140px] lg:pr-0">
+                <div className="col-start-1 row-start-1 col-span-1 flex-1 w-full min-w-0 lg:min-w-[140px] lg:pr-0">
                     <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm group-focus-within:text-[var(--color-primary)] transition-colors">
                             <Search className="w-4 h-4" />
@@ -75,8 +75,8 @@ export default function BehaviorFilterBar({
                 <div className="hidden lg:block w-[1px] h-5 bg-[var(--color-border)] lg:mx-2.5 xl:mx-4 shrink-0" />
 
                 {/* Group 2: Quick Filters & Sorting (Center) */}
-                <div className="flex lg:flex-nowrap flex-wrap items-center gap-2 pt-3 lg:pt-0 lg:px-0 shrink-0">
-                    <div className="flex items-center gap-1.5 shrink-0 py-0.5">
+                <div className="col-start-1 row-start-2 col-span-2 flex flex-nowrap items-center gap-1 pt-3 lg:pt-0 lg:px-0 shrink-0 w-full overflow-x-auto scrollbar-hide border-t border-[var(--color-border)] lg:border-t-0">
+                    <div className="flex items-center gap-1 shrink-0 py-0.5">
                         {[
                             { id: '', label: tp('all'), icon: ClipboardList, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },
                             { id: 'positive', label: tp('positive'), icon: CheckCircle2, activeCls: 'bg-emerald-500 border-emerald-500' },
@@ -88,13 +88,13 @@ export default function BehaviorFilterBar({
                                     setFilterType(s.id)
                                     setPage(1)
                                 }}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
+                                className={`flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-normal sm:tracking-widest whitespace-nowrap transition-all border ${
                                     filterType === s.id
                                         ? `${s.activeCls} text-white`
                                         : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]'
                                 }`}
                             >
-                                <s.icon className={`w-3.5 h-3.5 ${filterType === s.id ? 'opacity-100' : 'opacity-30'}`} />
+                                <s.icon className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${filterType === s.id ? 'opacity-100' : 'opacity-30'}`} />
                                 {s.label}
                             </button>
                         ))}
@@ -105,13 +105,13 @@ export default function BehaviorFilterBar({
                             setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')
                             setPage(1)
                         }}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shrink-0 ${
+                        className={`flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-normal sm:tracking-widest whitespace-nowrap transition-all border shrink-0 ${
                             sortBy === 'oldest'
                                 ? 'bg-amber-500 border-amber-500 text-white'
                                 : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-amber-500/30 hover:bg-amber-500/5 hover:text-amber-600'
                         }`}
                     >
-                        {sortBy === 'newest' ? <ArrowDown className="w-3.5 h-3.5 opacity-30" /> : <ArrowUp className="w-3.5 h-3.5" />}
+                        {sortBy === 'newest' ? <ArrowDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-30" /> : <ArrowUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                         {sortBy === 'newest' ? tp('newest') : tp('oldest')}
                     </button>
                 </div>
@@ -120,13 +120,13 @@ export default function BehaviorFilterBar({
                 <div className="hidden lg:block w-[1px] h-5 bg-[var(--color-border)] lg:mx-2.5 xl:mx-4 shrink-0" />
 
                 {/* Group 3: Action Buttons (Right) */}
-                <div className="flex flex-wrap items-center justify-start lg:justify-end gap-2 pt-3 lg:pt-0 lg:pl-0 shrink-0">
+                <div className="col-start-2 row-start-1 col-span-1 flex flex-nowrap items-center justify-end gap-1.5 lg:gap-2 lg:pt-0 lg:pl-0 shrink-0">
                     {/* View Mode Switcher */}
                     <div className="bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)] flex gap-0.5">
                         <button
                             onClick={() => setViewMode('timeline')}
                             title={tp('timeline')}
-                            className={`h-7 px-2.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${
+                            className={`h-7 px-2 lg:px-2.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${
                                 viewMode === 'timeline' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
                             }`}
                         >
@@ -136,7 +136,7 @@ export default function BehaviorFilterBar({
                         <button
                             onClick={() => setViewMode('table')}
                             title={tp('tableView')}
-                            className={`h-7 px-2.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${
+                            className={`h-7 px-2 lg:px-2.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${
                                 viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
                             }`}
                         >
@@ -148,7 +148,7 @@ export default function BehaviorFilterBar({
                     {/* Pilih Semua / Batal */}
                     <button
                         onClick={() => setSelectedIds(allSelected ? [] : reports.map((r) => r.id))}
-                        className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                        className={`h-9 px-2.5 lg:px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider lg:tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
                             selectedIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white shadow-md shadow-indigo-500/20' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'
                         }`}
                         title={tp('selectAll')}
@@ -165,7 +165,7 @@ export default function BehaviorFilterBar({
                     {/* Advanced Filter Sliders */}
                     <button
                         onClick={() => setShowAdvFilter((v) => !v)}
-                        className={`h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                        className={`h-9 px-2.5 lg:px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider lg:tracking-widest transition-all flex items-center justify-center gap-2 ${
                             showAdvFilter || activeFilters.length > 0
                                 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30'
                                 : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'
