@@ -75,7 +75,7 @@ export default function BehaviorFilterBar({
                 <div className="hidden lg:block w-[1px] h-5 bg-[var(--color-border)] lg:mx-2.5 xl:mx-4 shrink-0" />
 
                 {/* Group 2: Quick Filters & Sorting (Center) */}
-                <div className="col-start-1 row-start-2 col-span-2 flex flex-nowrap items-center gap-1 pt-3 lg:pt-0 lg:px-0 shrink-0 w-full overflow-x-auto scrollbar-hide border-t border-[var(--color-border)] lg:border-t-0">
+                <div className="col-start-1 row-start-2 col-span-2 flex flex-nowrap items-center gap-1 pt-3 lg:pt-0 lg:px-0 shrink-0 w-full lg:w-auto overflow-x-auto scrollbar-hide border-t border-[var(--color-border)] lg:border-t-0">
                     <div className="flex items-center gap-1 shrink-0 py-0.5">
                         {[
                             { id: '', label: tp('all'), icon: ClipboardList, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },

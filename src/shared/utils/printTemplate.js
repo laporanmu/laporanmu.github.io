@@ -87,9 +87,17 @@ td:first-child{text-align:center;color:#aaa;font-size:9px}
 .footer-app{color:#888;font-weight:600}
 .page-num{font-size:8.5px;color:#bbb}
 
+/* RTL overrides */
+html[dir="rtl"] th{text-align:right}
+html[dir="rtl"] th:first-child{border-radius:0 3px 3px 0}
+html[dir="rtl"] th:last-child{border-radius:3px 0 0 3px}
+html[dir="rtl"] .header-right{text-align:left}
+html[dir="rtl"] .total-badge,html[dir="rtl"] .total-label{text-align:left}
+
 @media print{
   body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .page{padding:0;height:100%}
+  .page{padding:0;min-height:auto;height:auto;display:block}
+  .footer-wrap{margin-top:24px}
 }
 `
 
@@ -126,6 +134,41 @@ export function buildPrintHTML({
   const timeLocale = new Intl.DateTimeFormat(dateLocale, { dateStyle: 'medium', timeStyle: 'short' }).format(now)
   const dateLocaleOnly = new Intl.DateTimeFormat(dateLocale, { dateStyle: 'medium' }).format(now)
 
+  const dict = {
+    id: {
+      docNo: 'No. Dok',
+      printed: 'Dicetak',
+      summary: 'Ringkasan',
+      details: 'Detail Laporan',
+      approvedBy: 'Mengetahui,',
+      page: 'Hal.',
+      total: 'Total',
+      timeSuffix: 'WIB'
+    },
+    en: {
+      docNo: 'Doc No',
+      printed: 'Printed',
+      summary: 'Summary',
+      details: 'Report Details',
+      approvedBy: 'Approved by,',
+      page: 'Page',
+      total: 'Total',
+      timeSuffix: 'UTC'
+    },
+    ar: {
+      docNo: 'رقم المستند',
+      printed: 'تمت الطباعة',
+      summary: 'ملخص',
+      details: 'تفاصيل التقرير',
+      approvedBy: 'التوقيع والموافقة',
+      page: 'الصفحة',
+      total: 'الإجمالي',
+      timeSuffix: 'توقيت'
+    }
+  }
+
+  const t = dict[language] || dict.id
+
   const finalDocNumber = docNumber || `DOC/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String((now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) % 9999 + 1).padStart(4, '0')}`
 
   const statsHtml = stats.map(s => 
@@ -148,7 +191,7 @@ export function buildPrintHTML({
   const signatureHtml = showSignature ? `
     <div class="signature-section">
       <div class="signature-box">
-        <p class="ttd-title">Mengetahui,</p>
+        <p class="ttd-title">${t.approvedBy}</p>
         <p class="ttd-role">${signatureTitle}</p>
         <div class="signature-line"></div>
         <p class="ttd-name">${signatureName || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</p>
@@ -156,9 +199,10 @@ export function buildPrintHTML({
     </div>` : ''
 
   const pageStyle = `@page{margin:14mm 16mm;size:${paperSize}}`
+  const dirAttribute = language === 'ar' ? 'dir="rtl"' : 'dir="ltr"'
 
   return `<!DOCTYPE html>
-<html lang="${language}">
+<html lang="${language}" ${dirAttribute}>
 <head>
   <meta charset="UTF-8">
   <title>${title}</title>
@@ -184,8 +228,8 @@ export function buildPrintHTML({
       </div>
       <div class="header-right">
         <div class="badge">${docBadge}</div>
-        <div class="doc-id">No. Dok: ${finalDocNumber}</div>
-        <div class="doc-printed">Dicetak: ${timeLocale} WIB</div>
+        <div class="doc-id">${t.docNo}: ${finalDocNumber}</div>
+        <div class="doc-printed">${t.printed}: ${timeLocale} ${t.timeSuffix}</div>
       </div>
     </div>
 
@@ -202,13 +246,13 @@ export function buildPrintHTML({
     </div>
 
     <!-- Stats -->
-    ${statsHtml ? `<div class="section-label">Ringkasan</div><div class="stats">${statsHtml}</div>` : ''}
+    ${statsHtml ? `<div class="section-label">${t.summary}</div><div class="stats">${statsHtml}</div>` : ''}
 
     <!-- Info strip -->
     ${infoStripHtml ? `<div class="info-strip">${infoStripHtml}</div>` : ''}
 
     <!-- Table -->
-    <div class="section-label">Detail Laporan</div>
+    <div class="section-label">${t.details}</div>
     <table>
       <thead><tr>${tableHeaderHtml}</tr></thead>
       <tbody>${tableRowsHTML}</tbody>
@@ -220,8 +264,8 @@ export function buildPrintHTML({
     ${signatureHtml}
     <div class="footer">
       <span class="footer-app">laporanmu.my.id &nbsp;·&nbsp; LaporanMu</span>
-      <span>Total ${totalCount} &nbsp;·&nbsp; ${dateLocaleOnly}</span>
-      <span class="page-num">Hal. 1</span>
+      <span>${t.total} ${totalCount} &nbsp;·&nbsp; ${dateLocaleOnly}</span>
+      <span class="page-num">${t.page} 1</span>
     </div>
   </div>
 

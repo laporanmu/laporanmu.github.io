@@ -320,15 +320,9 @@ export default function PointRulesTab({ showStats = true }) {
     }
 
     const handleBatchResetPoints = async () => {
-        const msg = resetPointsClassId
-            ? tp('resetPointsClassConfirm')
-            : tp('resetPointsAllConfirm')
-
-        if (!window.confirm(msg)) return
-
         setResettingPoints(true)
         try {
-            let query = supabase.from('students').update({ total_points: 0 })
+            let query = supabase.from('students').update({ total_points: 0 }).is('deleted_at', null)
             if (resetPointsClassId) {
                 query = query.eq('class_id', resetPointsClassId)
             }
@@ -337,10 +331,14 @@ export default function PointRulesTab({ showStats = true }) {
             if (error) throw error
 
             await logAudit({
-                action: 'RESET_POINTS',
-                table: 'students',
-                description: `Reset poin siswa ke 0 ${resetPointsClassId ? `untuk kelas ${resetPointsClassId}` : 'untuk semua kelas'}`,
-                metadata: { class_id: resetPointsClassId }
+                action: 'UPDATE',
+                source: 'SYSTEM',
+                tableName: 'students',
+                newData: {
+                    batch_reset_points: true,
+                    class_id: resetPointsClassId || 'all',
+                    description: `Reset poin siswa ke 0 ${resetPointsClassId ? `untuk kelas ${resetPointsClassId}` : 'untuk semua kelas'}`
+                }
             })
 
             addToast(tp('rulesToastResetSuccess'), 'success')
@@ -414,14 +412,14 @@ export default function PointRulesTab({ showStats = true }) {
                 ])
                 const autoTable = autoTableMod.default || autoTableMod
                 const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
-                
+
                 const width = doc.internal.pageSize.width
                 const height = doc.internal.pageSize.height
-                
+
                 // Draw Letterhead Box Logo
                 doc.setFillColor(30, 58, 95) // #1e3a5f
                 doc.roundedRect(14, 12, 12, 12, 2, 2, 'F')
-                
+
                 // Draw simple mortarboard cap symbol
                 doc.setDrawColor(255, 255, 255)
                 doc.setLineWidth(0.4)
@@ -438,22 +436,22 @@ export default function PointRulesTab({ showStats = true }) {
                 doc.setFont('Helvetica', 'bold')
                 doc.setFontSize(11)
                 doc.text('SMP Muhammadiyah 04 Tanggul', 29, 16)
-                
+
                 doc.setTextColor(85, 85, 85) // #555
                 doc.setFont('Helvetica', 'normal')
                 doc.setFontSize(8)
                 doc.text('Muhammadiyah Boarding School', 29, 20)
-                
+
                 doc.setTextColor(136, 136, 136) // #888
                 doc.setFontSize(7.5)
                 doc.text('Jln. Pemandian No 88, Tanggul, Jember', 29, 23.5)
-                
+
                 // Right aligned doc badge & date
                 const now = new Date()
                 const dateLocale = language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID'
                 const docNo = `ATR/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String((now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) % 9999 + 1).padStart(4, '0')}`
                 const printDateStr = new Intl.DateTimeFormat(dateLocale, { dateStyle: 'medium', timeStyle: 'short' }).format(now) + ' WIB'
-                
+
                 // Badge rect
                 doc.setFillColor(30, 58, 95)
                 doc.roundedRect(width - 50, 11, 36, 5, 1, 1, 'F')
@@ -461,7 +459,7 @@ export default function PointRulesTab({ showStats = true }) {
                 doc.setFont('Helvetica', 'bold')
                 doc.setFontSize(7)
                 doc.text('ATURAN POIN', width - 32, 14.5, { align: 'center' })
-                
+
                 doc.setTextColor(85, 85, 85)
                 doc.setFont('Helvetica', 'normal')
                 doc.setFontSize(8)
@@ -469,23 +467,23 @@ export default function PointRulesTab({ showStats = true }) {
                 doc.setTextColor(170, 170, 170)
                 doc.setFontSize(7.5)
                 doc.text(`Dicetak: ${printDateStr}`, width - 14, 23.5, { align: 'right' })
-                
+
                 // Blue line
                 doc.setDrawColor(30, 58, 95)
                 doc.setLineWidth(0.6)
                 doc.line(14, 27, width - 14, 27)
-                
+
                 // Title
                 doc.setTextColor(26, 26, 26) // #1a1a1a
                 doc.setFont('Helvetica', 'bold')
                 doc.setFontSize(13)
                 doc.text(tp('rulesExportTitle') || 'Konfigurasi Aturan Poin', 14, 34)
-                
+
                 doc.setTextColor(85, 85, 85)
                 doc.setFont('Helvetica', 'normal')
                 doc.setFontSize(8)
                 doc.text('Laporan Konfigurasi Aturan Poin Terdaftar', 14, 38)
-                
+
                 // Total Badge
                 doc.setTextColor(30, 58, 95)
                 doc.setFont('Helvetica', 'bold')
@@ -499,33 +497,33 @@ export default function PointRulesTab({ showStats = true }) {
                 const totalViolations = data.filter(v => v.is_negative).length
                 const totalAchievements = data.filter(v => !v.is_negative).length
                 const avgWeight = data.length ? Math.round(data.reduce((acc, v) => acc + Math.abs(v.points), 0) / data.length) : 0
-                
+
                 const cardGap = 4
                 const cardW = (width - 28 - 3 * cardGap) / 4
                 const cardH = 15
                 const cardY = 42
-                
+
                 const drawCard = (x, title, val, sub, colorRGB) => {
                     doc.setDrawColor(212, 212, 212)
                     doc.setFillColor(255, 255, 255)
                     doc.setLineWidth(0.25)
                     doc.roundedRect(x, cardY, cardW, cardH, 1.5, 1.5, 'FD')
-                    
+
                     // Left color accent bar
                     doc.setFillColor(colorRGB[0], colorRGB[1], colorRGB[2])
                     doc.rect(x, cardY, 1.5, cardH, 'F')
-                    
+
                     // Texts
                     doc.setTextColor(136, 136, 136)
                     doc.setFont('Helvetica', 'bold')
                     doc.setFontSize(7)
                     doc.text(title.toUpperCase(), x + 4, cardY + 4)
-                    
+
                     doc.setTextColor(26, 26, 26)
                     doc.setFont('Helvetica', 'bold')
                     doc.setFontSize(13)
                     doc.text(String(val), x + 4, cardY + 10.5)
-                    
+
                     if (sub) {
                         doc.setTextColor(187, 187, 187)
                         doc.setFont('Helvetica', 'normal')
@@ -533,33 +531,33 @@ export default function PointRulesTab({ showStats = true }) {
                         doc.text(sub, x + 4, cardY + 13.5)
                     }
                 }
-                
+
                 drawCard(14, 'Total Aturan', data.length, 'aktif terdaftar', [30, 58, 95])
                 drawCard(14 + cardW + cardGap, 'Poin Pelanggaran', totalViolations, 'tipe negatif (-)', [220, 38, 38])
                 drawCard(14 + (cardW + cardGap) * 2, 'Poin Prestasi', totalAchievements, 'tipe positif (+)', [16, 185, 129])
                 drawCard(14 + (cardW + cardGap) * 3, 'Rata-rata Poin', avgWeight, 'nilai bobot poin', [245, 158, 11])
-                
+
                 // Info Strip Y = 60
                 const stripY = 60
                 doc.setFillColor(240, 244, 248) // #f0f4f8
                 doc.setDrawColor(205, 214, 224) // #cdd6e0
                 doc.setLineWidth(0.2)
                 doc.roundedRect(14, stripY, width - 28, 6, 1, 1, 'FD')
-                
+
                 const itemGap = (width - 28) / 4
                 const scopeLabel = exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'
                 const operatorName = profile?.name || 'Sistem Otomatis'
-                
+
                 doc.setTextColor(136, 136, 136)
                 doc.setFont('Helvetica', 'normal')
                 doc.setFontSize(7.5)
-                
+
                 // Item 1
                 doc.text('Jangkauan: ', 18, stripY + 4.2)
                 doc.setFont('Helvetica', 'bold')
                 doc.setTextColor(26, 26, 26)
                 doc.text(scopeLabel, 33, stripY + 4.2)
-                
+
                 // Item 2
                 doc.setFont('Helvetica', 'normal')
                 doc.setTextColor(136, 136, 136)
@@ -567,7 +565,7 @@ export default function PointRulesTab({ showStats = true }) {
                 doc.setFont('Helvetica', 'bold')
                 doc.setTextColor(26, 26, 26)
                 doc.text(operatorName, 18 + itemGap + 12, stripY + 4.2)
-                
+
                 // Item 3
                 doc.setFont('Helvetica', 'normal')
                 doc.setTextColor(136, 136, 136)
@@ -575,7 +573,7 @@ export default function PointRulesTab({ showStats = true }) {
                 doc.setFont('Helvetica', 'bold')
                 doc.setTextColor(26, 26, 26)
                 doc.text('Aktif', 18 + itemGap * 2 + 10, stripY + 4.2)
-                
+
                 // Item 4
                 doc.setFont('Helvetica', 'normal')
                 doc.setTextColor(136, 136, 136)
@@ -611,7 +609,7 @@ export default function PointRulesTab({ showStats = true }) {
                 doc.setFont('Helvetica', 'bold')
                 doc.setFontSize(8.5)
                 doc.text('Kepala Sekolah', width - 50, finalY + 4)
-                
+
                 doc.setDrawColor(200, 200, 200)
                 doc.setLineWidth(0.2)
                 doc.line(width - 50, finalY + 22, width - 14, finalY + 22)
@@ -697,32 +695,67 @@ export default function PointRulesTab({ showStats = true }) {
                     return `<tr><td>${tNum(i + 1)}</td>${cells}</tr>`
                 }).join('')
 
-                const scopeLabel = exportScope === 'filtered' ? 'Filter Aktif' : exportScope === 'selected' ? 'Dipilih' : 'Semua'
-                const operatorValue = profile?.name || 'Sistem Otomatis'
+                const scopeLabel = exportScope === 'filtered' 
+                    ? tp('exportScopeFiltered') 
+                    : exportScope === 'selected' 
+                        ? tp('rulesExportScopeSelected', { count: selectedIds.length }) 
+                        : tp('exportScopeAll')
+                const operatorValue = profile?.name || (language === 'ar' ? 'نظام تلقائي' : language === 'en' ? 'Automated System' : 'Sistem Otomatis')
+
+                const translatedLabels = {
+                    id: {
+                        scope: 'Jangkauan',
+                        operator: 'Operator',
+                        status: 'Status',
+                        app: 'Aplikasi',
+                        active: 'Aktif',
+                        principal: 'Kepala Sekolah',
+                        subtitle: 'Laporan Konfigurasi Aturan Poin Terdaftar'
+                    },
+                    en: {
+                        scope: 'Scope',
+                        operator: 'Operator',
+                        status: 'Status',
+                        app: 'Application',
+                        active: 'Active',
+                        principal: 'School Principal',
+                        subtitle: 'Registered Point Rules Configuration Report'
+                    },
+                    ar: {
+                        scope: 'النطاق',
+                        operator: 'المشغل',
+                        status: 'الحالة',
+                        app: 'التطبيق',
+                        active: 'نشط',
+                        principal: 'مدير المدرسة',
+                        subtitle: 'تقرير تكوين قواعد النقاط المسجلة'
+                    }
+                }
+                const tl = translatedLabels[language] || translatedLabels.id
 
                 const htmlContent = buildPrintHTML({
                     language,
-                    docBadge: 'ATURAN POIN',
+                    docBadge: tp('tabRules'),
                     title: tp('rulesExportTitle') || 'Konfigurasi Aturan Poin',
-                    subtitle: 'Laporan Konfigurasi Aturan Poin Terdaftar',
+                    subtitle: tl.subtitle,
                     totalCount: data.length,
-                    totalLabel: 'Total Aturan',
+                    totalLabel: tp('rulesTotal'),
                     stats: [
-                        { label: 'Total Aturan', value: tNum(data.length), type: 'total', description: 'aktif terdaftar' },
-                        { label: 'Poin Pelanggaran', value: tNum(totalViolations), type: 'pelanggaran', description: 'tipe negatif (-)' },
-                        { label: 'Poin Prestasi', value: tNum(totalAchievements), type: 'prestasi', description: 'tipe positif (+)' },
-                        { label: 'Rata-rata Poin', value: tNum(avgWeight), type: 'avg', description: 'nilai bobot poin' },
+                        { label: tp('rulesTotal'), value: tNum(data.length), type: 'total', description: tp('rulesTotalSub') },
+                        { label: tp('rulesViolations'), value: tNum(totalViolations), type: 'pelanggaran', description: tp('rulesViolationsSub') },
+                        { label: tp('rulesAchievements'), value: tNum(totalAchievements), type: 'prestasi', description: tp('rulesAchievementsSub') },
+                        { label: tp('rulesAvg'), value: tNum(avgWeight), type: 'avg', description: tp('rulesAvgSub') },
                     ],
                     infoStrip: [
-                        { label: 'Jangkauan', value: scopeLabel },
-                        { label: 'Operator', value: operatorValue },
-                        { label: 'Status', value: 'Aktif' },
-                        { label: 'Aplikasi', value: 'LaporanMu' }
+                        { label: tl.scope, value: scopeLabel },
+                        { label: tl.operator, value: operatorValue },
+                        { label: tl.status, value: tl.active },
+                        { label: tl.app, value: 'LaporanMu' }
                     ],
                     tableHeaders,
                     tableRowsHTML: htmlRows,
                     showSignature: true,
-                    signatureTitle: 'Kepala Sekolah',
+                    signatureTitle: tl.principal,
                     signatureName: '',
                     paperSize: options.orientation === 'portrait' ? 'A4 portrait' : 'A4 landscape'
                 })
@@ -1354,24 +1387,25 @@ export default function PointRulesTab({ showStats = true }) {
                 icon={RotateCcw}
                 iconBg="bg-orange-500/10"
                 iconColor="text-orange-500"
-                size="sm"
+                size="md"
                 mobileVariant="bottom-sheet"
                 footer={
-                    <div className="flex gap-3">
+                    <div className="flex items-center w-full gap-3">
                         <button
                             type="button"
                             onClick={() => setIsResetModalOpen(false)}
-                            className="flex-1 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all"
+                            className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                         >
                             {tp('cancel')}
                         </button>
+                        <div className="flex-1" />
                         <button
                             type="button"
                             onClick={handleBatchResetPoints}
                             disabled={resettingPoints}
-                            className="flex-[2] h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
+                            className="h-10 px-6 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0"
                         >
-                            {resettingPoints ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                            {resettingPoints ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
                                 <>
                                     <RotateCcw className="w-3.5 h-3.5" />
                                     <span>{tp('resetPointsBtnConfirm')}</span>
@@ -1383,11 +1417,11 @@ export default function PointRulesTab({ showStats = true }) {
             >
                 <div className="space-y-4">
                     <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1 ml-1 flex items-center gap-2">
-                            <GraduationCap className="opacity-40 w-4 h-4" /> <span>{tp('resetPointsSelectClass')}</span>
-                        </label>
-                        <div className="space-y-3">
-                            <div className="relative group">
+                        <div className="flex items-center justify-between gap-4">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2 shrink-0">
+                                <GraduationCap className="opacity-40 w-4 h-4" /> <span>{tp('resetPointsSelectClass')}</span>
+                            </label>
+                            <div className="relative group flex-1 max-w-[200px]">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors">
                                     <Search className="w-3.5 h-3.5" />
                                 </div>
@@ -1396,7 +1430,7 @@ export default function PointRulesTab({ showStats = true }) {
                                     placeholder={tp('resetPointsSearchClassPlaceholder')}
                                     value={resetPointsSearch}
                                     onChange={(e) => setResetPointsSearch(e.target.value)}
-                                    className="w-full h-10 pl-9 pr-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[11px] font-medium focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all outline-none"
+                                    className="w-full h-9 pl-9 pr-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[11px] font-medium focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all outline-none"
                                 />
                                 {resetPointsSearch && (
                                     <button
@@ -1407,8 +1441,10 @@ export default function PointRulesTab({ showStats = true }) {
                                     </button>
                                 )}
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-1 max-h-48 overflow-y-auto pr-1">
+                        <div className="border border-[var(--color-border)] bg-[var(--color-surface-alt)]/15 rounded-2xl p-2.5 max-h-[170px] overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {/* Option Semua Kelas */}
                                 {!resetPointsSearch && (
                                     <button
