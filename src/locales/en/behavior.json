@@ -368,7 +368,7 @@
   "behavior.rulesFieldType": "Accumulation Type",
   "behavior.rulesFieldTypeViolation": "Violation (-)",
   "behavior.rulesFieldTypeAchievement": "Achievement (+)",
-  "behavior.rulesFieldPoints": "Point Weight (Positive Number)",
+  "behavior.rulesFieldPoints": "Point Weight",
   "behavior.rulesFieldPointsPlaceholder": "E.g., 10",
   "behavior.rulesFieldStatus": "Active Status",
   "behavior.rulesFieldStatusActive": "Active",

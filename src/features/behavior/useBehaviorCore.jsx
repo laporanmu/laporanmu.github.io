@@ -66,7 +66,7 @@ export function useBehaviorCore() {
     // columns
     const [visibleCols, setVisibleCols] = useState({ type: true, points: true, time: true, teacher: true })
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
-    const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
+    const [menuPos, setMenuPos] = useState({ top: 0, right: 0, showUp: false })
 
     // Export/Import & UX States
     const [isShortcutOpen, setIsShortcutOpen] = useState(false)
@@ -200,11 +200,18 @@ export function useBehaviorCore() {
                 setIsShortcutOpen(false)
             }
         }
+        const handleScroll = () => {
+            setIsColMenuOpen(false)
+            setIsHeaderMenuOpen(false)
+            setIsShortcutOpen(false)
+        }
         document.addEventListener('keydown', h)
         document.addEventListener('mousedown', handleGlobalClick)
+        document.addEventListener('scroll', handleScroll, { capture: true, passive: true })
         return () => {
             document.removeEventListener('keydown', h)
             document.removeEventListener('mousedown', handleGlobalClick)
+            document.removeEventListener('scroll', handleScroll, { capture: true })
         }
     }, [])
 

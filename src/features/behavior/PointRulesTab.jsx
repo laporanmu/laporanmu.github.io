@@ -7,6 +7,7 @@ import {
     GraduationCap, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight
 } from 'lucide-react'
 import Modal from '@shared/components/Modal'
+import ConfirmDialog from '@shared/components/ConfirmDialog'
 import RichSelect from '@shared/components/RichSelect'
 import Pagination from '@shared/components/Pagination'
 import RulesExportModal from './RulesExportModal'
@@ -100,14 +101,23 @@ export default function PointRulesTab({ showStats = true }) {
     })
 
     const [isColMenuOpen, setIsColMenuOpen] = useState(false)
-    const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
+    const [menuPos, setMenuPos] = useState({ top: 0, right: 0, showUp: false })
+
+    useEffect(() => {
+        if (!isColMenuOpen) return
+        const handleScroll = () => setIsColMenuOpen(false)
+        window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
+        return () => window.removeEventListener('scroll', handleScroll, { capture: true })
+    }, [isColMenuOpen])
 
     // Reset Poin States
     const [isResetModalOpen, setIsResetModalOpen] = useState(false)
-    const [resetPointsClassId, setResetPointsClassId] = useState('')
+    const [resetPointsClassIds, setResetPointsClassIds] = useState([])
     const [classesList, setClassesList] = useState([])
     const [resettingPoints, setResettingPoints] = useState(false)
     const [resetPointsSearch, setResetPointsSearch] = useState('')
+    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
+    const [confirmText, setConfirmText] = useState('')
 
     // ── DATA FETCHING ──────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -162,7 +172,7 @@ export default function PointRulesTab({ showStats = true }) {
     useEffect(() => { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) }, [visibleCols])
     useEffect(() => { localStorage.setItem(LS_PAGE_SIZE, pageSize) }, [pageSize])
 
-    const isAnyModalOpen = isModalOpen || isDeleteModalOpen || isBulkDeleteOpen || isExportModalOpen || isResetModalOpen
+    const isAnyModalOpen = isModalOpen || isDeleteModalOpen || isBulkDeleteOpen || isExportModalOpen || isResetModalOpen || isResetConfirmOpen
 
     // Active Filter Count
     const activeFilterCount = (filterCategory ? 1 : 0) + (filterType ? 1 : 0) + (filterStatus !== 'active' ? 1 : 0) + (filterExtreme ? 1 : 0)
@@ -322,13 +332,19 @@ export default function PointRulesTab({ showStats = true }) {
     const handleBatchResetPoints = async () => {
         setResettingPoints(true)
         try {
+            const isAllSelected = resetPointsClassIds.length === classesList.length
             let query = supabase.from('students').update({ total_points: 0 }).is('deleted_at', null)
-            if (resetPointsClassId) {
-                query = query.eq('class_id', resetPointsClassId)
+            if (!isAllSelected) {
+                query = query.in('class_id', resetPointsClassIds)
             }
 
             const { error } = await query
             if (error) throw error
+
+            const selectedClassNames = classesList
+                .filter(c => resetPointsClassIds.includes(c.id))
+                .map(c => c.name)
+                .join(', ')
 
             await logAudit({
                 action: 'UPDATE',
@@ -336,19 +352,26 @@ export default function PointRulesTab({ showStats = true }) {
                 tableName: 'students',
                 newData: {
                     batch_reset_points: true,
-                    class_id: resetPointsClassId || 'all',
-                    description: `Reset poin siswa ke 0 ${resetPointsClassId ? `untuk kelas ${resetPointsClassId}` : 'untuk semua kelas'}`
+                    class_ids: isAllSelected ? 'all' : resetPointsClassIds,
+                    description: `Reset poin siswa ke 0 untuk ${isAllSelected ? 'semua kelas' : `${resetPointsClassIds.length} kelas: ${selectedClassNames}`}`
                 }
             })
 
             addToast(tp('rulesToastResetSuccess'), 'success')
-            setIsResetModalOpen(false)
+            setIsResetConfirmOpen(false)
+            setConfirmText('')
         } catch (err) {
             console.error(err)
             addToast(tp('rulesToastResetError'), 'error')
         } finally {
             setResettingPoints(false)
         }
+    }
+
+    const handleCancelConfirm = () => {
+        setIsResetConfirmOpen(false)
+        setIsResetModalOpen(true)
+        setConfirmText('')
     }
 
     const toggleSelect = id => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -807,7 +830,7 @@ export default function PointRulesTab({ showStats = true }) {
                     {/* Reset Button */}
                     {canEdit && (
                         <button
-                            onClick={() => { setResetPointsClassId(''); setIsResetModalOpen(true) }}
+                            onClick={() => { setResetPointsClassIds(classesList.map(c => c.id)); setIsResetModalOpen(true) }}
                             className="h-9 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-orange-500 hover:border-orange-500/30 flex items-center gap-2 transition-all text-xs font-bold"
                             title={tp('rulesResetPointsTitle')}
                         >
@@ -1028,49 +1051,50 @@ export default function PointRulesTab({ showStats = true }) {
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-[var(--color-surface-alt)]/50 border-b border-[var(--color-border)]">
                                     <tr>
-                                        <th className="px-6 py-4 w-16 text-center">
+                                        <th className="px-4 py-3.5 w-10 text-center">
                                             <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] cursor-pointer" />
                                         </th>
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{tp('rulesColIdentity')}</th>
-                                        {visibleCols.description && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{tp('rulesColDescription')}</th>}
-                                        {visibleCols.type && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">{tp('rulesColType')}</th>}
-                                        {visibleCols.category && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">{tp('rulesColCategory')}</th>}
-                                        {visibleCols.points && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">{tp('rulesColWeight')}</th>}
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-32">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <span>{tp('rulesColAction')}</span>
-                                                <div className="relative">
-                                                    <button onClick={(e) => {
-                                                        const rect = e.currentTarget.getBoundingClientRect()
-                                                        const menuHeight = 240
-                                                        const spaceBelow = window.innerHeight - rect.bottom
-                                                        const showUp = spaceBelow < menuHeight && rect.top > menuHeight
-                                                        setMenuPos({
-                                                            top: showUp ? (rect.top + window.scrollY - menuHeight - 8) : (rect.bottom + window.scrollY + 8),
-                                                            right: window.innerWidth - rect.right - window.scrollX,
-                                                            showUp
-                                                        })
-                                                        setIsColMenuOpen(p => !p)
-                                                    }} title={tp('manageColumns')}
-                                                        className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}>
-                                                        <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
-                                                    </button>
-                                                    {isColMenuOpen && createPortal(
-                                                        <div className={`fixed z-[9999] w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95`}
-                                                            style={{ top: menuPos.top, right: menuPos.right }}>
-                                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('manageColumns')}</p>
-                                                            {[{ key: 'description', label: tp('rulesColDescription') }, { key: 'type', label: tp('rulesColTypePreset') }, { key: 'category', label: tp('rulesColCategory') }, { key: 'points', label: tp('rulesColWeightPreset') }].map(({ key, label }) => (
-                                                                <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
-                                                                    <span className="text-[11px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
-                                                                    <div className={`w-8 h-4.5 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
-                                                                        <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${visibleCols[key] ? 'translate-x-[14px]' : 'translate-x-0'}`} />
-                                                                    </div>
-                                                                </button>
-                                                            ))}
-                                                        </div>,
-                                                        document.body
-                                                    )}
-                                                </div>
+                                        <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{tp('rulesColIdentity')}</th>
+                                        {visibleCols.description && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{tp('rulesColDescription')}</th>}
+                                        {visibleCols.type && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28">{tp('rulesColType')}</th>}
+                                        {visibleCols.category && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28">{tp('rulesColCategory')}</th>}
+                                        {visibleCols.points && <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28">{tp('rulesColWeight')}</th>}
+                                        <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28 relative">
+                                            <span>{tp('rulesColAction')}</span>
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                                <button onClick={(e) => {
+                                                    const rect = e.currentTarget.getBoundingClientRect()
+                                                    const spaceBelow = window.innerHeight - rect.bottom
+                                                    const showUp = spaceBelow < 185 && rect.top > 185
+                                                    setMenuPos({
+                                                        top: showUp ? (rect.top + window.scrollY - 8) : (rect.bottom + window.scrollY + 8),
+                                                        right: window.innerWidth - rect.right - window.scrollX,
+                                                        showUp
+                                                    })
+                                                    setIsColMenuOpen(p => !p)
+                                                }} title={tp('manageColumns')}
+                                                    className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}>
+                                                    <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
+                                                </button>
+                                                {isColMenuOpen && createPortal(
+                                                    <div ref={colMenuRef} className="absolute z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95"
+                                                        style={{
+                                                            top: menuPos.top,
+                                                            right: menuPos.right,
+                                                            transform: menuPos.showUp ? 'translateY(-100%)' : undefined
+                                                        }}>
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('manageColumns')}</p>
+                                                        {[{ key: 'description', label: tp('rulesColDescription') }, { key: 'type', label: tp('rulesColTypePreset') }, { key: 'category', label: tp('rulesColCategory') }, { key: 'points', label: tp('rulesColWeightPreset') }].map(({ key, label }) => (
+                                                            <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
+                                                                <span className="text-[10px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
+                                                                <div className={`w-7 h-4 rounded-full transition-all flex items-center px-0.5 ${visibleCols[key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                                                    <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-all ${visibleCols[key] ? 'translate-x-[12px]' : 'translate-x-0'}`} />
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>,
+                                                    document.body
+                                                )}
                                             </div>
                                         </th>
                                     </tr>
@@ -1094,12 +1118,12 @@ export default function PointRulesTab({ showStats = true }) {
                                             </td>
                                         </tr>
                                     ) : pagedPoin.map(rule => (
-                                        <tr key={rule.id} className="hover:bg-[var(--color-surface-alt)]/30 transition-all group">
-                                            <td className="px-6 py-4 w-16 text-center">
+                                        <tr key={rule.id} className="hover:bg-[var(--color-surface-alt)]/40 transition-all group">
+                                            <td className="px-4 py-3 w-10 text-center">
                                                 <input type="checkbox" checked={selectedIds.includes(rule.id)} onChange={() => toggleSelect(rule.id)} className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] cursor-pointer" />
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2.5">
                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 ${rule.is_negative ? 'bg-red-500' : 'bg-emerald-500'}`}>
                                                         {rule.is_negative ? <Gavel className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
                                                     </div>
@@ -1109,35 +1133,37 @@ export default function PointRulesTab({ showStats = true }) {
                                                 </div>
                                             </td>
                                             {visibleCols.description && (
-                                                <td className="px-6 py-4">
+                                                <td className="px-4 py-3">
                                                     <p className="text-[11px] font-bold text-[var(--color-text-muted)] line-clamp-1 max-w-xs">{rule.description || '—'}</p>
                                                 </td>
                                             )}
                                             {visibleCols.type && (
-                                                <td className="px-6 py-4 text-center">
+                                                <td className="px-4 py-3 text-center">
                                                     <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border ${rule.is_negative ? 'bg-red-500/10 border-red-500/20 text-red-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
                                                         {rule.is_negative ? tp('violation') : tp('achievement')}
                                                     </span>
                                                 </td>
                                             )}
                                             {visibleCols.category && (
-                                                <td className="px-6 py-4 text-center">
+                                                <td className="px-4 py-3 text-center">
                                                     <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{tp(`cat.${rule.category}`) || rule.category}</span>
                                                 </td>
                                             )}
                                             {visibleCols.points && (
-                                                <td className="px-6 py-4 text-center">
-                                                    <div className={`inline-flex items-center px-2.5 py-1 rounded-lg text-white text-[10px] font-black shadow-lg ${getPointStyle(rule.points)}`}>
-                                                        {isPrivacyMode ? '***' : `${rule.points > 0 ? '+' : ''}${rule.points}`}
-                                                    </div>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className={`inline-flex items-center justify-center min-w-[40px] px-2 py-0.5 rounded-full text-[11px] font-black border ${
+                                                        rule.points > 0 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'
+                                                    }`}>
+                                                        {isPrivacyMode ? '***' : `${rule.points > 0 ? '+' : ''}${tNum(rule.points)}`}
+                                                    </span>
                                                 </td>
                                             )}
-                                            <td className="px-6 py-4 text-center whitespace-nowrap">
+                                            <td className="px-4 py-3 text-center whitespace-nowrap">
                                                 <div className="flex items-center justify-center gap-1">
                                                     {canEdit && (
                                                         <button
                                                             onClick={() => handleEdit(rule)}
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all text-sm"
+                                                            className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all"
                                                             title={tp('edit')}
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
@@ -1146,7 +1172,7 @@ export default function PointRulesTab({ showStats = true }) {
                                                     {canEdit && (
                                                         <button
                                                             onClick={() => { setItemToDelete(rule); setIsDeleteModalOpen(true) }}
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all text-sm"
+                                                            className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all"
                                                             title={tp('delete')}
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
@@ -1318,15 +1344,19 @@ export default function PointRulesTab({ showStats = true }) {
             </Modal>
 
             {/* Modal Delete Confirmation */}
-            <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title={tp('rulesDeleteTitle')} size="sm">
-                <div className="space-y-6">
-                    <div className="p-4 bg-red-500/10 rounded-2xl border border-red-500/20 flex items-center gap-4 text-red-500">
-                        <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0 text-xl border border-red-500/30 animate-pulse"><Trash2 className="w-6 h-6" /></div>
-                        <div>
-                            <h3 className="text-sm font-black uppercase tracking-wider">{tp('rulesDeletePermanent')}</h3>
-                            <p className="text-[10px] font-bold opacity-70 mt-1 uppercase tracking-widest leading-tight">{tp('rulesDeleteRisk')}</p>
-                        </div>
-                    </div>
+            <ConfirmDialog
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleDeleteConfirm}
+                title={tp('rulesDeleteTitle')}
+                description={tp('rulesDeleteRisk')}
+                icon={Trash2}
+                confirmText={tp('rulesBtnDeleteNow')}
+                confirmIcon={Trash2}
+                cancelText={tp('cancel')}
+                submitting={submitting}
+            >
+                <div className="px-1">
                     <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">
                         {(() => {
                             const deleteTemplate = tp('rulesDeleteWarningTemplate')
@@ -1340,14 +1370,8 @@ export default function PointRulesTab({ showStats = true }) {
                             )
                         })()}
                     </p>
-                    <div className="flex gap-3 pt-2">
-                        <button onClick={() => setIsDeleteModalOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">{tp('cancel').toUpperCase()}</button>
-                        <button onClick={handleDeleteConfirm} disabled={submitting} className="h-11 flex-[1.5] rounded-xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all flex items-center justify-center">
-                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : tp('rulesBtnDeleteNow')}
-                        </button>
-                    </div>
                 </div>
-            </Modal>
+            </ConfirmDialog>
 
             {/* Modal Bulk Delete */}
             <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title={tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })} size="sm">
@@ -1401,16 +1425,15 @@ export default function PointRulesTab({ showStats = true }) {
                         <div className="flex-1" />
                         <button
                             type="button"
-                            onClick={handleBatchResetPoints}
-                            disabled={resettingPoints}
-                            className="h-10 px-6 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0"
+                            disabled={resetPointsClassIds.length === 0}
+                            onClick={() => {
+                                setIsResetModalOpen(false)
+                                setIsResetConfirmOpen(true)
+                            }}
+                            className="h-10 px-6 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            {resettingPoints ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
-                                <>
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                    <span>{tp('resetPointsBtnConfirm')}</span>
-                                </>
-                            )}
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>{tp('resetPointsBtnConfirm')}</span>
                         </button>
                     </div>
                 }
@@ -1449,43 +1472,59 @@ export default function PointRulesTab({ showStats = true }) {
                                 {!resetPointsSearch && (
                                     <button
                                         type="button"
-                                        onClick={() => setResetPointsClassId('')}
-                                        className={`col-span-full p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group mb-1 ${resetPointsClassId === ''
+                                        onClick={() => {
+                                            const isAllSelected = resetPointsClassIds.length === classesList.length
+                                            if (isAllSelected) {
+                                                setResetPointsClassIds([])
+                                            } else {
+                                                setResetPointsClassIds(classesList.map(c => c.id))
+                                            }
+                                        }}
+                                        className={`col-span-full p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group mb-1 ${resetPointsClassIds.length === classesList.length
                                             ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20'
                                             : 'border-orange-500/30 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10'
                                             }`}
                                     >
-                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassId === '' ? 'bg-white/20 text-white' : 'bg-orange-500 text-white shadow-sm'
+                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassIds.length === classesList.length ? 'bg-white/20 text-white' : 'bg-orange-500 text-white shadow-sm'
                                             }`}>
                                             <Layers className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-black text-[10px] uppercase tracking-wider leading-tight">{tp('resetPointsAllClasses')}</p>
                                         </div>
-                                        {resetPointsClassId === '' && <Check className="w-3 h-3 opacity-60" />}
+                                        {resetPointsClassIds.length === classesList.length && <Check className="w-3 h-3 opacity-60" />}
                                     </button>
                                 )}
 
-                                {filteredResetClasses.map(c => (
-                                    <button
-                                        key={c.id}
-                                        type="button"
-                                        onClick={() => setResetPointsClassId(c.id)}
-                                        className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group ${resetPointsClassId === c.id
-                                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
-                                            : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'
-                                            }`}
-                                    >
-                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassId === c.id ? 'bg-white/20 text-white' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                                            }`}>
-                                            <GraduationCap className="w-3.5 h-3.5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-black text-[10px] uppercase tracking-wider leading-tight">{c.name}</p>
-                                        </div>
-                                        {resetPointsClassId === c.id && <Check className="w-3 h-3 opacity-60" />}
-                                    </button>
-                                ))}
+                                {filteredResetClasses.map(c => {
+                                    const isSelected = resetPointsClassIds.includes(c.id)
+                                    return (
+                                        <button
+                                            key={c.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setResetPointsClassIds(prev =>
+                                                    prev.includes(c.id)
+                                                        ? prev.filter(id => id !== c.id)
+                                                        : [...prev, c.id]
+                                                )
+                                            }}
+                                            className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group ${isSelected
+                                                ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
+                                                : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'
+                                                }`}
+                                        >
+                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-white/20 text-white' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                                                }`}>
+                                                <GraduationCap className="w-3.5 h-3.5" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-black text-[10px] uppercase tracking-wider leading-tight">{c.name}</p>
+                                            </div>
+                                            {isSelected && <Check className="w-3 h-3 opacity-60" />}
+                                        </button>
+                                    )
+                                })}
 
                                 {filteredResetClasses.length === 0 && (
                                     <div className="col-span-full py-8 text-center space-y-2">
@@ -1504,6 +1543,64 @@ export default function PointRulesTab({ showStats = true }) {
                     </div>
                 </div>
             </Modal>
+
+            {/* Modal Konfirmasi Ganda Reset Poin */}
+            <ConfirmDialog
+                isOpen={isResetConfirmOpen}
+                onClose={handleCancelConfirm}
+                onConfirm={handleBatchResetPoints}
+                title={language === 'ar' ? 'تأكيد إعادة تعيين النقاط' : language === 'en' ? 'Confirm Reset Points' : 'Konfirmasi Reset Poin'}
+                description={language === 'ar' ? 'ستتم إعادة جميع نقاط الطلاب المتراكمة إلى 0.' : language === 'en' ? 'All accumulated student points will be reset to 0.' : 'Semua akumulasi poin siswa akan kembali menjadi 0.'}
+                icon={AlertTriangle}
+                iconBg="bg-red-500/10"
+                iconColor="text-red-500"
+                mobileVariant="bottom-sheet"
+                confirmText={language === 'ar' ? 'نعم، أعد التعيين الآن' : language === 'en' ? 'Yes, Reset Now' : 'Ya, Reset Sekarang'}
+                confirmIcon={RotateCcw}
+                confirmClassName="h-10 px-6 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                confirmDisabled={confirmText.toUpperCase() !== 'RESET'}
+                cancelText={tp('cancel')}
+                submitting={resettingPoints}
+            >
+                <div className="space-y-4">
+                    {/* Informasi Target Reset */}
+                    <div className="text-xs text-[var(--color-text)] leading-relaxed font-bold space-y-2">
+                        <p>{language === 'ar' ? 'هل أنت متأكد أنك تريد إعادة تعيين النقاط لـ:' : language === 'en' ? 'Are you sure you want to reset points for:' : 'Apakah Anda yakin ingin mereset poin untuk:'}</p>
+                        <div className="p-3 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
+                            <span className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-widest block mb-1">
+                                {language === 'ar' ? 'الفصول المستهدفة:' : language === 'en' ? 'Target Classes:' : 'Target Kelas:'}
+                            </span>
+                            {resetPointsClassIds.length === classesList.length ? (
+                                <span className="text-xs text-[var(--color-primary)] font-black uppercase leading-normal">
+                                    {language === 'ar' ? 'جميع الفصول' : language === 'en' ? 'All Classes' : 'Semua Kelas'}
+                                </span>
+                            ) : (
+                                <div className="flex flex-wrap gap-1.5 mt-1 max-h-[80px] overflow-y-auto custom-scrollbar pr-1">
+                                    {classesList.filter(c => resetPointsClassIds.includes(c.id)).map(c => (
+                                        <span key={c.id} className="text-[9px] font-black uppercase tracking-wide px-2 py-0.5 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-md border border-[var(--color-primary)]/20 shrink-0">
+                                            {c.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Input Verifikasi Teks (Friction UX) */}
+                    <div className="space-y-2">
+                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                            {language === 'ar' ? <>اكتب <span className="text-red-500 font-bold">"RESET"</span> للتأكيد:</> : language === 'en' ? <>Type <span className="text-red-500 font-bold">"RESET"</span> to confirm:</> : <>Ketik <span className="text-red-500 font-bold">"RESET"</span> untuk mengonfirmasi:</>}
+                        </label>
+                        <input 
+                            type="text"
+                            value={confirmText}
+                            onChange={(e) => setConfirmText(e.target.value)}
+                            placeholder="RESET"
+                            className="w-full px-4 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-center text-xs font-black tracking-widest focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all uppercase placeholder:opacity-30"
+                        />
+                    </div>
+                </div>
+            </ConfirmDialog>
         </div>
     )
 }

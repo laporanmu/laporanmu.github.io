@@ -368,7 +368,7 @@
   "behavior.rulesFieldType": "Tipe Akumulasi",
   "behavior.rulesFieldTypeViolation": "Pelanggaran (-)",
   "behavior.rulesFieldTypeAchievement": "Prestasi (+)",
-  "behavior.rulesFieldPoints": "Bobot Poin (Angka Positif)",
+  "behavior.rulesFieldPoints": "Bobot Poin",
   "behavior.rulesFieldPointsPlaceholder": "Misal: 10",
   "behavior.rulesFieldStatus": "Status Keaktifan",
   "behavior.rulesFieldStatusActive": "Aktif",

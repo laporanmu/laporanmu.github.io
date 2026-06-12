@@ -30,6 +30,7 @@ export default function ConfirmDialog({
     confirmText = 'Konfirmasi',
     confirmIcon: ConfirmIcon,
     confirmClassName,
+    confirmDisabled = false,
     cancelText = 'Batal',
     submitting = false,
     children,
@@ -55,16 +56,16 @@ export default function ConfirmDialog({
                     >
                         {cancelText}
                     </button>
-
+ 
                     <div className="flex-1" />
-
+ 
                     <button
                         type="button"
                         onClick={onConfirm}
-                        disabled={submitting}
+                        disabled={submitting || confirmDisabled}
                         className={
                             confirmClassName ||
-                            'h-10 px-6 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50'
+                            'h-10 px-6 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed'
                         }
                     >
                         {submitting ? (

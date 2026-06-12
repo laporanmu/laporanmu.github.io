@@ -365,7 +365,7 @@
   "behavior.rulesFieldType": "نوع التراكم",
   "behavior.rulesFieldTypeViolation": "مخالفة (-)",
   "behavior.rulesFieldTypeAchievement": "إنجاز (+)",
-  "behavior.rulesFieldPoints": "وزن النقاط (رقم موجب)",
+  "behavior.rulesFieldPoints": "وزن النقاط",
   "behavior.rulesFieldPointsPlaceholder": "مثال: ١٠",
   "behavior.rulesFieldStatus": "حالة النشاط",
   "behavior.rulesFieldStatusActive": "نشط",

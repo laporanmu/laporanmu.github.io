@@ -725,7 +725,13 @@ export default function BehaviorPage() {
                                                         <button
                                                             onClick={(e) => {
                                                                 const rect = e.currentTarget.getBoundingClientRect()
-                                                                setMenuPos({ top: rect.bottom + window.scrollY + 8, right: window.innerWidth - rect.right - window.scrollX })
+                                                                const spaceBelow = window.innerHeight - rect.bottom
+                                                                const showUp = spaceBelow < 185 && rect.top > 185
+                                                                setMenuPos({
+                                                                    top: showUp ? (rect.top + window.scrollY - 8) : (rect.bottom + window.scrollY + 8),
+                                                                    right: window.innerWidth - rect.right - window.scrollX,
+                                                                    showUp
+                                                                })
                                                                 setIsColMenuOpen(p => !p)
                                                             }}
                                                             className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isColMenuOpen ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'}`}
@@ -733,8 +739,12 @@ export default function BehaviorPage() {
                                                             <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
                                                         </button>
                                                         {isColMenuOpen && createPortal(
-                                                            <div ref={colMenuRef} className="fixed z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95 slide-in-from-top-2"
-                                                                style={{ top: menuPos.top, right: menuPos.right }}>
+                                                            <div ref={colMenuRef} className="absolute z-[9999] w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95 slide-in-from-top-2"
+                                                                style={{
+                                                                    top: menuPos.top,
+                                                                    right: menuPos.right,
+                                                                    transform: menuPos.showUp ? 'translateY(-100%)' : undefined
+                                                                }}>
                                                                 <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('manageColumns')}</p>
                                                                 {[
                                                                     { key: 'type', label: tp('reportType') },
