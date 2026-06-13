@@ -32,8 +32,10 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
     }, [t])
     const [currentStep, setCurrentStep] = useState(1)
     const [modalSearch, setModalSearch] = useState('')
+    const [debouncedModalSearch, setDebouncedModalSearch] = useState('')
     const [modalClassFilter, setModalClassFilter] = useState('')
     const [vtSearch, setVtSearch] = useState('')
+    const [debouncedVtSearch, setDebouncedVtSearch] = useState('')
     const [vtTab, setVtTab] = useState('all') // 'all', 'violation', 'achievement'
     // Timezone-aware local ISO converter helper
     const toLocalDatetimeString = (dateOrIso) => {
@@ -118,6 +120,29 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
         setHasDraft(false)
     }
 
+    // Debounce student and behavior search inputs
+    useEffect(() => {
+        if (!modalSearch) {
+            setDebouncedModalSearch('')
+            return
+        }
+        const timer = setTimeout(() => {
+            setDebouncedModalSearch(modalSearch)
+        }, 200)
+        return () => clearTimeout(timer)
+    }, [modalSearch])
+
+    useEffect(() => {
+        if (!vtSearch) {
+            setDebouncedVtSearch('')
+            return
+        }
+        const timer = setTimeout(() => {
+            setDebouncedVtSearch(vtSearch)
+        }, 200)
+        return () => clearTimeout(timer)
+    }, [vtSearch])
+
     // Load Recent Students on modal open
     useEffect(() => {
         if (isOpen) {
@@ -150,8 +175,10 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
             setFormErrors({})
             setCurrentStep(1)
             setModalSearch('')
+            setDebouncedModalSearch('')
             setModalClassFilter('')
             setVtSearch('')
+            setDebouncedVtSearch('')
             setVtTab('all')
         }
         setHasDraft(false)
@@ -171,15 +198,15 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
     const filteredStudentsForModal = useMemo(() => {
         let list = students
         if (modalClassFilter) list = list.filter(s => s.class_name === modalClassFilter)
-        if (modalSearch) list = list.filter(s => s.name.toLowerCase().includes(modalSearch.toLowerCase()))
+        if (debouncedModalSearch) list = list.filter(s => s.name.toLowerCase().includes(debouncedModalSearch.toLowerCase()))
         return list
-    }, [students, modalClassFilter, modalSearch])
+    }, [students, modalClassFilter, debouncedModalSearch])
 
     // Limit displayed students initially to prevent DOM thrashing and lag on open
     const displayedStudents = useMemo(() => {
-        if (modalSearch || modalClassFilter) return filteredStudentsForModal
+        if (debouncedModalSearch || modalClassFilter) return filteredStudentsForModal
         return filteredStudentsForModal.slice(0, 25)
-    }, [filteredStudentsForModal, modalSearch, modalClassFilter])
+    }, [filteredStudentsForModal, debouncedModalSearch, modalClassFilter])
 
     // Filter and map recent students
     const recentStudents = useMemo(() => {
@@ -193,13 +220,13 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
     // Filter violation/behavior types for Step 2
     const filteredViolationTypes = useMemo(() => {
         return violationTypes.filter(vt => {
-            const matchesSearch = tDb(vt.name).toLowerCase().includes(vtSearch.toLowerCase())
+            const matchesSearch = tDb(vt.name).toLowerCase().includes(debouncedVtSearch.toLowerCase())
             const isNegative = vt.points < 0
             if (vtTab === 'violation') return matchesSearch && isNegative
             if (vtTab === 'achievement') return matchesSearch && !isNegative
             return matchesSearch
         })
-    }, [violationTypes, vtSearch, vtTab, tDb])
+    }, [violationTypes, debouncedVtSearch, vtTab, tDb])
 
     const groupedVT = useMemo(() => {
         const violations = filteredViolationTypes.filter(vt => vt.points < 0)
@@ -502,7 +529,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-bold leading-tight">
-                                                            {highlightText(s.name, modalSearch)}
+                                                            {highlightText(s.name, debouncedModalSearch)}
                                                         </p>
                                                         <div className="flex items-center gap-1.5 mt-0.5 leading-none">
                                                             {s.class_name && (
@@ -667,7 +694,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                                                         {ptsVal}
                                                                     </span>
                                                                     <span className="text-xs font-bold truncate">
-                                                                        {highlightText(tDb(vt.name), vtSearch)}
+                                                                        {highlightText(tDb(vt.name), debouncedVtSearch)}
                                                                     </span>
                                                                 </div>
                                                                 <ChevronRight className={`w-3 h-3 flex-shrink-0 ${formData.violation_type_id === vt.id ? 'text-white' : 'text-[var(--color-text-muted)]'}`} />
@@ -707,7 +734,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                                                         {ptsVal}
                                                                     </span>
                                                                     <span className="text-xs font-bold truncate">
-                                                                        {highlightText(tDb(vt.name), vtSearch)}
+                                                                        {highlightText(tDb(vt.name), debouncedVtSearch)}
                                                                     </span>
                                                                 </div>
                                                                 <ChevronRight className={`w-3 h-3 flex-shrink-0 ${formData.violation_type_id === vt.id ? 'text-white' : 'text-[var(--color-text-muted)]'}`} />

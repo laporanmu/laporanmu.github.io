@@ -876,6 +876,7 @@ export default function StudentsPage() {
                             icon={faUsers}
                             label="Total Siswa"
                             value={globalStats.total}
+                            subValue="Siswa aktif terdaftar"
                             color="sky"
                         />
                         <StatCard
@@ -883,6 +884,7 @@ export default function StudentsPage() {
                             icon={faMars}
                             label="Putra"
                             value={globalStats.boys}
+                            subValue={`${Math.round((globalStats.boys / (globalStats.total || 1)) * 100)}% dari total siswa`}
                             color="indigo"
                         />
                         <StatCard
@@ -890,6 +892,7 @@ export default function StudentsPage() {
                             icon={faVenus}
                             label="Putri"
                             value={globalStats.girls}
+                            subValue={`${Math.round((globalStats.girls / (globalStats.total || 1)) * 100)}% dari total siswa`}
                             color="rose"
                         />
                         <StatCard
@@ -899,6 +902,7 @@ export default function StudentsPage() {
                             value={globalStats.avgPoints}
                             trend={globalStats.avgPointsLastWeek !== null ? Math.abs(globalStats.avgPointsLastWeek) : null}
                             trendUp={globalStats.avgPointsLastWeek >= 0}
+                            subValue="Rata-rata poin per siswa"
                             color="emerald"
                             onClick={() => { setFilterPointMode('positive'); resetAllFilters({ filterPointMode: 'positive' }) }}
                         />

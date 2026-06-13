@@ -569,7 +569,6 @@ function AppRoutes() {
                 <ClassesPage />
               </RoleFlagRoute>
             } />
-            <Route path="/master/poin" element={<Navigate to="/boarding/behavior?tab=rules" replace />} />
             <Route path="/master/academic-years" element={
               <RoleFlagRoute roles={DEV_ADMIN_TEACHER} flag="module.academic_years" label="Tahun Pelajaran">
                 <AcademicYearsPage />

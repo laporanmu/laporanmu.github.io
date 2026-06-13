@@ -190,7 +190,7 @@ export default function DormsPage() {
                         icon={Bed}
                         label="Plotting Kamar"
                         value={data.stats.assignedCount}
-                        suffix={`/${data.stats.totalCount}`}
+                        subValue={`${Math.round((data.stats.assignedCount / (data.stats.totalCount || 1)) * 100)}% dari ${data.stats.totalCount} santri`}
                         color="primary"
                     />
 
@@ -201,6 +201,7 @@ export default function DormsPage() {
                         label="Belum Masuk Kamar"
                         value={data.stats.unassignedCount}
                         suffix=" Santri"
+                        subValue={`${Math.round((data.stats.unassignedCount / (data.stats.totalCount || 1)) * 100)}% belum dialokasikan`}
                         color="amber"
                     />
 
@@ -211,6 +212,7 @@ export default function DormsPage() {
                         label="Rata-rata Kebersihan"
                         value={data.stats.avgCleanliness}
                         suffix=" Poin"
+                        subValue="Skor rata-rata kamar"
                         color="emerald"
                     />
 
@@ -220,7 +222,8 @@ export default function DormsPage() {
                         icon={ClipboardList}
                         label="Kontrol Musyrif"
                         value={data.stats.taskProgress}
-                        suffix={`% (${data.stats.completedTasks}/${data.stats.totalTasks})`}
+                        suffix="%"
+                        subValue={`Selesai: ${data.stats.completedTasks} dari ${data.stats.totalTasks} tugas`}
                         color="indigo"
                     />
                 </StatsCarousel>
@@ -229,7 +232,7 @@ export default function DormsPage() {
                 <div className="grid grid-cols-4 sm:flex gap-1 sm:gap-1.5 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full sm:w-fit shrink-0">
                     <button
                         onClick={() => setActiveTab('plotting')}
-                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'plotting' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'plotting' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <Bed className="w-3.5 h-3.5 shrink-0" />
                         <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Plotting</span>
@@ -237,7 +240,7 @@ export default function DormsPage() {
                     </button>
                     <button
                         onClick={() => setActiveTab('kebersihan')}
-                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kebersihan' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kebersihan' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <Sparkles className="w-3.5 h-3.5 animate-pulse shrink-0" />
                         <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Kebersihan</span>
@@ -245,7 +248,7 @@ export default function DormsPage() {
                     </button>
                     <button
                         onClick={() => setActiveTab('musyrif')}
-                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'musyrif' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'musyrif' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <CheckSquare className="w-3.5 h-3.5 shrink-0" />
                         <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Musyrif</span>
@@ -253,7 +256,7 @@ export default function DormsPage() {
                     </button>
                     <button
                         onClick={() => setActiveTab('kelola_kamar')}
-                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kelola_kamar' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kelola_kamar' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
                         <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Kelola</span>

@@ -479,11 +479,11 @@ export default function BehaviorPage() {
 
                 {/* ── TABS ── */}
                 {isDevAdminTeacher && showPoinTab && (
-                    <div className="flex gap-1 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full lg:w-fit overflow-x-auto scrollbar-hide">
+                    <div className="flex gap-1 sm:gap-1.5 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full lg:w-fit overflow-x-auto scrollbar-hide">
                         <button
                             onClick={() => handleTabChange('reports')}
-                            className={`flex-1 lg:flex-none h-8 px-4 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'reports'
-                                ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20'
+                            className={`flex-1 lg:flex-none h-9 px-6 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'reports'
+                                ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm'
                                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                         >
                             <ClipboardList className="w-3.5 h-3.5" />
@@ -491,8 +491,8 @@ export default function BehaviorPage() {
                         </button>
                         <button
                             onClick={() => handleTabChange('rules')}
-                            className={`flex-1 lg:flex-none h-8 px-4 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'rules'
-                                ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20'
+                            className={`flex-1 lg:flex-none h-9 px-6 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'rules'
+                                ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm'
                                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                         >
                             <Sliders className="w-3.5 h-3.5" />

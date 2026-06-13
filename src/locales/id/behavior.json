@@ -419,5 +419,7 @@
   "behavior.cat.Tata Tertib": "Tata Tertib",
   "behavior.cat.Sikap": "Sikap",
   "behavior.cat.Prestasi": "Prestasi",
-  "behavior.cat.Lainnya": "Lainnya"
+  "behavior.cat.Lainnya": "Lainnya",
+  "behavior.rulesNoResults": "Aturan Tidak Ditemukan",
+  "behavior.rulesNoResultsDesc": "Tidak ada konfigurasi poin yang cocok dengan pencarian atau filter aktif. Coba ubah kata kunci atau reset filter."
 }

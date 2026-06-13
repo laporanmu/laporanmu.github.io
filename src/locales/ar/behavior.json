@@ -416,5 +416,7 @@
   "behavior.cat.Tata Tertib": "النظام العام",
   "behavior.cat.Sikap": "السلوك",
   "behavior.cat.Prestasi": "الإنجاز",
-  "behavior.cat.Lainnya": "أخرى"
+  "behavior.cat.Lainnya": "أخرى",
+  "behavior.rulesNoResults": "لم يتم العثور على قواعد",
+  "behavior.rulesNoResultsDesc": "لا توجد قواعد نقاط تطابق البحث أو الفلاتر الحالية. جرب تغيير الكلمات المفتاحية أو إعادة تعيين الفلاتر."
 }

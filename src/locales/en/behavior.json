@@ -419,5 +419,7 @@
   "behavior.cat.Tata Tertib": "Rules & Regulations",
   "behavior.cat.Sikap": "Attitude",
   "behavior.cat.Prestasi": "Achievement",
-  "behavior.cat.Lainnya": "Others"
+  "behavior.cat.Lainnya": "Others",
+  "behavior.rulesNoResults": "No Rules Found",
+  "behavior.rulesNoResultsDesc": "No point rules match your current search or filters. Try changing your keywords or reset all filters."
 }

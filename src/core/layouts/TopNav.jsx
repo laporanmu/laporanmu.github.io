@@ -56,7 +56,6 @@ const MASTER_ITEMS = [
     { to: "/master/teachers", label: "Data Guru", icon: faChalkboardTeacher, desc: "Data akun pengajar, musyrif, dan staf sekolah" },
     { to: "/master/classes", label: "Data Kelas", icon: faSchool, desc: "Pengaturan struktur kelas dan pembagian asrama" },
     { to: "/master/subjects", label: "Mata Pelajaran", icon: faBook, desc: "Daftar kurikulum mata pelajaran sekolah" },
-    { to: "/master/poin", label: "Konfigurasi Poin", icon: faExclamationTriangle, desc: "Konfigurasi kategori poin prestasi & pelanggaran" },
     { to: "/master/academic-years", label: "Tahun Pelajaran", icon: faCalendarAlt, desc: "Manajemen semester dan periode kalender akademik" },
     { to: "/master/enrollment", label: "PSB / Enrollment", icon: faUserPlus, desc: "Manajemen pendaftaran dan penerimaan siswa baru", color: "bg-emerald-500/10 text-emerald-600" },
 ]
@@ -282,7 +281,6 @@ export default function TopNav({ title, subtitle }) {
         if (it.to === '/master/students') return flags['nav.students'] !== false
         if (it.to === '/master/teachers') return flags['nav.teachers'] !== false
         if (it.to === '/master/classes') return flags['nav.classes'] !== false
-        if (it.to === '/master/poin') return flags['nav.poin'] !== false
         if (it.to === '/master/academic-years') return flags['nav.academic_years'] !== false
         return true
     })

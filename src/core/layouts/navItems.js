@@ -82,7 +82,6 @@ export const MASTER_ITEMS = [
     { to: "/master/teachers", label: "Data Guru", icon: GraduationCap, desc: "Data akun pengajar, musyrif, dan staf sekolah", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/master/classes", label: "Data Kelas", icon: School, desc: "Pengaturan struktur kelas dan pembagian asrama", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/master/subjects", label: "Mata Pelajaran", icon: BookOpen, desc: "Daftar kurikulum mata pelajaran sekolah", color: "bg-indigo-500/10 text-indigo-600" },
-    { to: "/boarding/behavior?tab=rules", label: "Konfigurasi Poin", icon: Sliders, desc: "Konfigurasi kategori poin prestasi & pelanggaran", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/master/academic-years", label: "Tahun Akademik", icon: CalendarRange, desc: "Manajemen semester dan periode kalender akademik", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/master/enrollment", label: "Pendaftaran Baru (PPDB)", icon: UserPlus, desc: "Manajemen pendaftaran dan penerimaan siswa baru", color: "bg-emerald-500/10 text-emerald-600" },
     { to: "/master/inventory", label: "Inventaris & Aset", icon: Boxes, desc: "Pencatatan sarana prasarana sekolah, inventaris asrama & kelas", color: "bg-blue-500/10 text-blue-600" },
@@ -171,7 +170,6 @@ export const ROUTE_FLAG_MAP = {
     '/master/students': 'nav.students',
     '/master/teachers': 'nav.teachers',
     '/master/classes': 'nav.classes',
-    '/boarding/behavior?tab=rules': 'nav.poin',
     '/master/academic-years': 'nav.academic_years',
 }
 

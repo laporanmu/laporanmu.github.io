@@ -46,6 +46,7 @@ export default function PointRulesTab({ showStats = true }) {
 
     // UI states
     const [searchQuery, setSearchQuery] = useState('')
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
     const [filterCategory, setFilterCategory] = useState('')
     const [filterType, setFilterType] = useState('') // 'violation' or 'achievement'
     const [filterStatus, setFilterStatus] = useState('active')
@@ -169,6 +170,17 @@ export default function PointRulesTab({ showStats = true }) {
     }, [fetchData])
 
     // ── UI EFFECTS ─────────────────────────────────────────────────
+    useEffect(() => {
+        if (!searchQuery) {
+            setDebouncedSearchQuery('')
+            return
+        }
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery)
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
     useEffect(() => { localStorage.setItem(LS_COLS, JSON.stringify(visibleCols)) }, [visibleCols])
     useEffect(() => { localStorage.setItem(LS_PAGE_SIZE, pageSize) }, [pageSize])
 
@@ -208,6 +220,11 @@ export default function PointRulesTab({ showStats = true }) {
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (isAnyModalOpen) return
+            // Jangan aktifkan shortcut saat user sedang mengetik di input/textarea/select
+            const tag = document.activeElement?.tagName
+            const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable
+            if (isEditing && !(e.ctrlKey && e.key === 'k')) return
+
             if (e.ctrlKey && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus() }
             if (e.key === '?') { e.preventDefault(); setIsShortcutOpen(v => !v) }
             if (e.key === 'n') { e.preventDefault(); handleAdd() }
@@ -222,7 +239,7 @@ export default function PointRulesTab({ showStats = true }) {
     // Filter & Sort Logic
     const filteredPoin = useMemo(() => {
         let result = poin.filter(v => {
-            const q = searchQuery.toLowerCase()
+            const q = debouncedSearchQuery.toLowerCase()
             const matchSearch = !q || v.name.toLowerCase().includes(q) || (v.description || '').toLowerCase().includes(q)
             const matchCat = !filterCategory || v.category === filterCategory
             const matchType = !filterType || (filterType === 'violation' ? v.is_negative : !v.is_negative)
@@ -234,12 +251,12 @@ export default function PointRulesTab({ showStats = true }) {
         else if (sortBy === 'points') result.sort((a, b) => Math.abs(b.points) - Math.abs(a.points))
         else if (sortBy === 'newest') result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         return result
-    }, [poin, searchQuery, filterCategory, filterType, filterStatus, filterExtreme, sortBy])
+    }, [poin, debouncedSearchQuery, filterCategory, filterType, filterStatus, filterExtreme, sortBy])
 
     const totalRows = filteredPoin.length
     const pagedPoin = filteredPoin.slice((page - 1) * pageSize, page * pageSize)
 
-    useEffect(() => { setPage(1) }, [searchQuery, filterCategory, filterType, filterStatus, filterExtreme])
+    useEffect(() => { setPage(1) }, [debouncedSearchQuery, filterCategory, filterType, filterStatus, filterExtreme])
 
     // Insights Row
     const insights = useMemo(() => {
@@ -888,127 +905,221 @@ export default function PointRulesTab({ showStats = true }) {
 
 
             {/* Filters & Actions */}
-            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-sm">
-                <div className="flex flex-row items-center gap-2 p-3">
-                    <div className="flex-1 relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] text-sm">
-                            <Search className="w-4 h-4" />
+            <div className="glass rounded-2xl border border-[var(--color-border)] overflow-hidden">
+                {/* Row 1: Search + Quick Filters + Filter Toggle */}
+                <div className="grid grid-cols-[minmax(0,_1fr)_auto] items-center gap-x-2 gap-y-3 p-3 lg:flex lg:flex-row lg:items-center lg:gap-0 lg:p-4">
+
+                    {/* Group 1: Search Bar */}
+                    <div className="col-start-1 row-start-1 col-span-1 flex-1 w-full min-w-0 lg:min-w-[160px]">
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors">
+                                <Search className="w-4 h-4" />
+                            </div>
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                placeholder={tp('rulesSearchPlaceholder')}
+                                className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-[var(--color-surface-alt)]/50 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all rounded-xl font-bold placeholder:font-normal placeholder:opacity-40"
+                            />
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg hover:bg-[var(--color-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] transition-all">
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            )}
                         </div>
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            placeholder={tp('rulesSearchPlaceholder')}
-                            className="w-full h-9 pl-10 pr-10 text-xs sm:text-sm bg-transparent border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all rounded-xl outline-none"
-                        />
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-3 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all">
-                                <X className="w-4 h-4" />
-                            </button>
-                        )}
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+
+                    {/* Divider 1 (Desktop only) */}
+                    <div className="hidden lg:block w-[1px] h-5 bg-[var(--color-border)] lg:mx-2.5 xl:mx-4 shrink-0" />
+
+                    {/* Group 2: Quick Filter Chips */}
+                    <div className="col-start-1 row-start-2 col-span-2 flex flex-nowrap items-center gap-1 pt-3 lg:pt-0 shrink-0 w-full lg:w-auto overflow-x-auto scrollbar-hide border-t border-[var(--color-border)] lg:border-t-0">
+                        <div className="flex items-center gap-1 shrink-0 py-0.5">
+                            {[
+                                { id: '', label: tp('all'), icon: Layers, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },
+                                { id: 'violation', label: tp('violation'), icon: Gavel, activeCls: 'bg-rose-500 border-rose-500' },
+                                { id: 'achievement', label: tp('achievement'), icon: Trophy, activeCls: 'bg-emerald-500 border-emerald-500' },
+                            ].map((s) => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => { setFilterType(s.id); setPage(1) }}
+                                    className={`flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-normal sm:tracking-widest whitespace-nowrap transition-all border ${
+                                        filterType === s.id
+                                            ? `${s.activeCls} text-white`
+                                            : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]'
+                                    }`}
+                                >
+                                    <s.icon className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${filterType === s.id ? 'opacity-100' : 'opacity-30'}`} />
+                                    {s.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Divider 2 (Desktop only) */}
+                    <div className="hidden lg:block w-[1px] h-5 bg-[var(--color-border)] lg:mx-2.5 xl:mx-4 shrink-0" />
+
+                    {/* Group 3: Action Buttons */}
+                    <div className="col-start-2 row-start-1 col-span-1 flex flex-nowrap items-center justify-end gap-1.5 lg:gap-2 shrink-0">
+                        {/* Select All */}
+                        <button
+                            onClick={toggleSelectAll}
+                            className={`h-9 px-2.5 lg:px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider lg:tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                                selectedIds.length > 0
+                                    ? 'bg-indigo-500 border-indigo-500 text-white shadow-md shadow-indigo-500/20'
+                                    : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'
+                            }`}
+                            title={tp('selectAll')}
+                        >
+                            <Check className="w-3.5 h-3.5" />
+                            <span className="hidden xl:inline">{selectedIds.length > 0 ? tp('selected') : tp('selectAll')}</span>
+                            {selectedIds.length > 0 && (
+                                <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">
+                                    {tNum(selectedIds.length)}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Advanced Filter Toggle */}
                         <button
                             onClick={() => setIsFilterOpen(!isFilterOpen)}
-                            className={`h-9 px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isFilterOpen || activeFilterCount > 0 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
+                            className={`h-9 px-2.5 lg:px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider lg:tracking-widest transition-all flex items-center justify-center gap-2 ${
+                                isFilterOpen || activeFilterCount > 0
+                                    ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30'
+                                    : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'
+                            }`}
+                            title={tp('advancedFilter')}
                         >
                             <Sliders className="w-3.5 h-3.5" />
-                            <span className="hidden xs:inline">{tp('filterShort')}</span>
-                            {activeFilterCount > 0 && <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">{activeFilterCount}</span>}
+                            <span className="hidden xl:inline">{tp('filterShort')}</span>
+                            {activeFilterCount > 0 && (
+                                <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
+                                    {activeFilterCount}
+                                </span>
+                            )}
                         </button>
                     </div>
                 </div>
 
                 {/* Active Filter Chips */}
-                {(searchQuery || filterCategory || filterType || filterStatus !== 'active' || filterExtreme) && (
-                    <div className="px-3 pb-3 -mt-1">
-                        <div className="flex flex-wrap gap-2">
-                            {searchQuery && (
-                                <button type="button" onClick={() => setSearchQuery('')}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title={tp('rulesClearSearch')}>
-                                    <Search className="w-3 h-3 opacity-60" />
-                                    <span className="max-w-[220px] truncate">"{searchQuery}"</span>
-                                    <span className="w-4 h-4 rounded bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
-                                        <X className="w-2.5 h-2.5" />
-                                    </span>
-                                </button>
-                            )}
-                            {filterCategory && (
-                                <button type="button" onClick={() => setFilterCategory('')}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[10px] font-black text-[var(--color-primary)]" title={tp('rulesClearCategory')}>
-                                    <span className="opacity-70">{tp('category')}:</span> {tp(`cat.${filterCategory}`) || filterCategory}
-                                    <span className="w-4 h-4 rounded bg-white/70 dark:bg-[var(--color-surface)] border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] opacity-70 group-hover:opacity-100 transition-opacity">
-                                        <X className="w-2.5 h-2.5" />
-                                    </span>
-                                </button>
-                            )}
-                            {filterType && (
-                                <button type="button" onClick={() => setFilterType('')}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title={tp('rulesClearType')}>
-                                    {filterType === 'violation' ? tp('violation') : tp('achievement')}
-                                    <span className="w-4 h-4 rounded bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
-                                        <X className="w-2.5 h-2.5" />
-                                    </span>
-                                </button>
-                            )}
-                            {filterStatus !== 'active' && (
-                                <button type="button" onClick={() => setFilterStatus('active')}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600" title={tp('rulesClearStatus')}>
-                                    {tp('status')}: {filterStatus === 'inactive' ? tp('rulesStatusInactive') : filterStatus}
-                                    <span className="w-4 h-4 rounded bg-white/70 dark:bg-[var(--color-surface)] border border-amber-500/20 flex items-center justify-center text-amber-600 opacity-70 group-hover:opacity-100 transition-opacity">
-                                        <X className="w-2.5 h-2.5" />
-                                    </span>
-                                </button>
-                            )}
-                            {filterExtreme && (
-                                <button type="button" onClick={() => setFilterExtreme(false)}
-                                    className="group inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-red-500/20 bg-red-500/10 text-[10px] font-black text-red-600" title={tp('rulesClearExtreme')}>
-                                    {tp('rulesExtremePoints')}
-                                    <span className="w-4 h-4 rounded bg-white/70 dark:bg-[var(--color-surface)] border border-red-500/20 flex items-center justify-center text-red-600 opacity-70 group-hover:opacity-100 transition-opacity">
-                                        <X className="w-2.5 h-2.5" />
-                                    </span>
-                                </button>
-                            )}
-                            <button type="button" onClick={resetAllFilters}
-                                className="inline-flex items-center gap-1 px-3 py-1 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title={tp('resetAllFilters')}>
-                                <RotateCcw className="w-3 h-3" />
-                                <span>{tp('resetAll')}</span>
+                {(debouncedSearchQuery || filterCategory || (filterType && filterType !== '') || filterStatus !== 'active' || filterExtreme) && (
+                    <div className="px-3 pb-3 -mt-1 flex flex-wrap gap-2">
+                        {debouncedSearchQuery && (
+                            <button type="button" onClick={() => setSearchQuery('')}
+                                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]">
+                                <Search className="w-3 h-3 opacity-60" />
+                                <span className="max-w-[180px] truncate">"{debouncedSearchQuery}"</span>
+                                <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
+                                    <X className="w-3.5 h-3.5" />
+                                </span>
                             </button>
-                        </div>
+                        )}
+                        {filterCategory && (
+                            <button type="button" onClick={() => setFilterCategory('')}
+                                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[10px] font-black text-[var(--color-primary)]">
+                                <span className="opacity-70">{tp('category')}:</span> {tp(`cat.${filterCategory}`) || filterCategory}
+                                <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] opacity-70 group-hover:opacity-100 transition-opacity">
+                                    <X className="w-3.5 h-3.5" />
+                                </span>
+                            </button>
+                        )}
+                        {filterStatus !== 'active' && (
+                            <button type="button" onClick={() => setFilterStatus('active')}
+                                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-[10px] font-black text-amber-600">
+                                {tp('status')}: {filterStatus === 'inactive' ? tp('rulesStatusInactive') : filterStatus}
+                                <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-amber-500/20 flex items-center justify-center text-amber-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                    <X className="w-3.5 h-3.5" />
+                                </span>
+                            </button>
+                        )}
+                        {filterExtreme && (
+                            <button type="button" onClick={() => setFilterExtreme(false)}
+                                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/10 text-[10px] font-black text-red-600">
+                                {tp('rulesExtremePoints')}
+                                <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-red-500/20 flex items-center justify-center text-red-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                                    <X className="w-3.5 h-3.5" />
+                                </span>
+                            </button>
+                        )}
+                        <button type="button" onClick={resetAllFilters}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600">
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            {tp('resetAllFilters')}
+                        </button>
                     </div>
                 )}
 
+                {/* Advanced Filter Panel */}
                 {isFilterOpen && (
-                    <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 animate-in slide-in-from-top-2 duration-300">
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">{tp('category')}</label>
-                                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
-                                    <option value="">{tp('rulesAllCategories')}</option>
-                                    {CATEGORIES.map(c => <option key={c} value={c}>{tp(`cat.${c}`) || c}</option>)}
-                                </select>
+                    <div className="border-t border-[var(--color-border)] p-3.5 bg-[var(--color-surface-alt)]/60 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center justify-between mb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-1 h-3.5 bg-[var(--color-primary)] rounded-full" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-primary)] flex items-center gap-2">
+                                    <Sliders className="w-3 h-3 opacity-60" />
+                                    <span className="sm:hidden">{tp('filterShort')}</span>
+                                    <span className="hidden sm:inline">{tp('advancedFilter')}</span>
+                                </span>
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">{tp('rulesType')}</label>
-                                <select value={filterType} onChange={e => setFilterType(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
-                                    <option value="">{tp('rulesAllTypes')}</option>
-                                    <option value="violation">{tp('rulesViolationsOnly')}</option>
-                                    <option value="achievement">{tp('rulesAchievementsOnly')}</option>
-                                </select>
+                            <button
+                                onClick={resetAllFilters}
+                                className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/5 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-500/10"
+                            >
+                                <RotateCcw className="w-3 h-3" />
+                                <span className="sm:hidden">{tp('resetShort')}</span>
+                                <span className="hidden sm:inline">{tp('resetAllFilters')}</span>
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{tp('category')}</label>
+                                <RichSelect
+                                    value={filterCategory}
+                                    onChange={(val) => { setFilterCategory(val); setPage(1) }}
+                                    options={[
+                                        { id: '', name: tp('rulesAllCategories') },
+                                        ...CATEGORIES.map(c => ({ id: c, name: tp(`cat.${c}`) || c }))
+                                    ]}
+                                    placeholder={tp('rulesAllCategories')}
+                                    small
+                                />
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="block text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] ml-1">{tp('rulesOrder')}</label>
-                                <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full h-9 px-3 text-xs font-bold bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl appearance-none outline-none focus:border-[var(--color-primary)]">
-                                    <option value="name">{tp('rulesOrderName')}</option>
-                                    <option value="points">{tp('rulesOrderPoints')}</option>
-                                    <option value="newest">{tp('newest')}</option>
-                                </select>
+                            <div>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{tp('rulesType')}</label>
+                                <RichSelect
+                                    value={filterType}
+                                    onChange={(val) => { setFilterType(val); setPage(1) }}
+                                    options={[
+                                        { id: '', name: tp('rulesAllTypes') },
+                                        { id: 'violation', name: tp('rulesViolationsOnly') },
+                                        { id: 'achievement', name: tp('rulesAchievementsOnly') },
+                                    ]}
+                                    placeholder={tp('rulesAllTypes')}
+                                    small
+                                />
                             </div>
-                            <div className="flex items-end">
-                                <button onClick={resetAllFilters} className="w-full h-9 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10 transition-all flex items-center justify-center gap-2">
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                    <span>{tp('resetShort')}</span>
+                            <div>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{tp('rulesOrder')}</label>
+                                <RichSelect
+                                    value={sortBy}
+                                    onChange={(val) => { setSortBy(val); setPage(1) }}
+                                    options={[
+                                        { id: 'name', name: tp('rulesOrderName') },
+                                        { id: 'points', name: tp('rulesOrderPoints') },
+                                        { id: 'newest', name: `↓ ${tp('newest')}` },
+                                    ]}
+                                    small
+                                />
+                            </div>
+                            <div className="flex items-end justify-end">
+                                <button
+                                    onClick={() => setIsFilterOpen(false)}
+                                    className="h-9 px-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all"
+                                >
+                                    {tp('closePanel')}
                                 </button>
                             </div>
                         </div>
@@ -1356,19 +1467,16 @@ export default function PointRulesTab({ showStats = true }) {
                 cancelText={tp('cancel')}
                 submitting={submitting}
             >
-                <div className="px-1">
+                <div className="px-1 space-y-3">
                     <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">
-                        {(() => {
-                            const deleteTemplate = tp('rulesDeleteWarningTemplate')
-                            const parts = deleteTemplate.includes('{name}') ? deleteTemplate.split('{name}') : [deleteTemplate, '']
-                            return (
-                                <>
-                                    {parts[0]}
-                                    <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{itemToDelete?.name}</span>
-                                    {parts[1]}
-                                </>
-                            )
-                        })()}
+                        {tp('rulesDeleteWarningTemplate').replace('{name}', '').replace('?', '').trim()}
+                    </p>
+                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/5 border border-red-500/20">
+                        <Trash2 className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                        <span className="text-sm text-red-500 font-black break-words min-w-0">{itemToDelete?.name}</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--color-text-muted)] font-bold">
+                        {tp('rulesDeletePermanent')} — {tp('rulesDeleteRisk')}
                     </p>
                 </div>
             </ConfirmDialog>
@@ -1466,7 +1574,7 @@ export default function PointRulesTab({ showStats = true }) {
                             </div>
                         </div>
 
-                        <div className="border border-[var(--color-border)] bg-[var(--color-surface-alt)]/15 rounded-2xl p-2.5 max-h-[170px] overflow-y-auto custom-scrollbar">
+                        <div className="border border-[var(--color-border)] bg-[var(--color-surface-alt)]/15 rounded-2xl p-2.5 max-h-[300px] overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {/* Option Semua Kelas */}
                                 {!resetPointsSearch && (
@@ -1537,9 +1645,9 @@ export default function PointRulesTab({ showStats = true }) {
                             </div>
                         </div>
                     </div>
-                    <div className="p-3 bg-red-500/5 rounded-2xl border border-red-500/10 text-[10px] text-red-600 dark:text-red-400 font-bold leading-relaxed">
-                        <AlertCircle className="inline w-3.5 h-3.5 mr-1" />
-                        <span>{tp('resetPointsWarning')}</span>
+                    <div className="flex items-center gap-2 px-2.5 py-1 bg-red-500/5 rounded-lg border border-red-500/10">
+                        <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                        <span className="text-[9px] text-red-600 dark:text-red-400 font-extrabold leading-snug">{tp('resetPointsWarning')}</span>
                     </div>
                 </div>
             </Modal>
