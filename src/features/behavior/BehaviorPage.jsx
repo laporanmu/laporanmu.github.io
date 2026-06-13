@@ -54,6 +54,7 @@ export default function BehaviorPage() {
         students,
         violationTypes,
         classesList,
+        classesObjects,
         loading,
         submitting,
         totalRows,
@@ -948,7 +949,11 @@ export default function BehaviorPage() {
                 />
                     </>
                 ) : (
-                    <PointRulesTab showStats={false} />
+                    <PointRulesTab
+                        showStats={false}
+                        initialPoin={violationTypes}
+                        initialClasses={classesObjects}
+                    />
                 )}
 
             </div>

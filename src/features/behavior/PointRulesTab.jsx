@@ -10,22 +10,22 @@ import Modal from '@shared/components/Modal'
 import ConfirmDialog from '@shared/components/ConfirmDialog'
 import RichSelect from '@shared/components/RichSelect'
 import Pagination from '@shared/components/Pagination'
-import RulesExportModal from './RulesExportModal'
-import { StatCard } from '@shared/components/DataDisplay'
+const LazyRulesExportModal = React.lazy(() => import('./RulesExportModal'))
+import { StatCard, EmptyState } from '@shared/components/DataDisplay'
 import { useToast } from '@context/Toast'
 import { useAuth } from '@context/Auth'
 import { useFlag } from '@context/FeatureFlags'
 import { useLanguage } from '@context/Language'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
-import Papa from 'papaparse'
+
 import { buildPrintHTML, openPrintWindow } from '@utils/printTemplate'
 
 const CATEGORIES = ['Kedisiplinan', 'Akademik', 'Tata Tertib', 'Sikap', 'Prestasi', 'Lainnya']
 const LS_COLS = 'Poin_columns'
 const LS_PAGE_SIZE = 'Poin_page_size'
 
-export default function PointRulesTab({ showStats = true }) {
+export default function PointRulesTab({ showStats = true, initialPoin = [], initialClasses = [] }) {
     const { addToast } = useToast()
     const { profile } = useAuth()
     const { enabled: teacherPoinEnabled } = useFlag('access.teacher_poin')
@@ -37,8 +37,8 @@ export default function PointRulesTab({ showStats = true }) {
 
     const canEdit = profile?.role === 'guru' ? teacherPoinEnabled : true
 
-    const [poin, setPoin] = useState([])
-    const [loading, setLoading] = useState(true)
+    const [poin, setPoin] = useState(initialPoin)
+    const [loading, setLoading] = useState(!initialPoin || initialPoin.length === 0)
     const [submitting, setSubmitting] = useState(false)
 
     // Stats
@@ -114,11 +114,36 @@ export default function PointRulesTab({ showStats = true }) {
     // Reset Poin States
     const [isResetModalOpen, setIsResetModalOpen] = useState(false)
     const [resetPointsClassIds, setResetPointsClassIds] = useState([])
-    const [classesList, setClassesList] = useState([])
+    const [classesList, setClassesList] = useState(initialClasses)
     const [resettingPoints, setResettingPoints] = useState(false)
     const [resetPointsSearch, setResetPointsSearch] = useState('')
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
     const [confirmText, setConfirmText] = useState('')
+
+    // Sync state with parent props when they load
+    useEffect(() => {
+        if (initialPoin && initialPoin.length > 0) {
+            setPoin(initialPoin)
+            setLoading(false)
+        }
+    }, [initialPoin])
+
+    useEffect(() => {
+        if (initialClasses && initialClasses.length > 0) {
+            setClassesList(initialClasses)
+        }
+    }, [initialClasses])
+
+    // Derive statistics automatically when point rules change
+    useEffect(() => {
+        const s = {
+            total: poin.length,
+            poin: poin.filter(v => v.is_negative).length,
+            achievements: poin.filter(v => !v.is_negative).length,
+            avgPoints: poin.length ? Math.round(poin.reduce((acc, v) => acc + Math.abs(v.points), 0) / poin.length) : 0
+        }
+        setStats(s)
+    }, [poin])
 
     // ── DATA FETCHING ──────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -132,13 +157,6 @@ export default function PointRulesTab({ showStats = true }) {
                     return canAchievement
                 })
                 setPoin(filtered)
-                const s = {
-                    total: filtered.length,
-                    poin: filtered.filter(v => v.is_negative).length,
-                    achievements: filtered.filter(v => !v.is_negative).length,
-                    avgPoints: filtered.length ? Math.round(filtered.reduce((acc, v) => acc + Math.abs(v.points), 0) / filtered.length) : 0
-                }
-                setStats(s)
             }
         } catch (err) {
             console.error(err)
@@ -152,22 +170,26 @@ export default function PointRulesTab({ showStats = true }) {
     useEffect(() => { fetchDataRef.current = fetchData }, [fetchData])
 
     useEffect(() => {
-        fetchData()
+        if (!initialPoin || initialPoin.length === 0) {
+            fetchData()
+        }
         const ch = supabase.channel('violation-types-rt')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'point_rules' }, () => fetchDataRef.current?.())
             .subscribe()
 
         // Fetch classes for reset modal
-        const fetchClasses = async () => {
-            const { data } = await supabase.from('classes').select('*').order('name')
-            if (data) setClassesList(data)
+        if (!initialClasses || initialClasses.length === 0) {
+            const fetchClasses = async () => {
+                const { data } = await supabase.from('classes').select('*').order('name')
+                if (data) setClassesList(data)
+            }
+            fetchClasses()
         }
-        fetchClasses()
 
         return () => {
             supabase.removeChannel(ch)
         }
-    }, [fetchData])
+    }, [fetchData, initialPoin, initialClasses])
 
     // ── UI EFFECTS ─────────────────────────────────────────────────
     useEffect(() => {
@@ -433,6 +455,7 @@ export default function PointRulesTab({ showStats = true }) {
             const finalFileName = fileName || `data_poin_${new Date().toISOString().slice(0, 10)}`
 
             if (format === 'csv') {
+                const { default: Papa } = await import('papaparse')
                 const csvData = Papa.unparse(mapped, { header: options.includeHeader !== false })
                 const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' })
                 const link = document.createElement('a')
@@ -1213,19 +1236,22 @@ export default function PointRulesTab({ showStats = true }) {
                                 <tbody className="divide-y divide-[var(--color-border)]">
                                     {totalRows === 0 ? (
                                         <tr>
-                                            <td colSpan={10} className="px-6 py-24 text-center align-middle">
-                                                <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
-                                                    <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] mb-4 text-xl">
-                                                        <Search className="w-6 h-6 opacity-40" />
-                                                    </div>
-                                                    <h3 className="text-sm font-black text-[var(--color-text)] mb-1">{tp('rulesNoResults')}</h3>
-                                                    <p className="text-[11px] font-bold text-[var(--color-text-muted)] leading-relaxed mb-4">
-                                                        {tp('rulesNoResultsDesc')}
-                                                    </p>
-                                                    <button onClick={resetAllFilters} className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition">
-                                                        {tp('resetAllFilters')}
-                                                    </button>
-                                                </div>
+                                            <td colSpan={10} className="px-6 py-12 text-center align-middle">
+                                                <EmptyState
+                                                    variant="plain"
+                                                    color="slate"
+                                                    icon={Search}
+                                                    title={tp('rulesNoResults')}
+                                                    description={tp('rulesNoResultsDesc')}
+                                                    action={
+                                                        <button
+                                                            onClick={resetAllFilters}
+                                                            className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                                        >
+                                                            {tp('resetAllFilters')}
+                                                        </button>
+                                                    }
+                                                />
                                             </td>
                                         </tr>
                                     ) : pagedPoin.map(rule => (
@@ -1300,17 +1326,22 @@ export default function PointRulesTab({ showStats = true }) {
                         {/* Mobile Stack View */}
                         <div className="md:hidden divide-y divide-[var(--color-border)]">
                             {totalRows === 0 ? (
-                                <div className="py-16 text-center px-4">
-                                    <div className="w-12 h-12 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] mx-auto mb-3 text-lg">
-                                        <Search className="w-5 h-5 opacity-40" />
-                                    </div>
-                                    <h3 className="text-xs font-black text-[var(--color-text)] mb-1">{tp('rulesNoResults')}</h3>
-                                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] max-w-[280px] leading-relaxed mb-4 mx-auto">
-                                        {tp('rulesNoResultsDescMobile')}
-                                    </p>
-                                    <button onClick={resetAllFilters} className="h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition">
-                                        {tp('resetAll')}
-                                    </button>
+                                <div className="py-10 px-4 bg-[var(--color-surface)]">
+                                    <EmptyState
+                                        variant="plain"
+                                        color="slate"
+                                        icon={Search}
+                                        title={tp('rulesNoResults')}
+                                        description={tp('rulesNoResultsDescMobile') || tp('rulesNoResultsDesc')}
+                                        action={
+                                            <button
+                                                onClick={resetAllFilters}
+                                                className="h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
+                                            >
+                                                {tp('resetAll')}
+                                            </button>
+                                        }
+                                    />
                                 </div>
                             ) : pagedPoin.map(v => (
                                 <div key={v.id} className="p-4 bg-[var(--color-surface)]">
@@ -1497,18 +1528,20 @@ export default function PointRulesTab({ showStats = true }) {
             </Modal>
 
             {/* Export Modal */}
-            <RulesExportModal
-                isOpen={isExportModalOpen}
-                onClose={() => setIsExportModalOpen(false)}
-                rulesCount={totalRows}
-                selectedCount={selectedIds.length}
-                exportScope={exportScope}
-                setExportScope={setExportScope}
-                exportColumns={exportColumns}
-                setExportColumns={setExportColumns}
-                exporting={exporting}
-                handleExport={handleExport}
-            />
+            <React.Suspense fallback={null}>
+                <LazyRulesExportModal
+                    isOpen={isExportModalOpen}
+                    onClose={() => setIsExportModalOpen(false)}
+                    rulesCount={totalRows}
+                    selectedCount={selectedIds.length}
+                    exportScope={exportScope}
+                    setExportScope={setExportScope}
+                    exportColumns={exportColumns}
+                    setExportColumns={setExportColumns}
+                    exporting={exporting}
+                    handleExport={handleExport}
+                />
+            </React.Suspense>
 
             {/* Reset Poin Siswa Modal */}
             <Modal

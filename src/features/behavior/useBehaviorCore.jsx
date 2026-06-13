@@ -55,6 +55,7 @@ export function useBehaviorCore() {
     const [itemToDelete, setItemToDelete] = useState(null)
     const [selectedIds, setSelectedIds] = useState([])
     const [classesList, setClassesList] = useState([]) // fetched directly from classes table
+    const [classesObjects, setClassesObjects] = useState([])
 
     const searchInputRef = useRef(null)
     const colMenuRef = useRef(null)
@@ -240,7 +241,10 @@ export function useBehaviorCore() {
                 })
                 setViolationTypes(filteredVTs)
             }
-            if (classRes.data) setClassesList(classRes.data.map(c => c.name).filter(Boolean).sort())
+            if (classRes.data) {
+                setClassesObjects(classRes.data)
+                setClassesList(classRes.data.map(c => c.name).filter(Boolean).sort())
+            }
         } catch { addToast(tp('toastLoadMetaError'), 'error') }
     }, [addToast, canAchievement, canViolation, tp])
 
@@ -542,6 +546,7 @@ export function useBehaviorCore() {
         students,
         violationTypes,
         classesList,
+        classesObjects,
         loading,
         submitting,
         totalRows,
