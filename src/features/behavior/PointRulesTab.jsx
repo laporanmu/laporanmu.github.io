@@ -928,9 +928,9 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
 
 
             {/* Filters & Actions */}
-            <div className="glass rounded-2xl border border-[var(--color-border)] overflow-hidden">
+            <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden">
                 {/* Row 1: Search + Quick Filters + Filter Toggle */}
-                <div className="grid grid-cols-[minmax(0,_1fr)_auto] items-center gap-x-2 gap-y-3 p-3 lg:flex lg:flex-row lg:items-center lg:gap-0 lg:p-4">
+                <div className="grid grid-cols-[minmax(0,_1fr)_auto] items-center gap-x-2 gap-y-2.5 p-2 xs:p-2.5 lg:flex lg:flex-row lg:items-center lg:gap-0 lg:p-3">
 
                     {/* Group 1: Search Bar */}
                     <div className="col-start-1 row-start-1 col-span-1 flex-1 w-full min-w-0 lg:min-w-[160px]">
@@ -958,7 +958,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                     <div className="hidden lg:block w-[1px] h-5 bg-[var(--color-border)] lg:mx-2.5 xl:mx-4 shrink-0" />
 
                     {/* Group 2: Quick Filter Chips */}
-                    <div className="col-start-1 row-start-2 col-span-2 flex flex-nowrap items-center gap-1 pt-3 lg:pt-0 shrink-0 w-full lg:w-auto overflow-x-auto scrollbar-hide border-t border-[var(--color-border)] lg:border-t-0">
+                    <div className="col-start-1 row-start-2 col-span-2 flex flex-nowrap items-center gap-1 pt-2.5 lg:pt-0 shrink-0 w-full lg:w-auto overflow-x-auto scrollbar-hide border-t border-[var(--color-border)] lg:border-t-0">
                         <div className="flex items-center gap-1 shrink-0 py-0.5">
                             {[
                                 { id: '', label: tp('all'), icon: Layers, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },

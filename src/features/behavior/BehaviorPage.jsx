@@ -10,7 +10,7 @@ import {
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '@context/Auth'
 import { useFlag } from '@context/FeatureFlags'
-import PointRulesTab from './PointRulesTab'
+const LazyPointRulesTab = React.lazy(() => import('./PointRulesTab'))
 
 const LazyBehaviorExportModal = React.lazy(() => import('./BehaviorExportModal'))
 const LazyBehaviorImportModal = React.lazy(() => import('./BehaviorImportModal'))
@@ -949,11 +949,18 @@ export default function BehaviorPage() {
                 />
                     </>
                 ) : (
-                    <PointRulesTab
-                        showStats={false}
-                        initialPoin={violationTypes}
-                        initialClasses={classesObjects}
-                    />
+                    <React.Suspense fallback={
+                        <div className="h-64 flex flex-col items-center justify-center gap-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl">
+                            <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] animate-pulse">{t('behavior.loading')}</span>
+                        </div>
+                    }>
+                        <LazyPointRulesTab
+                            showStats={false}
+                            initialPoin={violationTypes}
+                            initialClasses={classesObjects}
+                        />
+                    </React.Suspense>
                 )}
 
             </div>
