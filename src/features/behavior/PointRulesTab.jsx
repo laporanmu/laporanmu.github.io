@@ -4,7 +4,8 @@ import {
     Plus, Search, X, Loader2, Shield, Gavel, Trophy, Sliders,
     Trash2, Eye, EyeOff, Download, Archive, RotateCcw, Keyboard,
     Check, AlertTriangle, AlertCircle, Info, Edit2, Layers,
-    GraduationCap, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight
+    GraduationCap, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
+    Ban, MoreHorizontal
 } from 'lucide-react'
 import Modal from '@shared/components/Modal'
 import ConfirmDialog from '@shared/components/ConfirmDialog'
@@ -35,7 +36,98 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
     const { t, tNum, dir, language } = useLanguage()
     const tp = useCallback((key, params) => t(`behavior.${key}`, params), [t])
 
+    const getCategoryLabel = useCallback((cat) => {
+        if (!cat || cat === 'undefined') return tp('cat.Lainnya') || 'Lainnya'
+        const translated = tp(`cat.${cat}`)
+        if (translated && translated.toUpperCase().startsWith('BEHAVIOR.CAT.')) return cat
+        return translated
+    }, [tp])
+
     const canEdit = profile?.role === 'guru' ? teacherPoinEnabled : true
+
+    const renderCard = (v) => {
+        const isExpanded = expandedCardId === v.id
+        return (
+            <div key={v.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden shadow-sm transition-all duration-200">
+                <div className="p-3.5 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                        {/* Icon container */}
+                        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 border mt-0.5 ${
+                            v.is_negative 
+                                ? 'bg-red-50/70 dark:bg-red-500/10 text-red-500 border-red-500/10' 
+                                : 'bg-emerald-50/70 dark:bg-emerald-500/10 text-emerald-500 border-emerald-500/10'
+                        }`}>
+                            {v.is_negative ? <Ban className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
+                        </div>
+                        {/* Title & metadata info */}
+                        <div className="min-w-0">
+                            <h4 className="text-[13px] font-black text-[var(--color-text)] leading-snug break-words">{v.name}</h4>
+                            <div className="flex items-center gap-1.5 mt-1">
+                                <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ${
+                                    v.is_negative 
+                                        ? 'bg-red-500/10 text-red-500' 
+                                        : 'bg-emerald-500/10 text-emerald-500'
+                                }`}>
+                                    {v.is_negative ? tp('violation') : tp('achievement')}
+                                </span>
+                                <span className="text-[10px] text-[var(--color-text-muted)] font-bold truncate">
+                                    · {getCategoryLabel(v.category)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Points & Action Button */}
+                    <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                        <div className={`px-2.5 py-1 rounded-xl text-[10px] font-black ${
+                            v.is_negative 
+                                ? 'bg-red-500/10 text-red-500' 
+                                : 'bg-emerald-500/10 text-emerald-500'
+                        }`}>
+                            {isPrivacyMode ? '***' : `${v.points > 0 ? '+' : ''}${v.points}`}
+                        </div>
+                        {canEdit && (
+                            <button
+                                onClick={() => setExpandedCardId(isExpanded ? null : v.id)}
+                                className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${
+                                    isExpanded 
+                                        ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm shadow-[var(--color-primary)]/10' 
+                                        : 'bg-[var(--color-surface-alt)]/50 border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] hover:text-[var(--color-text)]'
+                                }`}
+                            >
+                                <MoreHorizontal className="w-4.5 h-4.5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {v.description && (
+                    <p className="text-[10px] font-semibold text-[var(--color-text-muted)]/75 leading-relaxed px-3.5 pb-3.5 -mt-1 pl-[48px]">
+                        {v.description}
+                    </p>
+                )}
+
+                {/* Collapsible Action Buttons drawer */}
+                {isExpanded && canEdit && (
+                    <div className="flex border-t border-[var(--color-border)] bg-[var(--color-surface-alt)]/20 animate-in slide-in-from-top-2 duration-150">
+                        <button
+                            onClick={() => handleEdit(v)}
+                            className="flex-1 py-2.5 flex items-center justify-center gap-2 border-r border-[var(--color-border)] text-xs font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)]/50 transition-all"
+                        >
+                            <Edit2 className="w-3.5 h-3.5 opacity-70" />
+                            <span>{tp('edit')}</span>
+                        </button>
+                        <button
+                            onClick={() => { setItemToDelete(v); setIsDeleteModalOpen(true) }}
+                            className="flex-1 py-2.5 flex items-center justify-center gap-2 text-xs font-bold text-rose-500 hover:bg-rose-500/[0.03] transition-all"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>{tp('delete')}</span>
+                        </button>
+                    </div>
+                )}
+            </div>
+        )
+    }
 
     const [poin, setPoin] = useState(initialPoin)
     const [loading, setLoading] = useState(!initialPoin || initialPoin.length === 0)
@@ -79,6 +171,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
     const [isExportModalOpen, setIsExportModalOpen] = useState(false)
     const [selectedItem, setSelectedItem] = useState(null)
+    const [expandedCardId, setExpandedCardId] = useState(null)
     const [formCategory, setFormCategory] = useState('Kedisiplinan')
     const [formStatus, setFormStatus] = useState('active')
 
@@ -459,7 +552,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                 const row = {}
                 if (exportColumns.includes('name')) row[tp('rulesFieldName')] = v.name
                 if (exportColumns.includes('type')) row[tp('rulesColTypePreset')] = v.is_negative ? tp('rulesFieldTypeViolation') : tp('rulesFieldTypeAchievement')
-                if (exportColumns.includes('category')) row[tp('category')] = tp(`cat.${v.category}`) || v.category
+                if (exportColumns.includes('category')) row[tp('category')] = getCategoryLabel(v.category)
                 if (exportColumns.includes('points')) row[tp('rulesColWeightPreset')] = v.points
                 if (exportColumns.includes('status')) row[tp('rulesFieldStatus')] = v.status === 'active' ? tp('rulesFieldStatusActive') : tp('rulesFieldStatusInactive')
                 if (exportColumns.includes('description')) row[tp('notes')] = v.description || '-'
@@ -880,7 +973,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                         {tp('rulesSubtitleConfig')}
                     </p>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center justify-end w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 sm:gap-2 justify-end w-full sm:w-auto">
                     {/* Reset Button */}
                     {canEdit && (
                         <button
@@ -889,7 +982,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                             title={tp('rulesResetPointsTitle')}
                         >
                             <RotateCcw className="w-3.5 h-3.5" />
-                            <span>{tp('rulesResetPoints')}</span>
+                            <span className="hidden sm:inline">{tp('rulesResetPoints')}</span>
                         </button>
                     )}
 
@@ -900,31 +993,30 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                         title={tp('rulesExportTitle')}
                     >
                         <Download className="w-3.5 h-3.5" />
-                        <span>{tp('rulesExport')}</span>
+                        <span className="hidden sm:inline">{tp('rulesExport')}</span>
                     </button>
 
                     {/* Privacy Toggle */}
                     <button
                         onClick={() => {
-                            const next = !isPrivacyMode
-                            setIsPrivacyMode(next)
-                            addToast(next ? tp('toastPrivacyOn') : tp('toastPrivacyOff'), next ? 'info' : 'success')
+                            setIsPrivacyMode(!isPrivacyMode)
                         }}
                         className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all text-xs font-bold ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                         title={isPrivacyMode ? tp('disablePrivacy') : tp('enablePrivacy')}
                     >
                         {isPrivacyMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        <span className="hidden md:inline">{tp('privacy')}</span>
+                        <span className="hidden sm:inline">{tp('privacy')}</span>
                     </button>
 
                     {/* Add Button */}
                     {canEdit && (
                         <button
                             onClick={handleAdd}
-                            className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 border border-white/10"
+                            className="h-9 px-3 sm:px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 border border-white/10"
+                            title={tp('rulesAdd')}
                         >
                             <Plus className="w-3.5 h-3.5" />
-                            <span>{tp('rulesAdd')}</span>
+                            <span className="hidden sm:inline">{tp('rulesAdd')}</span>
                         </button>
                     )}
                 </div>
@@ -973,7 +1065,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
 
                     {/* Group 2: Quick Filter Chips */}
                     <div className="col-start-1 row-start-2 col-span-2 flex flex-nowrap items-center gap-1 pt-2.5 lg:pt-0 shrink-0 w-full lg:w-auto overflow-x-auto scrollbar-hide border-t border-[var(--color-border)] lg:border-t-0">
-                        <div className="flex items-center gap-1 shrink-0 py-0.5">
+                        <div className="flex items-center gap-1 w-full lg:w-auto lg:shrink-0 py-0.5">
                             {[
                                 { id: '', label: tp('all'), icon: Layers, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },
                                 { id: 'violation', label: tp('violation'), icon: Gavel, activeCls: 'bg-rose-500 border-rose-500' },
@@ -982,7 +1074,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                                 <button
                                     key={s.id}
                                     onClick={() => { setFilterType(s.id); setPage(1) }}
-                                    className={`flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-normal sm:tracking-widest whitespace-nowrap transition-all border ${
+                                    className={`flex-1 lg:flex-initial flex items-center justify-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-normal sm:tracking-widest whitespace-nowrap transition-all border ${
                                         filterType === s.id
                                             ? `${s.activeCls} text-white`
                                             : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]'
@@ -1056,7 +1148,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                         {filterCategory && (
                             <button type="button" onClick={() => setFilterCategory('')}
                                 className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 text-[10px] font-black text-[var(--color-primary)]">
-                                <span className="opacity-70">{tp('category')}:</span> {tp(`cat.${filterCategory}`) || filterCategory}
+                                <span className="opacity-70">{tp('category')}:</span> {getCategoryLabel(filterCategory)}
                                 <span className="w-5 h-5 rounded-lg bg-white/70 dark:bg-[var(--color-surface)] border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] opacity-70 group-hover:opacity-100 transition-opacity">
                                     <X className="w-3.5 h-3.5" />
                                 </span>
@@ -1182,7 +1274,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
             )}
 
             {/* Main Content Area */}
-            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden">
+            <div className="md:bg-[var(--color-surface)] md:rounded-2xl md:border md:border-[var(--color-border)] md:shadow-sm md:overflow-hidden bg-transparent border-0 shadow-none mt-4">
                 {loading ? (
                     <div className="p-6 space-y-4">
                         <div className="animate-pulse space-y-3">
@@ -1297,7 +1389,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                                             )}
                                             {visibleCols.category && (
                                                 <td className="px-4 py-3 text-center">
-                                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{tp(`cat.${rule.category}`) || rule.category}</span>
+                                                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{getCategoryLabel(rule.category)}</span>
                                                 </td>
                                             )}
                                             {visibleCols.points && (
@@ -1338,9 +1430,9 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                         </div>
 
                         {/* Mobile Stack View */}
-                        <div className="md:hidden divide-y divide-[var(--color-border)]">
+                        <div className="md:hidden">
                             {totalRows === 0 ? (
-                                <div className="py-10 px-4 bg-[var(--color-surface)]">
+                                <div className="py-10 px-4 bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)]">
                                     <EmptyState
                                         variant="plain"
                                         color="slate"
@@ -1357,33 +1449,33 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                                         }
                                     />
                                 </div>
-                            ) : pagedPoin.map(v => (
-                                <div key={v.id} className="p-4 bg-[var(--color-surface)]">
-                                    <div className="flex items-start justify-between gap-3 mb-2">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center text-white ${v.is_negative ? 'bg-red-500' : 'bg-emerald-500'}`}>
-                                                {v.is_negative ? <Gavel className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
+                            ) : (
+                                <div className="space-y-4">
+                                    {/* Violations Section */}
+                                    {pagedPoin.some(v => v.is_negative) && (
+                                        <div className="space-y-2">
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-1 py-1">
+                                                {tp('violation')}
                                             </div>
-                                            <div>
-                                                <h4 className="text-xs font-black text-[var(--color-text)] leading-tight">{v.name}</h4>
-                                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">{tp(`cat.${v.category}`) || v.category}</p>
+                                            <div className="flex flex-col gap-2.5">
+                                                {pagedPoin.filter(v => v.is_negative).map(v => renderCard(v))}
                                             </div>
                                         </div>
-                                        <div className={`px-2 py-1 rounded-lg text-white text-[9px] font-black shadow-lg shrink-0 ${getPointStyle(v.points)}`}>
-                                            {isPrivacyMode ? '***' : `${v.points > 0 ? '+' : ''}${v.points}`}
-                                        </div>
-                                    </div>
-                                    {v.description && (
-                                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] leading-relaxed mt-1.5 pl-11">{v.description}</p>
                                     )}
-                                    {canEdit && (
-                                        <div className="flex items-center gap-2 mt-4">
-                                            <button onClick={() => handleEdit(v)} className="flex-1 h-8.5 rounded-xl bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest">{tp('edit')}</button>
-                                            <button onClick={() => { setItemToDelete(v); setIsDeleteModalOpen(true) }} className="flex-1 h-8.5 rounded-xl bg-red-500/10 text-red-600 text-[10px] font-black uppercase tracking-widest">{tp('delete')}</button>
+
+                                    {/* Achievements Section */}
+                                    {pagedPoin.some(v => !v.is_negative) && (
+                                        <div className="space-y-2">
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-1 py-1">
+                                                {tp('achievement')}
+                                            </div>
+                                            <div className="flex flex-col gap-2.5">
+                                                {pagedPoin.filter(v => !v.is_negative).map(v => renderCard(v))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-                            ))}
+                            )}
                         </div>
 
                         {/* Pagination Footer */}
@@ -1630,7 +1722,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                                 </div>
                             </div>
 
-                            <div className="border border-[var(--color-border)] bg-[var(--color-surface-alt)]/15 rounded-2xl p-2.5 max-h-[300px] overflow-y-auto custom-scrollbar">
+                            <div className="border border-[var(--color-border)] bg-[var(--color-surface-alt)]/15 rounded-2xl p-2.5 max-h-[200px] overflow-y-auto custom-scrollbar">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {/* Option Semua Kelas */}
                                     {!resetPointsSearch && (

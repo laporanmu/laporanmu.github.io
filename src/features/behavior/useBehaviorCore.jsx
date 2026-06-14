@@ -221,7 +221,7 @@ export function useBehaviorCore() {
         try {
             const [studRes, vtRes, classRes] = await Promise.all([
                 supabase.from('students').select('id,name,class_id,total_points,classes(id,name)').order('name'),
-                supabase.from('point_rules').select('id,name,points,is_negative,status').order('name'),
+                supabase.from('point_rules').select('id,name,category,points,is_negative,status').order('name'),
                 supabase.from('classes').select('id,name').order('name'),
             ])
             if (studRes.data) {
@@ -552,6 +552,7 @@ export function useBehaviorCore() {
         totalRows,
         stats,
         searchQuery, setSearchQuery,
+        debouncedSearch,
         filterType, setFilterType,
         filterClass, setFilterClass,
         sortBy, setSortBy,

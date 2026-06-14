@@ -100,6 +100,7 @@
   "behavior.studentCol": "الطالب",
   "behavior.manageColumns": "إدارة الأعمدة",
   "behavior.delete": "حذف",
+  "behavior.edit": "تعديل",
   "behavior.deleteReport": "حذف التقرير",
   "behavior.detailReport": "تفاصيل تقرير السلوك",
   "behavior.tooltipView": "عرض التفاصيل",

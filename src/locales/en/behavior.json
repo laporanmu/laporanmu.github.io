@@ -100,6 +100,7 @@
   "behavior.studentCol": "Student",
   "behavior.manageColumns": "Manage Columns",
   "behavior.delete": "Delete",
+  "behavior.edit": "Edit",
   "behavior.deleteReport": "Delete Report",
   "behavior.detailReport": "Behavior Report Detail",
   "behavior.tooltipView": "View detail",

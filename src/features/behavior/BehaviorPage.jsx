@@ -7,7 +7,6 @@ import {
     Keyboard, Eye, EyeOff, Archive, RotateCcw, Sliders, Trash2, Edit2, X, AlertCircle, FileEdit,
     Shield, Gavel, Trophy, Info
 } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '@context/Auth'
 import { useFlag } from '@context/FeatureFlags'
 const LazyPointRulesTab = React.lazy(() => import('./PointRulesTab'))
@@ -60,6 +59,7 @@ export default function BehaviorPage() {
         totalRows,
         stats,
         searchQuery, setSearchQuery,
+        debouncedSearch,
         filterType, setFilterType,
         filterClass, setFilterClass,
         sortBy, setSortBy,
@@ -173,9 +173,7 @@ export default function BehaviorPage() {
         return { total, violations, achievements, avgPoints }
     }, [violationTypes])
 
-    const [searchParams, setSearchParams] = useSearchParams()
-    const tabParam = searchParams.get('tab')
-    const [activeTab, setActiveTab] = useState(tabParam === 'rules' || tabParam === 'poin' ? 'rules' : 'reports')
+    const [activeTab, setActiveTab] = useState('reports')
 
     const [hasOpenedForm, setHasOpenedForm] = useState(false)
     const [hasOpenedDetail, setHasOpenedDetail] = useState(false)
@@ -191,17 +189,8 @@ export default function BehaviorPage() {
     useEffect(() => { if (isDeleteModalOpen) setHasOpenedDelete(true) }, [isDeleteModalOpen])
     useEffect(() => { if (isBulkDeleteOpen) setHasOpenedBulkDelete(true) }, [isBulkDeleteOpen])
 
-    useEffect(() => {
-        if (tabParam === 'rules' || tabParam === 'poin') {
-            setActiveTab('rules')
-        } else {
-            setActiveTab('reports')
-        }
-    }, [tabParam])
-
     const handleTabChange = (newTab) => {
         setActiveTab(newTab)
-        setSearchParams({ tab: newTab })
     }
 
     const tDb = useCallback((text) => {
@@ -441,9 +430,7 @@ export default function BehaviorPage() {
                             {/* Privasi Button Standalone */}
                             <button
                                 onClick={() => {
-                                    const next = !isPrivacyMode
-                                    setIsPrivacyMode(next)
-                                    addToast(next ? tp('toastPrivacyOn') : tp('toastPrivacyOff'), next ? 'info' : 'success')
+                                    setIsPrivacyMode(!isPrivacyMode)
                                 }}
                                 className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'} `}
                                 title={isPrivacyMode ? tp('disablePrivacy') : tp('enablePrivacy')}
