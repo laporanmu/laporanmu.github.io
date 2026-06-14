@@ -8,9 +8,7 @@ export default function DormsAssignModal({
     assignStep,
     isHeaderAssign,
     studentToAssign,
-    filteredAssignStudents,
-    assignSearchQuery,
-    setAssignSearchQuery,
+    students = [],
     dorms,
     selectedTargetRoom,
     setSelectedTargetRoom,
@@ -19,6 +17,22 @@ export default function DormsAssignModal({
     onSave,
     submitting
 }) {
+    const [localQuery, setLocalQuery] = React.useState('')
+
+    // Reset search query when modal opens/closes
+    React.useEffect(() => {
+        if (isOpen) {
+            setLocalQuery('')
+        }
+    }, [isOpen])
+
+    const filteredAssignStudents = React.useMemo(() => {
+        const query = localQuery.trim().toLowerCase()
+        if (!query) return students
+        return students.filter(s =>
+            s.name.toLowerCase().includes(query)
+        )
+    }, [students, localQuery])
     return (
         <Modal
             isOpen={isOpen}
@@ -80,14 +94,14 @@ export default function DormsAssignModal({
                             </div>
                             <input
                                 type="text"
-                                value={assignSearchQuery}
-                                onChange={(e) => setAssignSearchQuery(e.target.value)}
+                                value={localQuery}
+                                onChange={(e) => setLocalQuery(e.target.value)}
                                 placeholder="Cari nama santri..."
                                 className="w-full h-10 pl-9 pr-8 text-xs bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:outline-none transition-all rounded-xl font-bold"
                             />
-                            {assignSearchQuery && (
+                            {localQuery && (
                                 <button
-                                    onClick={() => setAssignSearchQuery('')}
+                                    onClick={() => setLocalQuery('')}
                                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                                 >
                                     <X className="w-3 h-3" />
@@ -101,38 +115,45 @@ export default function DormsAssignModal({
                                         Tidak ada santri ditemukan
                                     </p>
                                 ) : (
-                                    filteredAssignStudents.map(student => {
-                                        const room = student.metadata?.kamar
-                                        return (
-                                            <button
-                                                key={student.id}
-                                                onClick={() => {
-                                                    setStudentToAssign(student)
-                                                    setSelectedTargetRoom(room || '')
-                                                    setAssignStep(2)
-                                                }}
-                                                className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/60 hover:border-[var(--color-border-hover)] transition-all text-left flex items-center justify-between"
-                                            >
-                                                <div>
-                                                    <p className="text-[11.5px] font-black text-[var(--color-text)]">{student.name}</p>
-                                                    <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider mt-0.5">
-                                                        {student.classes?.name || 'Kelas —'}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    {room ? (
-                                                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
-                                                            {room}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-dashed border-amber-500/20">
-                                                            Belum Diplot
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </button>
-                                        )
-                                    })
+                                    <>
+                                        {filteredAssignStudents.slice(0, 20).map(student => {
+                                            const room = student.metadata?.kamar
+                                            return (
+                                                <button
+                                                    key={student.id}
+                                                    onClick={() => {
+                                                        setStudentToAssign(student)
+                                                        setSelectedTargetRoom(room || '')
+                                                        setAssignStep(2)
+                                                    }}
+                                                    className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)]/60 hover:border-[var(--color-border-hover)] transition-all text-left flex items-center justify-between"
+                                                >
+                                                    <div>
+                                                        <p className="text-[11.5px] font-black text-[var(--color-text)]">{student.name}</p>
+                                                        <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider mt-0.5">
+                                                            {student.classes?.name || 'Kelas —'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        {room ? (
+                                                            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
+                                                                {room}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-dashed border-amber-500/20">
+                                                                Belum Diplot
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            )
+                                        })}
+                                        {filteredAssignStudents.length > 20 && (
+                                            <p className="text-[9px] text-center text-[var(--color-text-muted)] py-2.5 font-black uppercase tracking-widest border-t border-[var(--color-border)]/30 mt-2 bg-[var(--color-surface-alt)]/20 rounded-lg">
+                                                Menampilkan 20 dari {filteredAssignStudents.length} santri. Silakan ketik nama lebih spesifik...
+                                            </p>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>

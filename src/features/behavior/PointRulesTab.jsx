@@ -978,10 +978,10 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                     {canEdit && (
                         <button
                             onClick={() => { setResetPointsClassIds(classesList.map(c => c.id)); setIsResetModalOpen(true) }}
-                            className="h-9 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-orange-500 hover:border-orange-500/30 flex items-center gap-2 transition-all text-xs font-bold"
+                            className="w-9 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-orange-500 hover:border-orange-500/30 flex items-center justify-center transition-all sm:w-auto sm:px-3 sm:gap-2 text-xs font-bold shrink-0"
                             title={tp('rulesResetPointsTitle')}
                         >
-                            <RotateCcw className="w-3.5 h-3.5" />
+                            <RotateCcw className="w-3.5 h-3.5 shrink-0" />
                             <span className="hidden sm:inline">{tp('rulesResetPoints')}</span>
                         </button>
                     )}
@@ -989,10 +989,10 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                     {/* Export Button */}
                     <button
                         onClick={() => setIsExportModalOpen(true)}
-                        className="h-9 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center gap-2 transition-all text-xs font-bold"
+                        className="w-9 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center justify-center transition-all sm:w-auto sm:px-3 sm:gap-2 text-xs font-bold shrink-0"
                         title={tp('rulesExportTitle')}
                     >
-                        <Download className="w-3.5 h-3.5" />
+                        <Download className="w-3.5 h-3.5 shrink-0" />
                         <span className="hidden sm:inline">{tp('rulesExport')}</span>
                     </button>
 
@@ -1001,10 +1001,10 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                         onClick={() => {
                             setIsPrivacyMode(!isPrivacyMode)
                         }}
-                        className={`h-9 px-3 rounded-lg border flex items-center gap-2 transition-all text-xs font-bold ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all sm:w-auto sm:px-3 sm:gap-2 text-xs font-bold shrink-0 ${isPrivacyMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                         title={isPrivacyMode ? tp('disablePrivacy') : tp('enablePrivacy')}
                     >
-                        {isPrivacyMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        {isPrivacyMode ? <EyeOff className="w-3.5 h-3.5 shrink-0" /> : <Eye className="w-3.5 h-3.5 shrink-0" />}
                         <span className="hidden sm:inline">{tp('privacy')}</span>
                     </button>
 
@@ -1012,10 +1012,11 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                     {canEdit && (
                         <button
                             onClick={handleAdd}
-                            className="h-9 px-3 sm:px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 border border-white/10"
+                            className="h-9 px-3 rounded-xl bg-[var(--color-primary)] text-white flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 border border-white/10 text-[10px] font-black uppercase tracking-widest whitespace-nowrap flex-1 sm:flex-initial"
                             title={tp('rulesAdd')}
                         >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Plus className="w-3.5 h-3.5 shrink-0" />
+                            <span className="sm:hidden">{tp('rulesAdd').split(' ')[0]}</span>
                             <span className="hidden sm:inline">{tp('rulesAdd')}</span>
                         </button>
                     )}
@@ -1274,7 +1275,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
             )}
 
             {/* Main Content Area */}
-            <div className="md:bg-[var(--color-surface)] md:rounded-2xl md:border md:border-[var(--color-border)] md:shadow-sm md:overflow-hidden bg-transparent border-0 shadow-none mt-4">
+            <div className="glass rounded-[1.5rem] border border-[var(--color-border)] overflow-hidden mt-4">
                 {loading ? (
                     <div className="p-6 space-y-4">
                         <div className="animate-pulse space-y-3">
@@ -1430,7 +1431,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                         </div>
 
                         {/* Mobile Stack View */}
-                        <div className="md:hidden">
+                        <div className="md:hidden p-3.5 xs:p-4 bg-[var(--color-surface-alt)]/30 border-b border-[var(--color-border)]">
                             {totalRows === 0 ? (
                                 <div className="py-10 px-4 bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)]">
                                     <EmptyState

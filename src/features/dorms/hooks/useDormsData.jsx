@@ -52,7 +52,6 @@ export function useDormsData(addToast) {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
     const [studentToAssign, setStudentToAssign] = useState(null)
     const [selectedTargetRoom, setSelectedTargetRoom] = useState('')
-    const [assignSearchQuery, setAssignSearchQuery] = useState('')
     const [assignStep, setAssignStep] = useState(1)
     const [isHeaderAssign, setIsHeaderAssign] = useState(false)
 
@@ -66,6 +65,23 @@ export function useDormsData(addToast) {
     const [isExportModalOpen, setIsExportModalOpen] = useState(false)
     const [exportScope, setExportScope] = useState('all')
     const [exportFormat, setExportFormat] = useState('csv')
+    const [exportDataset, setExportDataset] = useState('plotting')
+
+    // --- Import Modal States ---
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+    const [importFileName, setImportFileName] = useState('')
+    const [importPreview, setImportPreview] = useState([])
+    const [importIssues, setImportIssues] = useState([])
+    const [importing, setImporting] = useState(false)
+    const [importProgress, setImportProgress] = useState({ done: 0, total: 0 })
+    const [importStep, setImportStep] = useState(1) // 1: Upload, 2: Mapping, 3: Review
+    const [importRawData, setImportRawData] = useState([])
+    const [importFileHeaders, setImportFileHeaders] = useState([])
+    const [importColumnMapping, setImportColumnMapping] = useState({})
+    const [importDragOver, setImportDragOver] = useState(false)
+    const [importValidationOpen, setImportValidationOpen] = useState(false)
+    const [importLoading, setImportLoading] = useState(false)
+    const [importEditCell, setImportEditCell] = useState(null)
 
     const [isAuditModalOpen, setIsAuditModalOpen] = useState(false)
     const [newAudit, setNewAudit] = useState({
@@ -275,7 +291,6 @@ export function useDormsData(addToast) {
         setSelectedTargetRoom(student ? (student.metadata?.kamar || '') : '')
         setAssignStep(student ? 2 : 1)
         setIsHeaderAssign(!student)
-        setAssignSearchQuery('')
         setIsAssignModalOpen(true)
     }
 
@@ -768,86 +783,312 @@ export function useDormsData(addToast) {
         }
     }
 
-    // --- Export Actions Handlers ---
-    const handleExecuteExport = useCallback(() => {
-        setIsExportModalOpen(false)
-        try {
-            let filtered = students
-            if (exportScope === 'assigned') {
-                filtered = students.filter(s => s.metadata?.kamar)
-            } else if (exportScope === 'unassigned') {
-                filtered = students.filter(s => !s.metadata?.kamar)
-            }
+    // --- Export Actions Handlers (Backward Compatibility) ---
+    const handleOpenExportModal = useCallback((datasetType = 'plotting') => {
+        setExportDataset(datasetType)
+        setIsExportModalOpen(true)
+    }, [])
 
-            const rows = [['Nama Santri', 'Kelas', 'Kamar', 'Status']]
-            filtered.forEach(s => {
-                rows.push([
-                    s.name,
-                    s.classes?.name || '—',
-                    s.metadata?.kamar || '—',
-                    s.metadata?.kamar ? 'Terplot' : 'Belum Terplot'
-                ])
-            })
-            const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n')
-            const blob = new Blob([csv], { type: 'text/csv' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `plotting_kamar_${exportScope}.csv`
-            a.click()
-            URL.revokeObjectURL(url)
-            addToast('Data plotting berhasil diekspor', 'success')
-        } catch {
-            addToast('Gagal mengekspor data', 'error')
-        }
-    }, [students, exportScope, addToast])
+    const handleExecuteExport = useCallback(() => {
+        setIsExportModalOpen(true)
+    }, [])
 
     const handleExportAuditsCSV = useCallback(() => {
-        try {
-            const rows = [['Kamar', 'Skor Rata-rata', 'Predikat', 'Kerapian', 'Kebersihan', 'Keharuman', 'Tanggal', 'Catatan']]
-            audits.forEach(a => {
-                rows.push([
-                    a.room,
-                    a.score,
-                    a.rating,
-                    a.aspects?.kerapian || 0,
-                    a.aspects?.kebersihan || 0,
-                    a.aspects?.keharuman || 0,
-                    a.date || '—',
-                    a.notes || '—'
-                ])
-            })
-            const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n')
-            const blob = new Blob([csv], { type: 'text/csv' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a'); a.href = url; a.download = 'audit_kebersihan_kamar.csv'; a.click()
-            URL.revokeObjectURL(url)
-            addToast('Data audit kebersihan berhasil diekspor', 'success')
-        } catch { addToast('Gagal mengekspor data audit kebersihan', 'error') }
-    }, [audits, addToast])
+        handleOpenExportModal('cleanliness')
+    }, [handleOpenExportModal])
 
     const handleExportInventoriesCSV = useCallback(() => {
-        try {
-            const rows = [['Kamar', 'Nama Item', 'Total', 'Kondisi Baik', 'Kondisi Rusak', 'Catatan', 'Terakhir Diperiksa']]
-            inventories.forEach(i => {
-                rows.push([
-                    i.dorm_id || '—',
-                    i.item_name || '—',
-                    i.total_quantity || 0,
-                    i.good_condition_count || 0,
-                    i.damaged_condition_count || 0,
-                    i.notes || '—',
-                    i.last_checked_at ? new Date(i.last_checked_at).toLocaleDateString('id-ID') : '—'
-                ])
+        handleOpenExportModal('inventory')
+    }, [handleOpenExportModal])
+
+    // --- Import Actions & Helper Handlers ---
+    const SYSTEM_COLS = useMemo(() => [
+        { key: 'student_name', label: 'Nama Siswa', synonyms: ['nama', 'student', 'siswa', 'student_name', 'nama siswa', 'name', 'nama lengkap'] },
+        { key: 'class_name', label: 'Nama Kelas', synonyms: ['kelas', 'class', 'class_name', 'rombongan belajar', 'rombel', 'nama kelas'] },
+        { key: 'room_name', label: 'Nama Kamar', synonyms: ['kamar', 'room', 'room_name', 'nama kamar', 'asrama', 'kamar asrama'] }
+    ], [])
+
+    const parseCSVFile = async (file) => {
+        const Papa = (await import('papaparse')).default
+        return new Promise((resolve, reject) => {
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => resolve(results.data || []),
+                error: (err) => reject(err)
             })
-            const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n')
-            const blob = new Blob([csv], { type: 'text/csv' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a'); a.href = url; a.download = 'inventaris_kamar.csv'; a.click()
-            URL.revokeObjectURL(url)
-            addToast('Data inventaris kamar berhasil diekspor', 'success')
-        } catch { addToast('Gagal mengekspor data inventaris', 'error') }
-    }, [inventories, addToast])
+        })
+    }
+
+    const parseExcelFile = async (file) => {
+        const XLSX = await import('xlsx')
+        const buf = await file.arrayBuffer()
+        const wb = XLSX.read(buf, { type: 'array', cellDates: true })
+        const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
+        return json
+    }
+
+    const processImportFile = async (file) => {
+        const ext = file.name.toLowerCase()
+        if (!ext.endsWith('.csv') && !ext.endsWith('.xlsx')) {
+            addToast('Format file tidak didukung. Harap unggah file .csv atau .xlsx', 'error')
+            return
+        }
+        setImportFileName(file.name)
+        setImportPreview([])
+        setImportIssues([])
+        setImportLoading(true)
+        try {
+            const isXlsx = ext.endsWith('.xlsx') || (file.type || '').includes('sheet')
+            const rows = isXlsx ? await parseExcelFile(file) : await parseCSVFile(file)
+            if (!rows.length) {
+                addToast('File kosong atau tidak dapat dibaca', 'error')
+                return
+            }
+
+            setImportRawData(rows)
+            const headers = Object.keys(rows[0])
+            setImportFileHeaders(headers)
+
+            // Auto column mapping
+            const mapping = {}
+            const norm = (str) => (str || '').toLowerCase().replace(/[\s\xA0\n\r]+/g, ' ').trim()
+            SYSTEM_COLS.forEach(sys => {
+                const match = headers.find(h => {
+                    const normH = norm(h)
+                    const cleanH = norm(h.split(/[\(\[\{（\n\r]/)[0])
+                    const normK = norm(sys.key)
+                    const normL = norm(sys.label)
+                    if (normH === normL || normH === normK || cleanH === normL || cleanH === normK) return true
+                    if (sys.synonyms && sys.synonyms.some(syn => {
+                        const s = norm(syn)
+                        return normH === s || cleanH === s || cleanH.replace(/[^a-z0-9]/g, '') === s.replace(/[^a-z0-9]/g, '')
+                    })) return true
+                    return false
+                })
+                if (match) mapping[sys.key] = match
+            })
+
+            setImportColumnMapping(mapping)
+            setImportStep(2)
+        } catch (err) {
+            console.error(err)
+            addToast('Gagal membaca file import', 'error')
+        } finally {
+            setImportLoading(false)
+        }
+    }
+
+    const validateImportPreview = useCallback((preview) => {
+        const issues = []
+        const validated = preview.map((r, idx) => {
+            const rowIssues = []
+            if (!r.student_id) {
+                rowIssues.push({ level: 'error', type: 'student', message: `Santri "${r._studentName}" tidak ditemukan` })
+            }
+            if (!r.room_id) {
+                rowIssues.push({ level: 'error', type: 'room', message: `Kamar "${r._roomName}" tidak ditemukan` })
+            }
+            if (rowIssues.length) {
+                issues.push({
+                    row: idx + 2,
+                    level: 'error',
+                    types: rowIssues.map(x => x.type),
+                    messages: rowIssues.map(x => x.message)
+                })
+            }
+            return {
+                ...r,
+                _hasError: rowIssues.length > 0
+            }
+        })
+        setImportPreview(validated)
+        setImportIssues(issues)
+        setImportValidationOpen(issues.length > 0)
+    }, [students, dorms])
+
+    const buildImportPreview = async (rows, mapping) => {
+        const sanitizeText = (s) => String(s ?? '').replace(/[<>]/g, '').trim()
+        const pick = (obj, keys) => {
+            for (const k of keys) {
+                const v = obj?.[k]
+                if (v !== undefined && v !== null && String(v).trim() !== '') return v
+            }
+            return ''
+        }
+
+        const preview = rows.map((r) => {
+            const getVal = (row, sysKey) => {
+                if (mapping && mapping[sysKey]) return sanitizeText(row[mapping[sysKey]])
+                const colDef = SYSTEM_COLS.find(c => c.key === sysKey)
+                return sanitizeText(pick(row, colDef ? colDef.synonyms : [sysKey]))
+            }
+
+            const studentName = getVal(r, 'student_name')
+            const className = getVal(r, 'class_name')
+            const roomName = getVal(r, 'room_name')
+
+            // Match student by name and class
+            const matchedStudent = students.find(s => {
+                const nameMatches = s.name.toLowerCase() === studentName.toLowerCase()
+                if (!nameMatches) return false
+                if (className) {
+                    return (s.classes?.name || '').toLowerCase() === className.toLowerCase()
+                }
+                return true
+            })
+
+            // Match dorm room by ID
+            const matchedRoom = dorms.find(d => d.id.toLowerCase() === roomName.toLowerCase())
+
+            return {
+                student_id: matchedStudent?.id || '',
+                room_id: matchedRoom?.id || '',
+                _studentName: matchedStudent?.name || studentName || '',
+                _className: className || matchedStudent?.classes?.name || '',
+                _roomName: matchedRoom?.id || roomName || '',
+                _hasError: false
+            }
+        })
+
+        validateImportPreview(preview)
+    }
+
+    const handleImportCellEdit = (index, key, value) => {
+        const newPrev = [...importPreview]
+        const updatedRow = { ...newPrev[index], [key]: value }
+
+        if (key === 'student_id') {
+            const student = students.find(s => s.id === value)
+            updatedRow._studentName = student?.name || ''
+            updatedRow._className = student?.classes?.name || ''
+        } else if (key === 'room_id') {
+            const room = dorms.find(d => d.id === value)
+            updatedRow._roomName = room?.id || ''
+        }
+
+        newPrev[index] = updatedRow
+        validateImportPreview(newPrev)
+    }
+
+    const handleRemoveImportRow = (idx) => {
+        const next = importPreview.filter((_, i) => i !== idx)
+        validateImportPreview(next)
+        addToast('Baris import berhasil dihapus', 'success')
+    }
+
+    const handleBulkFix = (sysKey, value) => {
+        const newPrev = importPreview.map(r => {
+            const updated = { ...r, [sysKey]: value }
+            if (sysKey === 'student_id') {
+                const student = students.find(s => s.id === value)
+                updated._studentName = student?.name || ''
+                updated._className = student?.classes?.name || ''
+            } else if (sysKey === 'room_id') {
+                const room = dorms.find(d => d.id === value)
+                updated._roomName = room?.id || ''
+            }
+            return updated
+        })
+        validateImportPreview(newPrev)
+        addToast(`Berhasil memperbarui semua baris bermasalah`, 'success')
+    }
+
+    const handleDownloadTemplate = async () => {
+        const templateData = [
+            {
+                'Nama Siswa': 'Ahmad Fauzi',
+                'Kelas': 'X-A',
+                'Nama Kamar': dorms[0]?.id || 'Fachruddin'
+            },
+            {
+                'Nama Siswa': 'Budi Santoso',
+                'Kelas': 'X-B',
+                'Nama Kamar': dorms[0]?.id || 'Fachruddin'
+            }
+        ]
+        try {
+            const XLSX = await import('xlsx')
+            const ws = XLSX.utils.json_to_sheet(templateData)
+            ws['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 25 }]
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'Template Plotting')
+            const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+            const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            const link = document.createElement('a')
+            link.href = URL.createObjectURL(blob)
+            link.download = 'template_plotting_kamar.xlsx'
+            link.click()
+            URL.revokeObjectURL(link.href)
+            addToast('Berhasil mengunduh template impor', 'success')
+        } catch {
+            addToast('Gagal mengunduh template', 'error')
+        }
+    }
+
+    const importReadyRows = useMemo(() => {
+        if (!importPreview.length) return []
+        const errorSet = new Set(importIssues.filter(x => x.level === 'error').map(x => x.row - 2))
+        return importPreview.filter((_, i) => !errorSet.has(i))
+    }, [importPreview, importIssues])
+
+    const hasImportBlockingErrors = useMemo(() => {
+        return importIssues.some(x => x.level === 'error')
+    }, [importIssues])
+
+    const handleCommitImport = async () => {
+        if (!importPreview.length) {
+            addToast('Tidak ada data untuk diimport', 'error')
+            return
+        }
+        if (hasImportBlockingErrors) {
+            addToast('Harap perbaiki semua error sebelum menyimpan', 'error')
+            return
+        }
+
+        setImporting(true)
+        setImportProgress({ done: 0, total: importReadyRows.length })
+
+        const CHUNK = 50
+        try {
+            for (let i = 0; i < importReadyRows.length; i += CHUNK) {
+                const chunk = importReadyRows.slice(i, i + CHUNK)
+                const updates = chunk.map(async (r) => {
+                    const studentObj = students.find(s => s.id === r.student_id)
+                    if (!studentObj) return null
+                    const nextMetadata = { ...studentObj.metadata, kamar: r.room_id }
+                    const { error } = await supabase
+                        .from('students')
+                        .update({ metadata: nextMetadata })
+                        .eq('id', r.student_id)
+                    if (error) throw error
+                    return { id: r.student_id, metadata: nextMetadata }
+                })
+
+                const results = await Promise.all(updates)
+
+                // Update local state
+                setStudents(prev => prev.map(s => {
+                    const match = results.find(res => res && res.id === s.id)
+                    return match ? { ...s, metadata: match.metadata } : s
+                }))
+
+                setImportProgress({ done: Math.min(i + CHUNK, importReadyRows.length), total: importReadyRows.length })
+            }
+
+            addToast(`Berhasil memplotting ${importReadyRows.length} santri ke kamar`, 'success')
+            setIsImportModalOpen(false)
+            setImportPreview([])
+            setImportIssues([])
+            setImportFileName('')
+            setImportStep(1)
+        } catch (err) {
+            console.error(err)
+            addToast('Gagal memproses import data', 'error')
+        } finally {
+            setImporting(false)
+        }
+    }
 
     // --- Computed / Memoized Values ---
     const stats = useMemo(() => {
@@ -970,11 +1211,6 @@ export function useDormsData(addToast) {
         return students.length
     }, [students, exportScope])
 
-    const filteredAssignStudents = useMemo(() => {
-        return students.filter(s =>
-            s.name.toLowerCase().includes(assignSearchQuery.toLowerCase())
-        )
-    }, [students, assignSearchQuery])
 
     const allSelected = paginatedStudents.length > 0 && paginatedStudents.every(s => selectedIds.includes(s.id))
 
@@ -1019,7 +1255,6 @@ export function useDormsData(addToast) {
         isAssignModalOpen, setIsAssignModalOpen,
         studentToAssign, setStudentToAssign,
         selectedTargetRoom, setSelectedTargetRoom,
-        assignSearchQuery, setAssignSearchQuery,
         assignStep, setAssignStep,
         isHeaderAssign, setIsHeaderAssign,
         isConfirmEvictOpen, setIsConfirmEvictOpen,
@@ -1030,6 +1265,37 @@ export function useDormsData(addToast) {
         isExportModalOpen, setIsExportModalOpen,
         exportScope, setExportScope,
         exportFormat, setExportFormat,
+        exportDataset, setExportDataset,
+        handleOpenExportModal,
+
+        // Import states & selectors
+        isImportModalOpen, setIsImportModalOpen,
+        importFileName, setImportFileName,
+        importPreview, setImportPreview,
+        importIssues, setImportIssues,
+        importing, setImporting,
+        importProgress, setImportProgress,
+        importStep, setImportStep,
+        importRawData, setImportRawData,
+        importFileHeaders, setImportFileHeaders,
+        importColumnMapping, setImportColumnMapping,
+        importDragOver, setImportDragOver,
+        importValidationOpen, setImportValidationOpen,
+        importLoading, setImportLoading,
+        importEditCell, setImportEditCell,
+        importReadyRows,
+        hasImportBlockingErrors,
+        SYSTEM_COLS,
+
+        // Import Handlers
+        processImportFile,
+        buildImportPreview,
+        handleImportCellEdit,
+        handleRemoveImportRow,
+        handleBulkFix,
+        handleDownloadTemplate,
+        handleCommitImport,
+
         isAuditModalOpen, setIsAuditModalOpen,
         newAudit, setNewAudit,
         auditToDelete, setAuditToDelete,
@@ -1051,7 +1317,7 @@ export function useDormsData(addToast) {
         pendingInventoryDorm, setPendingInventoryDorm,
 
         // Computed values
-        stats, studentsByRoom, activeFilters, filteredStudents, paginatedStudents, filteredAudits, buildingOptions, exportPreviewCount, filteredAssignStudents, allSelected,
+        stats, studentsByRoom, activeFilters, filteredStudents, paginatedStudents, filteredAudits, buildingOptions, exportPreviewCount, allSelected,
 
         // Fetch triggers
         fetchData, fetchDorms, fetchAudits, fetchShiftLogs, fetchMusyrifTasks, fetchMusyrifList, fetchInventories,

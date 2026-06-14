@@ -16,6 +16,7 @@ import { useDormsData } from '@features/dorms/hooks/useDormsData'
 // Modals
 import DormsAssignModal from '@features/dorms/components/DormsAssignModal'
 import DormsExportModal from '@features/dorms/components/DormsExportModal'
+import DormsImportModal from '@features/dorms/components/DormsImportModal'
 import DormsBulkAssignModal from '@features/dorms/components/DormsBulkAssignModal'
 import { DormsInventoryModal, DormsInventoryFormModal } from '@features/dorms/components/DormsInventoryModal'
 import DormsAuditModal from '@features/dorms/components/DormsAuditModal'
@@ -45,6 +46,7 @@ export default function DormsPage() {
     const [headerMenuRect, setHeaderMenuRect] = useState(null)
     const [headerMenuMounted, setHeaderMenuMounted] = useState(false)
     const headerMenuBtnRef = useRef(null)
+    const importFileInputRef = useRef(null)
 
     const data = useDormsData(addToast)
 
@@ -115,7 +117,7 @@ export default function DormsPage() {
                                         >
                                             <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Opsi Data</p>
                                             <button
-                                                onClick={() => { setIsHeaderMenuOpen(false); data.setIsExportModalOpen(true); }}
+                                                onClick={() => { setIsHeaderMenuOpen(false); data.handleOpenExportModal('plotting'); }}
                                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
                                             >
                                                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -123,11 +125,11 @@ export default function DormsPage() {
                                                 </div>
                                                 <div className="text-left">
                                                     <p className="text-[11px] font-black leading-tight">Ekspor Plotting</p>
-                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">csv</p>
+                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv / pdf</p>
                                                 </div>
                                             </button>
                                             <button
-                                                onClick={data.handleExportAuditsCSV}
+                                                onClick={() => { setIsHeaderMenuOpen(false); data.handleOpenExportModal('cleanliness'); }}
                                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
                                             >
                                                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -135,11 +137,11 @@ export default function DormsPage() {
                                                 </div>
                                                 <div className="text-left">
                                                     <p className="text-[11px] font-black leading-tight">Ekspor Audit Kebersihan</p>
-                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">csv</p>
+                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv / pdf</p>
                                                 </div>
                                             </button>
                                             <button
-                                                onClick={data.handleExportInventoriesCSV}
+                                                onClick={() => { setIsHeaderMenuOpen(false); data.handleOpenExportModal('inventory'); }}
                                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
                                             >
                                                 <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -147,7 +149,20 @@ export default function DormsPage() {
                                                 </div>
                                                 <div className="text-left">
                                                     <p className="text-[11px] font-black leading-tight">Ekspor Inventaris</p>
-                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">csv</p>
+                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv / pdf</p>
+                                                </div>
+                                            </button>
+                                            <div className="h-px bg-[var(--color-border)] my-1" />
+                                            <button
+                                                onClick={() => { setIsHeaderMenuOpen(false); data.setIsImportModalOpen(true); }}
+                                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
+                                            >
+                                                <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <Download className="w-4 h-4 rotate-180" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-[11px] font-black leading-tight">Impor Plotting</p>
+                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv</p>
                                                 </div>
                                             </button>
                                         </div>
@@ -354,18 +369,15 @@ export default function DormsPage() {
             <DormsAssignModal
                 isOpen={data.isAssignModalOpen}
                 onClose={() => data.setIsAssignModalOpen(false)}
-                student={data.studentToAssign}
-                targetRoom={data.selectedTargetRoom}
-                setTargetRoom={data.setSelectedTargetRoom}
-                searchQuery={data.assignSearchQuery}
-                setSearchQuery={data.setAssignSearchQuery}
-                step={data.assignStep}
-                setStep={data.setAssignStep}
-                isHeader={data.isHeaderAssign}
+                studentToAssign={data.studentToAssign}
+                selectedTargetRoom={data.selectedTargetRoom}
+                setSelectedTargetRoom={data.setSelectedTargetRoom}
+                assignStep={data.assignStep}
+                setAssignStep={data.setAssignStep}
+                isHeaderAssign={data.isHeaderAssign}
                 dorms={data.dorms}
                 students={data.students}
-                filteredStudents={data.filteredAssignStudents}
-                setStudent={data.setStudentToAssign}
+                setStudentToAssign={data.setStudentToAssign}
                 onSave={data.handleSaveAssignment}
                 submitting={data.submitting}
             />
@@ -373,12 +385,49 @@ export default function DormsPage() {
             <DormsExportModal
                 isOpen={data.isExportModalOpen}
                 onClose={() => data.setIsExportModalOpen(false)}
-                scope={data.exportScope}
-                setScope={data.setExportScope}
-                format={data.exportFormat}
-                setFormat={data.setExportFormat}
-                previewCount={data.exportPreviewCount}
-                onExecute={data.handleExecuteExport}
+                students={data.students}
+                audits={data.audits}
+                inventories={data.inventories}
+                dorms={data.dorms}
+                selectedIds={data.selectedIds}
+                addToast={addToast}
+            />
+
+            <DormsImportModal
+                isOpen={data.isImportModalOpen}
+                onClose={() => data.setIsImportModalOpen(false)}
+                importing={data.importing}
+                importStep={data.importStep}
+                setImportStep={data.setImportStep}
+                importPreview={data.importPreview}
+                importFileName={data.importFileName}
+                importFileInputRef={importFileInputRef}
+                importDragOver={data.importDragOver}
+                setImportDragOver={data.setImportDragOver}
+                processImportFile={data.processImportFile}
+                students={data.students}
+                dorms={data.dorms}
+                handleDownloadTemplate={data.handleDownloadTemplate}
+                importFileHeaders={data.importFileHeaders}
+                SYSTEM_COLS={data.SYSTEM_COLS}
+                importColumnMapping={data.importColumnMapping}
+                setImportColumnMapping={data.setImportColumnMapping}
+                importRawData={data.importRawData}
+                importLoading={data.importLoading}
+                setImportLoading={data.setImportLoading}
+                buildImportPreview={data.buildImportPreview}
+                importIssues={data.importIssues}
+                importValidationOpen={data.importValidationOpen}
+                setImportValidationOpen={data.setImportValidationOpen}
+                importProgress={data.importProgress}
+                handleCommitImport={data.handleCommitImport}
+                hasImportBlockingErrors={data.hasImportBlockingErrors}
+                importReadyRows={data.importReadyRows}
+                handleImportCellEdit={data.handleImportCellEdit}
+                importEditCell={data.importEditCell}
+                setImportEditCell={data.setImportEditCell}
+                handleRemoveImportRow={data.handleRemoveImportRow}
+                handleBulkFix={data.handleBulkFix}
             />
 
             <DormsBulkAssignModal
