@@ -378,7 +378,7 @@ export default function DormsExportModal({
             icon={faFileExport}
             iconBg="bg-amber-500/10"
             iconColor="text-amber-600"
-            size="xl"
+            size="lg"
             mobileVariant="bottom-sheet"
             maxMobileHeight="92vh"
             contentClassName={exporting ? "relative !overflow-hidden" : "relative"}
