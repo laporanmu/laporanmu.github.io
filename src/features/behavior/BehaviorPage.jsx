@@ -14,6 +14,8 @@ const LazyPointRulesTab = React.lazy(() => import('./PointRulesTab'))
 
 const LazyBehaviorExportModal = React.lazy(() => import('./BehaviorExportModal'))
 const LazyBehaviorImportModal = React.lazy(() => import('./BehaviorImportModal'))
+const LazyBehaviorFormModal = React.lazy(() => import('./BehaviorFormModal'))
+const LazyBehaviorDetailModal = React.lazy(() => import('./BehaviorDetailModal'))
 import DashboardLayout from '@core/layouts/DashboardLayout'
 import StatsCarousel from '@shared/components/StatsCarousel'
 import Breadcrumb from '@shared/components/Breadcrumb'
@@ -21,8 +23,6 @@ import PageHeader from '@shared/components/PageHeader'
 import { StatCard, EmptyState } from '@shared/components/DataDisplay'
 import Modal from '@shared/components/Modal'
 import ConfirmDialog from '@shared/components/ConfirmDialog'
-import BehaviorFormModal from './BehaviorFormModal'
-import BehaviorDetailModal from './BehaviorDetailModal'
 import BehaviorFilterBar from './BehaviorFilterBar'
 import TimelineCard from './TimelineCard'
 import BehaviorTableRow from './BehaviorTableRow'
@@ -177,6 +177,20 @@ export default function BehaviorPage() {
     const tabParam = searchParams.get('tab')
     const [activeTab, setActiveTab] = useState(tabParam === 'rules' || tabParam === 'poin' ? 'rules' : 'reports')
 
+    const [hasOpenedForm, setHasOpenedForm] = useState(false)
+    const [hasOpenedDetail, setHasOpenedDetail] = useState(false)
+    const [hasOpenedExport, setHasOpenedExport] = useState(false)
+    const [hasOpenedImport, setHasOpenedImport] = useState(false)
+    const [hasOpenedDelete, setHasOpenedDelete] = useState(false)
+    const [hasOpenedBulkDelete, setHasOpenedBulkDelete] = useState(false)
+
+    useEffect(() => { if (isModalOpen) setHasOpenedForm(true) }, [isModalOpen])
+    useEffect(() => { if (isDetailOpen) setHasOpenedDetail(true) }, [isDetailOpen])
+    useEffect(() => { if (isExportModalOpen) setHasOpenedExport(true) }, [isExportModalOpen])
+    useEffect(() => { if (isImportModalOpen) setHasOpenedImport(true) }, [isImportModalOpen])
+    useEffect(() => { if (isDeleteModalOpen) setHasOpenedDelete(true) }, [isDeleteModalOpen])
+    useEffect(() => { if (isBulkDeleteOpen) setHasOpenedBulkDelete(true) }, [isBulkDeleteOpen])
+
     useEffect(() => {
         if (tabParam === 'rules' || tabParam === 'poin') {
             setActiveTab('rules')
@@ -239,56 +253,60 @@ export default function BehaviorPage() {
                 )}
 
                 <React.Suspense fallback={null}>
-                    <LazyBehaviorExportModal
-                        isOpen={isExportModalOpen}
-                        onClose={() => setIsExportModalOpen(false)}
-                        exportScope={exportScope}
-                        setExportScope={setExportScope}
-                        exportColumns={exportColumns}
-                        setExportColumns={setExportColumns}
-                        handleExportCSV={handleExportCSV}
-                        handleExportExcel={handleExportExcel}
-                        handleExportPDF={handleExportPDF}
-                        selectedCount={selectedIds.length}
-                        allCount={totalRows}
-                    />
-                    <LazyBehaviorImportModal
-                        isOpen={isImportModalOpen}
-                        onClose={() => setIsImportModalOpen(false)}
-                        importing={importing}
-                        importStep={importStep}
-                        setImportStep={setImportStep}
-                        importPreview={importPreview}
-                        importFileName={importFileName}
-                        importFileInputRef={importFileInputRef}
-                        importDragOver={importDragOver}
-                        setImportDragOver={setImportDragOver}
-                        processImportFile={processImportFile}
-                        students={students}
-                        violationTypes={violationTypes}
-                        handleDownloadTemplate={handleDownloadTemplate}
-                        importFileHeaders={importFileHeaders}
-                        SYSTEM_COLS={SYSTEM_COLS}
-                        importColumnMapping={importColumnMapping}
-                        setImportColumnMapping={setImportColumnMapping}
-                        importRawData={importRawData}
-                        importLoading={importLoading}
-                        setImportLoading={setImportLoading}
-                        buildImportPreview={buildImportPreview}
-                        importIssues={importIssues}
-                        importValidationOpen={importValidationOpen}
-                        setImportValidationOpen={setImportValidationOpen}
-                        importProgress={importProgress}
-                        handleCommitImport={handleCommitImport}
-                        handleImportClick={handleImportClick}
-                        hasImportBlockingErrors={hasImportBlockingErrors}
-                        importReadyRows={importReadyRows}
-                        handleImportCellEdit={handleImportCellEdit}
-                        importEditCell={importEditCell}
-                        setImportEditCell={setImportEditCell}
-                        handleRemoveImportRow={handleRemoveImportRow}
-                        handleBulkFix={handleBulkFix}
-                    />
+                    {hasOpenedExport && (
+                        <LazyBehaviorExportModal
+                            isOpen={isExportModalOpen}
+                            onClose={() => setIsExportModalOpen(false)}
+                            exportScope={exportScope}
+                            setExportScope={setExportScope}
+                            exportColumns={exportColumns}
+                            setExportColumns={setExportColumns}
+                            handleExportCSV={handleExportCSV}
+                            handleExportExcel={handleExportExcel}
+                            handleExportPDF={handleExportPDF}
+                            selectedCount={selectedIds.length}
+                            allCount={totalRows}
+                        />
+                    )}
+                    {hasOpenedImport && (
+                        <LazyBehaviorImportModal
+                            isOpen={isImportModalOpen}
+                            onClose={() => setIsImportModalOpen(false)}
+                            importing={importing}
+                            importStep={importStep}
+                            setImportStep={setImportStep}
+                            importPreview={importPreview}
+                            importFileName={importFileName}
+                            importFileInputRef={importFileInputRef}
+                            importDragOver={importDragOver}
+                            setImportDragOver={setImportDragOver}
+                            processImportFile={processImportFile}
+                            students={students}
+                            violationTypes={violationTypes}
+                            handleDownloadTemplate={handleDownloadTemplate}
+                            importFileHeaders={importFileHeaders}
+                            SYSTEM_COLS={SYSTEM_COLS}
+                            importColumnMapping={importColumnMapping}
+                            setImportColumnMapping={setImportColumnMapping}
+                            importRawData={importRawData}
+                            importLoading={importLoading}
+                            setImportLoading={setImportLoading}
+                            buildImportPreview={buildImportPreview}
+                            importIssues={importIssues}
+                            importValidationOpen={importValidationOpen}
+                            setImportValidationOpen={setImportValidationOpen}
+                            importProgress={importProgress}
+                            handleCommitImport={handleCommitImport}
+                            handleImportClick={handleImportClick}
+                            hasImportBlockingErrors={hasImportBlockingErrors}
+                            importReadyRows={importReadyRows}
+                            handleImportCellEdit={handleImportCellEdit}
+                            importEditCell={importEditCell}
+                            setImportEditCell={setImportEditCell}
+                            handleRemoveImportRow={handleRemoveImportRow}
+                            handleBulkFix={handleBulkFix}
+                        />
+                    )}
                     <input
                         type="file"
                         ref={importFileInputRef}
@@ -834,119 +852,131 @@ export default function BehaviorPage() {
                 </BulkActionsBar>
 
                 {/* ── WIZARD FORM MODAL ── */}
-                <BehaviorFormModal
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    selectedItem={selectedItem}
-                    students={students}
-                    violationTypes={violationTypes}
-                    classesList={classesList}
-                    onSubmit={handleSubmit}
-                    submitting={submitting}
-                />
+                <React.Suspense fallback={null}>
+                    {hasOpenedForm && (
+                        <LazyBehaviorFormModal
+                            isOpen={isModalOpen}
+                            onClose={() => setIsModalOpen(false)}
+                            selectedItem={selectedItem}
+                            students={students}
+                            violationTypes={violationTypes}
+                            classesList={classesList}
+                            onSubmit={handleSubmit}
+                            submitting={submitting}
+                        />
+                    )}
+                </React.Suspense>
 
                 {/* ── DELETE MODAL ── */}
-                <ConfirmDialog
-                    isOpen={isDeleteModalOpen}
-                    onClose={() => setIsDeleteModalOpen(false)}
-                    onConfirm={handleDeleteConfirm}
-                    title={tp('deleteReport')}
-                    description={tp('deleteReportDesc')}
-                    icon={Trash2}
-                    confirmText={tp('yesDelete')}
-                    confirmIcon={Trash2}
-                    cancelText={tp('cancel')}
-                    submitting={submitting}
-                >
-                    <div className="px-1">
-                        <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                            {(() => {
-                                const deleteConfirmText = tp('deleteConfirmTemplate')
-                                    .replace('{student}', '___STUDENT___')
-                                    .replace('{points}', '___POINTS___');
-                                const parts = deleteConfirmText.split(/(___STUDENT___|___POINTS___)/);
-                                return parts.map((part, i) => {
-                                    if (part === '___STUDENT___') {
-                                        return (
-                                            <span key={i} className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">
-                                                {mask(students.find(s => s.id === itemToDelete?.student_id)?.name || '')}
-                                            </span>
-                                        );
-                                    }
-                                    if (part === '___POINTS___') {
-                                        return (
-                                            <span key={i} className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">
-                                                {itemToDelete?.points > 0 ? `+${tNum(itemToDelete.points)}` : tNum(itemToDelete?.points)}
-                                            </span>
-                                        );
-                                    }
-                                    return part;
-                                });
-                            })()}
-                        </p>
-                    </div>
-                </ConfirmDialog>
+                {hasOpenedDelete && (
+                    <ConfirmDialog
+                        isOpen={isDeleteModalOpen}
+                        onClose={() => setIsDeleteModalOpen(false)}
+                        onConfirm={handleDeleteConfirm}
+                        title={tp('deleteReport')}
+                        description={tp('deleteReportDesc')}
+                        icon={Trash2}
+                        confirmText={tp('yesDelete')}
+                        confirmIcon={Trash2}
+                        cancelText={tp('cancel')}
+                        submitting={submitting}
+                    >
+                        <div className="px-1">
+                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                {(() => {
+                                    const deleteConfirmText = tp('deleteConfirmTemplate')
+                                        .replace('{student}', '___STUDENT___')
+                                        .replace('{points}', '___POINTS___');
+                                    const parts = deleteConfirmText.split(/(___STUDENT___|___POINTS___)/);
+                                    return parts.map((part, i) => {
+                                        if (part === '___STUDENT___') {
+                                            return (
+                                                <span key={i} className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">
+                                                    {mask(students.find(s => s.id === itemToDelete?.student_id)?.name || '')}
+                                                </span>
+                                            );
+                                        }
+                                        if (part === '___POINTS___') {
+                                            return (
+                                                <span key={i} className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">
+                                                    {itemToDelete?.points > 0 ? `+${tNum(itemToDelete.points)}` : tNum(itemToDelete?.points)}
+                                                </span>
+                                            );
+                                        }
+                                        return part;
+                                    });
+                                })()}
+                            </p>
+                        </div>
+                    </ConfirmDialog>
+                )}
 
                 {/* ── BULK DELETE MODAL ── */}
-                <ConfirmDialog
-                    isOpen={isBulkDeleteOpen}
-                    onClose={() => setIsBulkDeleteOpen(false)}
-                    onConfirm={handleBulkDelete}
-                    title={tp('bulkDelete')}
-                    description={tp('bulkDeleteDesc')}
-                    icon={Trash2}
-                    confirmText={`${tp('yesDelete')} ${tNum(selectedIds.length)} ${tp('reportCount')}`}
-                    confirmIcon={Trash2}
-                    cancelText={tp('cancel')}
-                    submitting={submitting}
-                >
-                    <div className="px-1 space-y-3">
-                        {/* Warning text */}
-                        <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                            {tp('bulkDeleteWarning1')} <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{tNum(selectedIds.length)} {tp('reportCount')}</span> {tp('bulkDeleteWarning2')}
-                        </p>
+                {hasOpenedBulkDelete && (
+                    <ConfirmDialog
+                        isOpen={isBulkDeleteOpen}
+                        onClose={() => setIsBulkDeleteOpen(false)}
+                        onConfirm={handleBulkDelete}
+                        title={tp('bulkDelete')}
+                        description={tp('bulkDeleteDesc')}
+                        icon={Trash2}
+                        confirmText={`${tp('yesDelete')} ${tNum(selectedIds.length)} ${tp('reportCount')}`}
+                        confirmIcon={Trash2}
+                        cancelText={tp('cancel')}
+                        submitting={submitting}
+                    >
+                        <div className="px-1 space-y-3">
+                            {/* Warning text */}
+                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                                {tp('bulkDeleteWarning1')} <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{tNum(selectedIds.length)} {tp('reportCount')}</span> {tp('bulkDeleteWarning2')}
+                            </p>
 
-                        {/* Preview list of reports to be deleted */}
-                        <div className={`rounded-xl border border-red-500/10 bg-red-500/[0.03] overflow-hidden ${selectedIds.length > 4 ? 'max-h-[200px] overflow-y-auto' : ''}`}>
-                            {selectedIds.map((id, idx) => {
-                                const r = reports.find(x => x.id === id)
-                                if (!r) return null
-                                const s = students.find(x => x.id === r.student_id)
-                                const isPos = (r.points ?? 0) > 0
-                                return (
-                                    <div key={id} className={`flex items-center gap-2.5 px-3 py-2 ${idx < selectedIds.length - 1 ? 'border-b border-red-500/10' : ''}`}>
-                                        {/* Avatar */}
-                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 ${isPos ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
-                                            {(s?.name || '?')[0].toUpperCase()}
+                            {/* Preview list of reports to be deleted */}
+                            <div className={`rounded-xl border border-red-500/10 bg-red-500/[0.03] overflow-hidden ${selectedIds.length > 4 ? 'max-h-[200px] overflow-y-auto' : ''}`}>
+                                {selectedIds.map((id, idx) => {
+                                    const r = reports.find(x => x.id === id)
+                                    if (!r) return null
+                                    const s = students.find(x => x.id === r.student_id)
+                                    const isPos = (r.points ?? 0) > 0
+                                    return (
+                                        <div key={id} className={`flex items-center gap-2.5 px-3 py-2 ${idx < selectedIds.length - 1 ? 'border-b border-red-500/10' : ''}`}>
+                                            {/* Avatar */}
+                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 ${isPos ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                                                {(s?.name || '?')[0].toUpperCase()}
+                                            </div>
+                                            {/* Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[11px] font-black text-[var(--color-text)] truncate">{isPrivacyMode ? mask(s?.name || '—') : (s?.name || '—')}</p>
+                                                <p className="text-[9px] text-[var(--color-text-muted)] opacity-60 truncate">{getTypeName(r.violation_type_id)}</p>
+                                            </div>
+                                            {/* Points badge */}
+                                            <span className={`shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded-lg border ${isPos ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
+                                                {isPos ? '+' : ''}{tNum(r.points)}
+                                            </span>
                                         </div>
-                                        {/* Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[11px] font-black text-[var(--color-text)] truncate">{isPrivacyMode ? mask(s?.name || '—') : (s?.name || '—')}</p>
-                                            <p className="text-[9px] text-[var(--color-text-muted)] opacity-60 truncate">{getTypeName(r.violation_type_id)}</p>
-                                        </div>
-                                        {/* Points badge */}
-                                        <span className={`shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded-lg border ${isPos ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20'}`}>
-                                            {isPos ? '+' : ''}{tNum(r.points)}
-                                        </span>
-                                    </div>
-                                )
-                            })}
+                                    )
+                                })}
+                            </div>
                         </div>
-                    </div>
-                </ConfirmDialog>
+                    </ConfirmDialog>
+                )}
 
                 {/* ── DETAIL MODAL ── */}
-                <BehaviorDetailModal
-                    isOpen={isDetailOpen}
-                    onClose={() => { setIsDetailOpen(false); setDetailItem(null); }}
-                    detailItem={detailItem}
-                    students={students}
-                    violationTypes={violationTypes}
-                    isPrivacyMode={isPrivacyMode}
-                    canInput={canInput}
-                    onEdit={(r) => { setSelectedItem(r); setIsModalOpen(true) }}
-                    onDelete={(r) => { setItemToDelete(r); setIsDeleteModalOpen(true) }}
-                />
+                <React.Suspense fallback={null}>
+                    {hasOpenedDetail && (
+                        <LazyBehaviorDetailModal
+                            isOpen={isDetailOpen}
+                            onClose={() => { setIsDetailOpen(false); setDetailItem(null); }}
+                            detailItem={detailItem}
+                            students={students}
+                            violationTypes={violationTypes}
+                            isPrivacyMode={isPrivacyMode}
+                            canInput={canInput}
+                            onEdit={(r) => { setSelectedItem(r); setIsModalOpen(true) }}
+                            onDelete={(r) => { setItemToDelete(r); setIsDeleteModalOpen(true) }}
+                        />
+                    )}
+                </React.Suspense>
                     </>
                 ) : (
                     <React.Suspense fallback={

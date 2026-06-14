@@ -35,23 +35,23 @@ function lazyRetry(componentImport) {
 
 // ─── Lazy-loaded Pages ────────────────────────────────────────────────────────
 // Public
-const LandingPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.LandingPage })))
-const LoginPage = lazyRetry(() => import('@features/auth').then(m => ({ default: m.LoginPage })))
-const ParentCheckPage = lazyRetry(() => import('@features/auth').then(m => ({ default: m.ParentCheckPage })))
-const InformationPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.InformationPage })))
-const PublicVerifyPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.PublicVerifyPage })))
+const LandingPage = lazyRetry(() => import('@features/public/pages/LandingPage.jsx'))
+const LoginPage = lazyRetry(() => import('@features/auth/pages/LoginPage.jsx'))
+const ParentCheckPage = lazyRetry(() => import('@features/auth/pages/ParentCheckPage.jsx'))
+const InformationPage = lazyRetry(() => import('@features/public/pages/InformationPage.jsx'))
+const PublicVerifyPage = lazyRetry(() => import('@features/public/pages/PublicVerifyPage.jsx'))
 
 // Core
-const DashboardPage = lazyRetry(() => import('@features/dashboard'))
-const RaportPage = lazyRetry(() => import('@features/raport'))
-const BehaviorPage = lazyRetry(() => import('@features/behavior').then(m => ({ default: m.BehaviorPage })))
+const DashboardPage = lazyRetry(() => import('@features/dashboard/pages/DashboardPage.jsx'))
+const RaportPage = lazyRetry(() => import('@features/raport/pages/RaportPage.jsx'))
+const BehaviorPage = lazyRetry(() => import('@features/behavior/BehaviorPage.jsx'))
 const DormsPage = lazyRetry(() => import('@features/dorms/pages/DormsPage.jsx'))
-const HealthPage = lazyRetry(() => import('@features/health'))
-const CounselingPage = lazyRetry(() => import('@features/counseling'))
-const AttendancePage = lazyRetry(() => import('@features/attendance'))
+const HealthPage = lazyRetry(() => import('@features/health/pages/HealthPage.jsx'))
+const CounselingPage = lazyRetry(() => import('@features/counseling/pages/CounselingPage.jsx'))
+const AttendancePage = lazyRetry(() => import('@features/attendance/pages/AttendancePage.jsx'))
 const GatePage = lazyRetry(() => import('@features/gate/pages/GatePage.jsx'))
 const GateKioskPage = lazyRetry(() => import('@features/gate/pages/GateKioskPage.jsx'))
-const SettingsPage = lazyRetry(() => import('@features/settings'))
+const SettingsPage = lazyRetry(() => import('@features/settings/pages/SettingsPage.jsx'))
 
 // Admin-only
 const UserPage = lazyRetry(() => import('@features/admin/pages/UserPage.jsx'))
@@ -68,12 +68,12 @@ const AdminDashboardPage = lazyRetry(() => import('@features/admin/pages/AdminDa
 
 // Master Data
 const StudentsPage = lazyRetry(() => import('@features/students/pages/StudentsPage.jsx'))
-const TeachersPage = lazyRetry(() => import('@features/teachers'))
-const ClassesPage = lazyRetry(() => import('@features/classes'))
-const AcademicYearsPage = lazyRetry(() => import('@features/academic-years'))
-const EnrollmentPage = lazyRetry(() => import('@features/enrollment'))
-const PublicEnrollmentPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.PublicEnrollmentPage })))
-const PublicStatusCheckPage = lazyRetry(() => import('@features/public').then(m => ({ default: m.PublicStatusCheckPage })))
+const TeachersPage = lazyRetry(() => import('@features/teachers/pages/TeachersPage.jsx'))
+const ClassesPage = lazyRetry(() => import('@features/classes/pages/ClassesPage.jsx'))
+const AcademicYearsPage = lazyRetry(() => import('@features/academic-years/pages/AcademicYearsPage.jsx'))
+const EnrollmentPage = lazyRetry(() => import('@features/enrollment/pages/EnrollmentPage.jsx'))
+const PublicEnrollmentPage = lazyRetry(() => import('@features/public/pages/PublicEnrollmentPage.jsx'))
+const PublicStatusCheckPage = lazyRetry(() => import('@features/public/pages/PublicStatusCheckPage.jsx'))
 
 // ─── Role Hierarchy ───────────────────────────────────────────────────────────
 // developer > admin > guru = satpam > viewer

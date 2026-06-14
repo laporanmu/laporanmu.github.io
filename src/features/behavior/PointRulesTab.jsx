@@ -120,6 +120,20 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
     const [confirmText, setConfirmText] = useState('')
 
+    const [hasOpenedForm, setHasOpenedForm] = useState(false)
+    const [hasOpenedDelete, setHasOpenedDelete] = useState(false)
+    const [hasOpenedBulkDelete, setHasOpenedBulkDelete] = useState(false)
+    const [hasOpenedExport, setHasOpenedExport] = useState(false)
+    const [hasOpenedReset, setHasOpenedReset] = useState(false)
+    const [hasOpenedResetConfirm, setHasOpenedResetConfirm] = useState(false)
+
+    useEffect(() => { if (isModalOpen) setHasOpenedForm(true) }, [isModalOpen])
+    useEffect(() => { if (isDeleteModalOpen) setHasOpenedDelete(true) }, [isDeleteModalOpen])
+    useEffect(() => { if (isBulkDeleteOpen) setHasOpenedBulkDelete(true) }, [isBulkDeleteOpen])
+    useEffect(() => { if (isExportModalOpen) setHasOpenedExport(true) }, [isExportModalOpen])
+    useEffect(() => { if (isResetModalOpen) setHasOpenedReset(true) }, [isResetModalOpen])
+    useEffect(() => { if (isResetConfirmOpen) setHasOpenedResetConfirm(true) }, [isResetConfirmOpen])
+
     // Sync state with parent props when they load
     useEffect(() => {
         if (initialPoin && initialPoin.length > 0) {
@@ -1387,361 +1401,373 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                 )}
             </div>
 
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title={selectedItem ? tp('rulesEditTitle') : tp('rulesAddTitle')}
-                description={selectedItem ? tp('rulesEditDesc') : tp('rulesAddDesc')}
-                size="md"
-                icon={selectedItem ? Edit2 : Plus}
-                iconBg="bg-[var(--color-primary)]/10"
-                iconColor="text-[var(--color-primary)]"
-                footer={
-                    <div className="flex items-center w-full gap-3">
-                        <button
-                            type="button"
-                            onClick={() => setIsModalOpen(false)}
-                            className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
-                        >
-                            {tp('cancel')}
-                        </button>
-                        <div className="flex-1" />
-                        <button
-                            type="submit"
-                            form="point-rule-form"
-                            disabled={submitting}
-                            className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center justify-center gap-2 shrink-0"
-                        >
-                            {submitting ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                                <Check className="w-3.5 h-3.5" />
-                            )}
-                            {selectedItem ? tp('rulesBtnUpdate') : tp('rulesBtnSave')}
-                        </button>
-                    </div>
-                }
-            >
-                <form id="point-rule-form" onSubmit={(e) => {
-                    e.preventDefault()
-                    const formData = new FormData(e.target)
-                    handleSubmit({
-                        name: formData.get('name'),
-                        points: Number(formData.get('points')),
-                        category: formData.get('category'),
-                        is_negative: formData.get('type') === 'violation',
-                        description: formData.get('description'),
-                        status: formData.get('status')
-                    })
-                }} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-3 md:col-span-2">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldName')}</label>
-                            <input name="name" defaultValue={selectedItem?.name} required placeholder={tp('rulesFieldNamePlaceholder')} className="w-full px-4 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40" />
+            {hasOpenedForm && (
+                <Modal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    title={selectedItem ? tp('rulesEditTitle') : tp('rulesAddTitle')}
+                    description={selectedItem ? tp('rulesEditDesc') : tp('rulesAddDesc')}
+                    size="md"
+                    icon={selectedItem ? Edit2 : Plus}
+                    iconBg="bg-[var(--color-primary)]/10"
+                    iconColor="text-[var(--color-primary)]"
+                    footer={
+                        <div className="flex items-center w-full gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
+                            >
+                                {tp('cancel')}
+                            </button>
+                            <div className="flex-1" />
+                            <button
+                                type="submit"
+                                form="point-rule-form"
+                                disabled={submitting}
+                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center justify-center gap-2 shrink-0"
+                            >
+                                {submitting ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <Check className="w-3.5 h-3.5" />
+                                )}
+                                {selectedItem ? tp('rulesBtnUpdate') : tp('rulesBtnSave')}
+                            </button>
                         </div>
-                        <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('category')}</label>
-                            <input type="hidden" name="category" value={formCategory} />
-                            <RichSelect
-                                value={formCategory}
-                                onChange={(val) => setFormCategory(val)}
-                                options={CATEGORIES.map(c => ({ id: c, name: tp(`cat.${c}`) || c }))}
-                            />
-                        </div>
-                        <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldType')}</label>
-                            <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
-                                <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer">
-                                    <input type="radio" name="type" value="violation" defaultChecked={selectedItem ? selectedItem.is_negative : true} className="hidden peer" />
-                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-red-500 peer-checked:text-white text-[var(--color-text-muted)] font-bold text-[9.5px] transition-all">{tp('rulesFieldTypeViolation')}</div>
-                                </label>
-                                <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer">
-                                    <input type="radio" name="type" value="achievement" defaultChecked={selectedItem ? !selectedItem.is_negative : false} className="hidden peer" />
-                                    <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-emerald-500 peer-checked:text-white text-[var(--color-text-muted)] font-bold text-[9.5px] transition-all">{tp('rulesFieldTypeAchievement')}</div>
-                                </label>
+                    }
+                >
+                    <form id="point-rule-form" onSubmit={(e) => {
+                        e.preventDefault()
+                        const formData = new FormData(e.target)
+                        handleSubmit({
+                            name: formData.get('name'),
+                            points: Number(formData.get('points')),
+                            category: formData.get('category'),
+                            is_negative: formData.get('type') === 'violation',
+                            description: formData.get('description'),
+                            status: formData.get('status')
+                        })
+                    }} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-3 md:col-span-2">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldName')}</label>
+                                <input name="name" defaultValue={selectedItem?.name} required placeholder={tp('rulesFieldNamePlaceholder')} className="w-full px-4 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40" />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('category')}</label>
+                                <input type="hidden" name="category" value={formCategory} />
+                                <RichSelect
+                                    value={formCategory}
+                                    onChange={(val) => setFormCategory(val)}
+                                    options={CATEGORIES.map(c => ({ id: c, name: tp(`cat.${c}`) || c }))}
+                                />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldType')}</label>
+                                <div className="flex p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl h-11">
+                                    <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer">
+                                        <input type="radio" name="type" value="violation" defaultChecked={selectedItem ? selectedItem.is_negative : true} className="hidden peer" />
+                                        <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-red-500 peer-checked:text-white text-[var(--color-text-muted)] font-bold text-[9.5px] transition-all">{tp('rulesFieldTypeViolation')}</div>
+                                    </label>
+                                    <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer">
+                                        <input type="radio" name="type" value="achievement" defaultChecked={selectedItem ? !selectedItem.is_negative : false} className="hidden peer" />
+                                        <div className="w-full h-full flex items-center justify-center rounded-lg peer-checked:bg-emerald-500 peer-checked:text-white text-[var(--color-text-muted)] font-bold text-[9.5px] transition-all">{tp('rulesFieldTypeAchievement')}</div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldPoints')}</label>
+                                <input type="number" name="points" defaultValue={selectedItem ? Math.abs(selectedItem.points) : ''} required min="1" placeholder={tp('rulesFieldPointsPlaceholder')} className="w-full px-4 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40" />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldStatus')}</label>
+                                <input type="hidden" name="status" value={formStatus} />
+                                <RichSelect
+                                    value={formStatus}
+                                    onChange={(val) => setFormStatus(val)}
+                                    options={[
+                                        { id: 'active', name: tp('rulesFieldStatusActive') },
+                                        { id: 'inactive', name: tp('rulesFieldStatusInactive') }
+                                    ]}
+                                />
+                            </div>
+                            <div className="space-y-3 md:col-span-2">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldDescription')}</label>
+                                <textarea name="description" defaultValue={selectedItem?.description} rows={3} placeholder={tp('rulesFieldDescriptionPlaceholder')} className="w-full p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl text-sm focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 resize-none" />
                             </div>
                         </div>
-                        <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldPoints')}</label>
-                            <input type="number" name="points" defaultValue={selectedItem ? Math.abs(selectedItem.points) : ''} required min="1" placeholder={tp('rulesFieldPointsPlaceholder')} className="w-full px-4 h-11 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40" />
-                        </div>
-                        <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldStatus')}</label>
-                            <input type="hidden" name="status" value={formStatus} />
-                            <RichSelect
-                                value={formStatus}
-                                onChange={(val) => setFormStatus(val)}
-                                options={[
-                                    { id: 'active', name: tp('rulesFieldStatusActive') },
-                                    { id: 'inactive', name: tp('rulesFieldStatusInactive') }
-                                ]}
-                            />
-                        </div>
-                        <div className="space-y-3 md:col-span-2">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">{tp('rulesFieldDescription')}</label>
-                            <textarea name="description" defaultValue={selectedItem?.description} rows={3} placeholder={tp('rulesFieldDescriptionPlaceholder')} className="w-full p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl text-sm focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] placeholder:opacity-40 resize-none" />
-                        </div>
-                    </div>
-                </form>
-            </Modal>
+                    </form>
+                </Modal>
+            )}
 
             {/* Modal Delete Confirmation */}
-            <ConfirmDialog
-                isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={handleDeleteConfirm}
-                title={tp('rulesDeleteTitle')}
-                description={tp('rulesDeleteRisk')}
-                icon={Trash2}
-                confirmText={tp('rulesBtnDeleteNow')}
-                confirmIcon={Trash2}
-                cancelText={tp('cancel')}
-                submitting={submitting}
-            >
-                <div className="px-1 space-y-3">
-                    <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">
-                        {tp('rulesDeleteWarningTemplate').replace('{name}', '').replace('?', '').trim()}
-                    </p>
-                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/5 border border-red-500/20">
-                        <Trash2 className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                        <span className="text-sm text-red-500 font-black break-words min-w-0">{itemToDelete?.name}</span>
+            {hasOpenedDelete && (
+                <ConfirmDialog
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setIsDeleteModalOpen(false)}
+                    onConfirm={handleDeleteConfirm}
+                    title={tp('rulesDeleteTitle')}
+                    description={tp('rulesDeleteRisk')}
+                    icon={Trash2}
+                    confirmText={tp('rulesBtnDeleteNow')}
+                    confirmIcon={Trash2}
+                    cancelText={tp('cancel')}
+                    submitting={submitting}
+                >
+                    <div className="px-1 space-y-3">
+                        <p className="text-xs text-[var(--color-text)] leading-relaxed font-bold">
+                            {tp('rulesDeleteWarningTemplate').replace('{name}', '').replace('?', '').trim()}
+                        </p>
+                        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/5 border border-red-500/20">
+                            <Trash2 className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                            <span className="text-sm text-red-500 font-black break-words min-w-0">{itemToDelete?.name}</span>
+                        </div>
+                        <p className="text-[11px] text-[var(--color-text-muted)] font-bold">
+                            {tp('rulesDeletePermanent')} — {tp('rulesDeleteRisk')}
+                        </p>
                     </div>
-                    <p className="text-[11px] text-[var(--color-text-muted)] font-bold">
-                        {tp('rulesDeletePermanent')} — {tp('rulesDeleteRisk')}
-                    </p>
-                </div>
-            </ConfirmDialog>
+                </ConfirmDialog>
+            )}
 
             {/* Modal Bulk Delete */}
-            <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title={tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })} size="sm">
-                <div className="space-y-6 text-center">
-                    <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-red-500/20 shadow-xl"><Trash2 className="text-3xl w-10 h-10" /></div>
-                    <h3 className="text-lg font-black text-[var(--color-text)] uppercase tracking-tight">{tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })}</h3>
-                    <p className="text-[11px] text-[var(--color-text-muted)] font-black uppercase tracking-widest leading-relaxed">{tp('rulesBulkDeleteWarning')}</p>
-                    <div className="flex gap-3 pt-4">
-                        <button onClick={() => setIsBulkDeleteOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">{tp('cancel')}</button>
-                        <button onClick={handleBulkDelete} disabled={submitting} className="h-11 flex-1 rounded-xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center">
-                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : tp('rulesBtnBulkDeleteConfirm')}
-                        </button>
+            {hasOpenedBulkDelete && (
+                <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title={tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })} size="sm">
+                    <div className="space-y-6 text-center">
+                        <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-red-500/20 shadow-xl"><Trash2 className="text-3xl w-10 h-10" /></div>
+                        <h3 className="text-lg font-black text-[var(--color-text)] uppercase tracking-tight">{tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })}</h3>
+                        <p className="text-[11px] text-[var(--color-text-muted)] font-black uppercase tracking-widest leading-relaxed">{tp('rulesBulkDeleteWarning')}</p>
+                        <div className="flex gap-3 pt-4">
+                            <button onClick={() => setIsBulkDeleteOpen(false)} className="h-11 flex-1 rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-text)] font-black text-[10px] uppercase tracking-widest">{tp('cancel')}</button>
+                            <button onClick={handleBulkDelete} disabled={submitting} className="h-11 flex-1 rounded-xl bg-red-500 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center">
+                                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : tp('rulesBtnBulkDeleteConfirm')}
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </Modal>
+                </Modal>
+            )}
 
             {/* Export Modal */}
             <React.Suspense fallback={null}>
-                <LazyRulesExportModal
-                    isOpen={isExportModalOpen}
-                    onClose={() => setIsExportModalOpen(false)}
-                    rulesCount={totalRows}
-                    selectedCount={selectedIds.length}
-                    exportScope={exportScope}
-                    setExportScope={setExportScope}
-                    exportColumns={exportColumns}
-                    setExportColumns={setExportColumns}
-                    exporting={exporting}
-                    handleExport={handleExport}
-                />
+                {hasOpenedExport && (
+                    <LazyRulesExportModal
+                        isOpen={isExportModalOpen}
+                        onClose={() => setIsExportModalOpen(false)}
+                        rulesCount={totalRows}
+                        selectedCount={selectedIds.length}
+                        exportScope={exportScope}
+                        setExportScope={setExportScope}
+                        exportColumns={exportColumns}
+                        setExportColumns={setExportColumns}
+                        exporting={exporting}
+                        handleExport={handleExport}
+                    />
+                )}
             </React.Suspense>
 
             {/* Reset Poin Siswa Modal */}
-            <Modal
-                isOpen={isResetModalOpen}
-                onClose={() => setIsResetModalOpen(false)}
-                title={tp('resetPointsTitle')}
-                description={tp('resetPointsDesc')}
-                icon={RotateCcw}
-                iconBg="bg-orange-500/10"
-                iconColor="text-orange-500"
-                size="md"
-                mobileVariant="bottom-sheet"
-                footer={
-                    <div className="flex items-center w-full gap-3">
-                        <button
-                            type="button"
-                            onClick={() => setIsResetModalOpen(false)}
-                            className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
-                        >
-                            {tp('cancel')}
-                        </button>
-                        <div className="flex-1" />
-                        <button
-                            type="button"
-                            disabled={resetPointsClassIds.length === 0}
-                            onClick={() => {
-                                setIsResetModalOpen(false)
-                                setIsResetConfirmOpen(true)
-                            }}
-                            className="h-10 px-6 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            <span>{tp('resetPointsBtnConfirm')}</span>
-                        </button>
-                    </div>
-                }
-            >
-                <div className="space-y-4">
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-4">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2 shrink-0">
-                                <GraduationCap className="opacity-40 w-4 h-4" /> <span>{tp('resetPointsSelectClass')}</span>
-                            </label>
-                            <div className="relative group flex-1 max-w-[200px]">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors">
-                                    <Search className="w-3.5 h-3.5" />
-                                </div>
-                                <input
-                                    type="text"
-                                    placeholder={tp('resetPointsSearchClassPlaceholder')}
-                                    value={resetPointsSearch}
-                                    onChange={(e) => setResetPointsSearch(e.target.value)}
-                                    className="w-full h-9 pl-9 pr-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[11px] font-medium focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all outline-none"
-                                />
-                                {resetPointsSearch && (
-                                    <button
-                                        onClick={() => setResetPointsSearch('')}
-                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-[var(--color-text-muted)] hover:text-rose-500 transition-colors"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                            </div>
+            {hasOpenedReset && (
+                <Modal
+                    isOpen={isResetModalOpen}
+                    onClose={() => setIsResetModalOpen(false)}
+                    title={tp('resetPointsTitle')}
+                    description={tp('resetPointsDesc')}
+                    icon={RotateCcw}
+                    iconBg="bg-orange-500/10"
+                    iconColor="text-orange-500"
+                    size="md"
+                    mobileVariant="bottom-sheet"
+                    footer={
+                        <div className="flex items-center w-full gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setIsResetModalOpen(false)}
+                                className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
+                            >
+                                {tp('cancel')}
+                            </button>
+                            <div className="flex-1" />
+                            <button
+                                type="button"
+                                disabled={resetPointsClassIds.length === 0}
+                                onClick={() => {
+                                    setIsResetModalOpen(false)
+                                    setIsResetConfirmOpen(true)
+                                }}
+                                className="h-10 px-6 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>{tp('resetPointsBtnConfirm')}</span>
+                            </button>
                         </div>
-
-                        <div className="border border-[var(--color-border)] bg-[var(--color-surface-alt)]/15 rounded-2xl p-2.5 max-h-[300px] overflow-y-auto custom-scrollbar">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {/* Option Semua Kelas */}
-                                {!resetPointsSearch && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const isAllSelected = resetPointsClassIds.length === classesList.length
-                                            if (isAllSelected) {
-                                                setResetPointsClassIds([])
-                                            } else {
-                                                setResetPointsClassIds(classesList.map(c => c.id))
-                                            }
-                                        }}
-                                        className={`col-span-full p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group mb-1 ${resetPointsClassIds.length === classesList.length
-                                            ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20'
-                                            : 'border-orange-500/30 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10'
-                                            }`}
-                                    >
-                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassIds.length === classesList.length ? 'bg-white/20 text-white' : 'bg-orange-500 text-white shadow-sm'
-                                            }`}>
-                                            <Layers className="w-3.5 h-3.5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-black text-[10px] uppercase tracking-wider leading-tight">{tp('resetPointsAllClasses')}</p>
-                                        </div>
-                                        {resetPointsClassIds.length === classesList.length && <Check className="w-3 h-3 opacity-60" />}
-                                    </button>
-                                )}
-
-                                {filteredResetClasses.map(c => {
-                                    const isSelected = resetPointsClassIds.includes(c.id)
-                                    return (
+                    }
+                >
+                    <div className="space-y-4">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2 shrink-0">
+                                    <GraduationCap className="opacity-40 w-4 h-4" /> <span>{tp('resetPointsSelectClass')}</span>
+                                </label>
+                                <div className="relative group flex-1 max-w-[200px]">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors">
+                                        <Search className="w-3.5 h-3.5" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder={tp('resetPointsSearchClassPlaceholder')}
+                                        value={resetPointsSearch}
+                                        onChange={(e) => setResetPointsSearch(e.target.value)}
+                                        className="w-full h-9 pl-9 pr-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[11px] font-medium focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all outline-none"
+                                    />
+                                    {resetPointsSearch && (
                                         <button
-                                            key={c.id}
+                                            onClick={() => setResetPointsSearch('')}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-[var(--color-text-muted)] hover:text-rose-500 transition-colors"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="border border-[var(--color-border)] bg-[var(--color-surface-alt)]/15 rounded-2xl p-2.5 max-h-[300px] overflow-y-auto custom-scrollbar">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {/* Option Semua Kelas */}
+                                    {!resetPointsSearch && (
+                                        <button
                                             type="button"
                                             onClick={() => {
-                                                setResetPointsClassIds(prev =>
-                                                    prev.includes(c.id)
-                                                        ? prev.filter(id => id !== c.id)
-                                                        : [...prev, c.id]
-                                                )
+                                                const isAllSelected = resetPointsClassIds.length === classesList.length
+                                                if (isAllSelected) {
+                                                    setResetPointsClassIds([])
+                                                } else {
+                                                    setResetPointsClassIds(classesList.map(c => c.id))
+                                                }
                                             }}
-                                            className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group ${isSelected
-                                                ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
-                                                : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'
+                                            className={`col-span-full p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group mb-1 ${resetPointsClassIds.length === classesList.length
+                                                ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20'
+                                                : 'border-orange-500/30 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10'
                                                 }`}
                                         >
-                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-white/20 text-white' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${resetPointsClassIds.length === classesList.length ? 'bg-white/20 text-white' : 'bg-orange-500 text-white shadow-sm'
                                                 }`}>
-                                                <GraduationCap className="w-3.5 h-3.5" />
+                                                <Layers className="w-3.5 h-3.5" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-black text-[10px] uppercase tracking-wider leading-tight">{c.name}</p>
+                                                <p className="font-black text-[10px] uppercase tracking-wider leading-tight">{tp('resetPointsAllClasses')}</p>
                                             </div>
-                                            {isSelected && <Check className="w-3 h-3 opacity-60" />}
+                                            {resetPointsClassIds.length === classesList.length && <Check className="w-3 h-3 opacity-60" />}
                                         </button>
-                                    )
-                                })}
+                                    )}
 
-                                {filteredResetClasses.length === 0 && (
-                                    <div className="col-span-full py-8 text-center space-y-2">
-                                        <div className="w-8 h-8 rounded-full bg-[var(--color-surface-alt)] flex items-center justify-center mx-auto opacity-40">
-                                            <Search className="w-4 h-4" />
+                                    {filteredResetClasses.map(c => {
+                                        const isSelected = resetPointsClassIds.includes(c.id)
+                                        return (
+                                            <button
+                                                key={c.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setResetPointsClassIds(prev =>
+                                                        prev.includes(c.id)
+                                                            ? prev.filter(id => id !== c.id)
+                                                            : [...prev, c.id]
+                                                    )
+                                                }}
+                                                className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all hover:scale-[1.01] active:scale-95 group ${isSelected
+                                                    ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
+                                                    : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'
+                                                    }`}
+                                            >
+                                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-white/20 text-white' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                                                    }`}>
+                                                    <GraduationCap className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-black text-[10px] uppercase tracking-wider leading-tight">{c.name}</p>
+                                                </div>
+                                                {isSelected && <Check className="w-3 h-3 opacity-60" />}
+                                            </button>
+                                        )
+                                    })}
+
+                                    {filteredResetClasses.length === 0 && (
+                                        <div className="col-span-full py-8 text-center space-y-2">
+                                            <div className="w-8 h-8 rounded-full bg-[var(--color-surface-alt)] flex items-center justify-center mx-auto opacity-40">
+                                                <Search className="w-4 h-4" />
+                                            </div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-40">{tp('resetPointsClassNotFound')}</p>
                                         </div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-40">{tp('resetPointsClassNotFound')}</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 px-2.5 py-1 bg-red-500/5 rounded-lg border border-red-500/10">
+                            <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                            <span className="text-[9px] text-red-600 dark:text-red-400 font-extrabold leading-snug">{tp('resetPointsWarning')}</span>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Modal Konfirmasi Ganda Reset Poin */}
+            {hasOpenedResetConfirm && (
+                <ConfirmDialog
+                    isOpen={isResetConfirmOpen}
+                    onClose={handleCancelConfirm}
+                    onConfirm={handleBatchResetPoints}
+                    title={language === 'ar' ? 'تأكيد إعادة تعيين النقاط' : language === 'en' ? 'Confirm Reset Points' : 'Konfirmasi Reset Poin'}
+                    description={language === 'ar' ? 'ستتم إعادة جميع نقاط الطلاب المتراكمة إلى 0.' : language === 'en' ? 'All accumulated student points will be reset to 0.' : 'Semua akumulasi poin siswa akan kembali menjadi 0.'}
+                    icon={AlertTriangle}
+                    iconBg="bg-red-500/10"
+                    iconColor="text-red-500"
+                    mobileVariant="bottom-sheet"
+                    confirmText={language === 'ar' ? 'نعم، أعد التعيين الآن' : language === 'en' ? 'Yes, Reset Now' : 'Ya, Reset Sekarang'}
+                    confirmIcon={RotateCcw}
+                    confirmClassName="h-10 px-6 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    confirmDisabled={confirmText.toUpperCase() !== 'RESET'}
+                    cancelText={tp('cancel')}
+                    submitting={resettingPoints}
+                >
+                    <div className="space-y-4">
+                        {/* Informasi Target Reset */}
+                        <div className="text-xs text-[var(--color-text)] leading-relaxed font-bold space-y-2">
+                            <p>{language === 'ar' ? 'هل أنت متأكد أنك تريد إعادة تعيين النقاط لـ:' : language === 'en' ? 'Are you sure you want to reset points for:' : 'Apakah Anda yakin ingin mereset poin untuk:'}</p>
+                            <div className="p-3 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
+                                <span className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-widest block mb-1">
+                                    {language === 'ar' ? 'الفصول المستهدفة:' : language === 'en' ? 'Target Classes:' : 'Target Kelas:'}
+                                </span>
+                                {resetPointsClassIds.length === classesList.length ? (
+                                    <span className="text-xs text-[var(--color-primary)] font-black uppercase leading-normal">
+                                        {language === 'ar' ? 'جميع الفصول' : language === 'en' ? 'All Classes' : 'Semua Kelas'}
+                                    </span>
+                                ) : (
+                                    <div className="flex flex-wrap gap-1.5 mt-1 max-h-[80px] overflow-y-auto custom-scrollbar pr-1">
+                                        {classesList.filter(c => resetPointsClassIds.includes(c.id)).map(c => (
+                                            <span key={c.id} className="text-[9px] font-black uppercase tracking-wide px-2 py-0.5 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-md border border-[var(--color-primary)]/20 shrink-0">
+                                                {c.name}
+                                            </span>
+                                        ))}
                                     </div>
                                 )}
                             </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-2 px-2.5 py-1 bg-red-500/5 rounded-lg border border-red-500/10">
-                        <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                        <span className="text-[9px] text-red-600 dark:text-red-400 font-extrabold leading-snug">{tp('resetPointsWarning')}</span>
-                    </div>
-                </div>
-            </Modal>
 
-            {/* Modal Konfirmasi Ganda Reset Poin */}
-            <ConfirmDialog
-                isOpen={isResetConfirmOpen}
-                onClose={handleCancelConfirm}
-                onConfirm={handleBatchResetPoints}
-                title={language === 'ar' ? 'تأكيد إعادة تعيين النقاط' : language === 'en' ? 'Confirm Reset Points' : 'Konfirmasi Reset Poin'}
-                description={language === 'ar' ? 'ستتم إعادة جميع نقاط الطلاب المتراكمة إلى 0.' : language === 'en' ? 'All accumulated student points will be reset to 0.' : 'Semua akumulasi poin siswa akan kembali menjadi 0.'}
-                icon={AlertTriangle}
-                iconBg="bg-red-500/10"
-                iconColor="text-red-500"
-                mobileVariant="bottom-sheet"
-                confirmText={language === 'ar' ? 'نعم، أعد التعيين الآن' : language === 'en' ? 'Yes, Reset Now' : 'Ya, Reset Sekarang'}
-                confirmIcon={RotateCcw}
-                confirmClassName="h-10 px-6 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                confirmDisabled={confirmText.toUpperCase() !== 'RESET'}
-                cancelText={tp('cancel')}
-                submitting={resettingPoints}
-            >
-                <div className="space-y-4">
-                    {/* Informasi Target Reset */}
-                    <div className="text-xs text-[var(--color-text)] leading-relaxed font-bold space-y-2">
-                        <p>{language === 'ar' ? 'هل أنت متأكد أنك تريد إعادة تعيين النقاط لـ:' : language === 'en' ? 'Are you sure you want to reset points for:' : 'Apakah Anda yakin ingin mereset poin untuk:'}</p>
-                        <div className="p-3 bg-[var(--color-surface-alt)] rounded-xl border border-[var(--color-border)]">
-                            <span className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-widest block mb-1">
-                                {language === 'ar' ? 'الفصول المستهدفة:' : language === 'en' ? 'Target Classes:' : 'Target Kelas:'}
-                            </span>
-                            {resetPointsClassIds.length === classesList.length ? (
-                                <span className="text-xs text-[var(--color-primary)] font-black uppercase leading-normal">
-                                    {language === 'ar' ? 'جميع الفصول' : language === 'en' ? 'All Classes' : 'Semua Kelas'}
-                                </span>
-                            ) : (
-                                <div className="flex flex-wrap gap-1.5 mt-1 max-h-[80px] overflow-y-auto custom-scrollbar pr-1">
-                                    {classesList.filter(c => resetPointsClassIds.includes(c.id)).map(c => (
-                                        <span key={c.id} className="text-[9px] font-black uppercase tracking-wide px-2 py-0.5 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-md border border-[var(--color-primary)]/20 shrink-0">
-                                            {c.name}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
+                        {/* Input Verifikasi Teks (Friction UX) */}
+                        <div className="space-y-2">
+                            <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                {language === 'ar' ? <>اكتب <span className="text-red-500 font-bold">"RESET"</span> للتأكيد:</> : language === 'en' ? <>Type <span className="text-red-500 font-bold">"RESET"</span> to confirm:</> : <>Ketik <span className="text-red-500 font-bold">"RESET"</span> untuk mengonfirmasi:</>}
+                            </label>
+                            <input 
+                                type="text"
+                                value={confirmText}
+                                onChange={(e) => setConfirmText(e.target.value)}
+                                placeholder="RESET"
+                                className="w-full px-4 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-center text-xs font-black tracking-widest focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all uppercase placeholder:opacity-30"
+                            />
                         </div>
                     </div>
-
-                    {/* Input Verifikasi Teks (Friction UX) */}
-                    <div className="space-y-2">
-                        <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                            {language === 'ar' ? <>اكتب <span className="text-red-500 font-bold">"RESET"</span> للتأكيد:</> : language === 'en' ? <>Type <span className="text-red-500 font-bold">"RESET"</span> to confirm:</> : <>Ketik <span className="text-red-500 font-bold">"RESET"</span> untuk mengonfirmasi:</>}
-                        </label>
-                        <input 
-                            type="text"
-                            value={confirmText}
-                            onChange={(e) => setConfirmText(e.target.value)}
-                            placeholder="RESET"
-                            className="w-full px-4 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-center text-xs font-black tracking-widest focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all uppercase placeholder:opacity-30"
-                        />
-                    </div>
-                </div>
-            </ConfirmDialog>
+                </ConfirmDialog>
+            )}
         </div>
     )
 }

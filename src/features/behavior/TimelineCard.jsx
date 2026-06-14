@@ -47,6 +47,27 @@ export default function TimelineCard({
     const isPos = (r.points ?? 0) > 0
     const stud = students.find((x) => x.id === r.student_id)
 
+    const cardRef = React.useRef(null)
+
+    React.useEffect(() => {
+        const el = cardRef.current
+        if (!el) return
+
+        const onTouchStart = (e) => handleCardPressStart(e, r.id)
+        const onTouchEnd = (e) => handleCardPressEnd(e, r.id, r)
+        const onTouchMove = () => handleCardPressCancel()
+
+        el.addEventListener('touchstart', onTouchStart, { passive: true })
+        el.addEventListener('touchend', onTouchEnd, { passive: true })
+        el.addEventListener('touchmove', onTouchMove, { passive: true })
+
+        return () => {
+            el.removeEventListener('touchstart', onTouchStart)
+            el.removeEventListener('touchend', onTouchEnd)
+            el.removeEventListener('touchmove', onTouchMove)
+        }
+    }, [r.id, r, handleCardPressStart, handleCardPressEnd, handleCardPressCancel])
+
     return (
         <div className="relative group/item -ml-[28px] pl-[28px] sm:-ml-[64px] sm:pl-[64px]">
             {/* Time — right-aligned in 0→36px zone. Hidden on mobile. */}
@@ -67,10 +88,8 @@ export default function TimelineCard({
 
             {/* Card — z=2 so it renders over the line/dot visually */}
             <div
+                ref={cardRef}
                 style={{ position: 'relative', zIndex: 2 }}
-                onTouchStart={(e) => handleCardPressStart(e, r.id)}
-                onTouchEnd={(e) => handleCardPressEnd(e, r.id, r)}
-                onTouchMove={handleCardPressCancel}
                 onMouseDown={(e) => handleCardPressStart(e, r.id)}
                 onMouseUp={(e) => handleCardPressEnd(e, r.id, r)}
                 onMouseLeave={handleCardPressCancel}
