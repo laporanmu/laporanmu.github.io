@@ -117,38 +117,18 @@ export default function DormsPage() {
                                         >
                                             <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Opsi Data</p>
                                             <button
-                                                onClick={() => { setIsHeaderMenuOpen(false); data.handleOpenExportModal('plotting'); }}
+                                                onClick={() => {
+                                                    setIsHeaderMenuOpen(false);
+                                                    const initialDataset = activeTab === 'kebersihan' ? 'cleanliness' : 'plotting';
+                                                    data.handleOpenExportModal(initialDataset);
+                                                }}
                                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
                                             >
                                                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                                                     <Download className="w-4 h-4" />
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-[11px] font-black leading-tight">Ekspor Plotting</p>
-                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv / pdf</p>
-                                                </div>
-                                            </button>
-                                            <button
-                                                onClick={() => { setIsHeaderMenuOpen(false); data.handleOpenExportModal('cleanliness'); }}
-                                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
-                                            >
-                                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                    <FileSpreadsheet className="w-4 h-4" />
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className="text-[11px] font-black leading-tight">Ekspor Audit Kebersihan</p>
-                                                    <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv / pdf</p>
-                                                </div>
-                                            </button>
-                                            <button
-                                                onClick={() => { setIsHeaderMenuOpen(false); data.handleOpenExportModal('inventory'); }}
-                                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
-                                            >
-                                                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                    <ClipboardList className="w-4 h-4" />
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className="text-[11px] font-black leading-tight">Ekspor Inventaris</p>
+                                                    <p className="text-[11px] font-black leading-tight">Ekspor Data Asrama</p>
                                                     <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv / pdf</p>
                                                 </div>
                                             </button>
@@ -385,6 +365,7 @@ export default function DormsPage() {
             <DormsExportModal
                 isOpen={data.isExportModalOpen}
                 onClose={() => data.setIsExportModalOpen(false)}
+                defaultDataset={data.exportDataset}
                 students={data.students}
                 audits={data.audits}
                 inventories={data.inventories}

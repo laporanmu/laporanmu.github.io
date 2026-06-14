@@ -1,5 +1,6 @@
 import { fmtDate, fmtTime, fmtDateTime, durasi } from '@features/gate/hooks/useGateCore'
 import { translatePurpose } from './gateConstants'
+import { buildPrintHTML } from '@shared/utils/printTemplate'
 
 // ─── Base Print Stylesheet ────────────────────────────────────────────────────
 
@@ -305,28 +306,36 @@ export function buildPrintHTMLDetail(src, title, typeMeta, language = 'id', opts
   const defaultSigTitle = language === 'en' ? 'Security Officer' : language === 'ar' ? 'ضابط الأمن' : 'Petugas Keamanan'
 
   const {
-    // — tampilan kolom —
     showNip = true,
     showPurpose = true,
     showDuration = true,
     showVehicle = true,
-    // — tanda tangan —
     showSignature = false,
     signatureTitle = defaultSigTitle,
     signatureName = '',
-    // — identitas institusi —
     schoolName = 'SMP Muhammadiyah 04 Tanggul',
     schoolSub = 'Muhammadiyah Boarding School',
     schoolAddress = 'Jln. Pemandian No 88, Tanggul, Jember',
-    // — konteks cetak —
     shift = '',
     operator = 'Sistem Otomatis',
     docNumber = _autoDocNumber('PKM', now),
-    paperSize = 'A4 portrait',     // 'A4 portrait' | 'A4 landscape' | '215mm 330mm portrait' (F4)
+    paperSize = 'A4 portrait',
   } = opts
 
-  /* ── rows ── */
-  const rows = src.map((l, i) => {
+  const tableHeaders = [
+    pt('thNo'),
+    pt('thDate'),
+    `${pt('thName')}${showNip ? ' / NIP' : ''}`,
+    pt('thType'),
+    ...(showPurpose ? [pt('thPurpose')] : []),
+    pt('thExit'),
+    pt('thEntry'),
+    ...(showDuration ? [pt('thDuration')] : []),
+    ...(showVehicle ? [pt('thVehicle')] : []),
+    pt('thStatus')
+  ]
+
+  const tableRowsHTML = src.map((l, i) => {
     const isInternal = l.visitor_type !== 'tamu'
     const dur = durasi(l.check_in, l.check_out)
     const statusLabel = !l.check_out
@@ -353,139 +362,50 @@ export function buildPrintHTMLDetail(src, title, typeMeta, language = 'id', opts
     </tr>`
   }).join('')
 
-  /* ── stat cards ── */
   const belumKembali = src.filter(l => !l.check_out).length
-  const statsHtml = [
-    [pt('totalEntriesCard'), src.length, 'total', `${belumKembali} ${pt('notReturnedSub')}`],
-    [typeMeta.guru?.label || 'Guru', src.filter(l => l.visitor_type === 'guru').length, 'guru', ''],
-    [typeMeta.karyawan?.label || 'Karyawan', src.filter(l => l.visitor_type === 'karyawan').length, 'karyawan', ''],
-    [typeMeta.tamu?.label || 'Tamu', src.filter(l => l.visitor_type === 'tamu').length, 'tamu', ''],
-  ].map(([l, v, c, d]) =>
-    `<div class="stat ${c}"><p class="l">${l}</p><p class="v">${v}</p>${d ? `<p class="d">${d}</p>` : ''}</div>`
-  ).join('')
 
-  /* ── table headers ── */
-  const tableHeaders = `
-    <th>${pt('thNo')}</th>
-    <th>${pt('thDate')}</th>
-    <th>${pt('thName')}${showNip ? ' / NIP' : ''}</th>
-    <th>${pt('thType')}</th>
-    ${showPurpose ? `<th>${pt('thPurpose')}</th>` : ''}
-    <th>${pt('thExit')}</th>
-    <th>${pt('thEntry')}</th>
-    ${showDuration ? `<th>${pt('thDuration')}</th>` : ''}
-    ${showVehicle ? `<th>${pt('thVehicle')}</th>` : ''}
-    <th>${pt('thStatus')}</th>
-  `
-
-  const signatureHtml = showSignature ? `
-    <div class="signature-section">
-      <div class="signature-box">
-        <p class="ttd-title">${pt('knowing')}</p>
-        <p class="ttd-role">${signatureTitle}</p>
-        <div class="signature-line"></div>
-        <p class="ttd-name">${signatureName || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</p>
-      </div>
-    </div>` : ''
+  const stats = [
+    { label: pt('totalEntriesCard'), value: src.length, type: 'total', description: `${belumKembali} ${pt('notReturnedSub')}` },
+    { label: typeMeta.guru?.label || 'Guru', value: src.filter(l => l.visitor_type === 'guru').length, type: 'avg' },
+    { label: typeMeta.karyawan?.label || 'Karyawan', value: src.filter(l => l.visitor_type === 'karyawan').length, type: 'prestasi' },
+    { label: typeMeta.tamu?.label || 'Tamu', value: src.filter(l => l.visitor_type === 'tamu').length, type: 'pelanggaran' }
+  ]
 
   const infoStrip = [
-    shift ? [pt('infoShift'), shift] : null,
-    operator ? [pt('infoOperator'), operator === 'Sistem Otomatis' ? pt('systemAutomated') : operator] : null,
-    [pt('infoStatus'), belumKembali > 0 ? pt('activeReport') : pt('completedReport')],
-    [pt('infoApp'), 'LaporanMu'],
-  ].filter(Boolean).map(([k, v]) =>
-    `<div class="info-item"><span class="info-key">${k}:</span><span class="info-val">${v}</span></div>`
-  ).join('')
+    ...(shift ? [{ label: pt('infoShift'), value: shift }] : []),
+    ...(operator ? [{ label: pt('infoOperator'), value: operator === 'Sistem Otomatis' ? pt('systemAutomated') : operator }] : []),
+    { label: pt('infoStatus'), value: belumKembali > 0 ? pt('activeReport') : pt('completedReport') },
+    { label: pt('infoApp'), value: 'LaporanMu' }
+  ]
 
-  const pageStyle = `@page{margin:14mm 16mm;size:${paperSize}}`
-
-  return `<!DOCTYPE html>
-<html lang="${language}">
-<head>
-  <meta charset="UTF-8">
-  <title>${title}</title>
-  <style>${PRINT_BASE_STYLE}${pageStyle}</style>
-</head>
-<body>
-<div class="page">
-  <div class="content-wrap">
-
-    <!-- Letterhead header -->
-    <div class="header">
-      <div class="header-brand">
-        <div class="header-logo">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="header-school-name">${schoolName}</div>
-          <div class="header-school-sub">${schoolSub}</div>
-          <div class="header-school-addr">${schoolAddress}</div>
-        </div>
-      </div>
-      <div class="header-right">
-        <div class="badge">${pt('portalTitle')}</div>
-        <div class="doc-id">${pt('docNo')}: ${docNumber}</div>
-        <div class="doc-printed">${pt('printed')}: ${fmtDateTime(now, language)} ${pt('wib')}</div>
-      </div>
-    </div>
-
-    <!-- Title -->
-    <div class="title-row">
-      <div>
-        <div class="report-title">${title}</div>
-        <div class="report-sub">${pt('dailyReport')}</div>
-      </div>
-      <div>
-        <div class="total-badge">${src.length}</div>
-        <div class="total-label">${pt('totalEntries')}</div>
-      </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="section-label">${pt('summarySection')}</div>
-    <div class="stats">${statsHtml}</div>
-
-    <!-- Info strip -->
-    <div class="info-strip">${infoStrip}</div>
-
-    <!-- Table -->
-    <div class="section-label">${pt('detailLogSection')}</div>
-    <table>
-      <thead><tr>${tableHeaders}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-
-  </div><!-- /content-wrap -->
-
-  <div class="footer-wrap">
-    ${signatureHtml}
-    <div class="footer">
-      <span class="footer-app">laporanmu.my.id &nbsp;·&nbsp; LaporanMu</span>
-      <span>Total ${src.length} ${pt('thExitCount').toLowerCase()} &nbsp;·&nbsp; ${fmtDate(now, language)}</span>
-      <span class="page-num">${pt('pageOf')} 1</span>
-    </div>
-  </div>
-
-</div><!-- /page -->
-<script>window.onload=()=>window.print()<\/script>
-</body></html>`
+  return buildPrintHTML({
+    language,
+    schoolName,
+    schoolSub,
+    schoolAddress,
+    schoolLogo: window.location.origin + '/logo-smp.png',
+    docBadge: pt('portalTitle'),
+    docNumber,
+    title,
+    subtitle: pt('dailyReport'),
+    totalCount: src.length,
+    totalLabel: pt('totalEntries'),
+    stats,
+    infoStrip,
+    tableHeaders,
+    tableRowsHTML,
+    showSignature,
+    signaturePlace: 'Tanggul',
+    signatureTitle,
+    signatureName,
+    secondarySignatureTitle: showSignature ? defaultSigTitle : '',
+    paperSize
+  })
 }
 
-/**
- * Build full-page print HTML for the Ringkasan (per-person summary) view.
- * @param {Array} ringkasan - Array of summary records
- * @param {string} title - Page title
- * @param {string} periodLabel - Human-readable period string
- * @param {Object} typeMeta - TYPE_META map
- * @param {string} language - Current language
- * @param {Object} opts - Print options
- */
 export function buildPrintHTMLRingkasan(ringkasan, title, periodLabel, typeMeta, language = 'id', opts = {}) {
   const now = new Date()
   const pt = (key) => PRINT_T[language]?.[key] || PRINT_T["id"]?.[key] || key
-
   const defaultSigTitle = language === 'en' ? 'Security Officer' : language === 'ar' ? 'ضابط الأمن' : 'Petugas Keamanan'
 
   const {
@@ -504,11 +424,20 @@ export function buildPrintHTMLRingkasan(ringkasan, title, periodLabel, typeMeta,
     paperSize = 'A4 portrait',
   } = opts
 
-  /* ── rows ── */
+  const tableHeaders = [
+    pt('thNo'),
+    `${pt('thName')}${showNip ? ' / NIP' : ''}`,
+    pt('thType'),
+    pt('thExitCount'),
+    ...(showDuration ? [pt('thTotalDuration'), pt('thAvgDuration')] : []),
+    pt('thStatus'),
+    ...(showPurpose ? [pt('thPurpose')] : [])
+  ]
+
   const hrLabel = language === 'en' ? 'h' : language === 'ar' ? 'س' : 'j'
   const minLabel = language === 'en' ? 'm' : language === 'ar' ? 'د' : 'm'
 
-  const rows = ringkasan.map((r, i) => {
+  const tableRowsHTML = ringkasan.map((r, i) => {
     const meta = typeMeta[r.type] || typeMeta.tamu
     const totalH = Math.floor(r.totalMs / 3600000)
     const totalM = Math.floor((r.totalMs % 3600000) / 60000)
@@ -542,122 +471,46 @@ export function buildPrintHTMLRingkasan(ringkasan, title, periodLabel, typeMeta,
     </tr>`
   }).join('')
 
-  /* ── stat cards ── */
   const totalBelum = ringkasan.reduce((s, r) => s + r.belumKembali, 0)
   const totalKeluar = ringkasan.reduce((s, r) => s + r.count, 0)
-  const statsHtml = [
-    [pt('totalPeopleCard'), ringkasan.length, 'total', ''],
-    [pt('totalExitsCard'), totalKeluar, 'tamu', ''],
-    [pt('notReturnedCard'), totalBelum, 'guru', pt('followUpSub')],
-    [pt('returnedCard'), totalKeluar - totalBelum, 'karyawan', ''],
-  ].map(([l, v, c, d]) =>
-    `<div class="stat ${c}"><p class="l">${l}</p><p class="v">${v}</p>${d ? `<p class="d">${d}</p>` : ''}</div>`
-  ).join('')
 
-  /* ── table headers ── */
-  const tableHeaders = `
-    <th>${pt('thNo')}</th>
-    <th>${pt('thName')}${showNip ? ' / NIP' : ''}</th>
-    <th>${pt('thType')}</th>
-    <th>${pt('thExitCount')}</th>
-    ${showDuration ? `<th>${pt('thTotalDuration')}</th><th>${pt('thAvgDuration')}</th>` : ''}
-    <th>${pt('thStatus')}</th>
-    ${showPurpose ? `<th>${pt('thPurpose')}</th>` : ''}
-  `
-
-  const signatureHtml = showSignature ? `
-    <div class="signature-section">
-      <div class="signature-box">
-        <p class="ttd-title">${pt('knowing')}</p>
-        <p class="ttd-role">${signatureTitle}</p>
-        <div class="signature-line"></div>
-        <p class="ttd-name">${signatureName || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</p>
-      </div>
-    </div>` : ''
+  const stats = [
+    { label: pt('totalPeopleCard'), value: ringkasan.length, type: 'total' },
+    { label: pt('totalExitsCard'), value: totalKeluar, type: 'avg' },
+    { label: pt('notReturnedCard'), value: totalBelum, type: 'pelanggaran', description: pt('followUpSub') },
+    { label: pt('returnedCard'), value: totalKeluar - totalBelum, type: 'prestasi' }
+  ]
 
   const infoStrip = [
-    [`${pt('infoPeriod')}`, periodLabel],
-    shift ? [pt('infoShift'), shift] : null,
-    operator ? [pt('infoOperator'), operator === 'Sistem Otomatis' ? pt('systemAutomated') : operator] : null,
-    [pt('infoApp'), 'LaporanMu'],
-  ].filter(Boolean).map(([k, v]) =>
-    `<div class="info-item"><span class="info-key">${k}:</span><span class="info-val">${v}</span></div>`
-  ).join('')
+    { label: pt('infoPeriod'), value: periodLabel },
+    ...(shift ? [{ label: pt('infoShift'), value: shift }] : []),
+    ...(operator ? [{ label: pt('infoOperator'), value: operator === 'Sistem Otomatis' ? pt('systemAutomated') : operator }] : []),
+    { label: pt('infoApp'), value: 'LaporanMu' }
+  ]
 
-  const pageStyle = `@page{margin:14mm 16mm;size:${paperSize}}`
-
-  return `<!DOCTYPE html>
-<html lang="${language}">
-<head>
-  <meta charset="UTF-8">
-  <title>${title}</title>
-  <style>${PRINT_BASE_STYLE}${pageStyle}</style>
-</head>
-<body>
-<div class="page">
-  <div class="content-wrap">
-
-    <!-- Letterhead header -->
-    <div class="header">
-      <div class="header-brand">
-        <div class="header-logo">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="header-school-name">${schoolName}</div>
-          <div class="header-school-sub">${schoolSub}</div>
-          <div class="header-school-addr">${schoolAddress}</div>
-        </div>
-      </div>
-      <div class="header-right">
-        <div class="badge">${pt('portalSummaryTitle')}</div>
-        <div class="doc-id">${pt('docNo')}: ${docNumber}</div>
-        <div class="doc-printed">${pt('printed')}: ${fmtDateTime(now, language)} ${pt('wib')}</div>
-      </div>
-    </div>
-
-    <!-- Title -->
-    <div class="title-row">
-      <div>
-        <div class="report-title">${title}</div>
-        <div class="report-sub">${pt('summaryReport')} &nbsp;·&nbsp; ${pt('infoPeriod')}: ${periodLabel}</div>
-      </div>
-      <div>
-        <div class="total-badge">${ringkasan.length}</div>
-        <div class="total-label">${pt('totalPeople')}</div>
-      </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="section-label">${pt('summarySection')}</div>
-    <div class="stats">${statsHtml}</div>
-
-    <!-- Info strip -->
-    <div class="info-strip">${infoStrip}</div>
-
-    <!-- Table -->
-    <div class="section-label">${pt('peopleDataSection')}</div>
-    <table>
-      <thead><tr>${tableHeaders}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-
-  </div><!-- /content-wrap -->
-
-  <div class="footer-wrap">
-    ${signatureHtml}
-    <div class="footer">
-      <span class="footer-app">laporanmu.my.id &nbsp;·&nbsp; LaporanMu</span>
-      <span>${ringkasan.length} ${pt('totalPeopleCard').toLowerCase()} &nbsp;·&nbsp; ${fmtDate(now, language)}</span>
-      <span class="page-num">${pt('pageOf')} 1</span>
-    </div>
-  </div>
-
-</div><!-- /page -->
-<script>window.onload=()=>window.print()<\/script>
-</body></html>`
+  return buildPrintHTML({
+    language,
+    schoolName,
+    schoolSub,
+    schoolAddress,
+    schoolLogo: window.location.origin + '/logo-smp.png',
+    docBadge: pt('portalSummaryTitle'),
+    docNumber,
+    title,
+    subtitle: `${pt('summaryReport')} · ${pt('infoPeriod')}: ${periodLabel}`,
+    totalCount: ringkasan.length,
+    totalLabel: pt('totalPeople'),
+    stats,
+    infoStrip,
+    tableHeaders,
+    tableRowsHTML,
+    showSignature,
+    signaturePlace: 'Tanggul',
+    signatureTitle,
+    signatureName,
+    secondarySignatureTitle: showSignature ? defaultSigTitle : '',
+    paperSize
+  })
 }
 
 // ─── CSV Builders ─────────────────────────────────────────────────────────────

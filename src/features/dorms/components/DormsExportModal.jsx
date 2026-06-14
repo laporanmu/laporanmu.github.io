@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faCheckCircle,
@@ -33,6 +33,7 @@ import {
     faCheckSquare
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '@shared/components/Modal'
+import { buildPrintHTML, openPrintWindow } from '@shared/utils/printTemplate'
 
 // Column definitions for each dataset
 const DATASETS = {
@@ -95,6 +96,7 @@ const DATASETS = {
 export default function DormsExportModal({
     isOpen,
     onClose,
+    defaultDataset = 'plotting',
     students = [],
     audits = [],
     inventories = [],
@@ -102,7 +104,7 @@ export default function DormsExportModal({
     selectedIds = [],
     addToast
 }) {
-    const [dataset, setDataset] = useState('plotting') // 'plotting' | 'cleanliness' | 'inventory'
+    const [dataset, setDataset] = useState(defaultDataset) // 'plotting' | 'cleanliness' | 'inventory'
     const [exportScope, setExportScope] = useState('all') // 'all' | 'assigned' | 'unassigned' | 'selected'
     const [exportColumns, setExportColumns] = useState([])
     const [fileName, setFileName] = useState('')
@@ -112,12 +114,19 @@ export default function DormsExportModal({
     const [exporting, setExporting] = useState(false)
     const containerRef = useRef(null)
 
+    // Sync dataset state when opening modal
+    useEffect(() => {
+        if (isOpen) {
+            setDataset(defaultDataset)
+        }
+    }, [isOpen, defaultDataset])
+
     // Set default columns and filename when opening/changing dataset
     useEffect(() => {
         if (isOpen) {
             const defCols = DATASETS[dataset].presets[0].cols
             setExportColumns(defCols)
-            const prefix = dataset === 'plotting' ? 'plotting_kamar' : dataset === 'cleanliness' ? 'audit_kebersihan' : 'inventaris_kamar'
+            const prefix = dataset === 'plotting' ? 'Plotting_Kamar' : dataset === 'cleanliness' ? 'Audit_Kebersihan' : 'Inventaris_Kamar'
             setFileName(`${prefix}_${new Date().toISOString().slice(0, 10)}`)
         }
     }, [isOpen, dataset])
@@ -147,7 +156,6 @@ export default function DormsExportModal({
         return active ? active.id : null
     }, [exportColumns, dataset])
 
-    // Count estimation based on dataset and scope
     const estimatedCount = useMemo(() => {
         if (dataset === 'plotting') {
             if (exportScope === 'assigned') return students.filter(s => s.metadata?.kamar).length
@@ -160,16 +168,18 @@ export default function DormsExportModal({
         return 0
     }, [dataset, exportScope, students, audits, inventories, selectedIds])
 
-    if (!isOpen) return null
+    const currentDatasetDef = useMemo(() => DATASETS[dataset], [dataset])
 
-    const handlePresetClick = (cols) => {
+    const handlePresetClick = useCallback((cols) => {
         setExportColumns(cols)
-    }
+    }, [])
 
-    const currentDatasetDef = DATASETS[dataset]
+    const exportOptions = useMemo(() => ({
+        includeHeader,
+        orientation: pdfOrientation
+    }), [includeHeader, pdfOrientation])
 
-    // Mapper function for raw data to export row
-    const getExportData = () => {
+    const getExportData = useCallback(() => {
         let rawList = []
         if (dataset === 'plotting') {
             rawList = students
@@ -181,7 +191,6 @@ export default function DormsExportModal({
         } else if (dataset === 'inventory') {
             rawList = inventories
         }
-
         return rawList.map(item => {
             const row = {}
             exportColumns.forEach(key => {
@@ -215,140 +224,185 @@ export default function DormsExportModal({
             })
             return row
         })
-    }
+    }, [dataset, exportScope, students, audits, inventories, selectedIds, exportColumns, dorms])
 
-    const downloadBlob = (blob, filename) => {
+    const downloadBlob = useCallback((blob, filename) => {
         const link = document.createElement('a')
         link.href = URL.createObjectURL(blob)
         link.download = filename
         link.click()
         URL.revokeObjectURL(link.href)
-    }
+    }, [])
 
-    const handleExportCSV = async (filename, options = {}) => {
+    const handleExportCSV = useCallback(async (filename, options = {}) => {
         setExporting(true)
         try {
             const Papa = (await import('papaparse')).default
             const rows = getExportData()
-            if (!rows.length) {
-                addToast('Tidak ada data asrama untuk diekspor', 'warning')
-                return
-            }
-            const csv = Papa.unparse(rows, { header: options.includeHeader })
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-            downloadBlob(blob, `${filename || 'export_asrama'}.csv`)
+            if (!rows.length) { addToast('Tidak ada data asrama untuk diekspor', 'warning'); return }
+            const csv = Papa.unparse(rows, { header: options.includeHeader !== false })
+            downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `${filename || 'export_asrama'}.csv`)
             addToast(`Berhasil mengekspor ${rows.length} baris data ke CSV`, 'success')
         } catch (e) {
             console.error(e)
             addToast('Gagal mengekspor data ke CSV', 'error')
-        } finally {
-            setExporting(false)
-        }
-    }
+        } finally { setExporting(false) }
+    }, [getExportData, downloadBlob, addToast])
 
-    const handleExportExcel = async (filename) => {
+    const handleExportExcel = useCallback(async (filename) => {
         setExporting(true)
         try {
             const XLSX = await import('xlsx')
             const data = getExportData()
-            if (!data.length) {
-                addToast('Tidak ada data asrama untuk diekspor', 'warning')
-                return
-            }
+            if (!data.length) { addToast('Tidak ada data asrama untuk diekspor', 'warning'); return }
             const ws = XLSX.utils.json_to_sheet(data)
-            const cols = Object.keys(data[0]).map(k => ({ wch: Math.max(k.length, 14) }))
-            ws['!cols'] = cols
+            ws['!cols'] = Object.keys(data[0]).map(k => ({ wch: Math.max(k.length, 14) }))
             const wb = XLSX.utils.book_new()
             XLSX.utils.book_append_sheet(wb, ws, currentDatasetDef.label)
             const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
-            const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-            downloadBlob(blob, `${filename || 'export_asrama'}.xlsx`)
+            downloadBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${filename || 'export_asrama'}.xlsx`)
             addToast(`Berhasil mengekspor ${data.length} baris data ke Excel`, 'success')
         } catch (e) {
             console.error(e)
             addToast('Gagal mengekspor data ke Excel', 'error')
-        } finally {
-            setExporting(false)
-        }
-    }
+        } finally { setExporting(false) }
+    }, [getExportData, downloadBlob, addToast, currentDatasetDef])
 
-    const handleExportPDF = async (filename, options = {}) => {
+    const handleExportPDF = useCallback(async (filename, options = {}) => {
         setExporting(true)
         try {
-            const [{ default: jsPDF }, autoTableMod] = await Promise.all([
-                import('jspdf'),
-                import('jspdf-autotable'),
-            ])
-            const autoTable = autoTableMod.default || autoTableMod
             const allRows = getExportData()
-            if (!allRows.length) {
-                addToast('Tidak ada data asrama untuk diekspor', 'warning')
-                return
+            if (!allRows.length) { addToast('Tidak ada data asrama untuk diekspor', 'warning'); return }
+            
+            let stats = []
+            let docBadge = 'ASRAMA'
+            let title = 'Laporan Asrama'
+            let subtitle = ''
+            let totalLabel = 'Total'
+            let secondarySignatureTitle = 'Tim Sarpras'
+
+            if (dataset === 'plotting') {
+                docBadge = 'PLOTTING KAMAR'
+                title = 'Laporan Plotting Kamar Asrama'
+                subtitle = `Cakupan: ${exportScope === 'assigned' ? 'Sudah Terplot' : exportScope === 'unassigned' ? 'Belum Terplot' : exportScope === 'selected' ? 'Pilihan Terpilih' : 'Semua Santri'}`
+                totalLabel = 'Total Santri'
+                secondarySignatureTitle = 'Staff Kesantrian'
+                
+                const totalVal = students.length
+                const assignedVal = students.filter(s => s.metadata?.kamar).length
+                const unassignedVal = students.filter(s => !s.metadata?.kamar).length
+                const percentVal = totalVal ? Math.round((assignedVal / totalVal) * 100) : 0
+                
+                stats = [
+                    { label: 'Total Santri', value: totalVal, type: 'total' },
+                    { label: 'Sudah Diplot', value: assignedVal, type: 'prestasi', description: 'telah terplotting' },
+                    { label: 'Belum Diplot', value: unassignedVal, type: 'pelanggaran', description: 'belum terplotting' },
+                    { label: 'Persentase', value: `${percentVal}%`, type: 'avg', description: 'santri terplot' }
+                ]
+            } else if (dataset === 'cleanliness') {
+                docBadge = 'AUDIT KEBERSIHAN'
+                title = 'Laporan Audit Kebersihan Asrama'
+                subtitle = 'Log Evaluasi & Penilaian Kebersihan Kamar'
+                totalLabel = 'Total Audit'
+                secondarySignatureTitle = 'Tim Sarpras'
+                
+                const totalVal = audits.length
+                const avgScore = audits.length ? (audits.reduce((acc, a) => acc + (a.score ?? 0), 0) / audits.length).toFixed(1) : 0
+                const goodVal = audits.filter(a => (a.score ?? 0) >= 80).length
+                const badVal = audits.filter(a => (a.score ?? 0) < 60).length
+                
+                stats = [
+                    { label: 'Total Audit', value: totalVal, type: 'total' },
+                    { label: 'Rata-rata Skor', value: avgScore, type: 'avg', description: 'skor rata-rata' },
+                    { label: 'Predikat Baik', value: goodVal, type: 'prestasi', description: 'skor ≥ 80' },
+                    { label: 'Perlu Tindak Lanjut', value: badVal, type: 'pelanggaran', description: 'skor < 60' }
+                ]
+            } else if (dataset === 'inventory') {
+                docBadge = 'INVENTARIS KAMAR'
+                title = 'Laporan Inventaris Kamar Asrama'
+                subtitle = 'Log Penilaian & Kondisi Barang Kamar'
+                totalLabel = 'Total Item'
+                secondarySignatureTitle = 'Tim Sarpras'
+                
+                const totalItems = inventories.reduce((acc, i) => acc + (i.total_quantity ?? 0), 0)
+                const goodItems = inventories.reduce((acc, i) => acc + (i.good_condition_count ?? 0), 0)
+                const damagedItems = inventories.reduce((acc, i) => acc + (i.damaged_condition_count ?? 0), 0)
+                const needFollowUp = inventories.filter(i => (i.damaged_condition_count ?? 0) > 0).length
+                
+                stats = [
+                    { label: 'Total Item', value: totalItems, type: 'total' },
+                    { label: 'Kondisi Baik', value: goodItems, type: 'prestasi' },
+                    { label: 'Kondisi Rusak', value: damagedItems, type: 'pelanggaran' },
+                    { label: 'Perlu Tindak Lanjut', value: needFollowUp, type: 'avg', description: 'kamar dengan item rusak' }
+                ]
             }
 
-            const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
-            doc.setFontSize(13)
-            doc.text(`Ekspor Data - ${currentDatasetDef.label}`, 14, 12)
-            doc.setFontSize(8)
-            const dateStrLabel = new Date().toLocaleDateString('id-ID')
-            doc.text(`Tanggal Cetak: ${dateStrLabel}  |  Total Data: ${allRows.length} rekod`, 14, 18)
+            const headerKeys = Object.keys(allRows[0])
+            const tableHeaders = ['#', ...headerKeys]
 
-            const headers = Object.keys(allRows[0])
-            const rows = allRows.map(r => headers.map(h => String(r[h] ?? '')))
+            const tableRowsHTML = allRows.map((r, i) => {
+                const cells = headerKeys.map(h => {
+                    const val = r[h]
+                    if (val === 'Terplot' || val === 'Kondisi Baik') {
+                        return `<td><span class="tag-status success">${val}</span></td>`
+                    } else if (val === 'Belum Terplot' || val === 'Kondisi Rusak') {
+                        return `<td><span class="tag-status warning">${val}</span></td>`
+                    }
+                    return `<td>${val ?? '—'}</td>`
+                }).join('')
+                return `<tr><td>${i + 1}</td>${cells}</tr>`
+            }).join('')
 
-            autoTable(doc, {
-                head: [headers],
-                body: rows,
-                startY: 22,
-                theme: 'grid',
-                styles: { fontSize: 7.5, cellPadding: 2 },
-                headStyles: { fillColor: [79, 70, 229], textColor: 255 },
-                alternateRowStyles: { fillColor: [248, 250, 252] }
+            const periodLabel = new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+            const asramaLabel = 'Putra & Putri'
+            const infoStrip = [
+                { label: 'Periode', value: periodLabel },
+                { label: 'Asrama', value: asramaLabel },
+                { label: 'Penyusun', value: secondarySignatureTitle }
+            ]
+
+            const html = buildPrintHTML({
+                schoolLogo: window.location.origin + '/logo-smp.png',
+                docBadge,
+                docNumber: `ASM/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${String(Math.floor(Math.random() * 9000) + 1000)}`,
+                title,
+                subtitle,
+                totalCount: allRows.length,
+                totalLabel,
+                stats,
+                infoStrip,
+                tableHeaders,
+                tableRowsHTML,
+                signaturePlace: 'Tanggul',
+                signatureTitle: 'Kepala Sekolah',
+                secondarySignatureTitle,
+                paperSize: options.orientation === 'portrait' ? 'A4 portrait' : 'A4 landscape'
             })
 
-            const pageCount = doc.internal.getNumberOfPages()
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i)
-                doc.setFontSize(7)
-                doc.setTextColor(150)
-                const dateStr = new Date().toLocaleString('id-ID')
-                doc.text(`Dicetak via LaporanMu pada ${dateStr}`, 14, doc.internal.pageSize.height - 8)
-                doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 8)
-            }
-
-            doc.save(`${filename || 'export_asrama'}.pdf`)
-            addToast(`Berhasil mengekspor ${allRows.length} baris data ke PDF`, 'success')
+            openPrintWindow(html)
+            addToast(`Berhasil menyiapkan halaman cetak PDF`, 'success')
         } catch (e) {
             console.error(e)
-            addToast('Gagal mengekspor data ke PDF', 'error')
+            addToast('Gagal memproses cetak PDF', 'error')
         } finally {
             setExporting(false)
         }
-    }
+    }, [getExportData, addToast, dataset, exportScope, students, audits, inventories])
 
-    const columnButtons = currentDatasetDef.columns.map(({ key, label, icon }) => {
+    const columnButtons = useMemo(() => currentDatasetDef.columns.map(({ key, label, icon }) => {
         const orderIdx = exportColumns.indexOf(key) + 1
         const isSelected = orderIdx > 0
-
-        const toggleColumn = () => {
-            if (isSelected) {
-                setExportColumns(prev => prev.filter(k => k !== key))
-            } else {
-                setExportColumns(prev => [...prev, key])
-            }
-        }
-
         return (
             <button
                 key={key}
-                onClick={toggleColumn}
+                onClick={() => setExportColumns(prev => isSelected ? prev.filter(k => k !== key) : [...prev, key])}
                 className={`group relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl border text-left transition-all
                     ${isSelected
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)] shadow-sm'
                         : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'}
                 `}
             >
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all 
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all
                     ${isSelected ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'}`}>
                     <FontAwesomeIcon icon={icon} className="text-[9px]" />
                 </div>
@@ -362,12 +416,9 @@ export default function DormsExportModal({
                 )}
             </button>
         )
-    })
+    }), [currentDatasetDef, exportColumns])
 
-    const exportOptions = {
-        includeHeader,
-        orientation: pdfOrientation
-    }
+    if (!isOpen) return null
 
     return (
         <Modal
@@ -380,11 +431,11 @@ export default function DormsExportModal({
             iconColor="text-amber-600"
             size="lg"
             mobileVariant="bottom-sheet"
-            maxMobileHeight="92vh"
             contentClassName={exporting ? "relative !overflow-hidden" : "relative"}
             footer={
                 <div className="flex items-center w-full">
                     <button
+                        type="button"
                         onClick={onClose}
                         className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
                     >
@@ -425,67 +476,76 @@ export default function DormsExportModal({
                     </div>
                 )}
 
-                <div className={`space-y-6 pb-2 transition-all duration-500 ${exporting ? 'blur-sm grayscale-[0.5] opacity-50 pointer-events-none' : ''}`}>
+                <div className={`space-y-4 pb-2 transition-all duration-500 ${exporting ? 'blur-sm grayscale-[0.5] opacity-50 pointer-events-none' : ''}`}>
                     {/* Section 1: Select Dataset */}
                     <div className="space-y-3">
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">1 — Pilih Dataset</p>
                         <div className="grid grid-cols-3 gap-2.5">
-                            {Object.entries(DATASETS).map(([key, def]) => (
-                                <button
-                                    key={key}
-                                    type="button"
-                                    onClick={() => setDataset(key)}
-                                    className={`group p-3.5 rounded-2xl border-2 text-left transition-all active:scale-95 flex flex-col justify-between h-24
-                                    ${dataset === key
-                                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
-                                            : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'}
-                                    `}
-                                >
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-1 transition-all 
-                                        ${dataset === key ? 'bg-[var(--color-primary)] text-white shadow-lg' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:bg-[var(--color-primary)]/10 text-[var(--color-text-muted)]'}`}>
-                                        <FontAwesomeIcon icon={def.icon} className="text-xs" />
-                                    </div>
-                                    <div>
-                                        <div className="text-[10px] font-black text-[var(--color-text)] leading-tight">{def.label}</div>
-                                        <div className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">
-                                            {key === 'plotting' ? `${students.length} santri` : key === 'cleanliness' ? `${audits.length} audit` : `${inventories.length} item`}
+                            {Object.entries(DATASETS).map(([key, def]) => {
+                                const isActive = dataset === key
+                                return (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => setDataset(key)}
+                                        className={`group p-3 rounded-2xl border-2 text-left transition-all active:scale-95 flex flex-col gap-2
+                                        ${isActive
+                                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
+                                                : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'}
+                                        `}
+                                    >
+                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all 
+                                            ${isActive ? 'bg-[var(--color-primary)] text-white shadow-lg' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:bg-[var(--color-primary)]/10'}`}>
+                                            <FontAwesomeIcon icon={def.icon} className="text-xs" />
                                         </div>
-                                    </div>
-                                </button>
-                            ))}
+                                        <div>
+                                            <div className="text-[10px] font-black text-[var(--color-text)] leading-tight">{def.label}</div>
+                                            <div className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">
+                                                {key === 'plotting' ? `${students.length} santri` : key === 'cleanliness' ? `${audits.length} audit` : `${inventories.length} item`}
+                                            </div>
+                                        </div>
+                                    </button>
+                                )
+                            })}
                         </div>
                     </div>
 
-                    {/* Section 1: Scope (Plotting only) */}
+                    {/* Section 2: Scope (Plotting only) */}
                     {dataset === 'plotting' && (
                         <div className="space-y-3">
                             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">2 — Cakupan Data</p>
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-4 gap-2.5">
                                 {[
                                     { val: 'all', label: 'Semua Santri', desc: `${students.length} Santri`, icon: faUsers },
                                     { val: 'assigned', label: 'Sudah Terplot', desc: `${students.filter(s => s.metadata?.kamar).length} Santri`, icon: faHome },
                                     { val: 'unassigned', label: 'Belum Terplot', desc: `${students.filter(s => !s.metadata?.kamar).length} Santri`, icon: faSliders },
                                     { val: 'selected', label: 'Pilihan UI', desc: `${selectedIds.length} Santri`, icon: faCheckCircle, disabled: selectedIds.length === 0 }
-                                ].map(({ val, label, desc, icon, disabled }) => (
-                                    <button
-                                        key={val}
-                                        type="button"
-                                        onClick={() => !disabled && setExportScope(val)}
-                                        disabled={disabled}
-                                        className={`group p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between h-20
-                                        ${exportScope === val
-                                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
-                                                : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'}
-                                        ${disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
-                                        `}
-                                    >
-                                        <div className="flex items-center gap-1.5">
-                                            <FontAwesomeIcon icon={icon} className={`text-[9px] ${exportScope === val ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`} />
-                                            <span className="text-[9px] font-black text-[var(--color-text)] leading-tight truncate">{label}</span>
-                                        </div>
-                                        <div className="text-[9px] font-bold text-[var(--color-text-muted)] leading-tight">{desc}</div>
-                                    </button>
-                                ))}
+                                ].map(({ val, label, desc, icon, disabled }) => {
+                                    const isActive = exportScope === val
+                                    return (
+                                        <button
+                                            key={val}
+                                            type="button"
+                                            onClick={() => !disabled && setExportScope(val)}
+                                            disabled={disabled}
+                                            className={`group p-3 rounded-2xl border-2 text-left transition-all flex flex-col gap-2
+                                            ${isActive
+                                                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
+                                                    : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-alt)]'}
+                                            ${disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
+                                            `}
+                                        >
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all 
+                                                ${isActive ? 'bg-[var(--color-primary)] text-white shadow-lg' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:bg-[var(--color-primary)]/10'}`}>
+                                                <FontAwesomeIcon icon={icon} className="text-xs" />
+                                            </div>
+                                            <div>
+                                                <div className="text-[10px] font-black text-[var(--color-text)] leading-tight">{label}</div>
+                                                <div className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">{desc}</div>
+                                            </div>
+                                        </button>
+                                    )
+                                })}
                             </div>
                         </div>
                     )}
@@ -614,9 +674,11 @@ export default function DormsExportModal({
                         )}
                     </div>
 
-                    {/* Section 5: Format Grid */}
+
+
+                    {/* Section 5: Mulai Ekspor */}
                     <div className="space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">5 — Mulai Unduh File</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">5 — Mulai Ekspor</p>
                         <div className="grid grid-cols-3 gap-2.5">
                             {[
                                 { label: 'CSV', icon: faFileCsv, desc: 'Universal', onClick: () => handleExportCSV(fileName, exportOptions), color: 'hover:border-slate-400 hover:bg-slate-50', iconColor: 'text-slate-500' },

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 import { useLanguage } from '@context'
+import { buildPrintHTML, openPrintWindow } from '@shared/utils/printTemplate'
 
 export const SYSTEM_COLS = [
     { key: 'student_name', labelKey: 'colStudent', synonyms: ['nama', 'student', 'siswa', 'student_name', 'nama siswa', 'name', 'nama lengkap'] },
@@ -77,7 +78,7 @@ export function useBehaviorImportExport({
         { key: 'teacher', label: t('behavior.colTeacher'), fn: r => r.teacher_name || '-' }
     ]
 
-    const getExportData = async () => {
+    const getExportRawData = async () => {
         let q = supabase
             .from('reports')
             .select('*, students(name, class_id, classes(name)), point_rules(name)')
@@ -107,7 +108,11 @@ export function useBehaviorImportExport({
                 )
             }
         }
+        return filtered
+    }
 
+    const getExportData = async () => {
+        const filtered = await getExportRawData()
         // Map based on the requested exportColumns order
         return filtered.map(r => {
             const row = {}
@@ -173,54 +178,76 @@ export function useBehaviorImportExport({
     const handleExportPDF = async (filename, options = {}) => {
         setExporting(true)
         try {
-            const [{ default: jsPDF }, autoTableMod] = await Promise.all([
-                import('jspdf'),
-                import('jspdf-autotable'),
-            ])
-            const autoTable = autoTableMod.default || autoTableMod
-            const allRows = await getExportData()
-            if (!allRows.length) return addToast(t('behavior.toastNoDataExport'), 'warning')
+            const rawList = await getExportRawData()
+            if (!rawList.length) return addToast(t('behavior.toastNoDataExport'), 'warning')
 
-            const doc = new jsPDF({ orientation: options.orientation || 'landscape' })
-            doc.setFontSize(13)
-            doc.text(t('behavior.pdfTitle'), 14, 12)
-            doc.setFontSize(8)
-            const dateStrLabel = new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID')
-            const scopeLabel = exportScope === 'filtered' ? t('behavior.pdfScopeFiltered') : exportScope === 'selected' ? t('behavior.pdfScopeSelected') : t('behavior.pdfScopeAll')
-            doc.text(`${t('behavior.pdfDate')}: ${dateStrLabel}  |  ${t('behavior.pdfTotal')}: ${tNum(allRows.length)} ${t('behavior.reports')}  |  ${t('behavior.pdfScope')}: ${scopeLabel}`, 14, 18)
-
-            const headers = Object.keys(allRows[0])
-            const rows = allRows.map(r => headers.map(h => String(r[h] ?? '')))
-
-            autoTable(doc, {
-                head: [headers],
-                body: rows,
-                startY: 22,
-                theme: 'grid',
-                styles: { fontSize: 7.5, cellPadding: 2 },
-                headStyles: { fillColor: [79, 70, 229], textColor: 255 },
-                alternateRowStyles: { fillColor: [248, 250, 252] },
-                columnStyles: {
-                    [t('behavior.colPoints')]: { halign: 'center' },
-                    [t('behavior.colDate')]: { halign: 'center' },
-                    [t('behavior.colClass')]: { halign: 'center' }
-                }
+            const allRows = rawList.map(r => {
+                const row = {}
+                exportColumns.forEach(key => {
+                    const col = ALL_EXPORT_COLUMNS.find(c => c.key === key)
+                    if (col) {
+                        row[col.label] = col.fn(r)
+                    }
+                })
+                return row
             })
 
-            const pageCount = doc.internal.getNumberOfPages()
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i)
-                doc.setFontSize(7)
-                doc.setTextColor(150)
-                const dateStr = new Date().toLocaleString(language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID', {
-                    dateStyle: 'medium',
-                    timeStyle: 'short'
-                })
-                doc.text(t('behavior.pdfPrintedBy').replace('{date}', dateStr), 14, doc.internal.pageSize.height - 8)
-                doc.text(t('behavior.pdfPageOf').replace('{current}', tNum(i)).replace('{total}', tNum(pageCount)), doc.internal.pageSize.width - 35, doc.internal.pageSize.height - 8)
-            }
+            const totalCount = rawList.length
+            const positiveCount = rawList.filter(r => r.points > 0).length
+            const negativeCount = rawList.filter(r => r.points < 0).length
+            const totalPoints = rawList.reduce((acc, r) => acc + Math.abs(r.points ?? 0), 0)
+            const avgPoints = totalCount ? Math.round(totalPoints / totalCount) : 0
 
-            doc.save(`${filename || 'export_perilaku'}.pdf`)
+            const stats = [
+                { label: t('behavior.pdfTotal') || 'Total Laporan', value: totalCount, type: 'total' },
+                { label: t('behavior.positive') || 'Prestasi (+)', value: positiveCount, type: 'prestasi', description: 'poin penghargaan' },
+                { label: t('behavior.negative') || 'Pelanggaran (−)', value: negativeCount, type: 'pelanggaran', description: 'poin kedisiplinan' },
+                { label: 'Rata-rata Poin', value: avgPoints, type: 'avg', description: 'rata-rata poin mutlak' }
+            ]
+
+            const periodLabel = new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID', { month: 'long', year: 'numeric' })
+            const scopeLabel = exportScope === 'filtered' ? t('behavior.pdfScopeFiltered') : exportScope === 'selected' ? t('behavior.pdfScopeSelected') : t('behavior.pdfScopeAll')
+            const infoStrip = [
+                { label: 'Periode', value: periodLabel },
+                { label: 'Cakupan', value: scopeLabel },
+                { label: 'Penyusun', value: 'Staff Kesiswaan' }
+            ]
+
+            const headerKeys = Object.keys(allRows[0])
+            const tableHeaders = ['#', ...headerKeys]
+
+            const tableRowsHTML = allRows.map((r, i) => {
+                const cells = headerKeys.map(h => {
+                    const val = r[h]
+                    if (h === t('behavior.colPoints')) {
+                        const numVal = Number(val)
+                        if (numVal > 0) return `<td><span class="tag-status success">+${numVal}</span></td>`
+                        if (numVal < 0) return `<td><span class="tag-status warning">${numVal}</span></td>`
+                    }
+                    return `<td>${val ?? '—'}</td>`
+                }).join('')
+                return `<tr><td>${i + 1}</td>${cells}</tr>`
+            }).join('')
+
+            const html = buildPrintHTML({
+                schoolLogo: window.location.origin + '/logo-smp.png',
+                docBadge: 'DISIPLIN & POIN',
+                docNumber: `BVR/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${String(Math.floor(Math.random() * 9000) + 1000)}`,
+                title: t('behavior.pdfTitle') || 'Laporan Poin Perilaku Santri',
+                subtitle: 'Log Pelanggaran & Prestasi Siswa',
+                totalCount,
+                totalLabel: t('behavior.reports') || 'Laporan',
+                stats,
+                infoStrip,
+                tableHeaders,
+                tableRowsHTML,
+                signaturePlace: 'Tanggul',
+                signatureTitle: 'Kepala Sekolah',
+                secondarySignatureTitle: 'Staff Kesiswaan',
+                paperSize: options.orientation === 'portrait' ? 'A4 portrait' : 'A4 landscape'
+            })
+
+            openPrintWindow(html)
             addToast(t('behavior.toastExportSuccessPDF').replace('{count}', tNum(allRows.length)), 'success')
             await logAudit({
                 action: 'EXPORT', source: 'OPERATIONAL', tableName: 'reports',
