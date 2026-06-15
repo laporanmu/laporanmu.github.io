@@ -11,6 +11,7 @@
   "section.sheet.master": "Master Data",
   "section.sheet.admin": "Infrastructure & Control",
   "nav.dashboard": "Dashboard",
+  "nav.task_center": "Task Center",
   "nav.gate": "Gate & Permits",
   "nav.behavior": "Discipline & Points",
   "nav.dorms": "Dormitory Management",
@@ -45,6 +46,7 @@
   "nav.settings": "Preferences",
 
   "nav.desc.dashboard": "Main overview and system statistics",
+  "nav.desc.task_center": "Daily task checklist and staff approvals",
   "nav.desc.gate": "Manage student exit & entry permits to the boarding school",
   "nav.desc.behavior": "Record violations, achievements, and student point accumulation",
   "nav.desc.dorms": "Room assignments, cleanliness checks, & Musyrif duties",

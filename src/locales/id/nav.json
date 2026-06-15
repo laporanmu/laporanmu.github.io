@@ -12,6 +12,7 @@
   "section.sheet.admin": "Infrastructure & Control",
 
   "nav.dashboard": "Dashboard",
+  "nav.task_center": "Pusat Tugas",
   "nav.gate": "Portal Perizinan",
   "nav.behavior": "Kedisiplinan & Poin",
   "nav.dorms": "Manajemen Asrama",
@@ -46,6 +47,7 @@
   "nav.settings": "Pengaturan",
 
   "nav.desc.dashboard": "Ringkasan utama dan statistik sistem",
+  "nav.desc.task_center": "Daftar tugas harian dan persetujuan staf",
   "nav.desc.gate": "Manajemen Izin santri keluar & kembali ke pesantren",
   "nav.desc.behavior": "Pencatatan pelanggaran, prestasi, dan akumulasi poin santri",
   "nav.desc.dorms": "Plotting kamar santri, kontrol kebersihan, & tugas Musyrif",

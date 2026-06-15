@@ -30,6 +30,7 @@ const STORAGE_KEY = "app-language"
 // O(1) Route-to-Translation-Key Mapping
 const ROUTE_KEY_MAP = {
     "/dashboard": "nav.dashboard",
+    "/task-center": "nav.task_center",
     "/boarding/gate": "nav.gate",
     "/boarding/behavior": "nav.behavior",
     "/boarding/dorms": "nav.dorms",

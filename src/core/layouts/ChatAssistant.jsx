@@ -90,6 +90,12 @@ export default function ChatAssistant({ isOpen: controlledIsOpen, onOpenChange }
     }
 
     if (!isOpen) {
+        // If the chat assistant is controlled from the parent layout (e.g., TopBar button), 
+        // hide the floating FAB bubble to prevent blocking dashboard content.
+        if (controlledIsOpen !== undefined) {
+            return null
+        }
+
         return (
             <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-3 group">
                 {showInvite && (

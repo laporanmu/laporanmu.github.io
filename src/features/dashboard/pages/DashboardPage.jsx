@@ -26,6 +26,7 @@ const RecentReports = lazy(() => import('@features/dashboard/components/widgets/
 const PointsConfigPie = lazy(() => import('@features/dashboard/components/widgets/PointsConfigPie').then(m => ({ default: m.PointsConfigPie })))
 const QuickActions = lazy(() => import('@features/dashboard/components/widgets/QuickActions').then(m => ({ default: m.QuickActions })))
 const GatePresence = lazy(() => import('@features/dashboard/components/widgets/GatePresence').then(m => ({ default: m.GatePresence })))
+const TaskCenterWidget = lazy(() => import('@features/dashboard/components/widgets/TaskCenterWidget').then(m => ({ default: m.TaskCenterWidget })))
 import { useAuth } from '@context/Auth'
 import { supabase } from '@lib/supabase'
 
@@ -419,6 +420,11 @@ export default function DashboardPage() {
 
                     {/* ── RIGHT STICKY SIDEBAR ── */}
                     <div className="w-full lg:w-[320px] xl:w-[360px] shrink-0 flex flex-col gap-4 sticky top-6 self-start">
+                        <Suspense fallback={
+                            <div className="glass rounded-[1.5rem] p-5 h-[200px] animate-pulse bg-[var(--color-surface-alt)]" />
+                        }>
+                            <TaskCenterWidget />
+                        </Suspense>
                         <Suspense fallback={
                             <div className="glass rounded-[1.5rem] p-6 h-[280px] animate-pulse bg-[var(--color-surface-alt)] flex flex-col items-center justify-center gap-4">
                                 <div className="w-40 h-40 rounded-full border-8 border-gray-400/10" />

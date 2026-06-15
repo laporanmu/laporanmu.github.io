@@ -11,6 +11,7 @@
   "section.sheet.master": "البيانات الأساسية",
   "section.sheet.admin": "Infrastructure & Control",
   "nav.dashboard": "لوحة القيادة",
+  "nav.task_center": "مركز المهام",
   "nav.gate": "بوابة التصاريح والدخول",
   "nav.behavior": "الانضباط والنقاط",
   "nav.dorms": "إدارة السكن الداخلي",
@@ -45,6 +46,7 @@
   "nav.settings": "الإعدادات العامة",
 
   "nav.desc.dashboard": "نظرة عامة رئيسية وإحصائيات النظام",
+  "nav.desc.task_center": "قائمة المهام اليومية والموافقات للموظفين",
   "nav.desc.gate": "إدارة تصاريح خروج وعودة الطلاب إلى المدرسة الداخلية",
   "nav.desc.behavior": "تسجيل المخالفات والإنجازات وتراكم نقاط الطلاب",
   "nav.desc.dorms": "تخصيص الغرف، رقابة النظافة، ومهام المشرفين",
