@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useSessionGuard } from '@hooks/useSessionGuard'
 import { useLanguage } from '@context'
 import BottomNav from "./BottomNav"
 import Sidebar from './Sidebar'
 import SlimTopBar from './SlimTopBar'
+
+const ChatAssistant = lazy(() => import('./ChatAssistant'))
 
 // ─── Persist sidebar state ────────────────────────────────────────────────────
 const STORAGE_KEY = 'sidebar-collapsed'
@@ -18,6 +20,7 @@ export default function DashboardLayout({ children, title }) {
     useSessionGuard(15000)
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialCollapsed)
+    const [isChatOpen, setIsChatOpen] = useState(false)
     const { dir } = useLanguage()
 
     // Persist collapse state
@@ -47,7 +50,13 @@ export default function DashboardLayout({ children, title }) {
             <SlimTopBar
                 onToggleSidebar={toggleSidebar}
                 sidebarCollapsed={sidebarCollapsed}
+                onOpenChatAssistant={() => setIsChatOpen(prev => !prev)}
             />
+
+            {/* Chat Assistant Widget */}
+            <Suspense fallback={null}>
+                <ChatAssistant isOpen={isChatOpen} onOpenChange={setIsChatOpen} />
+            </Suspense>
 
             {/* Ambient glows — desktop only, lightweight */}
             <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden hidden lg:block">

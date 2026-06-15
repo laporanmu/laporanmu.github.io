@@ -43,6 +43,7 @@ const PublicVerifyPage = lazyRetry(() => import('@features/public/pages/PublicVe
 
 // Core
 const DashboardPage = lazyRetry(() => import('@features/dashboard/pages/DashboardPage.jsx'))
+const TaskCenterPage = lazyRetry(() => import('@features/dashboard/pages/TaskCenterPage.jsx'))
 const RaportPage = lazyRetry(() => import('@features/raport/pages/RaportPage.jsx'))
 const BehaviorPage = lazyRetry(() => import('@features/behavior/BehaviorPage.jsx'))
 const DormsPage = lazyRetry(() => import('@features/dorms/pages/DormsPage.jsx'))
@@ -460,6 +461,7 @@ function AppRoutes() {
 
             {/* Core — module flag guarded */}
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/task-center" element={<TaskCenterPage />} />
             <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Bulanan"><RaportPage /></FlagRoute>} />
             <Route path="/boarding/behavior" element={<FlagRoute flag="module.poin" label="Kedisiplinan & Poin"><BehaviorPage /></FlagRoute>} />
             <Route path="/attendance" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AttendancePage /></FlagRoute>} />

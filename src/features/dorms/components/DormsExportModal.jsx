@@ -376,7 +376,9 @@ export default function DormsExportModal({
                 signaturePlace: 'Tanggul',
                 signatureTitle: 'Kepala Sekolah',
                 secondarySignatureTitle,
-                paperSize: options.orientation === 'portrait' ? 'A4 portrait' : 'A4 landscape'
+                paperSize: options.orientation === 'portrait' ? 'A4 portrait' : 'A4 landscape',
+                colorPrimary: '#1a5c35',
+                colorSecondary: '#c8a400',
             })
 
             openPrintWindow(html)

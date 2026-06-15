@@ -41,13 +41,20 @@ import {
     HeartHandshake,
     Library,
     Boxes,
+    ClipboardList,
 } from "lucide-react"
 
-// ─── Dashboard (standalone) ───────────────────────────────────────────────────
+// ─── Dashboard & Pusat Tugas (standalone) ────────────────────────────────────
 export const DASHBOARD_ITEM = {
     to: "/dashboard", label: "Dashboard", icon: Home,
     desc: "Ringkasan utama dan statistik sistem",
     color: "bg-indigo-500/10 text-indigo-600",
+}
+
+export const TASK_CENTER_ITEM = {
+    to: "/task-center", label: "Pusat Tugas", icon: ClipboardList,
+    desc: "Daftar tugas harian dan persetujuan staf",
+    color: "bg-amber-500/10 text-amber-600",
 }
 
 // ─── Kesantrian & Kedisiplinan (Daily Boarding Ops - High Priority) ─────────────

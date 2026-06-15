@@ -15,6 +15,11 @@ import {
     RotateCw,
     Globe,
     Check,
+    Sparkles,
+    PanelRightOpen,
+    PanelRightClose,
+    PanelLeftOpen,
+    PanelLeftClose,
 } from "lucide-react"
 import { useTheme, useAuth, useLanguage, useFeatureFlags } from "@context"
 import { useNotifications, translateNotification } from "@hooks/useNotifications"
@@ -98,7 +103,7 @@ function SearchResultItem({ item, isHighlighted, onClick }) {
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
+export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed, onOpenChatAssistant }) {
     const { isDark, toggleTheme } = useTheme()
     const { profile, signOut } = useAuth()
     const { flags } = useFeatureFlags()
@@ -264,7 +269,19 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                                 aria-label="Toggle sidebar"
                                 className="hidden lg:flex w-8 h-8 items-center justify-center rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                             >
-                                <Menu className="w-4.5 h-4.5" strokeWidth={2} />
+                                {dir === 'rtl' ? (
+                                    sidebarCollapsed ? (
+                                        <PanelRightOpen className="w-4.5 h-4.5" strokeWidth={2} />
+                                    ) : (
+                                        <PanelRightClose className="w-4.5 h-4.5" strokeWidth={2} />
+                                    )
+                                ) : (
+                                    sidebarCollapsed ? (
+                                        <PanelLeftOpen className="w-4.5 h-4.5" strokeWidth={2} />
+                                    ) : (
+                                        <PanelLeftClose className="w-4.5 h-4.5" strokeWidth={2} />
+                                    )
+                                )}
                             </button>
 
                             {/* Back button */}
@@ -426,6 +443,16 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                             )}
                         </button>
 
+                        {/* Asisten button */}
+                        <button
+                            onClick={onOpenChatAssistant}
+                            className={`h-8 flex items-center gap-1.5 px-3 rounded-xl border border-[var(--color-border)]/80 hover:bg-[var(--color-surface-alt)] hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)] transition text-[11px] font-extrabold text-[var(--color-text-muted)] ${searchFocused ? 'hidden sm:flex' : 'hidden sm:flex'}`}
+                            type="button"
+                        >
+                            <Sparkles className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                            <span>{t('ui.assistant') || 'Asisten'}</span>
+                        </button>
+
                         {/* Notification bell */}
                         <div className="relative" ref={notifBtnRef}>
                             <button
@@ -444,17 +471,23 @@ export default function SlimTopBar({ onToggleSidebar, sidebarCollapsed }) {
                         </div>
 
                         {/* Divider */}
-                        <div className="w-px h-6 bg-[var(--color-border)] mx-0.5 opacity-50 lg:hidden" />
+                        <div className="w-px h-6 bg-[var(--color-border)] mx-0.5 opacity-50" />
 
-                        {/* Profile — hidden on desktop since the sidebar footer already shows the profile */}
-                        <div className="relative lg:hidden" ref={profileRef}>
+                        {/* Profile — visible on all screen sizes */}
+                        <div className="relative" ref={profileRef}>
                             <button
                                 onClick={() => setProfileOpen(v => !v)}
                                 aria-label="Menu Profil"
-                                className="flex items-center gap-1.5 pl-1 pr-1.5 py-1 rounded-xl hover:bg-[var(--color-surface-alt)] transition border border-transparent hover:border-[var(--color-border)]"
+                                className={`flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-[var(--color-surface-alt)] transition border border-transparent hover:border-[var(--color-border)]
+                                    ${profileOpen ? 'bg-[var(--color-surface-alt)] border-[var(--color-border)]' : ''}`}
                                 type="button"
                             >
                                 <Avatar url={profile?.avatar_url} name={profile?.name} />
+                                {/* Name + role — visible on lg+ */}
+                                <div className="hidden lg:flex flex-col min-w-0 max-w-[120px]">
+                                    <span className="text-[11px] font-extrabold text-[var(--color-text)] leading-tight truncate">{profile?.name || 'User'}</span>
+                                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider leading-none mt-0.5 truncate">{profile?.role || 'Staff'}</span>
+                                </div>
                                 <ChevronDown
                                     className={`w-3 h-3 text-[var(--color-text-muted)] transition-transform hidden sm:block ${profileOpen ? "rotate-180" : ""}`}
                                     strokeWidth={2}

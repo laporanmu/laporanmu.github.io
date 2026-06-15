@@ -399,7 +399,9 @@ export function buildPrintHTMLDetail(src, title, typeMeta, language = 'id', opts
     signatureTitle,
     signatureName,
     secondarySignatureTitle: showSignature ? defaultSigTitle : '',
-    paperSize
+    paperSize,
+    colorPrimary: '#1a5c35',
+    colorSecondary: '#c8a400',
   })
 }
 
@@ -509,7 +511,9 @@ export function buildPrintHTMLRingkasan(ringkasan, title, periodLabel, typeMeta,
     signatureTitle,
     signatureName,
     secondarySignatureTitle: showSignature ? defaultSigTitle : '',
-    paperSize
+    paperSize,
+    colorPrimary: '#1a5c35',
+    colorSecondary: '#c8a400',
   })
 }
 

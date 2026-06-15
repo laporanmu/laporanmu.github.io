@@ -3,98 +3,104 @@
  */
 
 export const PRINT_BASE_STYLE = `
+:root{--print-primary:#1a5c35;--print-secondary:#c8a400}
 html,body{height:100%;margin:0;padding:0}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:10px;color:#1a1a1a;background:#fff;line-height:1.5}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:#1a1a1a;background:#fff;line-height:1.5}
 .page{padding:14mm 16mm;height:100%;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box}
 .content-wrap{flex:1 0 auto}
 .footer-wrap{flex-shrink:0;margin-top:auto}
 
 /* ── Letterhead header ── */
-.header{border-bottom:2px solid #1a2f5e;padding-bottom:14px;margin-bottom:0}
+.header{border-bottom:2px solid var(--print-primary);padding-bottom:14px;margin-bottom:0}
 .header-row{display:flex;justify-content:space-between;align-items:flex-start}
-.header-accent{height:3px;background:#f5d800;margin-bottom:16px}
+.header-accent{height:3px;background:linear-gradient(90deg, var(--print-primary), var(--print-secondary), var(--print-primary))}
+.header-accent-double{border-bottom:3px double var(--print-primary);margin-top:3px;margin-bottom:16px}
 .header-brand{display:flex;align-items:flex-start;gap:12px}
 .header-logo{width:42px;height:42px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
 .header-logo img{width:100%;height:100%;object-fit:contain}
-.header-logo svg{width:24px;height:24px;fill:#1a2f5e}
-.header-school-name{font-size:13px;font-weight:800;color:#1a2f5e;letter-spacing:0.01em;line-height:1.2}
-.header-school-sub{font-size:9px;color:#555;margin-top:2px}
-.header-school-addr{font-size:8.5px;color:#888;margin-top:3px}
-.header-right{text-align:right;font-size:9px;color:#64748b}
-.badge{display:inline-block;background:#1a2f5e;color:#f5d800;font-size:8px;font-weight:700;padding:2px 8px;border-radius:3px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.07em}
-.doc-id{font-size:9px;color:#555;margin-bottom:2px}
-.doc-printed{font-size:8.5px;color:#aaa}
+.header-logo svg{width:24px;height:24px;fill:var(--print-primary)}
+.header-school-name{font-size:14px;font-weight:800;color:var(--print-primary);letter-spacing:0.01em;line-height:1.2}
+.header-school-sub{font-size:10px;color:#555;margin-top:2px}
+.header-school-addr{font-size:9.5px;color:#888;margin-top:3px}
+.header-right{text-align:right;font-size:10px;color:#64748b}
+.badge{display:inline-block;background:var(--print-primary);color:#fff;font-size:9px;font-weight:700;padding:3px 9px;border-radius:3px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.07em}
+.doc-id{font-size:10px;color:#555;margin-bottom:2px}
+.doc-printed{font-size:9.5px;color:#aaa}
 
 /* ── Report title row ── */
 .title-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
-.report-title{font-size:16px;font-weight:800;color:#1a1a1a}
-.report-sub{font-size:9px;color:#555;margin-top:2px}
-.total-badge{font-size:22px;font-weight:800;color:#1a2f5e;line-height:1;text-align:right}
-.total-label{font-size:8px;text-transform:uppercase;letter-spacing:0.06em;color:#aaa;text-align:right;margin-top:1px}
+.report-title{font-size:17px;font-weight:800;color:#1a1a1a}
+.report-sub{font-size:10px;color:#555;margin-top:2px}
+.total-badge{font-size:24px;font-weight:800;color:var(--print-primary);line-height:1;text-align:right}
+.total-label{font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:#aaa;text-align:right;margin-top:1px}
 
 /* ── Section divider ── */
-.section-label{font-size:8.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#888;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.section-label{font-size:9.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#888;margin-bottom:7px;display:flex;align-items:center;gap:8px}
 .section-label::after{content:'';flex:1;height:0.5px;background:#ddd}
 
 /* ── Stats grid ── */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
-.stat{border:0.5px solid #d4d4d4;border-radius:5px;padding:9px 12px;position:relative;overflow:hidden}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.stat{border:0.5px solid #d4d4d4;border-radius:4px;padding:7px 10px;position:relative;overflow:hidden}
 .stat::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px}
-.stat.total::before{background:#1a2f5e}
+.stat.total::before{background:var(--print-primary)}
 .stat.pelanggaran::before{background:#dc2626}
 .stat.prestasi::before{background:#10b981}
 .stat.avg::before{background:#f59e0b}
 .stat.violet::before{background:#7c3aed}
 .stat.teal::before{background:#0d9488}
 .stat.amber::before{background:#d97706}
-.stat p.l{font-size:8px;text-transform:uppercase;letter-spacing:0.08em;color:#888;font-weight:700;margin-bottom:3px}
-.stat p.v{font-size:20px;font-weight:800;color:#1a1a1a;line-height:1}
-.stat p.d{font-size:8.5px;color:#bbb;margin-top:2px}
+.stat p.l{font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em;color:#888;font-weight:700;margin-bottom:2px}
+.stat p.v{font-size:18px;font-weight:800;color:#1a1a1a;line-height:1}
+.stat p.d{font-size:9px;color:#bbb;margin-top:1px}
 
 /* ── Info strip ── */
-.info-strip{background:#f0f4f8;border:0.5px solid #cdd6e0;border-radius:4px;padding:6px 12px;display:flex;flex-wrap:wrap;gap:4px 20px;margin-bottom:14px;font-size:9px;color:#444}
+.info-strip{background:#f0f4f8;border:0.5px solid #cdd6e0;border-radius:4px;padding:6px 12px;display:flex;flex-wrap:wrap;gap:4px 20px;margin-bottom:14px;font-size:10px;color:#444}
 .info-item{display:flex;gap:5px}
 .info-key{color:#888}
 .info-val{font-weight:700;color:#1a1a1a}
 
 /* ── Table ── */
-table{width:100%;border-collapse:collapse;margin-bottom:20px}
-thead tr{background:#1a2f5e}
-th{font-size:8.5px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:#fff;padding:7px 9px;text-align:left}
-th:first-child{border-radius:3px 0 0 3px;width:24px;text-align:center;color:#f5d800}
+table{width:100%;border-collapse:collapse;margin-bottom:20px;border:0.5px solid #d4d4d4}
+thead tr{background:var(--print-primary)}
+th{font-size:10px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:#fff;padding:7px 9px;text-align:left;border:0.5px solid rgba(255,255,255,0.15)}
+th:first-child{border-radius:3px 0 0 3px;width:24px;text-align:center;color:#fff}
 th:last-child{border-radius:0 3px 3px 0}
-td{padding:7px 9px;border-bottom:0.5px solid #eee;vertical-align:middle;color:#1a1a1a;font-size:9.5px}
+td{padding:7px 9px;border:0.5px solid #e5e7eb;vertical-align:middle;color:#1a1a1a;font-size:11px}
 tr:nth-child(even) td{background:#f8f9fb}
 tr{page-break-inside:avoid}
-td:first-child{text-align:center;color:#aaa;font-size:9px}
+td:first-child{text-align:center;color:#aaa;font-size:10px}
 td.cell-rusak{color:#991b1b;font-weight:700;background:#fef2f2}
 td.cell-empty{color:#bbb;font-style:italic}
 
 /* ── Badges ── */
-.tag-visitor{display:inline-block;padding:2px 7px;border-radius:3px;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
+.tag-visitor{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
 .tag-visitor.guru{background:#fef3c7;color:#92400e;border:0.5px solid #fde047}
 .tag-visitor.santri{background:#dbeafe;color:#1d4ed8;border:0.5px solid #93c5fd}
-.tag-status{display:inline-block;padding:2px 7px;border-radius:3px;font-size:8.5px;font-weight:700}
+.tag-status{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9.5px;font-weight:700}
 .tag-status.warning{background:#fef9c3;color:#713f12;border:0.5px solid #fde047}
 .tag-status.success{background:#dcfce7;color:#14532d;border:0.5px solid #86efac}
 
 /* ── Signature ── */
 .signature-section{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;margin-bottom:24px;page-break-inside:avoid}
-.signature-place{font-size:9px;color:#888}
+.signature-place{font-size:10px;color:#888}
 .signature-group{display:flex;gap:18px}
 .signature-box{text-align:center;border:0.5px solid #ccc;border-radius:4px;padding:8px 22px}
-.signature-box p.ttd-title{font-size:8.5px;color:#aaa;margin-bottom:2px}
-.signature-box p.ttd-role{font-weight:700;font-size:9.5px;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.03em}
-.signature-box.approver p.ttd-role{color:#1a2f5e}
+.signature-box p.ttd-title{font-size:9.5px;color:#aaa;margin-bottom:2px}
+.signature-box p.ttd-role{font-weight:700;font-size:10.5px;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.03em}
+.signature-box.approver p.ttd-role{color:var(--print-primary)}
 .signature-box .signature-line{height:48px}
-.signature-box p.ttd-name{font-weight:700;font-size:10px;color:#1a1a1a;border-top:0.5px solid #bbb;padding-top:4px;margin:0 4px}
+.signature-box p.ttd-name{font-weight:700;font-size:11px;color:#1a1a1a;border-top:0.5px solid #bbb;padding-top:4px;margin:0 4px}
 
-/* ── Footer ── */
-.footer-accent{height:2px;background:#f5d800;margin-bottom:8px}
-.footer{padding-top:0;display:flex;justify-content:space-between;align-items:center;color:#bbb;font-size:8.5px}
-.footer-app{color:#888;font-weight:600}
-.page-num{color:#bbb}
+/* ── Footer Premium ── */
+.footer-line{height:1px;background:#eee;margin-bottom:8px}
+.footer-premium{display:flex;justify-content:space-between;align-items:center;font-size:8.5pt;color:#888;font-family:sans-serif}
+.footer-left{display:flex;align-items:center;gap:8px}
+.footer-qr{width:42px;height:42px;border:1px solid #eee;border-radius:4px;padding:2px;background:#fff}
+.footer-brand{display:flex;flex-direction:column;line-height:1.2}
+.footer-brand-title{font-weight:700;color:#555}
+.footer-brand-sub{font-size:7.5pt;color:#999;font-style:italic}
+.footer-right{display:flex;flex-direction:column;text-align:right;line-height:1.3}
 
 /* RTL overrides */
 html[dir="rtl"] th{text-align:right}
@@ -103,6 +109,8 @@ html[dir="rtl"] th:last-child{border-radius:3px 0 0 3px}
 html[dir="rtl"] .header-right{text-align:left}
 html[dir="rtl"] .total-badge,html[dir="rtl"] .total-label{text-align:left}
 html[dir="rtl"] .signature-section{flex-direction:row-reverse}
+html[dir="rtl"] .footer-premium{direction:rtl}
+html[dir="rtl"] .footer-right{text-align:left}
 
 @media print{
   html,body{height:auto!important;min-height:auto!important;overflow:visible!important}
@@ -120,6 +128,30 @@ export function openPrintWindow(html) {
   win.document.write(html)
   win.document.close()
   return true
+}
+
+/**
+ * Generate a verification URL for the QR code.
+ * Uses the same logic as RaportPrintCard to handle local/dev/prod environments.
+ */
+function _getVerificationUrl(docNumber) {
+  const origin = window.location.origin
+  const host = window.location.hostname
+
+  const isLocalIp = host.startsWith('192.168.') ||
+                    host.startsWith('10.') ||
+                    host.startsWith('172.') ||
+                    host.includes('.local')
+
+  if (isLocalIp) {
+    return `${origin}/verify?no=${encodeURIComponent(docNumber)}`
+  }
+
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return `https://laporanmu.my.id/verify?no=${encodeURIComponent(docNumber)}`
+  }
+
+  return `${origin}/verify?no=${encodeURIComponent(docNumber)}`
 }
 
 export function buildPrintHTML({
@@ -144,7 +176,13 @@ export function buildPrintHTML({
   signatureName = '',
   secondarySignatureTitle = '', // e.g. 'Tim Sarpras' — if set, shows a second signature box (left side)
   secondarySignatureName = '',
-  paperSize = 'A4 landscape'
+  paperSize = 'A4 landscape',
+  // Phase 1: Color theming
+  colorPrimary = '#1a5c35',
+  colorSecondary = '#c8a400',
+  // Phase 3: Footer premium with QR
+  footerAppTitle = 'LaporanMu Academic Portal',
+  footerAppSubtitle = '',
 }) {
   const now = new Date()
   const dateLocale = language === 'ar' ? 'ar-SA' : language === 'en' ? 'en-US' : 'id-ID'
@@ -162,7 +200,10 @@ export function buildPrintHTML({
       page: 'Hal.',
       total: 'Total',
       timeSuffix: 'WIB',
-      placeDateLocale: 'id-ID'
+      placeDateLocale: 'id-ID',
+      printTime: 'Waktu Cetak',
+      docNoLabel: 'No. Dok',
+      verifySubtitle: 'Pindai QR untuk verifikasi keaslian laporan',
     },
     en: {
       docNo: 'Doc No',
@@ -174,7 +215,10 @@ export function buildPrintHTML({
       page: 'Page',
       total: 'Total',
       timeSuffix: 'UTC',
-      placeDateLocale: 'en-US'
+      placeDateLocale: 'en-US',
+      printTime: 'Print Time',
+      docNoLabel: 'Doc No',
+      verifySubtitle: 'Scan QR to verify document authenticity',
     },
     ar: {
       docNo: 'رقم المستند',
@@ -186,13 +230,19 @@ export function buildPrintHTML({
       page: 'الصفحة',
       total: 'الإجمالي',
       timeSuffix: 'توقيت',
-      placeDateLocale: 'ar-SA'
+      placeDateLocale: 'ar-SA',
+      printTime: 'تاريخ الطباعة',
+      docNoLabel: 'رقم المستند',
+      verifySubtitle: 'امسح الرمز للتحقق من صحة التقرير',
     }
   }
 
   const t = dict[language] || dict.id
 
   const finalDocNumber = docNumber || `DOC/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String((now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) % 9999 + 1).padStart(4, '0')}`
+
+  // Phase 1: CSS custom property overrides
+  const colorVars = `:root{--print-primary:${colorPrimary};--print-secondary:${colorSecondary}}`
 
   const statsHtml = stats.map(s =>
     `<div class="stat ${s.type || 'total'}">
@@ -232,6 +282,27 @@ export function buildPrintHTML({
       <div class="signature-group">${signatureBoxesHtml}</div>
     </div>` : ''
 
+  // Phase 3: Footer premium with QR code
+  const verificationUrl = _getVerificationUrl(finalDocNumber)
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&format=svg&ecc=L&qzone=1&data=${encodeURIComponent(verificationUrl)}`
+  const resolvedFooterSubtitle = footerAppSubtitle || t.verifySubtitle
+
+  const footerHtml = `
+    <div class="footer-line"></div>
+    <div class="footer-premium">
+      <div class="footer-left">
+        <img class="footer-qr" src="${qrSrc}" alt="Verification QR" />
+        <div class="footer-brand">
+          <span class="footer-brand-title">${footerAppTitle}</span>
+          <span class="footer-brand-sub">${resolvedFooterSubtitle}</span>
+        </div>
+      </div>
+      <div class="footer-right">
+        <span>${t.docNoLabel}: ${finalDocNumber}</span>
+        <span>${t.printTime}: ${timeLocale} ${t.timeSuffix}</span>
+      </div>
+    </div>`
+
   const pageStyle = `@page{margin:14mm 16mm;size:${paperSize}}`
   const dirAttribute = language === 'ar' ? 'dir="rtl"' : 'dir="ltr"'
 
@@ -240,7 +311,7 @@ export function buildPrintHTML({
 <head>
   <meta charset="UTF-8">
   <title>${title}</title>
-  <style>${PRINT_BASE_STYLE}${pageStyle}</style>
+  <style>${colorVars}${PRINT_BASE_STYLE}${pageStyle}</style>
 </head>
 <body>
 <div class="page">
@@ -270,6 +341,7 @@ export function buildPrintHTML({
       </div>
     </div>
     <div class="header-accent"></div>
+    <div class="header-accent-double"></div>
 
     <!-- Title -->
     <div class="title-row">
@@ -300,12 +372,7 @@ export function buildPrintHTML({
 
   <div class="footer-wrap">
     ${signatureHtml}
-    <div class="footer-accent"></div>
-    <div class="footer">
-      <span class="footer-app">laporanmu.my.id &nbsp;·&nbsp; LaporanMu</span>
-      <span>${t.total} ${totalCount} &nbsp;·&nbsp; ${dateLocaleOnly}</span>
-      <span class="page-num">${t.page} 1</span>
-    </div>
+    ${footerHtml}
   </div>
 
 </div><!-- /page -->

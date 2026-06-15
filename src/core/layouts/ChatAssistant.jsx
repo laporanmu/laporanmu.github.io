@@ -14,8 +14,18 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { askAi } from '@lib/ai'
 
-export default function ChatAssistant() {
-    const [isOpen, setIsOpen] = useState(false)
+export default function ChatAssistant({ isOpen: controlledIsOpen, onOpenChange }) {
+    const [uncontrolledIsOpen, setUncontrolledIsOpen] = useState(false)
+    const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : uncontrolledIsOpen
+
+    const setIsOpen = (val) => {
+        if (onOpenChange) {
+            onOpenChange(val)
+        } else {
+            setUncontrolledIsOpen(val)
+        }
+    }
+
     const [showInvite, setShowInvite] = useState(false)
     const [messages, setMessages] = useState([
         { role: 'assistant', content: 'Halo Kak! 😊 Saya **Asisten**. Ada yang ingin ditanyakan seputar aturan sekolah atau fitur aplikasi?' }

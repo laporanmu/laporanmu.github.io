@@ -4,9 +4,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons"
 import { useAuth, useFeatureFlags, useLanguage } from "@context"
 import {
-    DASHBOARD_ITEM, NAV_GROUPS, filterNavItems,
+    DASHBOARD_ITEM, TASK_CENTER_ITEM, NAV_GROUPS, filterNavItems,
 } from "./navItems"
-import { ChevronDown, Settings, LogOut, MessageSquare } from "lucide-react"
 
 // ─── NavIcon Helper (Pure outline, lightweight and crisp) ───────────────────
 function NavIcon({ icon, className = "" }) {
@@ -17,28 +16,6 @@ function NavIcon({ icon, className = "" }) {
         return <IconComponent className={className || "w-4 h-4"} strokeWidth={2} />
     }
     return <FontAwesomeIcon icon={icon} className={className} />
-}
-
-// ─── Avatar Helper Component ───────────────────────────────────────────────────
-function Avatar({ url, name, size = "w-8 h-8", textSize = "text-xs", rounded = "rounded-xl" }) {
-    const [imgError, setImgError] = useState(false)
-    const letter = name?.charAt(0)?.toUpperCase() || 'U'
-    const showImg = url && !imgError
-
-    return (
-        <div className={`${size} ${rounded} bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-extrabold shadow-sm overflow-hidden shrink-0`}>
-            {showImg ? (
-                <img
-                    src={url}
-                    alt={name || "Avatar"}
-                    onError={() => setImgError(true)}
-                    className="w-full h-full object-cover"
-                />
-            ) : (
-                <span className={textSize}>{letter}</span>
-            )}
-        </div>
-    )
 }
 
 // ─── Sidebar Persistence ──────────────────────────────────────────────────────
@@ -93,12 +70,12 @@ function SidebarItem({ item, collapsed }) {
                     )}
 
                     {/* Icon */}
-                    <div className={`w-6.5 h-6.5 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-200
+                    <div className={`w-5 h-5 flex items-center justify-center shrink-0 transition-colors duration-200
                         ${isActive
-                            ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                            ? 'text-[var(--color-primary)]'
                             : 'text-[var(--color-text-muted)] group-hover/item:text-[var(--color-text)]'}`}
                     >
-                        <NavIcon icon={item.icon} className="w-4 h-4" />
+                        <NavIcon icon={item.icon} className="w-[18px] h-[18px]" />
                     </div>
 
                     {/* Label — animated slide/fade */}
@@ -132,39 +109,42 @@ function SidebarGroup({ group, items, collapsed, isOpen, onToggle }) {
             <button
                 type="button"
                 onClick={collapsed ? undefined : onToggle}
-                className={`flex items-center rounded-xl min-w-0 outline-none transition-all duration-300
+                className={`flex items-center justify-between rounded-xl min-w-0 outline-none transition-all duration-300
                     ${collapsed
-                        ? 'w-10 h-10 justify-center mx-auto hover:bg-[var(--color-surface-alt)] group-hover/sidebar:w-full group-hover/sidebar:gap-2 group-hover/sidebar:px-2.5 group-hover/sidebar:py-[5px] group-hover/sidebar:justify-start group-hover/sidebar:mx-0'
-                        : 'w-full gap-2 px-2.5 py-[5px] text-[10px] font-black tracking-wider uppercase'}
+                        ? 'w-10 h-10 justify-center mx-auto hover:bg-[var(--color-surface-alt)] group-hover/sidebar:w-full group-hover/sidebar:px-2.5 group-hover/sidebar:py-[5px] group-hover/sidebar:justify-between group-hover/sidebar:mx-0'
+                        : 'w-full justify-between px-2.5 py-[5px]'}
                     ${(!collapsed && hasActiveChild)
                         ? 'text-[var(--color-primary)]'
                         : 'text-[var(--color-text-muted)]/70 hover:text-[var(--color-text-muted)]'}`}
             >
-                {/* Chevron icon — only visible when expanded */}
-                <div className={`w-2.5 mr-0.5 flex items-center justify-center shrink-0 transition-all duration-300
+                {/* Left Side: Group Icon (when collapsed) OR Group Label (when expanded/hovered) */}
+                <div className="flex items-center min-w-0">
+                    {/* Group Icon — only visible when collapsed (hidden on hover sidebar) */}
+                    <div className={`flex items-center justify-center shrink-0 transition-all duration-300
+                        ${collapsed ? 'w-5 opacity-100 group-hover/sidebar:w-0 group-hover/sidebar:opacity-0 group-hover/sidebar:overflow-hidden' : 'w-0 opacity-0 overflow-hidden'}`}
+                    >
+                        <NavIcon icon={group.icon} className="w-4 h-4 text-[var(--color-text-muted)]/70" />
+                    </div>
+
+                    {/* Group Label — hidden when collapsed, shown when expanded or sidebar hover */}
+                    <span className={`truncate text-left leading-none transition-all duration-300
+                        ${collapsed
+                            ? 'w-0 opacity-0 group-hover/sidebar:w-36 group-hover/sidebar:opacity-100 overflow-hidden text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)]/70'
+                            : 'text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)]/70'}`}
+                    >
+                        {tGroup(group.key, group.label)}
+                    </span>
+                </div>
+
+                {/* Right Side: Chevron icon — only visible when expanded/hovered */}
+                <div className={`w-2.5 flex items-center justify-center shrink-0 transition-all duration-300
                     ${collapsed ? 'w-0 opacity-0 group-hover/sidebar:w-2.5 group-hover/sidebar:opacity-100 overflow-hidden' : 'w-2.5 opacity-100'}`}
                 >
                     <NavIcon
                         icon={showChildren ? faChevronDown : faChevronRight}
-                        className="text-[7px] shrink-0"
+                        className="text-[7px] shrink-0 text-[var(--color-text-muted)]/70"
                     />
                 </div>
-
-                {/* Group Icon — only visible when collapsed (hidden on hover sidebar) */}
-                <div className={`w-5 flex items-center justify-center shrink-0 transition-all duration-300
-                    ${collapsed ? 'w-5 opacity-100 group-hover/sidebar:w-0 group-hover/sidebar:opacity-0 group-hover:overflow-hidden' : 'w-0 opacity-0 overflow-hidden'}`}
-                >
-                    <NavIcon icon={group.icon} className="w-4 h-4" />
-                </div>
-
-                {/* Group Label — hidden when collapsed, shown when expanded or sidebar hover */}
-                <span className={`truncate text-left leading-none transition-all duration-300
-                    ${collapsed
-                        ? 'w-0 opacity-0 group-hover/sidebar:w-36 group-hover/sidebar:opacity-100 overflow-hidden text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)]/70'
-                        : 'text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)]/70'}`}
-                >
-                    {tGroup(group.key, group.label)}
-                </span>
             </button>
 
             {/* Vertical Submenu Items */}
@@ -181,38 +161,11 @@ function SidebarGroup({ group, items, collapsed, isOpen, onToggle }) {
 
 // ─── Main Sidebar Component ──────────────────────────────────────────────────
 export default function Sidebar({ collapsed, onToggle }) {
-    const { profile, signOut } = useAuth()
+    const { profile } = useAuth()
     const { flags } = useFeatureFlags()
     const { t, tNav, tNum, dir } = useLanguage()
     const role = profile?.role?.toLowerCase() || ''
     const navigate = useNavigate()
-
-    const [statusOpen, setStatusOpen] = useState(false)
-    const [isOnline, setIsOnline] = useState(navigator.onLine)
-    const footerRef = useRef(null)
-
-    // Handle online/offline network listeners
-    useEffect(() => {
-        const handleOnline = () => setIsOnline(true)
-        const handleOffline = () => setIsOnline(false)
-        window.addEventListener('online', handleOnline)
-        window.addEventListener('offline', handleOffline)
-        return () => {
-            window.removeEventListener('online', handleOnline)
-            window.removeEventListener('offline', handleOffline)
-        }
-    }, [])
-
-    // Close status popover when clicking outside
-    useEffect(() => {
-        const onClick = (e) => {
-            if (footerRef.current && !footerRef.current.contains(e.target)) {
-                setStatusOpen(false)
-            }
-        }
-        window.addEventListener('mousedown', onClick)
-        return () => window.removeEventListener('mousedown', onClick)
-    }, [])
 
     // Main navigation scroll container reference
     const navRef = useRef(null)
@@ -300,6 +253,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             >
                 {/* Dashboard — always first, standalone */}
                 <SidebarItem item={DASHBOARD_ITEM} collapsed={collapsed} />
+                <SidebarItem item={TASK_CENTER_ITEM} collapsed={collapsed} />
 
                 {/* Divider */}
                 <div className={`h-px bg-[var(--color-border)]/60 !my-2 transition-all duration-300
@@ -323,137 +277,6 @@ export default function Sidebar({ collapsed, onToggle }) {
                     )
                 })}
             </nav>
-
-            {/* ── Footer — user profile status ── */}
-            <div className="shrink-0 border-t border-[var(--color-border)] px-2 py-2 flex items-center justify-center relative transition-all duration-300" ref={footerRef}>
-                {statusOpen && (
-                    <div className={`absolute bottom-[52px] z-50 w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-3 flex flex-col gap-2.5 animate-[fadeIn_0.15s_ease-out]
-                        ${dir === 'rtl' ? 'right-2' : 'left-2'}`}
-                    >
-                        {/* User Identity Details */}
-                        <div className="flex items-center gap-3 border-b border-[var(--color-border)]/60 pb-2.5 mb-1">
-                            <Avatar url={profile?.avatar_url} name={profile?.name} size="w-9 h-9" />
-                            <div className="min-w-0 flex-1">
-                                <h4 className="text-[11px] font-black text-[var(--color-text)] truncate">{profile?.name || "Pengguna"}</h4>
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5 truncate">{profile?.role || "Staf"}</p>
-                            </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex flex-col gap-0.5">
-                            <button
-                                onClick={() => {
-                                    setStatusOpen(false);
-                                    navigate("/settings");
-                                }}
-                                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all group ${dir === 'rtl' ? 'text-right' : 'text-start'}`}
-                                type="button"
-                            >
-                                <Settings className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors shrink-0" strokeWidth={2} />
-                                <span className="truncate">{t("ui.settings_account")}</span>
-                            </button>
-
-                            <a
-                                href="https://wa.me/6281230660013?text=Halo%20Developer%20LaporanMu,%20saya%20butuh%20bantuan%20terkait%20sistem..."
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--color-text)] hover:bg-emerald-500/10 hover:text-emerald-600 transition-all group ${dir === 'rtl' ? 'text-right' : 'text-start'}`}
-                            >
-                                <MessageSquare className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-emerald-500 transition-colors shrink-0" strokeWidth={2} />
-                                <span className="truncate">{t("ui.support")}</span>
-                            </a>
-
-                            <div className="h-px bg-[var(--color-border)]/60 my-1 mx-1.5" />
-
-                            <button
-                                onClick={async () => {
-                                    setStatusOpen(false);
-                                    await signOut();
-                                    navigate("/login");
-                                }}
-                                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-500/10 transition-all group ${dir === 'rtl' ? 'text-right' : 'text-start'}`}
-                                type="button"
-                            >
-                                <LogOut className="w-4 h-4 text-rose-500 transition-colors shrink-0" strokeWidth={2} />
-                                <span className="truncate">{t("ui.logout")}</span>
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {collapsed ? (
-                    <>
-                        {/* Minimalist collapsed avatar — hidden on hover */}
-                        <div className="group-hover/sidebar:hidden transition-all duration-300">
-                            <button
-                                onClick={() => setStatusOpen(prev => !prev)}
-                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all border border-transparent hover:border-[var(--color-border)]/50 hover:bg-[var(--color-surface-alt)] relative
-                                    ${statusOpen ? 'bg-[var(--color-surface-alt)] border-[var(--color-primary)]/20' : ''}`}
-                                aria-label="Profil Pengguna"
-                                type="button"
-                            >
-                                <Avatar url={profile?.avatar_url} name={profile?.name} size="w-7 h-7" textSize="text-[10px]" rounded="rounded-lg" />
-                                <span className={`absolute bottom-1 right-1 w-2 h-2 rounded-full border border-[var(--color-surface)] shrink-0
-                                    ${isOnline ? 'bg-emerald-500 animate-[pulse_2s_infinite]' : 'bg-rose-500 animate-[pulse_2s_infinite]'}`}
-                                />
-                            </button>
-                        </div>
-
-                        {/* Expanded full user panel — shown on hover */}
-                        <div className="hidden group-hover/sidebar:block w-full transition-all duration-300">
-                            <button
-                                onClick={() => setStatusOpen(prev => !prev)}
-                                className={`w-full flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group border border-transparent hover:border-[var(--color-border)]/50 text-left gap-2
-                                    ${statusOpen ? 'bg-[var(--color-surface-alt)] border-[var(--color-border)]/50' : ''}`}
-                                type="button"
-                            >
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className="relative">
-                                        <Avatar url={profile?.avatar_url} name={profile?.name} size="w-8 h-8" textSize="text-[11px]" rounded="rounded-xl" />
-                                        <span className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[var(--color-surface)] shrink-0
-                                            ${isOnline ? 'bg-emerald-500 animate-[pulse_2s_infinite]' : 'bg-rose-500 animate-[pulse_2s_infinite]'}`}
-                                        />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[11px] font-extrabold text-[var(--color-text)] leading-tight truncate">
-                                            {profile?.name || "Pengguna"}
-                                        </p>
-                                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider leading-none mt-0.5 truncate">
-                                            {profile?.role || "Staf"}
-                                        </p>
-                                    </div>
-                                </div>
-                                <ChevronDown className={`w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 ${statusOpen ? 'rotate-180 opacity-100 text-[var(--color-primary)]' : ''}`} />
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    <button
-                        onClick={() => setStatusOpen(prev => !prev)}
-                        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group border border-transparent hover:border-[var(--color-border)]/50 text-left gap-2
-                            ${statusOpen ? 'bg-[var(--color-surface-alt)] border-[var(--color-border)]/50' : ''}`}
-                        type="button"
-                    >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="relative">
-                                <Avatar url={profile?.avatar_url} name={profile?.name} size="w-8 h-8" textSize="text-[11px]" rounded="rounded-xl" />
-                                <span className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[var(--color-surface)] shrink-0
-                                    ${isOnline ? 'bg-emerald-500 animate-[pulse_2s_infinite]' : 'bg-rose-500 animate-[pulse_2s_infinite]'}`}
-                                />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[11px] font-extrabold text-[var(--color-text)] leading-tight truncate">
-                                    {profile?.name || "Pengguna"}
-                                </p>
-                                <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider leading-none mt-0.5 truncate">
-                                    {profile?.role || "Staf"}
-                                </p>
-                            </div>
-                        </div>
-                        <ChevronDown className={`w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 ${statusOpen ? 'rotate-180 opacity-100 text-[var(--color-primary)]' : ''}`} />
-                    </button>
-                )}
-            </div>
         </aside>
     )
 }
