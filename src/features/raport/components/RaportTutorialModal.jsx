@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { Modal } from '@shared/components'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faChevronLeft, faChevronRight, faCheck, faMagnifyingGlass, faLightbulb,
-    faClipboardList, faTableList, faFloppyDisk, faBoxArchive, faFillDrip, faFilePdf,
-    faXmark
-} from '@fortawesome/free-solid-svg-icons'
+    ChevronLeft, ChevronRight, Check, Search, Lightbulb,
+    ClipboardList, Table, Save, Archive, Paintbrush, FileText, X
+} from 'lucide-react'
 
 import Tutorial_1 from '@assets/images/tutorials/tutorial-step-1.png'
 import Tutorial_2 from '@assets/images/tutorials/tutorial-step-2.png'
@@ -143,7 +141,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
 
     const SLIDES = [
         {
-            icon: faClipboardList,
+            icon: ClipboardList,
             iconColor: 'text-emerald-500',
             iconBg: 'bg-emerald-500/15',
             title: 'Dua Cara Memulai Input Nilai',
@@ -170,7 +168,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             img: TUTORIAL_IMAGES[0],
         },
         {
-            icon: faTableList,
+            icon: Table,
             iconColor: 'text-indigo-500',
             iconBg: 'bg-indigo-500/15',
             title: 'Mengisi Nilai Santri',
@@ -180,7 +178,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             img: TUTORIAL_IMAGES[1],
         },
         {
-            icon: faFloppyDisk,
+            icon: Save,
             iconColor: 'text-sky-500',
             iconBg: 'bg-sky-500/15',
             title: 'Auto-Save & Status Simpan',
@@ -190,7 +188,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             img: TUTORIAL_IMAGES[2],
         },
         {
-            icon: faBoxArchive,
+            icon: Archive,
             iconColor: 'text-violet-500',
             iconBg: 'bg-violet-500/15',
             title: 'Data Tambahan per Santri',
@@ -200,7 +198,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             img: TUTORIAL_IMAGES[3],
         },
         {
-            icon: faFillDrip,
+            icon: Paintbrush,
             iconColor: 'text-rose-500',
             iconBg: 'bg-rose-500/15',
             title: 'Isi Massal & Copy Bulan Lalu',
@@ -210,7 +208,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             img: TUTORIAL_IMAGES[4],
         },
         {
-            icon: faFilePdf,
+            icon: FileText,
             iconColor: 'text-red-500',
             iconBg: 'bg-red-500/15',
             title: 'Cetak, ZIP & WA Blast',
@@ -220,7 +218,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
             img: TUTORIAL_IMAGES[5],
         },
         {
-            icon: faBoxArchive,
+            icon: Archive,
             iconColor: 'text-teal-500',
             iconBg: 'bg-teal-500/15',
             title: 'Arsip & Riwayat',
@@ -243,7 +241,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
                 disabled={isFirst}
                 className="h-10 px-4 rounded-xl border border-[var(--color-border)] text-[11px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 active:scale-95"
             >
-                <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" /> Sebelumnya
+                <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
             </button>
 
             {/* Pagination badge */}
@@ -258,14 +256,14 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
                     onClick={onClose}
                     className="h-10 px-6 rounded-xl bg-amber-500 text-white text-[11px] font-black hover:bg-amber-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95"
                 >
-                    <FontAwesomeIcon icon={faCheck} className="text-[10px]" /> Selesai
+                    <Check className="w-3.5 h-3.5" /> Selesai
                 </button>
             ) : (
                 <button 
                     onClick={() => setStep(v => Math.min(totalSteps - 1, v + 1))}
                     className="h-10 px-6 rounded-xl bg-amber-500 text-white text-[11px] font-black hover:bg-amber-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95"
                 >
-                    Berikutnya <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
+                    Berikutnya <ChevronRight className="w-3.5 h-3.5" />
                 </button>
             )}
         </div>
@@ -299,14 +297,17 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
                             />
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none bg-slate-950/10">
                                 <div className="bg-slate-950/75 text-white text-[10px] font-black px-4 py-2 rounded-full flex items-center gap-1.5 backdrop-blur-sm shadow-lg">
-                                    <FontAwesomeIcon icon={faMagnifyingGlass} className="text-[9px]" /> Klik untuk zoom
+                                    <Search className="w-2.5 h-2.5" /> Klik untuk zoom
                                 </div>
                             </div>
                         </div>
                     ) : (
                         <div className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] flex items-center justify-center h-48 animate-pulse text-[var(--color-text-muted)] opacity-30">
-                            <div className="text-center">
-                                <FontAwesomeIcon icon={currentSlide.icon} className="text-2xl mb-2" />
+                            <div className="text-center flex flex-col items-center justify-center">
+                                {(() => {
+                                    const IconComp = currentSlide.icon
+                                    return <IconComp className="w-6 h-6 mb-2" />
+                                })()}
                                 <p className="text-[9px] font-black uppercase tracking-widest">Screenshot Slide {step + 1}</p>
                             </div>
                         </div>
@@ -318,7 +319,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
 
                     {/* Tips Box */}
                     <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/15 flex items-start gap-3">
-                        <FontAwesomeIcon icon={faLightbulb} className="text-amber-500 text-xs mt-0.5 shrink-0" />
+                        <Lightbulb className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
                         <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400 leading-normal">{currentSlide.tips}</p>
                     </div>
                 </div>
@@ -375,7 +376,7 @@ export const RaportTutorialModal = memo(function RaportTutorialModal({ isOpen, o
                         className="absolute top-6 right-6 w-12 h-12 bg-slate-900/50 hover:bg-slate-900/80 text-white rounded-full transition-all duration-200 flex items-center justify-center border border-white/10 shadow-2xl backdrop-blur-md group cursor-pointer z-50"
                         aria-label="Tutup Preview"
                     >
-                        <FontAwesomeIcon icon={faXmark} className="text-lg group-hover:rotate-90 transition-transform duration-300" />
+                        <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
                     </button>
 
                     {/* Image Container with native swiping pan/scroll on zoom & mouse dragging on desktop */}

@@ -64,6 +64,7 @@ export const BOARDING_ITEMS = [
     { to: "/boarding/dorms", label: "Manajemen Asrama", icon: Bed, desc: "Plotting kamar santri, kontrol kebersihan, & tugas Musyrif", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/boarding/health", label: "Klinik & Kesehatan", icon: HeartPulse, desc: "Pos Kesehatan Pesantren (Poskestren) & rekam medis santri", color: "bg-emerald-500/10 text-emerald-600" },
     { to: "/boarding/counseling", label: "Konseling & BK", icon: HeartHandshake, desc: "Sesi konseling santri, bimbingan psikologis & pembinaan mental", color: "bg-purple-500/10 text-purple-600" },
+    { to: "/raport", label: "Raport Bulanan", icon: FileSpreadsheet, desc: "Kelola dan cetak raport bulanan per kelas", color: "bg-blue-500/10 text-blue-600" },
 ]
 
 // ─── Akademik & Keagamaan ─────────────────────────────────────────────────────
@@ -171,6 +172,7 @@ export const ROUTE_FLAG_MAP = {
     '/boarding/dorms': 'nav.dorms',
     '/boarding/health': 'nav.health',
     '/boarding/counseling': 'nav.counseling',
+    '/raport': 'module.raport',
     '/academic/tahfidz': 'nav.tahfidz',
     '/academic/extracurricular': 'nav.extracurricular',
     '/finance/saving': 'nav.saving',
@@ -197,7 +199,7 @@ export function filterNavItems(items, flags = {}, role = '') {
         if (role === 'satpam') {
             if (item.to === '/boarding/gate') return true
             // Hide non-gate items in Kesantrian
-            if (['/boarding/behavior', '/boarding/dorms', '/boarding/health', '/boarding/counseling'].includes(item.to)) return false
+            if (['/boarding/behavior', '/boarding/dorms', '/boarding/health', '/boarding/counseling', '/raport'].includes(item.to)) return false
         }
 
         return true

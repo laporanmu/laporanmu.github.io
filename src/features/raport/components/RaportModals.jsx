@@ -1,11 +1,16 @@
 import { memo } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faKeyboard, faXmark, faChevronLeft, faChevronRight,
-    faMagnifyingGlass, faCircleInfo, faLightbulb, faFloppyDisk,
-    faTableList, faCheck, faBoxArchive, faFillDrip, faFilePdf, faClipboardList
-} from '@fortawesome/free-solid-svg-icons'
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
+    Keyboard, X, ChevronLeft, ChevronRight,
+    Search, Info, Lightbulb, Save,
+    Table, Check, Archive, Paintbrush, FileText, ClipboardList
+} from 'lucide-react'
+
+// Simple SVG replacement for WhatsApp icon
+const WhatsAppIcon = (props) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={props.className} style={props.style} width={props.width || "1em"} height={props.height || "1em"}>
+        <path d="M12.012 1c-6.067 0-11 4.934-11 11a10.957 10.957 0 001.605 5.679L1 23l5.52-1.748A10.949 10.949 0 0012.012 23c6.067 0 11-4.933 11-11s-4.933-11-11-11zm5.12 15.65c-.218.614-1.077 1.15-1.636 1.218-.557.068-1.229.098-3.003-.618-2.28-.92-3.738-3.23-3.852-3.38-.114-.15-.92-1.227-.92-2.355 0-1.127.59-1.682.802-1.912.213-.23.46-.287.613-.287.154 0 .307.003.44.01.14.007.327-.052.51.393.187.456.64 1.56.697 1.674.057.115.095.249.019.402-.077.153-.153.249-.306.42-.154.173-.326.288-.135.614.19.326.85 1.397 1.82 2.261.97.864 1.787 1.132 2.094 1.266.307.135.48.115.652-.076.173-.192.748-.864.947-1.161.2-.298.4-.249.671-.15.27.097 1.722.812 2.018.96.297.147.494.22.567.346.073.125.073.722-.145 1.336z"/>
+    </svg>
+)
 
 // ─── Shortcut Modal Content ──────────────────────────────────────────────────
 
@@ -52,7 +57,7 @@ export const WaBlastConfirmContent = memo(({ count, onConfirm, onCancel }) => (
     <div className="space-y-6 text-center">
         <div className="p-1 inline-block">
              <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
-                <FontAwesomeIcon icon={faWhatsapp} className="text-4xl text-green-500" />
+                <WhatsAppIcon className="w-10 h-10 text-green-500" />
             </div>
         </div>
         <div className="space-y-1">
@@ -84,7 +89,11 @@ export const WaBlastProgressContent = memo(({ progress, total, activeName, isFai
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${pct === 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-indigo-500/10 text-indigo-500'}`}>
-                        <FontAwesomeIcon icon={pct === 100 ? faCheck : faWhatsapp} className="text-2xl" />
+                        {pct === 100 ? (
+                            <Check className="w-6 h-6" />
+                        ) : (
+                            <WhatsAppIcon className="w-6 h-6" />
+                        )}
                     </div>
                     <div>
                         <p className="text-base font-black text-[var(--color-text)] tracking-tight">{pct === 100 ? 'Proses Selesai!' : 'Sedang Mengirim...'}</p>
@@ -134,10 +143,10 @@ export const ZipBlastProgressContent = memo(({ progress, total, done, failed, ac
                             : 'bg-teal-500/10 text-teal-500 animate-pulse'
                     }`}>
                         {isFinished ? (
-                            <FontAwesomeIcon icon={faCheck} className="text-xl" />
+                            <Check className="w-5 h-5" />
                         ) : (
                             <div className="relative flex items-center justify-center">
-                                <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
+                                <FileText className="w-5 h-5" />
                                 <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-teal-500 rounded-full border-2 border-white animate-ping" />
                             </div>
                         )}

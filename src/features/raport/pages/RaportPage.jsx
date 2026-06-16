@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
+import React, { Fragment, useState, useEffect, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -21,8 +21,6 @@ import { StatCard, EmptyState } from '@shared/components/DataDisplay'
 import Modal from '@shared/components/Modal'
 import RichSelect from '@shared/components/RichSelect'
 import StatsCarousel from '@shared/components/StatsCarousel'
-import RaportImportModal from '@features/raport/components/RaportImportModal'
-import RaportExportModal from '@features/raport/components/RaportExportModal'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 import { useToast } from '@context/Toast'
@@ -44,12 +42,15 @@ import RaportPrintCard from '@features/raport/components/RaportPrintCard'
 import StudentRow, { ExtraInput, ExtraTextarea } from '@features/raport/components/RaportRecordRow'
 import BulkActionBar from '@features/raport/components/BulkActionBar'
 import { ShortcutModalContent, WaBlastConfirmContent, WaBlastProgressContent, ZipBlastProgressContent } from '@features/raport/components/RaportModals'
-import { RaportTutorialModal } from '@features/raport/components/RaportTutorialModal'
 import Skeleton from '@shared/components/Skeleton'
 import { useRaportCore } from '@hooks/reports/useRaportCore'
 import { useRaportImportExport } from '@hooks/reports/useRaportImportExport'
 import RaportInputTable from '@features/raport/components/RaportInputTable'
 import RaportArchive from '@features/raport/components/RaportArchive'
+
+const LazyRaportImportModal = lazy(() => import('@features/raport/components/RaportImportModal'))
+const LazyRaportExportModal = lazy(() => import('@features/raport/components/RaportExportModal'))
+const LazyRaportTutorialModal = lazy(() => import('@features/raport/components/RaportTutorialModal').then(module => ({ default: module.RaportTutorialModal })))
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -215,6 +216,14 @@ export default function RaportPage() {
     saveAllRef.current = saveAll
     const [showTutorialModal, setShowTutorialModal] = useState(false)
     const [showTemplatePreviewModal, setShowTemplatePreviewModal] = useState(false)
+
+    const [hasOpenedImport, setHasOpenedImport] = useState(false)
+    const [hasOpenedExport, setHasOpenedExport] = useState(false)
+    const [hasOpenedTutorial, setHasOpenedTutorial] = useState(false)
+
+    useEffect(() => { if (isImportModalOpen) setHasOpenedImport(true) }, [isImportModalOpen])
+    useEffect(() => { if (isExportModalOpen) setHasOpenedExport(true) }, [isExportModalOpen])
+    useEffect(() => { if (showTutorialModal) setHasOpenedTutorial(true) }, [showTutorialModal])
     const [pageSize, setPageSize] = useState('f4') // 'a4' | 'f4'
     const [previewZoom, setPreviewZoom] = useState(1) // 0.8 = 80% zoom out
     const [isFullScreenPreview, setIsFullScreenPreview] = useState(false)
@@ -3005,34 +3014,42 @@ export default function RaportPage() {
                 )}
 
                 {/* SaaS Raport Import Modal */}
-                <RaportImportModal
-                    isOpen={isImportModalOpen}
-                    onClose={() => setIsImportModalOpen(false)}
-                    selectedMonth={selectedMonth}
-                    selectedYear={selectedYear}
-                    musyrif={musyrif}
-                    profile={profile}
-                    onSuccess={loadStudents}
-                    activeClassName={selectedClass?.name}
-                />
+                <Suspense fallback={null}>
+                    {hasOpenedImport && (
+                        <LazyRaportImportModal
+                            isOpen={isImportModalOpen}
+                            onClose={() => setIsImportModalOpen(false)}
+                            selectedMonth={selectedMonth}
+                            selectedYear={selectedYear}
+                            musyrif={musyrif}
+                            profile={profile}
+                            onSuccess={loadStudents}
+                            activeClassName={selectedClass?.name}
+                        />
+                    )}
+                </Suspense>
 
                 {/* SaaS Raport Export Modal */}
-                <RaportExportModal
-                    isOpen={isExportModalOpen}
-                    onClose={() => setIsExportModalOpen(false)}
-                    students={students}
-                    selectedStudentIds={selectedStudentIds}
-                    activeClassName={selectedClass?.name}
-                    selectedMonthName={bulanObj?.id_str}
-                    selectedYear={selectedYear}
-                    exporting={exporting}
-                    handleExportCSV={handleExportCSV}
-                    handleExportExcel={handleExportExcel}
-                    handleExportAllClasses={handleExportAllClasses}
-                    handleExportZip={handleExportZip}
-                    handlePrintAll={handlePrintAll}
-                    addToast={addToast}
-                />
+                <Suspense fallback={null}>
+                    {hasOpenedExport && (
+                        <LazyRaportExportModal
+                            isOpen={isExportModalOpen}
+                            onClose={() => setIsExportModalOpen(false)}
+                            students={students}
+                            selectedStudentIds={selectedStudentIds}
+                            activeClassName={selectedClass?.name}
+                            selectedMonthName={bulanObj?.id_str}
+                            selectedYear={selectedYear}
+                            exporting={exporting}
+                            handleExportCSV={handleExportCSV}
+                            handleExportExcel={handleExportExcel}
+                            handleExportAllClasses={handleExportAllClasses}
+                            handleExportZip={handleExportZip}
+                            handlePrintAll={handlePrintAll}
+                            addToast={addToast}
+                        />
+                    )}
+                </Suspense>
 
                 {/* ── Hidden print container ── */}
                 {printQueue.length > 0 && (
@@ -3067,10 +3084,14 @@ export default function RaportPage() {
                 )}
 
                 {/* Tutorial Modal */}
-                <RaportTutorialModal
-                    isOpen={showTutorialModal}
-                    onClose={() => setShowTutorialModal(false)}
-                />
+                <Suspense fallback={null}>
+                    {hasOpenedTutorial && (
+                        <LazyRaportTutorialModal
+                            isOpen={showTutorialModal}
+                            onClose={() => setShowTutorialModal(false)}
+                        />
+                    )}
+                </Suspense>
 
                 {/* WA Blast Confirm Modal */}
                 <Modal

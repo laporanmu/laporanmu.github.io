@@ -1,8 +1,8 @@
 import {
-    faStar, faMosque, faBroom, faBookOpen, faLanguage,
-    faWeightScale, faRulerVertical, faBandage, faCircleExclamation,
-    faTriangleExclamation, faDoorOpen, faFileLines
-} from '@fortawesome/free-solid-svg-icons'
+    Star, Heart, Brush, BookOpen, Languages,
+    Scale, Ruler, HeartPulse, AlertCircle,
+    AlertTriangle, DoorOpen, FileText
+} from 'lucide-react'
 
 export const MAX_SCORE = 9
 export const STORAGE_BUCKET = 'raport-mbs'
@@ -65,25 +65,25 @@ export const LABEL = {
 }
 
 export const KRITERIA = [
-    { key: 'nilai_akhlak', id: 'Akhlak', ar: 'الأخلاق', arShort: 'الأخلاق', icon: faStar, color: '#f59e0b' },
-    { key: 'nilai_ibadah', id: 'Ibadah', ar: 'العبادة', arShort: 'العبادة', icon: faMosque, color: '#6366f1' },
-    { key: 'nilai_kebersihan', id: 'Kebersihan', ar: 'النظافة', arShort: 'النظافة', icon: faBroom, color: '#06b6d4' },
-    { key: 'nilai_quran', id: "Al-Qur'an", ar: 'تحسين القراءة وحفظ القرآن', arShort: 'القرآن', icon: faBookOpen, color: '#10b981' },
-    { key: 'nilai_bahasa', id: 'Bahasa', ar: 'اللغة', arShort: 'اللغة', icon: faLanguage, color: '#8b5cf6' },
+    { key: 'nilai_akhlak', id: 'Akhlak', ar: 'الأخلاق', arShort: 'الأخلاق', icon: Star, color: '#f59e0b' },
+    { key: 'nilai_ibadah', id: 'Ibadah', ar: 'العبادة', arShort: 'العبادة', icon: Heart, color: '#6366f1' },
+    { key: 'nilai_kebersihan', id: 'Kebersihan', ar: 'النظافة', arShort: 'النظافة', icon: Brush, color: '#06b6d4' },
+    { key: 'nilai_quran', id: "Al-Qur'an", ar: 'تحسين القراءة وحفظ القرآن', arShort: 'القرآن', icon: BookOpen, color: '#10b981' },
+    { key: 'nilai_bahasa', id: 'Bahasa', ar: 'اللغة', arShort: 'اللغة', icon: Languages, color: '#8b5cf6' },
 ]
 
 export const FISIK_FIELDS = [
-    { key: 'berat_badan', label: 'BB', icon: faWeightScale, color: '#6366f1', unit: 'kg' },
-    { key: 'tinggi_badan', label: 'TB', icon: faRulerVertical, color: '#06b6d4', unit: 'cm' },
-    { key: 'hari_sakit', label: 'Skt', icon: faBandage, color: '#ef4444', unit: 'hr' },
-    { key: 'hari_izin', label: 'Izin', icon: faCircleExclamation, color: '#f59e0b', unit: 'hr' },
-    { key: 'hari_alpa', label: 'Alpa', icon: faTriangleExclamation, color: '#ef4444', unit: 'hr' },
-    { key: 'hari_pulang', label: 'Plg', icon: faDoorOpen, color: '#8b5cf6', unit: 'x' },
+    { key: 'berat_badan', label: 'BB', icon: Scale, color: '#6366f1', unit: 'kg' },
+    { key: 'tinggi_badan', label: 'TB', icon: Ruler, color: '#06b6d4', unit: 'cm' },
+    { key: 'hari_sakit', label: 'Skt', icon: HeartPulse, color: '#ef4444', unit: 'hr' },
+    { key: 'hari_izin', label: 'Izin', icon: AlertCircle, color: '#f59e0b', unit: 'hr' },
+    { key: 'hari_alpa', label: 'Alpa', icon: AlertTriangle, color: '#ef4444', unit: 'hr' },
+    { key: 'hari_pulang', label: 'Plg', icon: DoorOpen, color: '#8b5cf6', unit: 'x' },
 ]
 
 export const HAFALAN_FIELDS = [
-    { key: 'ziyadah', ph: 'Ziyadah', icon: faBookOpen, color: '#10b981' },
-    { key: 'murojaah', ph: "Muroja'ah", icon: faFileLines, color: '#8b5cf6' },
+    { key: 'ziyadah', ph: 'Ziyadah', icon: BookOpen, color: '#10b981' },
+    { key: 'murojaah', ph: "Muroja'ah", icon: FileText, color: '#8b5cf6' },
 ]
 
 export const GRADE = (n) => {

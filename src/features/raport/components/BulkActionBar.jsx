@@ -1,10 +1,14 @@
 import { memo } from 'react'
 import { createPortal } from 'react-dom'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faCircleCheck, faFloppyDisk, faFileZipper, faSpinner, faXmark, faFillDrip
-} from '@fortawesome/free-solid-svg-icons'
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
+    Save, FolderArchive, Loader2, X, Paintbrush
+} from 'lucide-react'
+
+const WhatsAppIcon = (props) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={props.className} style={props.style} width={props.width || "1em"} height={props.height || "1em"}>
+        <path d="M12.012 1c-6.067 0-11 4.934-11 11a10.957 10.957 0 001.605 5.679L1 23l5.52-1.748A10.949 10.949 0 0012.012 23c6.067 0 11-4.933 11-11s-4.933-11-11-11zm5.12 15.65c-.218.614-1.077 1.15-1.636 1.218-.557.068-1.229.098-3.003-.618-2.28-.92-3.738-3.23-3.852-3.38-.114-.15-.92-1.227-.92-2.355 0-1.127.59-1.682.802-1.912.213-.23.46-.287.613-.287.154 0 .307.003.44.01.14.007.327-.052.51.393.187.456.64 1.56.697 1.674.057.115.095.249.019.402-.077.153-.153.249-.306.42-.154.173-.326.288-.135.614.19.326.85 1.397 1.82 2.261.97.864 1.787 1.132 2.094 1.266.307.135.48.115.652-.076.173-.192.748-.864.947-1.161.2-.298.4-.249.671-.15.27.097 1.722.812 2.018.96.297.147.494.22.567.346.073.125.073.722-.145 1.336z"/>
+    </svg>
+)
 import { useLanguage } from '@context'
 
 const BulkActionBar = memo(({ 
@@ -50,7 +54,11 @@ const BulkActionBar = memo(({
                             className="flex-1 md:flex-none h-8 px-2 md:px-3 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest disabled:opacity-50 min-w-0"
                             title="Simpan Semua"
                         >
-                            <FontAwesomeIcon icon={isSavingAll ? faSpinner : faFloppyDisk} className={isSavingAll ? 'animate-spin' : ''} />
+                            {isSavingAll ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <Save className="w-3.5 h-3.5" />
+                            )}
                             <span className="hidden md:inline">Simpan Semua</span>
                         </button>
 
@@ -59,7 +67,7 @@ const BulkActionBar = memo(({
                             className="flex-1 md:flex-none h-8 px-2 md:px-3 rounded-xl bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 hover:bg-fuchsia-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest min-w-0"
                             title="Isi Massal"
                         >
-                            <FontAwesomeIcon icon={faFillDrip} />
+                            <Paintbrush className="w-3.5 h-3.5" />
                             <span className="hidden md:inline">Isi Massal</span>
                         </button>
 
@@ -68,7 +76,7 @@ const BulkActionBar = memo(({
                             className="flex-1 md:flex-none h-8 px-2 md:px-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest min-w-0"
                             title="WA Blast"
                         >
-                            <FontAwesomeIcon icon={faWhatsapp} />
+                            <WhatsAppIcon className="w-3.5 h-3.5" />
                             <span className="hidden md:inline">WA Blast</span>
                         </button>
 
@@ -78,7 +86,11 @@ const BulkActionBar = memo(({
                             className="flex-1 md:flex-none h-8 px-2 md:px-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white transition-all duration-200 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest disabled:opacity-50 min-w-0"
                             title="Export ZIP"
                         >
-                            <FontAwesomeIcon icon={isExporting ? faSpinner : faFileZipper} className={isExporting ? 'animate-spin' : ''} />
+                            {isExporting ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <FolderArchive className="w-3.5 h-3.5" />
+                            )}
                             <span className="hidden md:inline">Export ZIP</span>
                         </button>
                     </div>
@@ -88,7 +100,7 @@ const BulkActionBar = memo(({
                         className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-all shrink-0"
                         title="Batal"
                     >
-                        <FontAwesomeIcon icon={faXmark} />
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
             </div>

@@ -1,15 +1,20 @@
 import { memo, useState, useEffect, useRef } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faSpinner, faCircleCheck, faFloppyDisk, faFilePdf, faXmark,
-    faClipboardList, faBolt, faLightbulb, faLanguage
-} from '@fortawesome/free-solid-svg-icons'
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
+    Loader2, CheckCircle2, Save, FileText, X,
+    ClipboardList, Zap, Lightbulb, Languages, Star, Heart
+} from 'lucide-react'
 import {
     MAX_SCORE, KRITERIA, GRADE, FISIK_FIELDS, HAFALAN_FIELDS,
     CATATAN_TEMPLATES, calcAvg
 } from '@utils/reports/raportConstants'
 import { RadarChart, SparklineTrend } from './RaportCharts'
+
+// Simple SVG replacement for WhatsApp icon
+const WhatsAppIcon = (props) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={props.className} style={props.style} width={props.width || "1em"} height={props.height || "1em"}>
+        <path d="M12.012 1c-6.067 0-11 4.934-11 11a10.957 10.957 0 001.605 5.679L1 23l5.52-1.748A10.949 10.949 0 0012.012 23c6.067 0 11-4.933 11-11s-4.933-11-11-11zm5.12 15.65c-.218.614-1.077 1.15-1.636 1.218-.557.068-1.229.098-3.003-.618-2.28-.92-3.738-3.23-3.852-3.38-.114-.15-.92-1.227-.92-2.355 0-1.127.59-1.682.802-1.912.213-.23.46-.287.613-.287.154 0 .307.003.44.01.14.007.327-.052.51.393.187.456.64 1.56.697 1.674.057.115.095.249.019.402-.077.153-.153.249-.306.42-.154.173-.326.288-.135.614.19.326.85 1.397 1.82 2.261.97.864 1.787 1.132 2.094 1.266.307.135.48.115.652-.076.173-.192.748-.864.947-1.161.2-.298.4-.249.671-.15.27.097 1.722.812 2.018.96.297.147.494.22.567.346.073.125.073.722-.145 1.336z"/>
+    </svg>
+)
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -145,8 +150,8 @@ const StudentRow = memo(({
                         <div className="text-[12px] font-black text-[var(--color-text)] leading-tight whitespace-normal break-words uppercase tracking-tight">{student.name}</div>
                         <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
                             {avg ? <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).color }}>{avg}</span> : <span className="text-[8px] text-[var(--color-text-muted)] font-bold">isi nilai</span>}
-                            {isSaving && <FontAwesomeIcon icon={faSpinner} className="text-[8px] text-amber-500 animate-spin" />}
-                            {!isSaving && isSaved && <FontAwesomeIcon icon={faCircleCheck} className="text-[8px] text-emerald-500" />}
+                            {isSaving && <Loader2 className="w-2 h-2 text-amber-500 animate-spin" />}
+                            {!isSaving && isSaved && <CheckCircle2 className="w-2 h-2 text-emerald-500" />}
                             {!isSaving && !isSaved && isDirty && <span className="text-[8px] font-black text-amber-500 flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" /></span>}
                             {trendData?.length >= 2 && <SparklineTrend trendData={trendData} />}
                         </div>
@@ -170,30 +175,46 @@ const StudentRow = memo(({
             })}
             <td className="px-2 py-3" style={{ verticalAlign: 'middle' }}>
                 <div className="grid grid-cols-2 gap-1.5">
-                    {FISIK_FIELDS.map(f => (
-                        <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
-                            <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}><FontAwesomeIcon icon={f.icon} style={{ color: f.color, fontSize: 9 }} /></div>
-                            <ExtraInput type="number" inputMode="decimal" placeholder="—" value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.label} className="flex-1 w-0 h-full text-[11px] font-bold text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none appearance-none" />
-                            <span className="text-[9px] text-[var(--color-text-muted)] font-bold pr-1 shrink-0">{f.unit}</span>
-                        </div>
-                    ))}
+                    {FISIK_FIELDS.map(f => {
+                        const IconComp = f.icon
+                        return (
+                            <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
+                                <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>
+                                    <IconComp className="w-2.5 h-2.5" style={{ color: f.color }} />
+                                </div>
+                                <ExtraInput type="number" inputMode="decimal" placeholder="—" value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.label} className="flex-1 w-0 h-full text-[11px] font-bold text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none appearance-none" />
+                                <span className="text-[9px] text-[var(--color-text-muted)] font-bold pr-1 shrink-0">{f.unit}</span>
+                            </div>
+                        )
+                    })}
                 </div>
             </td>
             <td className="px-2 py-3" style={{ verticalAlign: 'middle' }}>
                 <div className="flex flex-col gap-1.5">
-                    {HAFALAN_FIELDS.map(f => (
-                        <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
-                            <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}><FontAwesomeIcon icon={f.icon} style={{ color: f.color, fontSize: 9 }} /></div>
-                            <ExtraInput placeholder={f.ph} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.ph} className="flex-1 w-0 h-full px-1 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />
-                        </div>
-                    ))}
+                    {HAFALAN_FIELDS.map(f => {
+                        const IconComp = f.icon
+                        return (
+                            <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
+                                <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>
+                                    <IconComp className="w-2.5 h-2.5" style={{ color: f.color }} />
+                                </div>
+                                <ExtraInput placeholder={f.ph} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.ph} className="flex-1 w-0 h-full px-1 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />
+                            </div>
+                        )
+                    })}
                     <div className="flex rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', minHeight: 32 }}>
-                        <div className="w-6 shrink-0 flex items-center justify-center" style={{ background: '#f59e0b18' }}><FontAwesomeIcon icon={faClipboardList} style={{ color: '#f59e0b', fontSize: 9 }} /></div>
+                        <div className="w-6 shrink-0 flex items-center justify-center" style={{ background: '#f59e0b18' }}>
+                            <ClipboardList className="w-2.5 h-2.5 text-[#f59e0b]" />
+                        </div>
                         <ExtraTextarea placeholder="Catatan untuk Santri..." value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={onCatatanChange} maxLength={200} rows={2} aria-label="Catatan musyrif" className="flex-1 w-0 px-1.5 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
-                        <button onClick={() => { const c = generateAutoComment(sc, student.id, trendData); if (!c) return; onCatatanChange(student.id, 'catatan', c) }} title="Generate komentar otomatis dari nilai" disabled={!avg} className="shrink-0 w-6 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30"><FontAwesomeIcon icon={faBolt} style={{ fontSize: 9 }} /></button>
+                        <button onClick={() => { const c = generateAutoComment(sc, student.id, trendData); if (!c) return; onCatatanChange(student.id, 'catatan', c) }} title="Generate komentar otomatis dari nilai" disabled={!avg} className="shrink-0 w-6 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30">
+                            <Zap className="w-2.5 h-2.5" />
+                        </button>
                     </div>
                     <div className="relative">
-                        <button onClick={() => onTemplateToggle(student.id)} className={`w-full h-6 rounded-md border text-[8px] font-black flex items-center justify-center gap-1 transition-all ${templateOpen ? 'bg-amber-500/15 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}><FontAwesomeIcon icon={faLightbulb} style={{ fontSize: 7 }} /> Template Catatan</button>
+                        <button onClick={() => onTemplateToggle(student.id)} className={`w-full h-6 rounded-md border text-[8px] font-black flex items-center justify-center gap-1 transition-all ${templateOpen ? 'bg-amber-500/15 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                            <Lightbulb className="w-2 h-2" /> Template Catatan
+                        </button>
                         {templateOpen && (
                             <div className="absolute left-0 right-0 z-30 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-xl overflow-hidden" style={{ ...(si < 2 ? { top: 'calc(100% + 4px)' } : { bottom: 'calc(100% + 4px)' }), minWidth: 200 }}>
                                 <p className="text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-2.5 pt-2 pb-1">Pilih template catatan</p>
@@ -206,19 +227,37 @@ const StudentRow = memo(({
             <td className="px-2 py-3 sticky right-0 z-10" style={{ verticalAlign: 'middle', background: si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)' }}>
                 <div className="flex flex-col gap-1.5">
                     <button onClick={() => onSave(student.id)} disabled={isSaving} className="w-full h-8 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-black transition-all disabled:opacity-50" style={{ background: isSaved ? '#10b98115' : isDirty ? '#6366f115' : 'var(--color-surface-alt)', color: isSaved ? '#10b981' : isDirty ? '#6366f1' : 'var(--color-text-muted)', border: '1px solid', borderColor: isSaved ? '#10b98130' : isDirty ? '#6366f130' : 'var(--color-border)' }}>
-                        <FontAwesomeIcon icon={isSaving ? faSpinner : isSaved ? faCircleCheck : faFloppyDisk} className={isSaving ? 'animate-spin text-[10px]' : 'text-[10px]'} />{isSaving ? 'Menyimpan...' : isSaved ? 'Tersimpan' : 'Simpan'}
+                        {isSaving ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : isSaved ? (
+                            <CheckCircle2 className="w-3 h-3" />
+                        ) : (
+                            <Save className="w-3 h-3" />
+                        )}
+                        {isSaving ? 'Menyimpan...' : isSaved ? 'Tersimpan' : 'Simpan'}
                     </button>
                     <div className="grid grid-cols-2 gap-1">
-                        <button onClick={() => onPDF(student.id)} aria-label={`Preview PDF ${student.name}`} className="h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center gap-1 text-[11px] font-black hover:bg-indigo-500/20 transition-all"><FontAwesomeIcon icon={faFilePdf} className="text-[10px]" /> PDF</button>
+                        <button onClick={() => onPDF(student.id)} aria-label={`Preview PDF ${student.name}`} className="h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center gap-1 text-[11px] font-black hover:bg-indigo-500/20 transition-all">
+                            <FileText className="w-3 h-3" /> PDF
+                        </button>
                         <button onClick={() => onWA(student)} disabled={!student.phone || (!!sendingWAStatus && sendingWAStatus !== 'done')} aria-label={`Kirim WA ke wali ${student.name}`}
                             className={`h-8 rounded-lg border text-[11px] font-black flex items-center justify-center gap-1 transition-all ${!student.phone ? 'opacity-30 cursor-not-allowed bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)]' : sendingWAStatus === 'done' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/20' : sendingWAStatus ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 cursor-wait' : 'bg-green-500/10 border-green-500/20 text-green-600 hover:bg-green-500/20'}`}>
-                            <FontAwesomeIcon icon={sendingWAStatus === 'generating' || sendingWAStatus === 'uploading' ? faSpinner : sendingWAStatus === 'done' ? faCircleCheck : faWhatsapp} className={(sendingWAStatus === 'generating' || sendingWAStatus === 'uploading') ? 'animate-spin text-[10px]' : 'text-[10px]'} /> WA
+                            {(() => {
+                                if (sendingWAStatus === 'generating' || sendingWAStatus === 'uploading') {
+                                    return <Loader2 className="w-3 h-3 animate-spin" />
+                                }
+                                if (sendingWAStatus === 'done') {
+                                    return <CheckCircle2 className="w-3 h-3" />
+                                }
+                                return <WhatsAppIcon className="w-3 h-3" />
+                            })()}
+                            WA
                         </button>
                     </div>
                     <button onClick={() => onReset(student)} aria-label={`Reset nilai ${student.name}`}
                         className="w-full h-7 rounded-lg flex items-center justify-center gap-1 text-[10px] font-black transition-all hover:bg-red-500/10 hover:text-red-500"
                         style={{ background: 'transparent', color: 'var(--color-text-muted)', border: '1px dashed var(--color-border)' }}>
-                        <FontAwesomeIcon icon={faXmark} className="text-[9px]" /> Reset
+                        <X className="w-2.5 h-2.5" /> Reset
                     </button>
                 </div>
             </td>

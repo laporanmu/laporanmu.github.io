@@ -54,6 +54,7 @@ const ROUTE_KEY_MAP = {
     "/master/academic-years": "nav.academic_years",
     "/master/enrollment": "nav.enrollment",
     "/boarding/counseling": "nav.counseling",
+    "/raport": "nav.raport_bulanan",
     "/academic/library": "nav.library",
     "/master/inventory": "nav.inventory",
     "/admin": "nav.admin_dashboard",

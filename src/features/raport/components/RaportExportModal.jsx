@@ -1,64 +1,30 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-    faCheckCircle,
-    faFileLines,
-    faSliders,
-    faSpinner,
-    faTableList,
-    faTriangleExclamation,
-    faUsers,
-    faIdCard,
-    faFileExport,
-    faHashtag,
-    faStar,
-    faCircleQuestion,
-    faTags,
-    faChartPie,
-    faArrowDownAZ,
-    faFileExcel,
-    faFileCsv,
-    faFilePdf,
-    faChevronDown,
-    faGear,
-    faHeading,
-    faArrowsLeftRight,
-    faArrowsUpDown,
-    faUser,
-    faSchool,
-    faBookOpen,
-    faMosque,
-    faBroom,
-    faLanguage,
-    faWeightScale,
-    faRulerVertical,
-    faBandage,
-    faCalendarAlt,
-    faNotesMedical,
-    faPersonCircleQuestion,
-    faFileZipper,
-    faPrint
-} from '@fortawesome/free-solid-svg-icons'
+    CheckCircle2, FileText, Sliders, Loader2, Table, AlertTriangle, Users, Contact,
+    Download, Hash, Star, HelpCircle, Tags, PieChart, ArrowDownAZ, FileSpreadsheet,
+    ChevronDown, Settings, Heading, MoveHorizontal, MoveVertical, User, School, BookOpen,
+    Heart, Brush, Languages, Scale, Ruler, HeartPulse, AlertCircle, DoorOpen, FileArchive, Printer
+} from 'lucide-react'
 import { Modal } from '@shared/components'
 
 const COLUMN_DEFS = [
-    { key: 'nama', label: 'Nama Santri', icon: faUser },
-    { key: 'nilai_akhlak', label: 'Nilai Akhlak', icon: faStar },
-    { key: 'nilai_ibadah', label: 'Nilai Ibadah', icon: faMosque },
-    { key: 'nilai_kebersihan', label: 'Nilai Kebersihan', icon: faBroom },
-    { key: 'nilai_quran', label: 'Nilai Al-Qur\'an', icon: faBookOpen },
-    { key: 'nilai_bahasa', label: 'Nilai Bahasa', icon: faLanguage },
-    { key: 'avg', label: 'Rata-rata', icon: faChartPie },
-    { key: 'predikat', label: 'Predikat', icon: faArrowDownAZ },
-    { key: 'berat_badan', label: 'Berat Badan', icon: faWeightScale },
-    { key: 'tinggi_badan', label: 'Tinggi Badan', icon: faRulerVertical },
-    { key: 'ziyadah', label: 'Ziyadah', icon: faBookOpen },
-    { key: 'murojaah', label: 'Muroja\'ah', icon: faBookOpen },
-    { key: 'hari_sakit', label: 'Absen Sakit', icon: faBandage },
-    { key: 'hari_izin', label: 'Absen Izin', icon: faCalendarAlt },
-    { key: 'hari_alpa', label: 'Absen Alpa', icon: faPersonCircleQuestion },
-    { key: 'hari_pulang', label: 'Absen Pulang', icon: faNotesMedical },
-    { key: 'catatan', label: 'Catatan Musyrif', icon: faFileLines },
+    { key: 'nama', label: 'Nama Santri', icon: User },
+    { key: 'nilai_akhlak', label: 'Nilai Akhlak', icon: Star },
+    { key: 'nilai_ibadah', label: 'Nilai Ibadah', icon: Heart },
+    { key: 'nilai_kebersihan', label: 'Nilai Kebersihan', icon: Brush },
+    { key: 'nilai_quran', label: 'Nilai Al-Qur\'an', icon: BookOpen },
+    { key: 'nilai_bahasa', label: 'Nilai Bahasa', icon: Languages },
+    { key: 'avg', label: 'Rata-rata', icon: PieChart },
+    { key: 'predikat', label: 'Predikat', icon: ArrowDownAZ },
+    { key: 'berat_badan', label: 'Berat Badan', icon: Scale },
+    { key: 'tinggi_badan', label: 'Tinggi Badan', icon: Ruler },
+    { key: 'ziyadah', label: 'Ziyadah', icon: BookOpen },
+    { key: 'murojaah', label: 'Muroja\'ah', icon: FileText },
+    { key: 'hari_sakit', label: 'Absen Sakit', icon: HeartPulse },
+    { key: 'hari_izin', label: 'Absen Izin', icon: AlertCircle },
+    { key: 'hari_alpa', label: 'Absen Alpa', icon: AlertTriangle },
+    { key: 'hari_pulang', label: 'Absen Pulang', icon: DoorOpen },
+    { key: 'catatan', label: 'Catatan Musyrif', icon: FileText },
 ]
 
 const PRESETS = [
@@ -155,7 +121,10 @@ export default function RaportExportModal({
                         ${key === 'nama' ? 'bg-emerald-500 text-white shadow-sm' : ''}
                         ${isSelected && key !== 'nama' ? 'bg-[var(--color-primary)] text-white shadow-sm' : ''}
                         ${!isSelected && key !== 'nama' ? 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]' : ''}`}>
-                        <FontAwesomeIcon icon={icon} className="text-[9px]" />
+                        {(() => {
+                            const IconComp = icon
+                            return <IconComp className="w-3 h-3" />
+                        })()}
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className={`text-[9px] font-black uppercase tracking-tight truncate 
@@ -191,7 +160,7 @@ export default function RaportExportModal({
             onClose={onClose}
             title="Export Data Raport"
             description="Cadangkan, backup, atau cetak massal data raport bulanan santri ke format XLS, CSV, PDF, maupun ZIP."
-            icon={faFileExport}
+            icon={Download}
             iconBg="bg-indigo-500/10"
             iconColor="text-indigo-600"
             size="lg"
@@ -222,7 +191,7 @@ export default function RaportExportModal({
                                     style={{ filter: 'drop-shadow(0 0 4px var(--color-primary))' }}
                                 ></div>
                                 <div className="absolute inset-0 m-auto w-10 h-10 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)]/60 flex items-center justify-center shadow-sm z-10">
-                                    <FontAwesomeIcon icon={faFileExport} className="text-[var(--color-primary)] text-sm animate-pulse" />
+                                    <Download className="w-5 h-5 text-[var(--color-primary)] animate-pulse" />
                                 </div>
                             </div>
                             <div className="flex flex-col items-center">
@@ -246,9 +215,9 @@ export default function RaportExportModal({
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">1 — Jangkauan Data Raport</p>
                         <div className="grid grid-cols-3 gap-2.5">
                             {[
-                                { val: 'filtered', label: 'Kelas Aktif', desc: activeClassName || 'Pilih kelas dulu', icon: faSliders, disabled: !activeClassName },
-                                { val: 'selected', label: 'Dipilih', desc: `${selectedStudentIds.length} santri`, icon: faCheckCircle, disabled: selectedStudentIds.length === 0 },
-                                { val: 'all', label: 'Semua Kelas', desc: 'Backup seluruh kelas', icon: faUsers },
+                                { val: 'filtered', label: 'Kelas Aktif', desc: activeClassName || 'Pilih kelas dulu', icon: Sliders, disabled: !activeClassName },
+                                { val: 'selected', label: 'Dipilih', desc: `${selectedStudentIds.length} santri`, icon: CheckCircle2, disabled: selectedStudentIds.length === 0 },
+                                { val: 'all', label: 'Semua Kelas', desc: 'Backup seluruh kelas', icon: Users },
                             ].map(({ val, label, desc, icon, disabled }) => (
                                 <button
                                     key={val}
@@ -263,7 +232,10 @@ export default function RaportExportModal({
                                 >
                                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 transition-all 
                                         ${exportScope === val ? 'bg-[var(--color-primary)] text-white shadow-lg' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:bg-[var(--color-primary)]/10'}`}>
-                                        <FontAwesomeIcon icon={icon} className="text-xs" />
+                                        {(() => {
+                                            const IconComp = icon
+                                            return <IconComp className="w-4 h-4" />
+                                        })()}
                                     </div>
                                     <div className="text-xs font-black text-[var(--color-text)] mb-0.5">{label}</div>
                                     <div className="text-[9px] font-bold text-[var(--color-text-muted)] leading-tight truncate">{desc}</div>
@@ -285,7 +257,7 @@ export default function RaportExportModal({
                         {/* Presets Grid */}
                         <div className="flex flex-col gap-2 p-3 bg-[var(--color-surface-alt)]/40 rounded-2xl border border-[var(--color-border)]/50">
                             <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider text-[var(--color-text-muted)] opacity-60">
-                                <FontAwesomeIcon icon={faTags} className="text-[9px]" />
+                                <Tags className="w-3.5 h-3.5" />
                                 <span>Pilih Paket Kolom (Preset)</span>
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -343,7 +315,7 @@ export default function RaportExportModal({
                                 className={`px-4 py-3 rounded-xl border transition-all flex items-center gap-2 text-xs font-black
                                     ${advancedOpen ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40'}`}
                             >
-                                <FontAwesomeIcon icon={faGear} className={advancedOpen ? 'animate-spin-slow' : ''} />
+                                <Settings className={`w-4 h-4 ${advancedOpen ? 'animate-spin-slow' : ''}`} />
                                 Opsi
                             </button>
                         </div>
@@ -352,7 +324,7 @@ export default function RaportExportModal({
                             <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5">
-                                        <FontAwesomeIcon icon={faHeading} />
+                                        <Heading className="w-3.5 h-3.5" />
                                         Sertakan Baris Header
                                     </label>
                                     <div className="flex gap-1 bg-[var(--color-surface)] p-1 rounded-lg border border-[var(--color-border)]">
@@ -378,7 +350,7 @@ export default function RaportExportModal({
                             {[
                                 {
                                     label: 'Excel',
-                                    icon: faFileExcel,
+                                    icon: FileSpreadsheet,
                                     desc: '.xlsx',
                                     onClick: () => {
                                         if (exportScope === 'all') {
@@ -394,7 +366,7 @@ export default function RaportExportModal({
                                 },
                                 {
                                     label: 'CSV',
-                                    icon: faFileCsv,
+                                    icon: FileText,
                                     desc: 'Universal',
                                     onClick: () => handleExportCSV(exportScope, exportOptions),
                                     color: 'hover:border-slate-400 hover:bg-slate-50 text-slate-700',
@@ -404,7 +376,7 @@ export default function RaportExportModal({
                                 },
                                 {
                                     label: 'ZIP PDF',
-                                    icon: faFileZipper,
+                                    icon: FileArchive,
                                     desc: 'PDF Kartu Raport',
                                     onClick: () => handleExportZip(exportScope),
                                     color: 'hover:border-teal-400 hover:bg-teal-50 text-teal-700',
@@ -414,7 +386,7 @@ export default function RaportExportModal({
                                 },
                                 {
                                     label: 'Cetak Raport',
-                                    icon: faPrint,
+                                    icon: Printer,
                                     desc: 'Cetak Massal',
                                     onClick: () => handlePrintAll(exportScope),
                                     color: 'hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700',
@@ -431,7 +403,10 @@ export default function RaportExportModal({
                                     className={`relative group h-24 rounded-2xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 ${color}`}
                                 >
                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 transition-transform group-hover:scale-110 ${iconColor} bg-[var(--color-surface-alt)]`}>
-                                        <FontAwesomeIcon icon={icon} className="text-xl" />
+                                        {(() => {
+                                            const IconComp = icon
+                                            return <IconComp className="w-5 h-5" />
+                                        })()}
                                     </div>
                                     <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
                                     <span className="text-[8px] font-bold opacity-60 uppercase">{desc}</span>
@@ -442,7 +417,7 @@ export default function RaportExportModal({
 
                     {exportColumns.length === 0 && (
                         <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-red-500/5 border border-red-500/10 text-red-600 text-xs font-black uppercase tracking-tight animate-pulse">
-                            <FontAwesomeIcon icon={faTriangleExclamation} />
+                            <AlertTriangle className="w-4 h-4" />
                             Pilih minimal satu kolom untuk melanjutkan
                         </div>
                     )}
