@@ -33,62 +33,63 @@ import {
     faCheckSquare
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '@shared/components/Modal'
+import { useLanguage } from '@context/Language'
 import { buildPrintHTML, openPrintWindow } from '@shared/utils/printTemplate'
 
 // Column definitions for each dataset
 const DATASETS = {
     plotting: {
-        label: 'Plotting Kamar',
+        labelKey: 'dorms.tabPlotting',
         icon: faBed,
         colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/30',
         columns: [
-            { key: 'name', label: 'Nama Santri', icon: faUser },
-            { key: 'class', label: 'Kelas', icon: faSchool },
-            { key: 'gender', label: 'Jenis Kelamin', icon: faVenusMars },
-            { key: 'room', label: 'Kamar', icon: faHome },
-            { key: 'building', label: 'Gedung', icon: faWarehouse },
-            { key: 'status', label: 'Status Plotting', icon: faCheckSquare }
+            { key: 'name', labelKey: 'dorms.plotting.thSantri', icon: faUser },
+            { key: 'class', labelKey: 'dorms.plotting.class', icon: faSchool },
+            { key: 'gender', labelKey: 'dorms.plotting.gender', icon: faVenusMars },
+            { key: 'room', labelKey: 'dorms.plotting.dorm', icon: faHome },
+            { key: 'building', labelKey: 'dorms.plotting.building', icon: faWarehouse },
+            { key: 'status', labelKey: 'dorms.plotting.thStatus', icon: faCheckSquare }
         ],
         presets: [
-            { id: 'all', label: 'Preset Lengkap', cols: ['name', 'class', 'gender', 'room', 'building', 'status'] },
-            { id: 'summary', label: 'Preset Ringkasan', cols: ['name', 'class', 'room'] }
+            { id: 'all', labelKey: 'dorms.export.presetComplete', cols: ['name', 'class', 'gender', 'room', 'building', 'status'] },
+            { id: 'summary', labelKey: 'dorms.export.presetSummary', cols: ['name', 'class', 'room'] }
         ]
     },
     cleanliness: {
-        label: 'Audit Kebersihan',
+        labelKey: 'dorms.export.datasetCleanliness',
         icon: faBroom,
         colorClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30',
         columns: [
-            { key: 'room', label: 'Kamar', icon: faHome },
-            { key: 'score', label: 'Skor Rata-rata', icon: faStar },
-            { key: 'rating', label: 'Predikat', icon: faSliders },
-            { key: 'aspect_kerapian', label: 'Aspek Kerapian', icon: faCheckCircle },
-            { key: 'aspect_kebersihan', label: 'Aspek Kebersihan', icon: faCheckCircle },
-            { key: 'aspect_keharuman', label: 'Aspek Keharuman', icon: faCheckCircle },
-            { key: 'date', label: 'Tanggal Audit', icon: faCalendarAlt },
-            { key: 'notes', label: 'Catatan', icon: faFileLines }
+            { key: 'room', labelKey: 'dorms.plotting.dorm', icon: faHome },
+            { key: 'score', labelKey: 'dorms.export.scoreAverage', icon: faStar },
+            { key: 'rating', labelKey: 'dorms.export.predicate', icon: faSliders },
+            { key: 'aspect_kerapian', labelKey: 'dorms.export.aspectKerapian', icon: faCheckCircle },
+            { key: 'aspect_kebersihan', labelKey: 'dorms.export.aspectKebersihan', icon: faCheckCircle },
+            { key: 'aspect_keharuman', labelKey: 'dorms.export.aspectKeharuman', icon: faCheckCircle },
+            { key: 'date', labelKey: 'dorms.cleanliness.dateLabel', icon: faCalendarAlt },
+            { key: 'notes', labelKey: 'dorms.musyrif.notes', icon: faFileLines }
         ],
         presets: [
-            { id: 'all', label: 'Preset Lengkap', cols: ['room', 'score', 'rating', 'aspect_kerapian', 'aspect_kebersihan', 'aspect_keharuman', 'date', 'notes'] },
-            { id: 'summary', label: 'Preset Ringkasan', cols: ['room', 'score', 'rating', 'date'] }
+            { id: 'all', labelKey: 'dorms.export.presetComplete', cols: ['room', 'score', 'rating', 'aspect_kerapian', 'aspect_kebersihan', 'aspect_keharuman', 'date', 'notes'] },
+            { id: 'summary', labelKey: 'dorms.export.presetSummary', cols: ['room', 'score', 'rating', 'date'] }
         ]
     },
     inventory: {
-        label: 'Inventaris Kamar',
+        labelKey: 'dorms.export.datasetInventory',
         icon: faBoxOpen,
         colorClass: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/30',
         columns: [
-            { key: 'dorm', label: 'Kamar', icon: faHome },
-            { key: 'item', label: 'Nama Item', icon: faClipboardList },
-            { key: 'total', label: 'Total Item', icon: faHashtag },
-            { key: 'good', label: 'Kondisi Baik', icon: faCheckCircle },
-            { key: 'damaged', label: 'Kondisi Rusak', icon: faTriangleExclamation },
-            { key: 'notes', label: 'Catatan', icon: faFileLines },
-            { key: 'last_checked', label: 'Terakhir Diperiksa', icon: faCalendarAlt }
+            { key: 'dorm', labelKey: 'dorms.plotting.dorm', icon: faHome },
+            { key: 'item', labelKey: 'dorms.export.itemName', icon: faClipboardList },
+            { key: 'total', labelKey: 'dorms.export.totalItem', icon: faHashtag },
+            { key: 'good', labelKey: 'dorms.export.conditionGood', icon: faCheckCircle },
+            { key: 'damaged', labelKey: 'dorms.export.conditionDamaged', icon: faTriangleExclamation },
+            { key: 'notes', labelKey: 'dorms.musyrif.notes', icon: faFileLines },
+            { key: 'last_checked', labelKey: 'dorms.export.lastChecked', icon: faCalendarAlt }
         ],
         presets: [
-            { id: 'all', label: 'Preset Lengkap', cols: ['dorm', 'item', 'total', 'good', 'damaged', 'notes', 'last_checked'] },
-            { id: 'summary', label: 'Preset Ringkasan', cols: ['dorm', 'item', 'total', 'good', 'damaged'] }
+            { id: 'all', labelKey: 'dorms.export.presetComplete', cols: ['dorm', 'item', 'total', 'good', 'damaged', 'notes', 'last_checked'] },
+            { id: 'summary', labelKey: 'dorms.export.presetSummary', cols: ['dorm', 'item', 'total', 'good', 'damaged'] }
         ]
     }
 }
@@ -104,6 +105,7 @@ export default function DormsExportModal({
     selectedIds = [],
     addToast
 }) {
+    const { t, tNum, language } = useLanguage()
     const [dataset, setDataset] = useState(defaultDataset) // 'plotting' | 'cleanliness' | 'inventory'
     const [exportScope, setExportScope] = useState('all') // 'all' | 'assigned' | 'unassigned' | 'selected'
     const [exportColumns, setExportColumns] = useState([])
@@ -126,10 +128,14 @@ export default function DormsExportModal({
         if (isOpen) {
             const defCols = DATASETS[dataset].presets[0].cols
             setExportColumns(defCols)
-            const prefix = dataset === 'plotting' ? 'Plotting_Kamar' : dataset === 'cleanliness' ? 'Audit_Kebersihan' : 'Inventaris_Kamar'
+            const prefix = dataset === 'plotting'
+                ? t('dorms.tabPlotting').replace(/\s+/g, '_')
+                : dataset === 'cleanliness'
+                    ? t('dorms.export.datasetCleanliness').replace(/\s+/g, '_')
+                    : t('dorms.export.datasetInventory').replace(/\s+/g, '_')
             setFileName(`${prefix}_${new Date().toISOString().slice(0, 10)}`)
         }
-    }, [isOpen, dataset])
+    }, [isOpen, dataset, t])
 
     useEffect(() => {
         if (exportScope === 'selected' && selectedIds.length === 0) {
@@ -194,37 +200,40 @@ export default function DormsExportModal({
         return rawList.map(item => {
             const row = {}
             exportColumns.forEach(key => {
+                const colDef = currentDatasetDef.columns.find(c => c.key === key)
+                const headerLabel = colDef ? t(colDef.labelKey) : key
+
                 if (dataset === 'plotting') {
                     const roomName = item.metadata?.kamar || ''
                     const dormObj = roomName ? dorms.find(d => d.id === roomName) : null
-                    if (key === 'name') row['Nama Santri'] = item.name
-                    if (key === 'class') row['Kelas'] = item.classes?.name || '—'
-                    if (key === 'gender') row['Jenis Kelamin'] = item.gender === 'putra' ? 'Putra' : item.gender === 'putri' ? 'Putri' : '—'
-                    if (key === 'room') row['Kamar'] = roomName || '—'
-                    if (key === 'building') row['Gedung'] = dormObj?.building || '—'
-                    if (key === 'status') row['Status Plotting'] = roomName ? 'Terplot' : 'Belum Terplot'
+                    if (key === 'name') row[headerLabel] = item.name
+                    if (key === 'class') row[headerLabel] = item.classes?.name || '—'
+                    if (key === 'gender') row[headerLabel] = item.gender === 'putra' ? t('dorms.export.genderPutra') : item.gender === 'putri' ? t('dorms.export.genderPutri') : '—'
+                    if (key === 'room') row[headerLabel] = roomName || '—'
+                    if (key === 'building') row[headerLabel] = dormObj?.building || '—'
+                    if (key === 'status') row[headerLabel] = roomName ? t('dorms.export.statusAssigned') : t('dorms.export.statusUnassigned')
                 } else if (dataset === 'cleanliness') {
-                    if (key === 'room') row['Kamar'] = item.room || '—'
-                    if (key === 'score') row['Skor Rata-rata'] = item.score ?? 0
-                    if (key === 'rating') row['Predikat'] = item.rating || '—'
-                    if (key === 'aspect_kerapian') row['Aspek Kerapian'] = item.aspects?.kerapian ?? 0
-                    if (key === 'aspect_kebersihan') row['Aspek Kebersihan'] = item.aspects?.kebersihan ?? 0
-                    if (key === 'aspect_keharuman') row['Aspek Keharuman'] = item.aspects?.keharuman ?? 0
-                    if (key === 'date') row['Tanggal Audit'] = item.date || '—'
-                    if (key === 'notes') row['Catatan'] = item.notes || '—'
+                    if (key === 'room') row[headerLabel] = item.room || '—'
+                    if (key === 'score') row[headerLabel] = item.score ?? 0
+                    if (key === 'rating') row[headerLabel] = item.rating ? t(`dorms.cleanliness.predicate`).replace('{rating}', item.rating) : '—'
+                    if (key === 'aspect_kerapian') row[headerLabel] = item.aspects?.kerapian ?? 0
+                    if (key === 'aspect_kebersihan') row[headerLabel] = item.aspects?.kebersihan ?? 0
+                    if (key === 'aspect_keharuman') row[headerLabel] = item.aspects?.keharuman ?? 0
+                    if (key === 'date') row[headerLabel] = item.date || '—'
+                    if (key === 'notes') row[headerLabel] = item.notes || '—'
                 } else if (dataset === 'inventory') {
-                    if (key === 'dorm') row['Kamar'] = item.dorm_id || '—'
-                    if (key === 'item') row['Nama Item'] = item.item_name || '—'
-                    if (key === 'total') row['Total Item'] = item.total_quantity ?? 0
-                    if (key === 'good') row['Kondisi Baik'] = item.good_condition_count ?? 0
-                    if (key === 'damaged') row['Kondisi Rusak'] = item.damaged_condition_count ?? 0
-                    if (key === 'notes') row['Catatan'] = item.notes || '—'
-                    if (key === 'last_checked') row['Terakhir Diperiksa'] = item.last_checked_at ? new Date(item.last_checked_at).toLocaleDateString('id-ID') : '—'
+                    if (key === 'dorm') row[headerLabel] = item.dorm_id || '—'
+                    if (key === 'item') row[headerLabel] = item.item_name || '—'
+                    if (key === 'total') row[headerLabel] = item.total_quantity ?? 0
+                    if (key === 'good') row[headerLabel] = item.good_condition_count ?? 0
+                    if (key === 'damaged') row[headerLabel] = item.damaged_condition_count ?? 0
+                    if (key === 'notes') row[headerLabel] = item.notes || '—'
+                    if (key === 'last_checked') row[headerLabel] = item.last_checked_at ? new Date(item.last_checked_at).toLocaleDateString(language === 'id' ? 'id-ID' : language === 'ar' ? 'ar-EG' : 'en-US') : '—'
                 }
             })
             return row
         })
-    }, [dataset, exportScope, students, audits, inventories, selectedIds, exportColumns, dorms])
+    }, [dataset, exportScope, students, audits, inventories, selectedIds, exportColumns, dorms, t, language, currentDatasetDef])
 
     const downloadBlob = useCallback((blob, filename) => {
         const link = document.createElement('a')
@@ -239,54 +248,55 @@ export default function DormsExportModal({
         try {
             const Papa = (await import('papaparse')).default
             const rows = getExportData()
-            if (!rows.length) { addToast('Tidak ada data asrama untuk diekspor', 'warning'); return }
+            if (!rows.length) { addToast(t('dorms.export.errNoDormData'), 'warning'); return }
             const csv = Papa.unparse(rows, { header: options.includeHeader !== false })
             downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `${filename || 'export_asrama'}.csv`)
-            addToast(`Berhasil mengekspor ${rows.length} baris data ke CSV`, 'success')
+            addToast(t('dorms.export.exportCsvSuccess').replace('{count}', tNum(rows.length)), 'success')
         } catch (e) {
             console.error(e)
-            addToast('Gagal mengekspor data ke CSV', 'error')
+            addToast(t('dorms.export.exportCsvFailed'), 'error')
         } finally { setExporting(false) }
-    }, [getExportData, downloadBlob, addToast])
+    }, [getExportData, downloadBlob, addToast, t, tNum])
 
     const handleExportExcel = useCallback(async (filename) => {
         setExporting(true)
         try {
             const XLSX = await import('xlsx')
             const data = getExportData()
-            if (!data.length) { addToast('Tidak ada data asrama untuk diekspor', 'warning'); return }
+            if (!data.length) { addToast(t('dorms.export.errNoDormData'), 'warning'); return }
             const ws = XLSX.utils.json_to_sheet(data)
             ws['!cols'] = Object.keys(data[0]).map(k => ({ wch: Math.max(k.length, 14) }))
             const wb = XLSX.utils.book_new()
-            XLSX.utils.book_append_sheet(wb, ws, currentDatasetDef.label)
+            XLSX.utils.book_append_sheet(wb, ws, t(currentDatasetDef.labelKey))
             const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
             downloadBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${filename || 'export_asrama'}.xlsx`)
-            addToast(`Berhasil mengekspor ${data.length} baris data ke Excel`, 'success')
+            addToast(t('dorms.export.exportExcelSuccess').replace('{count}', tNum(data.length)), 'success')
         } catch (e) {
             console.error(e)
-            addToast('Gagal mengekspor data ke Excel', 'error')
+            addToast(t('dorms.export.exportExcelFailed'), 'error')
         } finally { setExporting(false) }
-    }, [getExportData, downloadBlob, addToast, currentDatasetDef])
+    }, [getExportData, downloadBlob, addToast, currentDatasetDef, t, tNum])
 
     const handleExportPDF = useCallback(async (filename, options = {}) => {
         setExporting(true)
         try {
             const allRows = getExportData()
-            if (!allRows.length) { addToast('Tidak ada data asrama untuk diekspor', 'warning'); return }
+            if (!allRows.length) { addToast(t('dorms.export.errNoDormData'), 'warning'); return }
             
             let stats = []
-            let docBadge = 'ASRAMA'
-            let title = 'Laporan Asrama'
+            let docBadge = t('dorms.export.dorms').toUpperCase()
+            let title = t('dorms.export.pdfReport')
             let subtitle = ''
-            let totalLabel = 'Total'
-            let secondarySignatureTitle = 'Tim Sarpras'
+            let totalLabel = t('dorms.export.totalItem')
+            let secondarySignatureTitle = t('dorms.export.teamSarpras')
 
             if (dataset === 'plotting') {
-                docBadge = 'PLOTTING KAMAR'
-                title = 'Laporan Plotting Kamar Asrama'
-                subtitle = `Cakupan: ${exportScope === 'assigned' ? 'Sudah Terplot' : exportScope === 'unassigned' ? 'Belum Terplot' : exportScope === 'selected' ? 'Pilihan Terpilih' : 'Semua Santri'}`
-                totalLabel = 'Total Santri'
-                secondarySignatureTitle = 'Staff Kesantrian'
+                docBadge = t('dorms.tabPlottingShort').toUpperCase()
+                title = t('dorms.export.pdfPlottingReport')
+                const scopeLabel = exportScope === 'assigned' ? t('dorms.export.scopeAssigned') : exportScope === 'unassigned' ? t('dorms.export.scopeUnassigned') : exportScope === 'selected' ? t('dorms.export.scopeSelected') : t('dorms.export.scopeAll')
+                subtitle = `${t('dorms.plotting.filter')}: ${scopeLabel}`
+                totalLabel = t('dorms.export.totalStudents')
+                secondarySignatureTitle = t('dorms.export.staffKesantrian')
                 
                 const totalVal = students.length
                 const assignedVal = students.filter(s => s.metadata?.kamar).length
@@ -294,17 +304,17 @@ export default function DormsExportModal({
                 const percentVal = totalVal ? Math.round((assignedVal / totalVal) * 100) : 0
                 
                 stats = [
-                    { label: 'Total Santri', value: totalVal, type: 'total' },
-                    { label: 'Sudah Diplot', value: assignedVal, type: 'prestasi', description: 'telah terplotting' },
-                    { label: 'Belum Diplot', value: unassignedVal, type: 'pelanggaran', description: 'belum terplotting' },
-                    { label: 'Persentase', value: `${percentVal}%`, type: 'avg', description: 'santri terplot' }
+                    { label: t('dorms.export.totalStudents'), value: tNum(totalVal), type: 'total' },
+                    { label: t('dorms.export.statusAssigned'), value: tNum(assignedVal), type: 'prestasi', description: t('dorms.export.statusAssigned').toLowerCase() },
+                    { label: t('dorms.export.statusUnassigned'), value: tNum(unassignedVal), type: 'pelanggaran', description: t('dorms.export.statusUnassigned').toLowerCase() },
+                    { label: t('dorms.export.assignedPercentage'), value: `${tNum(percentVal)}%`, type: 'avg', description: t('dorms.export.percentageDescription') }
                 ]
             } else if (dataset === 'cleanliness') {
-                docBadge = 'AUDIT KEBERSIHAN'
-                title = 'Laporan Audit Kebersihan Asrama'
-                subtitle = 'Log Evaluasi & Penilaian Kebersihan Kamar'
-                totalLabel = 'Total Audit'
-                secondarySignatureTitle = 'Tim Sarpras'
+                docBadge = t('dorms.tabCleanlinessShort').toUpperCase()
+                title = t('dorms.export.pdfCleanlinessReport')
+                subtitle = t('dorms.export.cleanlinessLog')
+                totalLabel = t('dorms.export.totalAudits')
+                secondarySignatureTitle = t('dorms.export.teamSarpras')
                 
                 const totalVal = audits.length
                 const avgScore = audits.length ? (audits.reduce((acc, a) => acc + (a.score ?? 0), 0) / audits.length).toFixed(1) : 0
@@ -312,17 +322,17 @@ export default function DormsExportModal({
                 const badVal = audits.filter(a => (a.score ?? 0) < 60).length
                 
                 stats = [
-                    { label: 'Total Audit', value: totalVal, type: 'total' },
-                    { label: 'Rata-rata Skor', value: avgScore, type: 'avg', description: 'skor rata-rata' },
-                    { label: 'Predikat Baik', value: goodVal, type: 'prestasi', description: 'skor ≥ 80' },
-                    { label: 'Perlu Tindak Lanjut', value: badVal, type: 'pelanggaran', description: 'skor < 60' }
+                    { label: t('dorms.export.totalAudits'), value: tNum(totalVal), type: 'total' },
+                    { label: t('dorms.export.scoreAverage'), value: tNum(avgScore), type: 'avg', description: t('dorms.export.scoreAverage').toLowerCase() },
+                    { label: t('dorms.export.ratingGood'), value: tNum(goodVal), type: 'prestasi', description: t('dorms.export.goodScoreDesc') },
+                    { label: t('dorms.export.needFollowUp'), value: tNum(badVal), type: 'pelanggaran', description: t('dorms.export.needFollowUpDesc') }
                 ]
             } else if (dataset === 'inventory') {
-                docBadge = 'INVENTARIS KAMAR'
-                title = 'Laporan Inventaris Kamar Asrama'
-                subtitle = 'Log Penilaian & Kondisi Barang Kamar'
-                totalLabel = 'Total Item'
-                secondarySignatureTitle = 'Tim Sarpras'
+                docBadge = t('dorms.export.datasetInventory').toUpperCase()
+                title = t('dorms.export.pdfInventoryReport')
+                subtitle = t('dorms.export.inventoryLog')
+                totalLabel = t('dorms.export.totalItem')
+                secondarySignatureTitle = t('dorms.export.teamSarpras')
                 
                 const totalItems = inventories.reduce((acc, i) => acc + (i.total_quantity ?? 0), 0)
                 const goodItems = inventories.reduce((acc, i) => acc + (i.good_condition_count ?? 0), 0)
@@ -330,10 +340,10 @@ export default function DormsExportModal({
                 const needFollowUp = inventories.filter(i => (i.damaged_condition_count ?? 0) > 0).length
                 
                 stats = [
-                    { label: 'Total Item', value: totalItems, type: 'total' },
-                    { label: 'Kondisi Baik', value: goodItems, type: 'prestasi' },
-                    { label: 'Kondisi Rusak', value: damagedItems, type: 'pelanggaran' },
-                    { label: 'Perlu Tindak Lanjut', value: needFollowUp, type: 'avg', description: 'kamar dengan item rusak' }
+                    { label: t('dorms.export.totalItem'), value: tNum(totalItems), type: 'total' },
+                    { label: t('dorms.export.conditionGood'), value: tNum(goodItems), type: 'prestasi' },
+                    { label: t('dorms.export.conditionDamaged'), value: tNum(damagedItems), type: 'pelanggaran' },
+                    { label: t('dorms.export.needFollowUp'), value: tNum(needFollowUp), type: 'avg', description: t('dorms.export.needFollowUpInventoryDesc') }
                 ]
             }
 
@@ -343,22 +353,22 @@ export default function DormsExportModal({
             const tableRowsHTML = allRows.map((r, i) => {
                 const cells = headerKeys.map(h => {
                     const val = r[h]
-                    if (val === 'Terplot' || val === 'Kondisi Baik') {
+                    if (val === t('dorms.export.statusAssigned') || val === t('dorms.export.conditionGood')) {
                         return `<td><span class="tag-status success">${val}</span></td>`
-                    } else if (val === 'Belum Terplot' || val === 'Kondisi Rusak') {
+                    } else if (val === t('dorms.export.statusUnassigned') || val === t('dorms.export.conditionDamaged')) {
                         return `<td><span class="tag-status warning">${val}</span></td>`
                     }
                     return `<td>${val ?? '—'}</td>`
                 }).join('')
-                return `<tr><td>${i + 1}</td>${cells}</tr>`
+                return `<tr><td>${tNum(i + 1)}</td>${cells}</tr>`
             }).join('')
 
-            const periodLabel = new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
-            const asramaLabel = 'Putra & Putri'
+            const periodLabel = new Date().toLocaleDateString(language === 'id' ? 'id-ID' : language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })
+            const asramaLabel = t('dorms.export.genderBoth')
             const infoStrip = [
-                { label: 'Periode', value: periodLabel },
-                { label: 'Asrama', value: asramaLabel },
-                { label: 'Penyusun', value: secondarySignatureTitle }
+                { label: t('dorms.export.period'), value: periodLabel },
+                { label: t('dorms.export.dorms'), value: asramaLabel },
+                { label: t('dorms.export.arranger'), value: secondarySignatureTitle }
             ]
 
             const html = buildPrintHTML({
@@ -373,8 +383,8 @@ export default function DormsExportModal({
                 infoStrip,
                 tableHeaders,
                 tableRowsHTML,
-                signaturePlace: 'Tanggul',
-                signatureTitle: 'Kepala Sekolah',
+                signaturePlace: t('dorms.export.signPlace'),
+                signatureTitle: t('dorms.export.headmaster'),
                 secondarySignatureTitle,
                 paperSize: options.orientation === 'portrait' ? 'A4 portrait' : 'A4 landscape',
                 colorPrimary: '#1a5c35',
@@ -382,18 +392,19 @@ export default function DormsExportModal({
             })
 
             openPrintWindow(html)
-            addToast(`Berhasil menyiapkan halaman cetak PDF`, 'success')
+            addToast(t('dorms.export.pdfPrepareSuccess'), 'success')
         } catch (e) {
             console.error(e)
-            addToast('Gagal memproses cetak PDF', 'error')
+            addToast(t('dorms.export.pdfPrepareFailed'), 'error')
         } finally {
             setExporting(false)
         }
-    }, [getExportData, addToast, dataset, exportScope, students, audits, inventories])
+    }, [getExportData, addToast, dataset, exportScope, students, audits, inventories, t, tNum, language])
 
-    const columnButtons = useMemo(() => currentDatasetDef.columns.map(({ key, label, icon }) => {
+    const columnButtons = useMemo(() => currentDatasetDef.columns.map(({ key, labelKey, icon }) => {
         const orderIdx = exportColumns.indexOf(key) + 1
         const isSelected = orderIdx > 0
+        const label = t(labelKey)
         return (
             <button
                 key={key}
@@ -405,7 +416,7 @@ export default function DormsExportModal({
                 `}
             >
                 <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all
-                    ${isSelected ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'}`}>
+                     ${isSelected ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'}`}>
                     <FontAwesomeIcon icon={icon} className="text-[9px]" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -413,12 +424,12 @@ export default function DormsExportModal({
                 </div>
                 {isSelected && (
                     <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-white text-[8px] font-black flex items-center justify-center shadow-md border border-white dark:border-[var(--color-surface)] animate-in zoom-in duration-200">
-                        {orderIdx}
+                        {tNum(orderIdx)}
                     </div>
                 )}
             </button>
         )
-    }), [currentDatasetDef, exportColumns])
+    }), [currentDatasetDef, exportColumns, t, tNum])
 
     if (!isOpen) return null
 
@@ -426,8 +437,8 @@ export default function DormsExportModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Ekspor Data Asrama"
-            description="Pilih jenis dataset, kolom, cakupan data, dan format file untuk diunduh."
+            title={t('dorms.export.title')}
+            description={t('dorms.export.description')}
             icon={faFileExport}
             iconBg="bg-amber-500/10"
             iconColor="text-amber-600"
@@ -441,7 +452,7 @@ export default function DormsExportModal({
                         onClick={onClose}
                         className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-surface-alt)] transition-all flex items-center justify-center"
                     >
-                        Tutup
+                        {t('dorms.export.cancel')}
                     </button>
                     <div className="flex-1" />
                 </div>
@@ -464,9 +475,9 @@ export default function DormsExportModal({
                                 </div>
                             </div>
                             <div className="flex flex-col items-center">
-                                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-[var(--color-primary)]">Mengekspor</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-[var(--color-primary)]">{t('dorms.export.exporting')}</span>
                                 <span className="text-[8px] font-extrabold text-[var(--color-text-muted)] uppercase tracking-widest mt-1.5 flex items-center gap-1">
-                                    Sedang memproses dokumen asrama
+                                    {t('dorms.export.processing')}
                                     <span className="inline-flex gap-0.5 items-center">
                                         <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '0ms' }}></span>
                                         <span className="w-1 h-1 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '150ms' }}></span>
@@ -481,7 +492,7 @@ export default function DormsExportModal({
                 <div className={`space-y-4 pb-2 transition-all duration-500 ${exporting ? 'blur-sm grayscale-[0.5] opacity-50 pointer-events-none' : ''}`}>
                     {/* Section 1: Select Dataset */}
                     <div className="space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">1 — Pilih Dataset</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">{t('dorms.export.stepDataset')}</p>
                         <div className="grid grid-cols-3 gap-2.5">
                             {Object.entries(DATASETS).map(([key, def]) => {
                                 const isActive = dataset === key
@@ -501,9 +512,13 @@ export default function DormsExportModal({
                                             <FontAwesomeIcon icon={def.icon} className="text-xs" />
                                         </div>
                                         <div>
-                                            <div className="text-[10px] font-black text-[var(--color-text)] leading-tight">{def.label}</div>
+                                            <div className="text-[10px] font-black text-[var(--color-text)] leading-tight">{t(def.labelKey)}</div>
                                             <div className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">
-                                                {key === 'plotting' ? `${students.length} santri` : key === 'cleanliness' ? `${audits.length} audit` : `${inventories.length} item`}
+                                                {key === 'plotting'
+                                                    ? `${tNum(students.length)}${t('dorms.suffixSantri')}`
+                                                    : key === 'cleanliness'
+                                                        ? `${tNum(audits.length)} ${t('dorms.cleanliness.reportsCount')}`
+                                                        : `${tNum(inventories.length)} ${t('dorms.inventory.unitPieces')}`}
                                             </div>
                                         </div>
                                     </button>
@@ -515,13 +530,13 @@ export default function DormsExportModal({
                     {/* Section 2: Scope (Plotting only) */}
                     {dataset === 'plotting' && (
                         <div className="space-y-3">
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">2 — Cakupan Data</p>
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">{t('dorms.export.stepScope')}</p>
                             <div className="grid grid-cols-4 gap-2.5">
                                 {[
-                                    { val: 'all', label: 'Semua Santri', desc: `${students.length} Santri`, icon: faUsers },
-                                    { val: 'assigned', label: 'Sudah Terplot', desc: `${students.filter(s => s.metadata?.kamar).length} Santri`, icon: faHome },
-                                    { val: 'unassigned', label: 'Belum Terplot', desc: `${students.filter(s => !s.metadata?.kamar).length} Santri`, icon: faSliders },
-                                    { val: 'selected', label: 'Pilihan UI', desc: `${selectedIds.length} Santri`, icon: faCheckCircle, disabled: selectedIds.length === 0 }
+                                    { val: 'all', label: t('dorms.export.scopeAll'), desc: `${tNum(students.length)}${t('dorms.suffixSantri')}`, icon: faUsers },
+                                    { val: 'assigned', label: t('dorms.export.scopeAssigned'), desc: `${tNum(students.filter(s => s.metadata?.kamar).length)}${t('dorms.suffixSantri')}`, icon: faHome },
+                                    { val: 'unassigned', label: t('dorms.export.scopeUnassigned'), desc: `${tNum(students.filter(s => !s.metadata?.kamar).length)}${t('dorms.suffixSantri')}`, icon: faSliders },
+                                    { val: 'selected', label: t('dorms.export.scopeSelected'), desc: `${tNum(selectedIds.length)}${t('dorms.suffixSantri')}`, icon: faCheckCircle, disabled: selectedIds.length === 0 }
                                 ].map(({ val, label, desc, icon, disabled }) => {
                                     const isActive = exportScope === val
                                     return (
@@ -555,10 +570,10 @@ export default function DormsExportModal({
                     {/* Section 3: Columns */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">3 — Kolom &amp; Presets</p>
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">{t('dorms.export.stepColumns')}</p>
                             <div className="flex gap-2">
-                                <button type="button" onClick={() => handlePresetClick(currentDatasetDef.columns.map(c => c.key))} className="text-[9px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest bg-[var(--color-primary)]/5 px-2 py-1 rounded-lg transition-colors">Semua Kolom</button>
-                                <button type="button" onClick={() => handlePresetClick(currentDatasetDef.presets[1].cols)} className="text-[9px] font-black text-rose-500 hover:underline uppercase tracking-widest bg-rose-500/5 px-2 py-1 rounded-lg transition-colors">Reset</button>
+                                <button type="button" onClick={() => handlePresetClick(currentDatasetDef.columns.map(c => c.key))} className="text-[9px] font-black text-[var(--color-primary)] hover:underline uppercase tracking-widest bg-[var(--color-primary)]/5 px-2 py-1 rounded-lg transition-colors">{t('dorms.export.allColumns')}</button>
+                                <button type="button" onClick={() => handlePresetClick(currentDatasetDef.presets[1].cols)} className="text-[9px] font-black text-rose-500 hover:underline uppercase tracking-widest bg-rose-500/5 px-2 py-1 rounded-lg transition-colors">{t('dorms.export.reset')}</button>
                             </div>
                         </div>
 
@@ -566,7 +581,7 @@ export default function DormsExportModal({
                         <div className="flex flex-col gap-2 p-3 bg-[var(--color-surface-alt)]/40 rounded-2xl border border-[var(--color-border)]/50">
                             <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider text-[var(--color-text-muted)] opacity-60">
                                 <FontAwesomeIcon icon={faTags} className="text-[9px]" />
-                                <span>Pilih Cepat Preset</span>
+                                <span>{t('dorms.export.quickPreset')}</span>
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {currentDatasetDef.presets.map(preset => {
@@ -581,7 +596,7 @@ export default function DormsExportModal({
                                                     ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-sm shadow-[var(--color-primary)]/20'
                                                     : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]'}`}
                                         >
-                                            {preset.label}
+                                            {t(preset.labelKey)}
                                         </button>
                                     )
                                 })}
@@ -594,7 +609,7 @@ export default function DormsExportModal({
                                 <div className="w-full border-t border-dashed border-[var(--color-border)]/65"></div>
                             </div>
                             <div className="relative bg-[var(--color-surface)] px-3 text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-50">
-                                Pilih Kustom Kolom (Tekan untuk Mengurutkan)
+                                {t('dorms.export.customColumns')}
                             </div>
                         </div>
 
@@ -605,14 +620,14 @@ export default function DormsExportModal({
 
                     {/* Section 4: Filename & Advanced */}
                     <div className="space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">4 — Konfigurasi Nama &amp; Opsi</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">{t('dorms.export.stepFilename')}</p>
                         <div className="flex flex-col sm:flex-row gap-3">
                             <div className="flex-1 relative">
                                 <input
                                     type="text"
                                     value={fileName}
                                     onChange={(e) => setFileName(e.target.value)}
-                                    placeholder="Masukkan nama file ekspor..."
+                                    placeholder={t('dorms.export.placeholderFilename')}
                                     className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-xs font-bold focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all placeholder:opacity-50 pr-20"
                                 />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-[var(--color-border)] text-[8px] font-black uppercase text-[var(--color-text-muted)]">
@@ -626,7 +641,7 @@ export default function DormsExportModal({
                                     ${advancedOpen ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/40'}`}
                             >
                                 <FontAwesomeIcon icon={faGear} className={advancedOpen ? 'animate-spin-slow' : ''} />
-                                Opsi Lanjutan
+                                {t('dorms.export.advanced')}
                             </button>
                         </div>
 
@@ -635,10 +650,10 @@ export default function DormsExportModal({
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5">
                                         <FontAwesomeIcon icon={faHeading} />
-                                        Sertakan Baris Judul Kolom (Header)
+                                        {t('dorms.export.includeHeader')}
                                     </label>
                                     <div className="flex gap-1 bg-[var(--color-surface)] p-1 rounded-lg border border-[var(--color-border)]">
-                                        {[{ v: true, l: 'Ya' }, { v: false, l: 'Tidak' }].map(opt => (
+                                        {[{ v: true, l: t('dorms.export.yes') }, { v: false, l: t('dorms.export.no') }].map(opt => (
                                             <button
                                                 key={String(opt.v)}
                                                 type="button"
@@ -653,12 +668,12 @@ export default function DormsExportModal({
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1.5">
                                         <FontAwesomeIcon icon={faArrowsLeftRight} />
-                                        Orientasi PDF
+                                        {t('dorms.export.pdfOrientation')}
                                     </label>
                                     <div className="flex gap-1 bg-[var(--color-surface)] p-1 rounded-lg border border-[var(--color-border)]">
                                         {[
-                                            { v: 'landscape', l: 'Landscape', icon: faArrowsLeftRight },
-                                            { v: 'portrait', l: 'Portrait', icon: faArrowsUpDown }
+                                            { v: 'landscape', l: t('dorms.export.landscape'), icon: faArrowsLeftRight },
+                                            { v: 'portrait', l: t('dorms.export.portrait'), icon: faArrowsUpDown }
                                         ].map(opt => (
                                             <button
                                                 key={opt.v}
@@ -676,11 +691,9 @@ export default function DormsExportModal({
                         )}
                     </div>
 
-
-
                     {/* Section 5: Mulai Ekspor */}
                     <div className="space-y-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">5 — Mulai Ekspor</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">{t('dorms.export.stepExport')}</p>
                         <div className="grid grid-cols-3 gap-2.5">
                             {[
                                 { label: 'CSV', icon: faFileCsv, desc: 'Universal', onClick: () => handleExportCSV(fileName, exportOptions), color: 'hover:border-slate-400 hover:bg-slate-50', iconColor: 'text-slate-500' },
@@ -707,14 +720,14 @@ export default function DormsExportModal({
                     {exportColumns.length === 0 && (
                         <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-red-500/5 border border-red-500/10 text-red-600 text-xs font-black uppercase tracking-tight animate-pulse">
                             <FontAwesomeIcon icon={faTriangleExclamation} />
-                            Wajib memilih minimal 1 kolom untuk mengekspor data!
+                            {t('dorms.export.errNoColumns')}
                         </div>
                     )}
 
                     {estimatedCount === 0 && (
                         <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-600 text-[10px] font-black uppercase tracking-tight">
                             <FontAwesomeIcon icon={faTriangleExclamation} />
-                            Tidak ada rekod data untuk cakupan atau filter yang dipilih!
+                            {t('dorms.export.errNoData')}
                         </div>
                     )}
                 </div>

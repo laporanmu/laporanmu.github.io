@@ -873,28 +873,24 @@ export default function CounselingPage() {
                         icon={HeartHandshake}
                         label="Total Sesi Konseling"
                         value={stats.total}
-                        subValue="Seluruh catatan sejarah santri"
                         color="indigo"
                     />
                     <StatCard
                         icon={CheckCircle2}
                         label="Sesi Selesai (Solusi)"
                         value={stats.completed}
-                        subValue={`${stats.total ? Math.round((stats.completed / stats.total) * 100) : 0}% Tingkat Penyelesaian`}
                         color="emerald"
                     />
                     <StatCard
                         icon={Clock}
                         label="Pembinaan Berjalan"
                         value={stats.active}
-                        subValue="Dalam pendampingan berkala"
                         color="amber"
                     />
                     <StatCard
                         icon={AlertTriangle}
                         label="Urgent (Tingkat Tinggi)"
                         value={stats.highUrgency}
-                        subValue="Butuh mediasi cepat / wali santri"
                         color="rose"
                     />
                 </StatsCarousel>

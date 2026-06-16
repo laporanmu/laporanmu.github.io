@@ -455,31 +455,23 @@ export default function BehaviorPage() {
                 {/* ── STATS OVERVIEW (Top Level) ── */}
                 {activeTab === 'reports' ? (
                     <StatsCarousel count={4} cols={4}>
-                        <StatCard key="total" icon={ClipboardList} label={tp('total')} value={stats.total} color="primary"
-                            subValue={tp('statTotalSub').replace('{count}', students.length)} />
+                        <StatCard key="total" icon={ClipboardList} label={tp('total')} value={stats.total} color="primary" />
                         <StatCard key="positive" icon={CheckCircle2} label={tp('positive')} value={stats.positive} color="emerald"
-                            subValue={`${stats.total > 0 ? Math.round((stats.positive / stats.total) * 100) : 0}% ${tp('statRatio')}`}
                             onClick={() => setFilterType(prev => prev === 'positive' ? '' : 'positive')}
                             className={filterType === 'positive' ? 'ring-2 ring-[var(--color-primary)]/30' : ''} />
                         <StatCard key="negative" icon={AlertCircle} label={tp('negative')} value={stats.negative} color="rose"
-                            subValue={`${stats.total > 0 ? Math.round((stats.negative / stats.total) * 100) : 0}% ${tp('statRatio')}`}
                             onClick={() => setFilterType(prev => prev === 'negative' ? '' : 'negative')}
                             className={filterType === 'negative' ? 'ring-2 ring-[var(--color-primary)]/30' : ''} />
                         <StatCard key="today" icon={Calendar} label={tp('today')} value={stats.today} color="amber"
-                            subValue={`${tp('yesterday')}: ${stats.yesterday}`}
                             trend={trendValue}
                             trendUp={trendUp} />
                     </StatsCarousel>
                 ) : (
                     <StatsCarousel count={4} cols={4}>
-                        <StatCard key="total-rules" icon={Shield} label={tp('rulesTotal')} value={rulesStats.total} color="primary"
-                            subValue={tp('rulesTotalSub')} />
-                        <StatCard key="violations-rules" icon={Gavel} label={tp('rulesViolations')} value={rulesStats.violations} color="rose"
-                            subValue={tp('rulesViolationsSub')} />
-                        <StatCard key="achievements-rules" icon={Trophy} label={tp('rulesAchievements')} value={rulesStats.achievements} color="emerald"
-                            subValue={tp('rulesAchievementsSub')} />
-                        <StatCard key="avg-rules" icon={Info} label={tp('rulesAvg')} value={rulesStats.avgPoints} color="amber"
-                            subValue={tp('rulesAvgSub')} />
+                        <StatCard key="total-rules" icon={Shield} label={tp('rulesTotal')} value={rulesStats.total} color="primary" />
+                        <StatCard key="violations-rules" icon={Gavel} label={tp('rulesViolations')} value={rulesStats.violations} color="rose" />
+                        <StatCard key="achievements-rules" icon={Trophy} label={tp('rulesAchievements')} value={rulesStats.achievements} color="emerald" />
+                        <StatCard key="avg-rules" icon={Info} label={tp('rulesAvg')} value={rulesStats.avgPoints} color="amber" />
                     </StatsCarousel>
                 )}
 

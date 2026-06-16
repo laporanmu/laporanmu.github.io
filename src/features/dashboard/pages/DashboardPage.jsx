@@ -278,15 +278,13 @@ export default function DashboardPage() {
         window.print()
     }
 
-    // adapt ke StatCard kamu
     const STATS = useMemo(() => ([
         {
             icon: faUsers,
             label: 'Total Siswa',
             value: loading ? '…' : String(stats.totalStudents),
             subValue: stats.trendStudents,
-            borderColor: 'bg-indigo-500',
-            iconBg: 'bg-indigo-500/10 text-indigo-600',
+            color: 'indigo',
             onClick: () => navigate('/students')
         },
         {
@@ -294,7 +292,7 @@ export default function DashboardPage() {
             label: 'Laporan Hari Ini',
             value: loading ? '…' : String(stats.todayReports),
             subValue: stats.trendReports,
-            borderColor: 'bg-blue-500',
+            borderColor: 'blue-500',
             iconBg: 'bg-blue-500/10 text-blue-600',
             onClick: () => navigate('/reports')
         },
@@ -304,8 +302,7 @@ export default function DashboardPage() {
             value: loading ? '…' : String(stats.weekPoin),
             trend: stats.trendPoin,
             trendUp: false,
-            borderColor: 'bg-rose-500',
-            iconBg: 'bg-rose-500/10 text-rose-600',
+            color: 'rose',
             onClick: () => navigate('/reports?type=pelanggaran')
         },
         {
@@ -314,8 +311,7 @@ export default function DashboardPage() {
             value: loading ? '…' : String(stats.weekAchievements),
             trend: stats.trendAchievements,
             trendUp: true,
-            borderColor: 'bg-emerald-500',
-            iconBg: 'bg-emerald-500/10 text-emerald-600',
+            color: 'emerald',
             onClick: () => navigate('/reports?type=prestasi')
         }
     ]), [loading, stats, navigate])

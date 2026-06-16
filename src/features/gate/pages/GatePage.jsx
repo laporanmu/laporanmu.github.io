@@ -542,54 +542,24 @@ export default function GatePage() {
         />
 
         {/* STATS */}
-        {(() => {
-          const getSubValue = (type, st) => {
-            if (type === 'total') {
-              if (language === 'ar') return `داخلي: ${tNum(st.total - st.tamu)} | زائر: ${tNum(st.tamu)}`
-              if (language === 'en') return `Internal: ${tNum(st.total - st.tamu)} | Guest: ${tNum(st.tamu)}`
-              return `Internal: ${tNum(st.total - st.tamu)} | Tamu: ${tNum(st.tamu)}`
-            }
-            if (type === 'keluar') {
-              if (language === 'ar') return 'خارج المؤسسة حالياً'
-              if (language === 'en') return 'Currently outside the area'
-              return 'Sedang berada di luar area'
-            }
-            if (type === 'dalamTamu') {
-              if (language === 'ar') return 'داخل المؤسسة حالياً'
-              if (language === 'en') return 'Currently inside the area'
-              return 'Sedang berada di dalam area'
-            }
-            if (type === 'tamu') {
-              if (language === 'ar') return 'إجمالي زيارات الضيوف اليوم'
-              if (language === 'en') return 'Total guest visits today'
-              return 'Total kunjungan tamu hari ini'
-            }
-            return ''
-          }
-
-          return (
-            <StatsCarousel count={4} className="mb-4">
-              {[
-                { key: 'total', label: tp('totalToday'), value: stats.total, icon: ClipboardList, bg: 'bg-indigo-500/10 text-indigo-500', border: 'bg-indigo-500' },
-                { key: 'keluar', label: tp('siswaGuruKeluar'), value: stats.keluar, icon: LogOut, bg: 'bg-rose-500/10 text-rose-500', border: 'bg-rose-500' },
-                { key: 'dalamTamu', label: tp('tamuDiDalam'), value: stats.dalamTamu, icon: Building2, bg: 'bg-emerald-500/10 text-emerald-500', border: 'bg-emerald-500' },
-                { key: 'tamu', label: tp('kunjunganTamu'), value: stats.tamu, icon: Users, bg: 'bg-amber-500/10 text-amber-500', border: 'bg-amber-500' },
-              ].map((s, i) => (
-                <StatCard
-                  key={i}
-                  icon={s.icon}
-                  label={s.label}
-                  value={s.value}
-                  borderColor={s.border}
-                  iconBg={s.bg}
-                  loading={loadingLogs}
-                  subValue={getSubValue(s.key, stats)}
-                  className="min-w-[200px]"
-                />
-              ))}
-            </StatsCarousel>
-          )
-        })()}
+        <StatsCarousel count={4} className="mb-4">
+          {[
+            { key: 'total',     label: tp('totalToday'),      value: stats.total,     icon: ClipboardList, color: 'indigo' },
+            { key: 'keluar',    label: tp('siswaGuruKeluar'), value: stats.keluar,    icon: LogOut,        color: 'rose'   },
+            { key: 'dalamTamu', label: tp('tamuDiDalam'),     value: stats.dalamTamu, icon: Building2,     color: 'emerald'},
+            { key: 'tamu',      label: tp('kunjunganTamu'),   value: stats.tamu,      icon: Users,         color: 'amber'  },
+          ].map((s, i) => (
+            <StatCard
+              key={i}
+              icon={s.icon}
+              label={s.label}
+              value={s.value}
+              color={s.color}
+              loading={loadingLogs}
+              className="min-w-[200px]"
+            />
+          ))}
+        </StatsCarousel>
 
         {/* TABS — full width on mobile, auto on desktop */}
         <div className="flex gap-1 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] mb-6 w-full lg:w-fit overflow-x-auto scrollbar-hide">

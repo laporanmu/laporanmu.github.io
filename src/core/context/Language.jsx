@@ -7,22 +7,25 @@ import idCommon from "../../locales/id/common.json"
 import idNav from "../../locales/id/nav.json"
 import idGate from "../../locales/id/gate.json"
 import idBehavior from "../../locales/id/behavior.json"
+import idDorms from "../../locales/id/dorms.json"
 
 import enCommon from "../../locales/en/common.json"
 import enNav from "../../locales/en/nav.json"
 import enGate from "../../locales/en/gate.json"
 import enBehavior from "../../locales/en/behavior.json"
+import enDorms from "../../locales/en/dorms.json"
 
 import arCommon from "../../locales/ar/common.json"
 import arNav from "../../locales/ar/nav.json"
 import arGate from "../../locales/ar/gate.json"
 import arBehavior from "../../locales/ar/behavior.json"
+import arDorms from "../../locales/ar/dorms.json"
 
 // Combine modular dictionaries into single namespace
 const DICTIONARY = {
-    id: { ...idCommon, ...idNav, ...idGate, ...idBehavior },
-    en: { ...enCommon, ...enNav, ...enGate, ...enBehavior },
-    ar: { ...arCommon, ...arNav, ...arGate, ...arBehavior }
+    id: { ...idCommon, ...idNav, ...idGate, ...idBehavior, ...idDorms },
+    en: { ...enCommon, ...enNav, ...enGate, ...enBehavior, ...enDorms },
+    ar: { ...arCommon, ...arNav, ...arGate, ...arBehavior, ...arDorms }
 }
 
 const STORAGE_KEY = "app-language"

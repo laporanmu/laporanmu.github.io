@@ -28,9 +28,12 @@ export function StatCard({
     trend, 
     trendUp, 
     loading = false,
-    borderColor, 
+    borderColor,      // Tailwind color name, e.g. 'indigo-500' or 'primary'
     iconBg, 
     color = 'primary',
+    isActive = false, // shows colored ring + border to indicate selected state
+    progressValue,    // 0-100, renders a thin fill bar at the bottom of card
+    progressMax = 100,
     className = '',
     valueClassName = 'text-xl sm:text-[22px] text-[var(--color-text)]',
     onClick,
@@ -38,53 +41,109 @@ export function StatCard({
 }) {
     const { tNum } = useLanguage()
 
-    // If color is provided, map it to specific styles
+    // Color map: border uses `border-t-2 border-t-*` for visible top accent
     const colorMap = {
-        primary: { border: 'border-t-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' },
-        indigo: { border: 'border-indigo-500', bg: 'bg-indigo-500/10 text-indigo-500' },
-        emerald: { border: 'border-emerald-500', bg: 'bg-emerald-500/10 text-emerald-500' },
-        amber: { border: 'border-amber-500', bg: 'bg-amber-500/10 text-amber-500' },
-        rose: { border: 'border-rose-500', bg: 'bg-rose-500/10 text-rose-500' },
-        sky: { border: 'border-sky-500', bg: 'bg-sky-500/10 text-sky-500' },
+        primary: { borderTop: 'border-t-[var(--color-primary)]', dotBg: 'bg-[var(--color-primary)]', bg: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' },
+        indigo:  { borderTop: 'border-t-indigo-500',  dotBg: 'bg-indigo-500',  bg: 'bg-indigo-500/10 text-indigo-500' },
+        emerald: { borderTop: 'border-t-emerald-500', dotBg: 'bg-emerald-500', bg: 'bg-emerald-500/10 text-emerald-500' },
+        amber:   { borderTop: 'border-t-amber-500',   dotBg: 'bg-amber-500',   bg: 'bg-amber-500/10 text-amber-500' },
+        rose:    { borderTop: 'border-t-rose-500',    dotBg: 'bg-rose-500',    bg: 'bg-rose-500/10 text-rose-500' },
+        sky:     { borderTop: 'border-t-sky-500',     dotBg: 'bg-sky-500',     bg: 'bg-sky-500/10 text-sky-500' },
     }
 
-    const finalBorder = borderColor || colorMap[color]?.border || colorMap.primary.border
-    const finalBg = iconBg || colorMap[color]?.bg || colorMap.primary.bg
+    const resolved      = colorMap[color] || colorMap.primary
+    // borderColor is tolerant of multiple formats:
+    //   colorMap key   → 'indigo' or 'emerald' etc.
+    //   bare color     → 'indigo-500', 'blue-500' etc.
+    //   prefixed class → 'border-t-indigo-500' (legacy, used as-is)
+    //   CSS var class  → 'border-t-[var(--color-primary)]' (used as-is)
+    const finalBorderTop = borderColor
+        ? (colorMap[borderColor]?.borderTop          // colorMap key
+            ?? (borderColor.startsWith('border-t-')
+                ? borderColor                        // already prefixed → use as-is
+                : `border-t-${borderColor}`))        // bare color → add prefix
+        : resolved.borderTop
+    const finalDotBg     = resolved.dotBg
+    const finalBg        = iconBg || resolved.bg
+
+    // Active ring — matches the card's accent color
+    const activeRing = isActive ? `ring-2 ring-offset-1 ${resolved.borderTop.replace('border-t-', 'ring-')} ${resolved.borderTop.replace('border-t-', 'shadow-md shadow-')} shadow-[color]/10` : ''
+
+    // Progress fill percentage clamped 0-100
+    const progressPct = progressValue != null
+        ? Math.min(100, Math.max(0, (progressValue / (progressMax || 100)) * 100))
+        : null
 
     const animatedValue = useCountUp(value, 1500, loading)
-    const displayValue = typeof value === 'number' || !isNaN(parseFloat(value)) ? animatedValue : value
+    const displayValue  = typeof value === 'number' || !isNaN(parseFloat(value)) ? animatedValue : value
+
+    // Trend arrow indicator
+    const TrendArrow = trendUp === true ? '↑' : trendUp === false ? '↓' : null
 
     return (
         <div 
             onClick={onClick} 
             title={title} 
-            className={`shrink-0 snap-center w-[200px] xs:w-[220px] sm:w-auto glass group relative overflow-hidden rounded-2xl p-4 border border-[var(--color-border)] flex items-center gap-3.5 hover:border-[var(--color-primary)]/30 hover:shadow-lg hover:shadow-[var(--color-primary)]/5 transition-all duration-300 min-h-[78px] ${onClick ? 'cursor-pointer active:scale-95' : ''} ${className}`}
+            className={`shrink-0 snap-center w-[200px] xs:w-[220px] sm:w-auto glass group relative overflow-hidden rounded-2xl border-t ${finalBorderTop} border border-[var(--color-border)] p-4 flex items-center gap-3.5 hover:border-[var(--color-primary)]/30 hover:shadow-lg hover:shadow-[var(--color-primary)]/5 transition-all duration-300 min-h-[78px] ${onClick ? 'cursor-pointer active:scale-95' : ''} ${activeRing} ${className}`}
         >
-            {/* Neural Pulse Indicator (Top Right in LTR, Top Left in RTL) */}
+            {/* Status Pulse Dot — top-right corner */}
             <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3">
-                <div className={`w-1.5 h-1.5 rounded-full ${finalBorder.replace('border-t-', 'bg-').replace('border-', 'bg-')} opacity-60 animate-pulse shadow-[0_0_8px_currentColor]`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${finalDotBg} opacity-50 animate-pulse`} />
             </div>
 
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-base flex-shrink-0 shadow-sm ${finalBg} transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-500`}>
-                {renderIcon(icon, 'w-4.5 h-4.5')}
+            {/* Icon Container */}
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${finalBg} transform group-hover:scale-110 transition-all duration-500`}>
+                {renderIcon(icon, 'w-5 h-5')}
             </div>
             
+            {/* Content */}
             <div className="min-w-0 relative z-10 flex-1 text-start">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] opacity-60 mb-0.5 truncate">{label}</p>
-                <div className="flex items-center gap-2">
+                {/* Label */}
+                {loading
+                    ? <span className="inline-block w-20 h-2.5 rounded bg-[var(--color-border)] animate-pulse mb-1" />
+                    : <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] opacity-70 mb-0.5 truncate">{label}</p>
+                }
+
+                {/* Value + Trend */}
+                <div className="flex items-center gap-1.5">
                     <h3 className={`font-black font-heading leading-none tabular-nums tracking-tighter ${valueClassName}`}>
-                        {loading ? <span className="inline-block w-8 h-5 rounded bg-[var(--color-border)] animate-pulse" /> : <>{tNum(displayValue)}{tNum(suffix)}</>}
+                        {loading
+                            ? <span className="inline-block w-10 h-5 rounded bg-[var(--color-border)] animate-pulse" />
+                            : <>{tNum(displayValue)}{suffix && tNum(suffix)}</>}
                     </h3>
-                    {trend && (
-                        <p className={`text-[9px] font-black flex items-center gap-1 ${trendUp === true ? 'text-emerald-500 bg-emerald-500/10' : trendUp === false ? 'text-rose-500 bg-rose-500/10' : 'text-[var(--color-text-muted)] bg-[var(--color-surface-alt)]'} px-1.5 py-0.5 rounded-md`}>
+                    {!loading && trend && (
+                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-black px-1.5 py-0.5 rounded-md leading-none ${
+                            trendUp === true  ? 'text-emerald-500 bg-emerald-500/10' :
+                            trendUp === false ? 'text-rose-500 bg-rose-500/10' :
+                            'text-[var(--color-text-muted)] bg-[var(--color-surface-alt)]'
+                        }`}>
+                            {TrendArrow && <span>{TrendArrow}</span>}
                             {tNum(trend)}
-                        </p>
+                        </span>
+                    )}
+                    {loading && trend !== undefined && (
+                        <span className="inline-block w-10 h-4 rounded bg-[var(--color-border)] animate-pulse" />
                     )}
                 </div>
-                {subValue && (
-                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] mt-0.5 opacity-60 uppercase tracking-wider">{tNum(subValue)}</p>
-                )}
+
+                {/* SubValue */}
+                {loading
+                    ? <span className="inline-block w-16 h-2 rounded bg-[var(--color-border)] animate-pulse mt-1" />
+                    : subValue && (
+                        <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-0.5 opacity-60 uppercase tracking-wide truncate">{tNum(subValue)}</p>
+                    )
+                }
             </div>
+
+            {/* Optional Progress Bar — thin strip at the bottom of card */}
+            {progressPct != null && (
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[var(--color-border)]/60">
+                    <div
+                        className={`h-full ${finalDotBg} opacity-70 transition-all duration-1000 ease-out rounded-full`}
+                        style={{ width: loading ? '0%' : `${progressPct}%` }}
+                    />
+                </div>
+            )}
         </div>
     )
 }

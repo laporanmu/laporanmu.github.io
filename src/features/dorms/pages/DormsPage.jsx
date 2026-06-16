@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useToast } from '@context/Toast'
+import { useLanguage } from '@context/Language'
 import DashboardLayout from '@core/layouts/DashboardLayout'
 import PageHeader from '@shared/components/PageHeader'
 import { StatCard } from '@shared/components/DataDisplay'
@@ -40,6 +41,8 @@ import { getPortalContainer } from '@features/dorms/utils/dormUtils'
 
 export default function DormsPage() {
     const { addToast } = useToast()
+    const { language, t, tNum } = useLanguage()
+
     const [activeTab, setActiveTab] = useState('plotting') // 'plotting' | 'kebersihan' | 'musyrif' | 'kelola_kamar'
     const [isPrivacyMode, setIsPrivacyMode] = useState(false)
     const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false)
@@ -77,10 +80,10 @@ export default function DormsPage() {
             <div className="p-4 sm:p-6 space-y-5">
                 {/* --- HEADER --- */}
                 <PageHeader
-                    badge="Kesantrian"
-                    breadcrumbs={['Manajemen Asrama']}
-                    title="Manajemen Asrama"
-                    subtitle="Plotting kamar santri, audit kebersihan, dan jurnal Musyrif."
+                    badge={t('dorms.badge')}
+                    breadcrumbs={[t('dorms.breadcrumbs')]}
+                    title={t('dorms.title')}
+                    subtitle={t('dorms.subtitle')}
                     actions={
                         <>
                             {/* Dropdown: Opsi Ekspor */}
@@ -98,11 +101,11 @@ export default function DormsPage() {
                                             ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
                                             : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'
                                     }`}
-                                    title="Opsi Data"
+                                    title={t('dorms.dataOptions')}
                                 >
                                     <Sliders className="w-4 h-4" />
                                 </button>
-
+                                
                                 {headerMenuMounted && headerMenuRect && createPortal(
                                     <>
                                         <div
@@ -115,7 +118,7 @@ export default function DormsPage() {
                                             }`}
                                             style={{ top: headerMenuRect.bottom + 8, left: Math.max(10, headerMenuRect.right - 224) }}
                                         >
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Opsi Data</p>
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{t('dorms.dataOptions')}</p>
                                             <button
                                                 onClick={() => {
                                                     setIsHeaderMenuOpen(false);
@@ -128,7 +131,7 @@ export default function DormsPage() {
                                                     <Download className="w-4 h-4" />
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-[11px] font-black leading-tight">Ekspor Data Asrama</p>
+                                                    <p className="text-[11px] font-black leading-tight">{t('dorms.exportDormData')}</p>
                                                     <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv / pdf</p>
                                                 </div>
                                             </button>
@@ -141,7 +144,7 @@ export default function DormsPage() {
                                                     <Download className="w-4 h-4 rotate-180" />
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="text-[11px] font-black leading-tight">Impor Plotting</p>
+                                                    <p className="text-[11px] font-black leading-tight">{t('dorms.importPlotting')}</p>
                                                     <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv</p>
                                                 </div>
                                             </button>
@@ -159,10 +162,10 @@ export default function DormsPage() {
                                         ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
                                         : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
                                 }`}
-                                title={isPrivacyMode ? 'Nonaktifkan Mode Privasi' : 'Aktifkan Mode Privasi'}
+                                title={isPrivacyMode ? t('dorms.privacyModeOn') : t('dorms.privacyModeOff')}
                             >
                                 {isPrivacyMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Privasi</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{t('dorms.privacy')}</span>
                             </button>
 
                             {/* Primary: Assign Santri */}
@@ -171,7 +174,7 @@ export default function DormsPage() {
                                 className="h-9 px-4 sm:px-5 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 border border-white/10"
                             >
                                 <Plus className="w-3.5 h-3.5" />
-                                <span>Assign Santri</span>
+                                <span>{t('dorms.assignStudent')}</span>
                             </button>
                         </>
                     }
@@ -181,45 +184,42 @@ export default function DormsPage() {
                 <StatsCarousel count={4} className="mb-5">
                     <StatCard
                         onClick={() => { setActiveTab('plotting'); data.setSelectedRoomTab('Assigned'); }}
-                        className={`${activeTab === 'plotting' && data.selectedRoomTab !== 'Unassigned' ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/10 shadow-md' : 'border-transparent'}`}
+                        isActive={activeTab === 'plotting' && data.selectedRoomTab !== 'Unassigned'}
                         icon={Bed}
-                        label="Plotting Kamar"
+                        label={t('dorms.statPlotting')}
                         value={data.stats.assignedCount}
-                        subValue={`${Math.round((data.stats.assignedCount / (data.stats.totalCount || 1)) * 100)}% dari ${data.stats.totalCount} santri`}
                         color="primary"
                     />
 
                     <StatCard
                         onClick={() => { setActiveTab('plotting'); data.setSelectedRoomTab('Unassigned'); }}
-                        className={`${activeTab === 'plotting' && data.selectedRoomTab === 'Unassigned' ? 'border-amber-500 ring-2 ring-amber-500/10 shadow-md shadow-amber-500/5' : 'border-transparent'}`}
+                        isActive={activeTab === 'plotting' && data.selectedRoomTab === 'Unassigned'}
                         icon={Users}
-                        label="Belum Masuk Kamar"
+                        label={t('dorms.statUnassigned')}
                         value={data.stats.unassignedCount}
-                        suffix=" Santri"
-                        subValue={`${Math.round((data.stats.unassignedCount / (data.stats.totalCount || 1)) * 100)}% belum dialokasikan`}
+                        suffix={t('dorms.suffixSantri')}
                         color="amber"
                     />
 
                     <StatCard
                         onClick={() => setActiveTab('kebersihan')}
-                        className={`${activeTab === 'kebersihan' ? 'border-emerald-500 ring-2 ring-emerald-500/10 shadow-md shadow-emerald-500/5' : 'border-transparent'}`}
+                        isActive={activeTab === 'kebersihan'}
                         icon={Star}
-                        label="Rata-rata Kebersihan"
+                        label={t('dorms.statCleanliness')}
                         value={data.stats.avgCleanliness}
-                        suffix=" Poin"
-                        subValue="Skor rata-rata kamar"
+                        suffix={t('dorms.suffixPoin')}
                         color="emerald"
                     />
 
                     <StatCard
                         onClick={() => setActiveTab('musyrif')}
-                        className={`${activeTab === 'musyrif' ? 'border-indigo-500 ring-2 ring-indigo-500/10 shadow-md shadow-indigo-500/5' : 'border-transparent'}`}
+                        isActive={activeTab === 'musyrif'}
                         icon={ClipboardList}
-                        label="Kontrol Musyrif"
+                        label={t('dorms.statMusyrif')}
                         value={data.stats.taskProgress}
                         suffix="%"
-                        subValue={`Selesai: ${data.stats.completedTasks} dari ${data.stats.totalTasks} tugas`}
                         color="indigo"
+                        progressValue={data.stats.taskProgress}
                     />
                 </StatsCarousel>
 
@@ -230,32 +230,32 @@ export default function DormsPage() {
                         className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'plotting' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <Bed className="w-3.5 h-3.5 shrink-0" />
-                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Plotting</span>
-                        <span className="hidden sm:inline">Plotting Kamar</span>
+                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">{t('dorms.tabPlottingShort')}</span>
+                        <span className="hidden sm:inline">{t('dorms.tabPlotting')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('kebersihan')}
                         className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kebersihan' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <Sparkles className="w-3.5 h-3.5 animate-pulse shrink-0" />
-                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Kebersihan</span>
-                        <span className="hidden sm:inline">Kontrol Kebersihan</span>
+                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">{t('dorms.tabCleanlinessShort')}</span>
+                        <span className="hidden sm:inline">{t('dorms.tabCleanliness')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('musyrif')}
                         className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'musyrif' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Musyrif</span>
-                        <span className="hidden sm:inline">Tugas Musyrif</span>
+                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">{t('dorms.tabMusyrifShort')}</span>
+                        <span className="hidden sm:inline">{t('dorms.tabMusyrif')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('kelola_kamar')}
                         className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kelola_kamar' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">Kelola</span>
-                        <span className="hidden sm:inline">Kelola Kamar</span>
+                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">{t('dorms.tabManageShort')}</span>
+                        <span className="hidden sm:inline">{t('dorms.tabManage')}</span>
                     </button>
                 </div>
 

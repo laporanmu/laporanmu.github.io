@@ -1,5 +1,6 @@
 import React from 'react'
 import Modal from '@shared/components/Modal'
+import { useLanguage } from '@context/Language'
 import { UserMinus, Trash2 } from 'lucide-react'
 
 export function ConfirmEvictModal({
@@ -9,12 +10,13 @@ export function ConfirmEvictModal({
     onConfirm,
     submitting
 }) {
+    const { t } = useLanguage()
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Keluarkan dari Kamar"
-            description="Plotting kamar santri akan dikosongkan"
+            title={t('dorms.confirm.evict.title')}
+            description={t('dorms.confirm.evict.description')}
             icon={UserMinus}
             iconBg="bg-red-500/10"
             iconColor="text-red-500"
@@ -27,7 +29,7 @@ export function ConfirmEvictModal({
                         onClick={onClose}
                         className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                     >
-                        Batal
+                        {t('dorms.confirm.evict.cancel')}
                     </button>
                     <div className="flex-1" />
                     <button
@@ -41,14 +43,25 @@ export function ConfirmEvictModal({
                         ) : (
                             <UserMinus className="w-3.5 h-3.5 opacity-70" />
                         )}
-                        Ya, Keluarkan
+                        {t('dorms.confirm.evict.confirm')}
                     </button>
                 </div>
             }
         >
             <div className="px-1">
                 <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                    Santri <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{studentToEvict?.name}</span> akan dikeluarkan dari kamar {studentToEvict?.metadata?.kamar || 'Kamar'}. Tindakan ini akan mengosongkan plotting kamar santri tersebut.
+                    {t('dorms.confirm.evict.text')
+                        .split('{name}')
+                        .reduce((acc, part, i) => {
+                            if (i === 0) return [part.replace('{room}', studentToEvict?.metadata?.kamar || 'Kamar')]
+                            return [
+                                ...acc,
+                                <span key={i} className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">
+                                    {studentToEvict?.name}
+                                </span>,
+                                part.replace('{room}', studentToEvict?.metadata?.kamar || 'Kamar')
+                            ]
+                        }, [])}
                 </p>
             </div>
         </Modal>
@@ -63,12 +76,13 @@ export function ConfirmDeleteDormModal({
     onConfirm,
     submitting
 }) {
+    const { t, tNum } = useLanguage()
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Hapus Kamar"
-            description="Kamar asrama akan dihapus secara permanen"
+            title={t('dorms.confirm.deleteDorm.title')}
+            description={t('dorms.confirm.deleteDorm.description')}
             icon={Trash2}
             iconBg="bg-red-500/10"
             iconColor="text-red-500"
@@ -81,7 +95,7 @@ export function ConfirmDeleteDormModal({
                         onClick={onClose}
                         className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                     >
-                        Batal
+                        {t('dorms.confirm.deleteDorm.cancel')}
                     </button>
                     <div className="flex-1" />
                     <button
@@ -95,7 +109,7 @@ export function ConfirmDeleteDormModal({
                         ) : (
                             <Trash2 className="w-3.5 h-3.5 opacity-70" />
                         )}
-                        Ya, Hapus
+                        {t('dorms.confirm.deleteDorm.confirm')}
                     </button>
                 </div>
             }
@@ -106,13 +120,31 @@ export function ConfirmDeleteDormModal({
                     if (occupants.length > 0) {
                         return (
                             <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                                Ada {occupants.length} santri yang saat ini menempati kamar <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{dormToDelete.id}</span>. Apakah Anda yakin ingin mengeluarkan mereka dari kamar secara otomatis dan menghapus kamar ini?
+                                {t('dorms.confirm.deleteDorm.occupantsText')
+                                    .split('{room}')
+                                    .reduce((acc, part, i) => {
+                                        if (i === 0) return [part.replace('{count}', tNum(occupants.length))]
+                                        return [
+                                            ...acc,
+                                            <span key={i} className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{dormToDelete.id}</span>,
+                                            part.replace('{count}', tNum(occupants.length))
+                                        ]
+                                    }, [])}
                             </p>
                         )
                     }
                     return (
                         <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                            Apakah Anda yakin ingin menghapus kamar <span className="text-[var(--color-text)] font-black">{dormToDelete.id}</span>? Tindakan ini akan menghapus data kamar secara permanen dan tidak dapat dibatalkan.
+                            {t('dorms.confirm.deleteDorm.noOccupantsText')
+                                .split('{room}')
+                                .reduce((acc, part, i) => {
+                                    if (i === 0) return [part]
+                                    return [
+                                        ...acc,
+                                        <span key={i} className="text-[var(--color-text)] font-black">{dormToDelete.id}</span>,
+                                        part
+                                    ]
+                                }, [])}
                         </p>
                     )
                 })()}
@@ -128,12 +160,13 @@ export function ConfirmDeleteAuditModal({
     onConfirm,
     submitting
 }) {
+    const { t } = useLanguage()
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Hapus Laporan Kebersihan"
-            description="Laporan pemeriksaan akan dihapus secara permanen"
+            title={t('dorms.confirm.deleteAudit.title')}
+            description={t('dorms.confirm.deleteAudit.description')}
             icon={Trash2}
             iconBg="bg-red-500/10"
             iconColor="text-red-500"
@@ -146,7 +179,7 @@ export function ConfirmDeleteAuditModal({
                         onClick={onClose}
                         className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                     >
-                        Batal
+                        {t('dorms.confirm.deleteAudit.cancel')}
                     </button>
                     <div className="flex-1" />
                     <button
@@ -160,7 +193,7 @@ export function ConfirmDeleteAuditModal({
                         ) : (
                             <Trash2 className="w-3.5 h-3.5 opacity-70" />
                         )}
-                        Ya, Hapus
+                        {t('dorms.confirm.deleteAudit.confirm')}
                     </button>
                 </div>
             }
@@ -168,7 +201,23 @@ export function ConfirmDeleteAuditModal({
             <div className="px-1">
                 {auditToDelete && (
                     <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                        Apakah Anda yakin ingin menghapus laporan kebersihan kamar <span className="text-[var(--color-text)] font-black">{auditToDelete.room}</span> tanggal <span className="text-[var(--color-text)] font-black">{auditToDelete.date}</span>? Tindakan ini tidak dapat dibatalkan.
+                        {t('dorms.confirm.deleteAudit.text')
+                            .split('{room}')
+                            .reduce((acc, part, i) => {
+                                if (i === 0) return [part.replace('{date}', auditToDelete.date)]
+                                return [
+                                    ...acc,
+                                    <span key={`room-${i}`} className="text-[var(--color-text)] font-black">{auditToDelete.room}</span>,
+                                    ...part.split('{date}').reduce((dAcc, dPart, dI) => {
+                                        if (dI === 0) return [dPart]
+                                        return [
+                                            ...dAcc,
+                                            <span key={`date-${dI}`} className="text-[var(--color-text)] font-black">{auditToDelete.date}</span>,
+                                            dPart
+                                        ]
+                                    }, [])
+                                ]
+                            }, [])}
                     </p>
                 )}
             </div>
@@ -182,12 +231,13 @@ export function ConfirmDeleteInventoryModal({
     inventoryToDelete,
     onConfirm
 }) {
+    const { t } = useLanguage()
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Hapus Item Inventaris"
-            description="Item akan dihapus secara permanen"
+            title={t('dorms.confirm.deleteInventory.title')}
+            description={t('dorms.confirm.deleteInventory.description')}
             icon={Trash2}
             iconBg="bg-red-500/10"
             iconColor="text-red-500"
@@ -200,7 +250,7 @@ export function ConfirmDeleteInventoryModal({
                         onClick={onClose}
                         className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                     >
-                        Batal
+                        {t('dorms.confirm.deleteInventory.cancel')}
                     </button>
                     <div className="flex-1" />
                     <button
@@ -208,7 +258,7 @@ export function ConfirmDeleteInventoryModal({
                         onClick={onConfirm}
                         className="h-10 px-6 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 shrink-0"
                     >
-                        <Trash2 className="w-3.5 h-3.5 opacity-70" /> Ya, Hapus
+                        <Trash2 className="w-3.5 h-3.5 opacity-70" /> {t('dorms.confirm.deleteInventory.confirm')}
                     </button>
                 </div>
             }
@@ -216,7 +266,16 @@ export function ConfirmDeleteInventoryModal({
             <div className="px-1">
                 {inventoryToDelete && (
                     <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                        Apakah Anda yakin ingin menghapus item <span className="text-[var(--color-text)] font-black">{inventoryToDelete.item_name}</span>? Tindakan ini tidak dapat dibatalkan.
+                        {t('dorms.confirm.deleteInventory.text')
+                            .split('{item}')
+                            .reduce((acc, part, i) => {
+                                if (i === 0) return [part]
+                                return [
+                                    ...acc,
+                                    <span key={i} className="text-[var(--color-text)] font-black">{inventoryToDelete.item_name}</span>,
+                                    part
+                                ]
+                            }, [])}
                     </p>
                 )}
             </div>

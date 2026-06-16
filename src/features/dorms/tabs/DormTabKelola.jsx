@@ -1,5 +1,6 @@
 import React from 'react'
 import { EmptyState } from '@shared/components/DataDisplay'
+import { useLanguage } from '@context/Language'
 import {
     Plus, Bed, ClipboardList, Edit2, Trash2
 } from 'lucide-react'
@@ -15,13 +16,14 @@ export default function DormTabKelola({
     setInventoryModalDorm,
     handleOpenDeleteDormModal
 }) {
+    const { t, tNum } = useLanguage()
     return (
         <div className="space-y-5 animate-in fade-in duration-300">
             {/* Header toolbar */}
             <div className="glass rounded-[1.5rem] border border-[var(--color-border)] p-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[var(--color-surface-alt)]/10">
                 <div>
-                    <h3 className="text-sm font-black text-[var(--color-text)]">Master Data Kamar</h3>
-                    <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Tambah, edit, dan hapus data kamar asrama MBS secara dinamis.</p>
+                    <h3 className="text-sm font-black text-[var(--color-text)]">{t('dorms.manage.title')}</h3>
+                    <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{t('dorms.manage.subtitle')}</p>
                 </div>
                 <button
                     onClick={() => {
@@ -32,7 +34,7 @@ export default function DormTabKelola({
                     className="h-10 px-5 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white hover:scale-105 active:scale-95 justify-center shadow-lg shadow-[var(--color-primary)]/10"
                 >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Tambah Kamar</span>
+                    <span>{t('dorms.manage.addDorm')}</span>
                 </button>
             </div>
 
@@ -41,26 +43,26 @@ export default function DormTabKelola({
                 {loadingDorms ? (
                     <div className="py-20 flex flex-col items-center justify-center gap-3">
                         <div className="w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-                        <p className="text-xs text-[var(--color-text-muted)] font-black uppercase tracking-widest">Memuat Kamar...</p>
+                        <p className="text-xs text-[var(--color-text-muted)] font-black uppercase tracking-widest">{t('dorms.manage.loading')}</p>
                     </div>
                 ) : dorms.length === 0 ? (
                     <EmptyState
                         icon={Bed}
-                        title="Belum Ada Kamar"
-                        description="Tambahkan kamar asrama baru menggunakan tombol di atas."
+                        title={t('dorms.manage.noDorms')}
+                        description={t('dorms.manage.noDormsDesc')}
                     />
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[750px]">
                             <thead className="bg-[var(--color-surface-alt)]/60 border-b border-[var(--color-border)]">
                                 <tr>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[20%]">Nama Kamar</th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-right w-[12%]" dir="rtl">الغرفة (Arab)</th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[10%]">Kapasitas</th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[18%]">Okupansi</th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[10%]">Status</th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[18%]">PJ Musyrif</th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28">Aksi</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[20%]">{t('dorms.manage.thRoomName')}</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-right w-[12%]" dir="rtl">{t('dorms.manage.thRoomArab')}</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[10%]">{t('dorms.manage.thCapacity')}</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[18%]">{t('dorms.manage.thOccupancy')}</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-[10%]">{t('dorms.manage.thStatus')}</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[18%]">{t('dorms.manage.thMusyrif')}</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-28">{t('dorms.manage.thAction')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
@@ -85,7 +87,7 @@ export default function DormTabKelola({
                                                         <span className="text-sm font-black text-[var(--color-text)] block leading-tight">{room.id}</span>
                                                         {(room.building || room.gender) && (
                                                             <span className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-65 block mt-1">
-                                                                {room.building || '—'} • {room.gender === 'putra' ? 'Putra' : room.gender === 'putri' ? 'Putri' : 'Semua'}
+                                                                {room.building || '—'} • {room.gender === 'putra' ? t('dorms.plotting.male') : room.gender === 'putri' ? t('dorms.plotting.female') : t('dorms.plotting.all')}
                                                             </span>
                                                         )}
                                                     </div>
@@ -95,16 +97,16 @@ export default function DormTabKelola({
                                                 {room.ar || '—'}
                                             </td>
                                             <td className="px-5 py-4 text-center text-xs font-bold text-[var(--color-text)]">
-                                                {cap} Santri
+                                                {tNum(cap)} {t('dorms.plotting.paginationLabel')}
                                             </td>
                                             <td className="px-5 py-4 min-w-[200px]">
                                                 <div className="space-y-1.5 max-w-[180px]">
                                                     <div className="flex items-center justify-between text-[10px] font-black">
                                                         <span className={percent >= 100 ? 'text-rose-500' : percent >= 85 ? 'text-amber-500' : 'text-[var(--color-primary)]'}>
-                                                            {count} / {cap} Terisi
+                                                            {tNum(count)} / {tNum(cap)} {t('dorms.manage.occupancyText')}
                                                         </span>
                                                         <span className="text-[var(--color-text-muted)] opacity-60">
-                                                            {Math.round(percent)}%
+                                                            {tNum(Math.round(percent))}%
                                                         </span>
                                                     </div>
                                                     <div className="w-full bg-[var(--color-surface-alt)] h-1.5 rounded-full overflow-hidden">
@@ -115,15 +117,15 @@ export default function DormTabKelola({
                                             <td className="px-5 py-4 text-center">
                                                 {room.status === 'maintenance' ? (
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 border border-rose-500/25">
-                                                        Perbaikan
+                                                        {t('dorms.manage.statusMaintenance')}
                                                     </span>
                                                 ) : room.status === 'full' ? (
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/25">
-                                                        Terkunci
+                                                        {t('dorms.manage.statusLocked')}
                                                     </span>
                                                 ) : (
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/25">
-                                                        Aktif
+                                                        {t('dorms.manage.statusActive')}
                                                     </span>
                                                 )}
                                             </td>
@@ -136,7 +138,7 @@ export default function DormTabKelola({
                                                         </span>
                                                     ) : (
                                                         <span className="text-xs text-[var(--color-text-muted)] italic opacity-60">
-                                                            — Tidak Ada —
+                                                            {t('dorms.manage.noMusyrif')}
                                                         </span>
                                                     )
                                                 })()}
@@ -147,7 +149,7 @@ export default function DormTabKelola({
                                                     <button
                                                         onClick={() => setInventoryModalDorm(room)}
                                                         className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-indigo-500 hover:bg-indigo-500/5 transition-all"
-                                                        title="Lihat Inventori"
+                                                        title={t('dorms.manage.viewInventory')}
                                                     >
                                                         <ClipboardList className="w-3.5 h-3.5" />
                                                     </button>
@@ -166,12 +168,14 @@ export default function DormTabKelola({
                                                             setIsDormModalOpen(true);
                                                         }}
                                                         className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all"
+                                                        title={t('dorms.manage.editDorm')}
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleOpenDeleteDormModal(room)}
                                                         className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all"
+                                                        title={t('dorms.manage.deleteDorm')}
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>

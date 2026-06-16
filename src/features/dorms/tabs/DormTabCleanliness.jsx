@@ -2,6 +2,7 @@ import React from 'react'
 import { EmptyState } from '@shared/components/DataDisplay'
 import RichSelect from '@shared/components/RichSelect'
 import RichDatePicker from '@shared/components/RichDatePicker'
+import { useLanguage } from '@context/Language'
 import {
     Bed, Plus, X, ClipboardList, Trash2, Award, ShieldAlert
 } from 'lucide-react'
@@ -19,6 +20,7 @@ export default function DormTabCleanliness({
     audits,
     handleOpenDeleteAuditModal
 }) {
+    const { t, tNum } = useLanguage()
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 animate-in fade-in duration-300">
             {/* Room Rating Cleanliness Scorecard */}
@@ -26,15 +28,15 @@ export default function DormTabCleanliness({
                 <div className="glass rounded-[1.5rem] p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                         <div>
-                            <p className="text-[13px] font-black text-[var(--color-text)]">Jurnal Penilaian Kebersihan</p>
-                            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Riwayat skor kebersihan dan kerapian kamar mingguan.</p>
+                            <p className="text-[13px] font-black text-[var(--color-text)]">{t('dorms.cleanliness.title')}</p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{t('dorms.cleanliness.subtitle')}</p>
                         </div>
                         <button
                             onClick={() => setIsAuditModalOpen(true)}
                             className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10"
                         >
                             <Plus className="w-3.5 h-3.5" />
-                            Input Penilaian
+                            {t('dorms.cleanliness.inputRating')}
                         </button>
                     </div>
 
@@ -47,9 +49,9 @@ export default function DormTabCleanliness({
                                 icon={Bed}
                                 value={auditRoomFilter}
                                 onChange={setAuditRoomFilter}
-                                placeholder="Semua Kamar"
+                                placeholder={t('dorms.cleanliness.allDorms')}
                                 options={dorms.map(d => ({ id: d.id, name: d.id }))}
-                                extraOption={{ id: '', name: 'Semua Kamar' }}
+                                extraOption={{ id: '', name: t('dorms.cleanliness.allDorms') }}
                             />
                         </div>
 
@@ -62,7 +64,7 @@ export default function DormTabCleanliness({
                                 clearable={false}
                                 className="w-[190px]"
                             />
-                            <span className="text-[10px] text-[var(--color-text-muted)] font-black">s/d</span>
+                            <span className="text-[10px] text-[var(--color-text-muted)] font-black">{t('dorms.cleanliness.upToDate')}</span>
                             <RichDatePicker
                                 compact
                                 value={auditDateTo}
@@ -78,12 +80,12 @@ export default function DormTabCleanliness({
                                 onClick={() => { setAuditRoomFilter(''); setAuditDateFrom(''); setAuditDateTo(''); }}
                                 className="h-8 px-2.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/10 transition flex items-center gap-1.5"
                             >
-                                <X className="w-3 h-3" /> Reset
+                                <X className="w-3 h-3" /> {t('dorms.cleanliness.reset')}
                             </button>
                         )}
 
                         <span className="text-[9px] text-[var(--color-text-muted)] font-black ml-auto opacity-60">
-                            {filteredAudits.length} / {audits.length} laporan
+                            {tNum(filteredAudits.length)} / {tNum(audits.length)} {t('dorms.cleanliness.reportsCount')}
                         </span>
                     </div>
 
@@ -92,15 +94,15 @@ export default function DormTabCleanliness({
                             <EmptyState
                                 variant="plain"
                                 icon={ClipboardList}
-                                title={audits.length === 0 ? "Belum Ada Penilaian" : "Tidak Ditemukan"}
-                                description={audits.length === 0 ? "Belum ada laporan kebersihan yang diinput. Klik '+ Input Penilaian' untuk memulai." : "Tidak ada laporan yang sesuai filter."}
+                                title={audits.length === 0 ? t('dorms.cleanliness.noAudits') : t('dorms.cleanliness.notFound')}
+                                description={audits.length === 0 ? t('dorms.cleanliness.noAuditsDesc') : t('dorms.cleanliness.notFoundDesc')}
                                 action={audits.length === 0 ? (
                                     <button
                                         onClick={() => setIsAuditModalOpen(true)}
                                         className="h-9 px-4 rounded-xl bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 shadow-lg shadow-[var(--color-primary)]/10 transition flex items-center gap-2 mx-auto"
                                     >
                                         <Plus className="w-3.5 h-3.5" />
-                                        Input Penilaian
+                                        {t('dorms.cleanliness.inputRating')}
                                     </button>
                                 ) : null}
                             />
@@ -113,28 +115,28 @@ export default function DormTabCleanliness({
                                     <div className="flex items-center gap-2.5">
                                         <span className="text-[12px] font-black text-[var(--color-text)]">{audit.room}</span>
                                         <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-md ${audit.rating === 'A' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-500'}`}>
-                                            Predikat {audit.rating}
+                                            {t('dorms.cleanliness.predicate').replace('{rating}', audit.rating)}
                                         </span>
                                     </div>
                                     <p className="text-[10.5px] text-[var(--color-text-muted)]">{audit.notes}</p>
                                     <div className="flex items-center gap-3 text-[9px] text-[var(--color-text-muted)] opacity-60 font-semibold pt-1">
-                                        <span>Tgl: {audit.date}</span>
+                                        <span>{t('dorms.cleanliness.dateLabel')}: {audit.date}</span>
                                         <span>•</span>
-                                        <span>Kerapian: {audit.aspects?.kerapian}</span>
+                                        <span>{t('dorms.cleanliness.aspectKerapian')}: {tNum(audit.aspects?.kerapian)}</span>
                                         <span>•</span>
-                                        <span>Kebersihan: {audit.aspects?.kebersihan}</span>
+                                        <span>{t('dorms.cleanliness.aspectKebersihan')}: {tNum(audit.aspects?.kebersihan)}</span>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-4 justify-between sm:justify-end border-t sm:border-t-0 border-[var(--color-border)] pt-3 sm:pt-0">
                                     <div className="text-right sm:pr-2">
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Skor Rata-rata</p>
-                                        <p className="text-xl font-black text-[var(--color-primary)] mt-0.5">{audit.score} <span className="text-[10px] font-bold text-[var(--color-text-muted)]">/ 100</span></p>
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{t('dorms.cleanliness.avgScore')}</p>
+                                        <p className="text-xl font-black text-[var(--color-primary)] mt-0.5">{tNum(audit.score)} <span className="text-[10px] font-bold text-[var(--color-text-muted)]">/ {tNum(100)}</span></p>
                                     </div>
                                     <button
                                         onClick={() => handleOpenDeleteAuditModal(audit)}
                                         className="w-8 h-8 rounded-xl bg-red-500/5 hover:bg-red-500/10 text-red-500 transition flex items-center justify-center"
-                                        title="Hapus Laporan"
+                                        title={t('dorms.cleanliness.deleteTooltip')}
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -154,25 +156,25 @@ export default function DormTabCleanliness({
                             <Award className="w-5 h-5" />
                         </div>
                         <div>
-                            <p className="text-[12px] font-black text-[var(--color-text)]">Kamar Terbaik Minggu Ini</p>
-                            <p className="text-[9px] text-[var(--color-text-muted)]">Skor tertinggi se-asrama</p>
+                            <p className="text-[12px] font-black text-[var(--color-text)]">{t('dorms.cleanliness.bestRoom')}</p>
+                            <p className="text-[9px] text-[var(--color-text-muted)]">{t('dorms.cleanliness.bestRoomSub')}</p>
                         </div>
                     </div>
 
                     {audits.length === 0 ? (
                         <div className="bg-[var(--color-surface-alt)] border border-dashed border-[var(--color-border)] rounded-2xl p-5 text-center">
-                            <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Kamar Terbersih</p>
-                            <p className="text-[11px] text-[var(--color-text-muted)] mt-2 opacity-60">Belum ada data penilaian. Input penilaian pertama untuk melihat kamar terbersih.</p>
+                            <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">{t('dorms.cleanliness.bestTitle')}</p>
+                            <p className="text-[11px] text-[var(--color-text-muted)] mt-2 opacity-60">{t('dorms.cleanliness.noBestRoom')}</p>
                         </div>
                     ) : (() => {
                         const best = audits.reduce((prev, curr) => (curr.score > prev.score ? curr : prev), audits[0])
                         return (
                             <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-4 text-center">
-                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Kamar Terbersih</p>
-                                <p className="text-xl font-black text-[var(--color-text)] mt-1.5">Kamar {best.room}</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{best.notes || 'Kamar dengan skor tertinggi se-asrama.'}</p>
+                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{t('dorms.cleanliness.bestTitle')}</p>
+                                <p className="text-xl font-black text-[var(--color-text)] mt-1.5">{t('dorms.import.rowNameDorm').replace('{room}', best.room)}</p>
+                                <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{best.notes || t('dorms.cleanliness.bestRoomDesc')}</p>
                                 <div className="w-fit mx-auto mt-4 bg-emerald-500 text-white font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg shadow-emerald-500/20">
-                                    {best.score} Poin
+                                    {t('dorms.cleanliness.bestPoints').replace('{score}', tNum(best.score))}
                                 </div>
                             </div>
                         )
@@ -182,23 +184,23 @@ export default function DormTabCleanliness({
                 <div className="glass rounded-[1.5rem] p-5 space-y-3">
                     <div className="flex items-center gap-2 text-[12px] font-black text-[var(--color-text)]">
                         <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
-                        <span>Pedoman Penilaian</span>
+                        <span>{t('dorms.cleanliness.guidelines')}</span>
                     </div>
                     <p className="text-[10.5px] text-[var(--color-text-muted)] leading-relaxed">
-                        Pemeriksaan kebersihan dilakukan setiap hari Minggu pagi oleh Musyrif Kamar/Piket asrama.
+                        {t('dorms.cleanliness.guidelinesDesc')}
                     </p>
                     <div className="space-y-2 pt-1.5">
                         <div className="flex items-start gap-2.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] mt-1.5 shrink-0" />
-                            <p className="text-[10px] text-[var(--color-text)]"><strong>Kerapian (33.3%):</strong> Plot kasur, pelipatan selimut, susunan lemari pakaian.</p>
+                            <p className="text-[10px] text-[var(--color-text)]"><strong>{t('dorms.cleanliness.guidelineKerapian')}</strong> {t('dorms.cleanliness.guidelineKerapianDesc')}</p>
                         </div>
                         <div className="flex items-start gap-2.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] mt-1.5 shrink-0" />
-                            <p className="text-[10px] text-[var(--color-text)]"><strong>Kebersihan (33.3%):</strong> Menyapu, mengepel lantai kamar, kebersihan ventilasi jendela.</p>
+                            <p className="text-[10px] text-[var(--color-text)]"><strong>{t('dorms.cleanliness.guidelineKebersihan')}</strong> {t('dorms.cleanliness.guidelineKebersihanDesc')}</p>
                         </div>
                         <div className="flex items-start gap-2.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] mt-1.5 shrink-0" />
-                            <p className="text-[10px] text-[var(--color-text)]"><strong>Keharuman (33.3%):</strong> Aroma kesegaran, tidak apek, sirkulasi udara lancar.</p>
+                            <p className="text-[10px] text-[var(--color-text)]"><strong>{t('dorms.cleanliness.guidelineKeharuman')}</strong> {t('dorms.cleanliness.guidelineKeharumanDesc')}</p>
                         </div>
                     </div>
                 </div>

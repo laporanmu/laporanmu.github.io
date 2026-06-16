@@ -920,35 +920,31 @@ export default function HealthPage() {
                 <StatsCarousel count={4} className="mb-5">
                     <StatCard
                         onClick={() => { setActiveTab('medical'); setSelectedStatusFilter('All'); }}
-                        className={`${activeTab === 'medical' && selectedStatusFilter === 'All' ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/10 shadow-md' : 'border-transparent'}`}
+                        isActive={activeTab === 'medical' && selectedStatusFilter === 'All'}
                         label={tp('statTotal')}
                         value={logs.length}
-                        subValue="Semua riwayat masuk UKS"
                         icon={Star}
                         color="primary"
                     />
                     <StatCard
                         onClick={() => setActiveTab('resting')}
-                        className={`${activeTab === 'resting' ? 'border-amber-500 ring-2 ring-amber-500/10 shadow-md shadow-amber-500/5' : 'border-transparent'}`}
+                        isActive={activeTab === 'resting'}
                         label={tp('statResting')}
                         value={restingStudents.length}
-                        subValue="Istirahat di UKS / Asrama"
                         icon={Bed}
                         color="amber"
                     />
                     <StatCard
                         onClick={() => { setActiveTab('inventory'); }}
-                        className={`${activeTab === 'inventory' ? 'border-indigo-500 ring-2 ring-indigo-500/10 shadow-md shadow-indigo-500/5' : 'border-transparent'}`}
+                        isActive={activeTab === 'inventory'}
                         label={tp('statLowStock')}
                         value={lowStockMeds.length}
-                        subValue="Obat kritis segera restock"
                         icon={Pill}
                         color={lowStockMeds.length > 0 ? "rose" : "indigo"}
                     />
                     <StatCard
                         label={tp('statHealthy')}
                         value="SIAGA"
-                        subValue="UKS buka 24 jam penuh"
                         icon={HeartPulse}
                         color="emerald"
                     />

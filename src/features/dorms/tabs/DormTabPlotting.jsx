@@ -3,6 +3,7 @@ import { EmptyState } from '@shared/components/DataDisplay'
 import RichSelect from '@shared/components/RichSelect'
 import Pagination from '@shared/components/Pagination'
 import BulkActionsBar from '@shared/components/BulkActionsBar'
+import { useLanguage } from '@context/Language'
 import {
     Search, X, Sliders, RotateCcw, LayoutGrid, Table,
     CheckCircle2, User, UserMinus, ArrowRightLeft, Bed, AlertCircle, Users
@@ -50,6 +51,7 @@ export default function DormTabPlotting({
     setSelectedBulkRoom,
     students
 }) {
+    const { t } = useLanguage()
     return (
         <div className="space-y-5 animate-in fade-in duration-300">
             {/* ── SEARCH & FILTER BAR (Standardized from BehaviorPage) ── */}
@@ -66,7 +68,7 @@ export default function DormTabPlotting({
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-                                placeholder="Cari nama santri..."
+                                placeholder={t('dorms.plotting.searchPlaceholder')}
                                 className="input-field pl-10 w-full h-9 text-xs sm:text-sm bg-[var(--color-surface-alt)]/50 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 transition-all rounded-xl font-bold placeholder:font-normal placeholder:opacity-40 outline-none"
                             />
                             {searchQuery && (
@@ -87,9 +89,9 @@ export default function DormTabPlotting({
                         {/* Group 1: Status Plotting */}
                         <div className="flex items-center gap-1.5 shrink-0">
                             {[
-                                { id: 'All', label: 'Semua', icon: Users, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },
-                                { id: 'Assigned', label: 'Sudah Diplot', icon: CheckCircle2, activeCls: 'bg-emerald-500 border-emerald-500' },
-                                { id: 'Unassigned', label: 'Belum Diplot', icon: AlertCircle, activeCls: 'bg-amber-500 border-amber-500' },
+                                { id: 'All', label: t('dorms.plotting.all'), icon: Users, activeCls: 'bg-[var(--color-primary)] border-[var(--color-primary)]' },
+                                { id: 'Assigned', label: t('dorms.plotting.assigned'), icon: CheckCircle2, activeCls: 'bg-emerald-500 border-emerald-500' },
+                                { id: 'Unassigned', label: t('dorms.plotting.unassigned'), icon: AlertCircle, activeCls: 'bg-amber-500 border-amber-500' },
                             ].map((s) => {
                                 const isActive = selectedRoomTab === s.id || (s.id === 'Assigned' && selectedRoomTab !== 'All' && selectedRoomTab !== 'Unassigned' && selectedRoomTab !== '')
                                 return (
@@ -125,19 +127,19 @@ export default function DormTabPlotting({
                         <div className="bg-[var(--color-surface-alt)] p-1 rounded-xl border border-[var(--color-border)] flex gap-0.5 items-center shrink-0">
                             <button
                                 onClick={() => setViewMode('cards')}
-                                title="Kartu"
+                                title={t('dorms.plotting.cards')}
                                 className={`h-7 px-2.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'cards' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             >
                                 <LayoutGrid className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Kartu</span>
+                                <span className="hidden sm:inline">{t('dorms.plotting.cards')}</span>
                             </button>
                             <button
                                 onClick={() => setViewMode('table')}
-                                title="Tabel"
+                                title={t('dorms.plotting.table')}
                                 className={`h-7 px-2.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                             >
                                 <Table className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Tabel</span>
+                                <span className="hidden sm:inline">{t('dorms.plotting.table')}</span>
                             </button>
                         </div>
 
@@ -145,10 +147,10 @@ export default function DormTabPlotting({
                         <button
                             onClick={toggleAll}
                             className={`h-9 px-2.5 xs:px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${selectedIds.length > 0 ? 'bg-indigo-500 border-indigo-500 text-white shadow-md shadow-indigo-500/20' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'} `}
-                            title={selectedIds.length > 0 ? 'Batalkan Pilihan' : 'Pilih Semua'}
+                            title={selectedIds.length > 0 ? t('dorms.plotting.deselectAll') : t('dorms.plotting.selectAll')}
                         >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">{selectedIds.length > 0 ? 'Terpilih' : 'Pilih Semua'}</span>
+                            <span className="hidden sm:inline">{selectedIds.length > 0 ? t('dorms.plotting.selected') : t('dorms.plotting.selectAll')}</span>
                             {selectedIds.length > 0 && (
                                 <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">
                                     {selectedIds.length}
@@ -162,10 +164,10 @@ export default function DormTabPlotting({
                             className={`h-9 px-2.5 xs:px-3 sm:px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${showAdvFilter || activeFilters.length > 0
                                 ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30'
                                 : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}
-                            title="Filter Lanjutan"
+                            title={t('dorms.plotting.advancedFilter')}
                         >
                             <Sliders className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Filter</span>
+                            <span className="hidden sm:inline">{t('dorms.plotting.filter')}</span>
                             {activeFilters.length > 0 && (
                                 <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[9px] font-black flex items-center justify-center">
                                     {activeFilters.length}
@@ -180,7 +182,7 @@ export default function DormTabPlotting({
                     <div className="px-3 pb-3 -mt-1 flex flex-wrap gap-2">
                         {activeFilters.map((f, i) => (
                             <button key={i} type="button" onClick={f.clear}
-                                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title="Hapus Filter">
+                                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)]/40 text-[10px] font-black text-[var(--color-text)]" title={t('dorms.plotting.resetFilter')}>
                                 {f.label}
                                 <span className="w-5 h-5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-red-500 transition-colors">
                                     <X className="w-3.5 h-3.5" />
@@ -195,9 +197,9 @@ export default function DormTabPlotting({
                                 setSelectedBuildingFilter('');
                                 setPage(1);
                             }}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title="Reset Semua Filter">
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-red-500/20 bg-red-500/5 text-[10px] font-black text-red-600" title={t('dorms.plotting.resetFilter')}>
                             <RotateCcw className="w-3.5 h-3.5" />
-                            <span>Reset Filter</span>
+                            <span>{t('dorms.plotting.resetFilter')}</span>
                         </button>
                     </div>
                 )}
@@ -211,8 +213,8 @@ export default function DormTabPlotting({
                                 <div className="w-1 h-3.5 bg-[var(--color-primary)] rounded-full" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-primary)] flex items-center gap-2">
                                     <Sliders className="w-3 h-3 opacity-60" />
-                                    <span className="sm:hidden">Filter</span>
-                                    <span className="hidden sm:inline">Filter Lanjutan</span>
+                                    <span className="sm:hidden">{t('dorms.plotting.filter')}</span>
+                                    <span className="hidden sm:inline">{t('dorms.plotting.advancedFilter')}</span>
                                 </span>
                             </div>
                             <button
@@ -226,70 +228,70 @@ export default function DormTabPlotting({
                                 className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/5 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-red-500/10"
                             >
                                 <RotateCcw className="w-3 h-3" />
-                                <span>Reset Filter</span>
+                                <span>{t('dorms.plotting.resetFilter')}</span>
                             </button>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <div>
-                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Kelas</label>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{t('dorms.plotting.class')}</label>
                                 <RichSelect
                                     value={selectedClassFilter}
                                     onChange={(val) => { setSelectedClassFilter(val); setPage(1); }}
                                     options={[
-                                        { id: '', name: 'Semua Kelas' },
+                                        { id: '', name: t('dorms.plotting.allClasses') },
                                         ...classesList.map(c => ({ id: c.id, name: c.name }))
                                     ]}
-                                    placeholder="Semua Kelas"
+                                    placeholder={t('dorms.plotting.allClasses')}
                                     small
                                 />
                             </div>
                             <div>
-                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Kamar</label>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{t('dorms.plotting.dorm')}</label>
                                 <RichSelect
                                     value={selectedRoomTab}
                                     onChange={(val) => { setSelectedRoomTab(val); setPage(1); }}
                                     options={[
-                                        { id: 'All', name: 'Semua Kamar' },
-                                        { id: 'Assigned', name: 'Sudah Diplot' },
-                                        { id: 'Unassigned', name: 'Belum Diplot' },
+                                        { id: 'All', name: t('dorms.plotting.allDorms') },
+                                        { id: 'Assigned', name: t('dorms.plotting.assigned') },
+                                        { id: 'Unassigned', name: t('dorms.plotting.unassigned') },
                                         ...dorms.map(d => ({ id: d.id, name: d.id }))
                                     ]}
-                                    placeholder="Semua Kamar"
+                                    placeholder={t('dorms.plotting.allDorms')}
                                     small
                                 />
                             </div>
                             <div>
-                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Jenis Kelamin</label>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{t('dorms.plotting.gender')}</label>
                                 <RichSelect
                                     value={selectedGenderFilter}
                                     onChange={(val) => { setSelectedGenderFilter(val); setPage(1); }}
                                     options={[
-                                        { id: '', name: 'Semua' },
-                                        { id: 'putra', name: 'Putra' },
-                                        { id: 'putri', name: 'Putri' },
+                                        { id: '', name: t('dorms.plotting.allGenders') },
+                                        { id: 'putra', name: t('dorms.plotting.male') },
+                                        { id: 'putri', name: t('dorms.plotting.female') },
                                     ]}
-                                    placeholder="Semua"
+                                    placeholder={t('dorms.plotting.allGenders')}
                                     small
                                 />
                             </div>
                             <div>
-                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Gedung / Blok</label>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">{t('dorms.plotting.building')}</label>
                                 <RichSelect
                                     value={selectedBuildingFilter}
                                     onChange={(val) => { setSelectedBuildingFilter(val); setPage(1); }}
                                     options={[
-                                        { id: '', name: 'Semua Gedung' },
+                                        { id: '', name: t('dorms.plotting.allBuildings') },
                                         ...buildingOptions.map(b => ({ id: b, name: b }))
                                     ]}
-                                    placeholder="Semua Gedung"
+                                    placeholder={t('dorms.plotting.allBuildings')}
                                     small
                                 />
                             </div>
                             <div className="flex items-end justify-end">
                                 <button onClick={() => setShowAdvFilter(false)}
                                     className="h-9 px-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all">
-                                    Tutup Panel
+                                    {t('dorms.plotting.closePanel')}
                                 </button>
                             </div>
                         </div>
@@ -312,8 +314,8 @@ export default function DormTabPlotting({
                         <EmptyState
                             variant="plain"
                             icon={Search}
-                            title="Pencarian Tidak Ditemukan"
-                            description="Tidak ada santri yang sesuai dengan filter atau kata kunci pencarian Anda."
+                            title={t('dorms.plotting.notFound')}
+                            description={t('dorms.plotting.notFoundDesc')}
                             action={
                                 <button
                                     onClick={() => {
@@ -326,7 +328,7 @@ export default function DormTabPlotting({
                                     }}
                                     className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition"
                                 >
-                                    Reset Filter
+                                    {t('dorms.plotting.resetFilter')}
                                 </button>
                             }
                         />
@@ -349,7 +351,7 @@ export default function DormTabPlotting({
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="text-[12px] font-black text-[var(--color-text)] truncate">{isPrivacyMode ? maskName(student.name) : student.name}</p>
-                                                    <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">{student.classes?.name || 'Kelas —'}</p>
+                                                    <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">{student.classes?.name || t('dorms.plotting.classEmpty')}</p>
                                                 </div>
                                             </div>
                                             <input
@@ -362,7 +364,7 @@ export default function DormTabPlotting({
 
                                         <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-3 mt-1">
                                             <div>
-                                                <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Kamar & Okupansi</p>
+                                                <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">{t('dorms.plotting.kamarOccupancy')}</p>
                                                 {room ? (
                                                     (() => {
                                                         const roomDetails = dorms.find(d => d.id === room)
@@ -377,7 +379,7 @@ export default function DormTabPlotting({
                                                     })()
                                                 ) : (
                                                     <p className="text-[11px] font-black mt-0.5 text-amber-500">
-                                                        Belum Diplot
+                                                        {t('dorms.plotting.unassigned')}
                                                     </p>
                                                 )}
                                             </div>
@@ -385,7 +387,7 @@ export default function DormTabPlotting({
                                                 {room && (
                                                     <button
                                                         onClick={() => handleOpenEvictModal(student)}
-                                                        title="Keluarkan dari Kamar"
+                                                        title={t('dorms.plotting.evictTooltip')}
                                                         className="w-8 h-8 flex items-center justify-center rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/5 active:scale-95 transition-all"
                                                     >
                                                         <UserMinus className="w-3.5 h-3.5" />
@@ -396,7 +398,7 @@ export default function DormTabPlotting({
                                                     className="h-8 px-3.5 flex items-center gap-1.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 active:scale-95 transition-all"
                                                 >
                                                     <ArrowRightLeft className="w-3 h-3" />
-                                                    Plotting
+                                                    {t('dorms.plotting.assignTooltip')}
                                                 </button>
                                             </div>
                                         </div>
@@ -418,10 +420,10 @@ export default function DormTabPlotting({
                                             className="w-4 h-4 rounded border-[var(--color-border)] cursor-pointer accent-[var(--color-primary)]"
                                         />
                                     </th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[35%]">Santri</th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[20%]">Status</th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[30%]">Kamar & Okupansi</th>
-                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-36">Aksi</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[35%]">{t('dorms.plotting.thSantri')}</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[20%]">{t('dorms.plotting.thStatus')}</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] w-[30%]">{t('dorms.plotting.thKamarOccupancy')}</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-center w-36">{t('dorms.plotting.thAction')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
@@ -445,18 +447,18 @@ export default function DormTabPlotting({
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-black text-[var(--color-text)] leading-tight whitespace-nowrap">{isPrivacyMode ? maskName(student.name) : student.name}</p>
-                                                        <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-50 mt-0.5">{student.classes?.name || 'Kelas —'}</p>
+                                                        <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider opacity-50 mt-0.5">{student.classes?.name || t('dorms.plotting.classEmpty')}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-5 py-3.5">
                                                 {room ? (
                                                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/25">
-                                                        Terplot
+                                                        {t('dorms.plotting.badgeAssigned')}
                                                     </span>
                                                 ) : (
                                                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-dashed border-amber-500/25">
-                                                        Belum Terplot
+                                                        {t('dorms.plotting.badgeUnassigned')}
                                                     </span>
                                                 )}
                                             </td>
@@ -477,7 +479,7 @@ export default function DormTabPlotting({
                                                                 {room}
                                                             </span>
                                                             <span className="text-[10px] text-[var(--color-text-muted)] font-black opacity-60">
-                                                                {occupiedCount} / {cap} Terisi
+                                                                {occupiedCount} / {cap} {t('dorms.plotting.occupied')}
                                                             </span>
                                                         </div>
                                                     )
@@ -487,7 +489,7 @@ export default function DormTabPlotting({
                                                 <div className="flex items-center justify-center gap-1">
                                                     <button
                                                         onClick={() => handleOpenAssignModal(student)}
-                                                        title="Plotting Kamar"
+                                                        title={t('dorms.plotting.assignTooltipTable')}
                                                         className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all"
                                                     >
                                                         <ArrowRightLeft className="w-3.5 h-3.5" />
@@ -495,7 +497,7 @@ export default function DormTabPlotting({
                                                     {room ? (
                                                         <button
                                                             onClick={() => handleOpenEvictModal(student)}
-                                                            title="Keluarkan dari Kamar"
+                                                            title={t('dorms.plotting.evictTooltip')}
                                                             className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/5 transition-all"
                                                         >
                                                             <UserMinus className="w-3.5 h-3.5" />
@@ -526,7 +528,7 @@ export default function DormTabPlotting({
                         pageSize={pageSize}
                         setPage={setPage}
                         setPageSize={setPageSize}
-                        label="Santri"
+                        label={t('dorms.plotting.paginationLabel')}
                         jumpPage={jumpPage}
                         setJumpPage={setJumpPage}
                     />
@@ -537,22 +539,22 @@ export default function DormTabPlotting({
             <BulkActionsBar
                 selectedCount={selectedIds.length}
                 onClear={() => setSelectedIds([])}
-                title="Terpilih"
-                subtitle="Aksi Massal Plotting"
+                title={t('dorms.plotting.selected')}
+                subtitle={t('dorms.plotting.bulkActionsSubtitle')}
             >
                 <button
                     onClick={() => { setSelectedBulkRoom(''); setIsBulkAssignModalOpen(true); }}
                     className="h-9 px-4 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white hover:scale-105 active:scale-95 justify-center shadow-lg shadow-[var(--color-primary)]/10"
                 >
                     <ArrowRightLeft className="w-3.5 h-3.5" />
-                    <span>Plot Kamar ({selectedIds.length})</span>
+                    <span>{t('dorms.plotting.bulkAssign')} ({selectedIds.length})</span>
                 </button>
                 <button
                     onClick={handleBulkUnassign}
                     className="h-9 px-4 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white justify-center shadow-lg shadow-rose-500/5"
                 >
                     <UserMinus className="w-3.5 h-3.5" />
-                    <span>Kosongkan Kamar</span>
+                    <span>{t('dorms.plotting.bulkEvict')}</span>
                 </button>
             </BulkActionsBar>
         </div>

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useLanguage } from '@context/Language'
 import {
     RefreshCw, Plus, Check, CheckSquare
 } from 'lucide-react'
@@ -10,6 +11,7 @@ export default function DormTabMusyrif({
     setIsLogModalOpen,
     shiftLogs
 }) {
+    const { t } = useLanguage()
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 animate-in fade-in duration-300">
             {/* Tasks Checklist */}
@@ -17,15 +19,15 @@ export default function DormTabMusyrif({
                 <div className="glass rounded-[1.5rem] p-5">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <p className="text-[13px] font-black text-[var(--color-text)]">Kontrol Jurnal Harian Musyrif</p>
-                            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Daftar tugas rutin pengawasan asrama hari ini.</p>
+                            <p className="text-[13px] font-black text-[var(--color-text)]">{t('dorms.musyrif.title')}</p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{t('dorms.musyrif.subtitle')}</p>
                         </div>
                         <button
                             onClick={resetAllTasks}
                             className="h-8.5 px-3 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5"
                         >
                             <RefreshCw className="w-3 h-3" />
-                            Reset Checklist
+                            {t('dorms.musyrif.resetChecklist')}
                         </button>
                     </div>
 
@@ -48,7 +50,7 @@ export default function DormTabMusyrif({
 
                                 {task.completed && task.completedAt && (
                                     <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded shrink-0">
-                                        Selesai {task.completedAt}
+                                        {t('dorms.musyrif.completedAt').replace('{completedAt}', task.completedAt)}
                                     </span>
                                 )}
                             </div>
@@ -62,21 +64,21 @@ export default function DormTabMusyrif({
                 <div className="glass rounded-[1.5rem] p-5">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <p className="text-[12.5px] font-black text-[var(--color-text)]">Jurnal Piket Asrama</p>
-                            <p className="text-[9.5px] text-[var(--color-text-muted)] mt-0.5">Catatan piket harian musyrif asrama.</p>
+                            <p className="text-[12.5px] font-black text-[var(--color-text)]">{t('dorms.musyrif.piketTitle')}</p>
+                            <p className="text-[9.5px] text-[var(--color-text-muted)] mt-0.5">{t('dorms.musyrif.piketSubtitle')}</p>
                         </div>
                         <button
                             onClick={() => setIsLogModalOpen(true)}
                             className="h-8 px-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/10 transition flex items-center gap-1.5"
                         >
                             <Plus className="w-3 h-3" />
-                            Isi Jurnal
+                            {t('dorms.musyrif.fillJournal')}
                         </button>
                     </div>
 
                     <div className="space-y-3.5 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
                         {shiftLogs.length === 0 ? (
-                            <p className="text-[11px] text-[var(--color-text-muted)] text-center py-8">Belum ada entri jurnal hari ini.</p>
+                            <p className="text-[11px] text-[var(--color-text-muted)] text-center py-8">{t('dorms.musyrif.noLogs')}</p>
                         ) : (
                             shiftLogs.map(log => (
                                 <div key={log.id} className="p-3.5 rounded-2xl bg-[var(--color-surface-alt)]/65 border border-[var(--color-border)] space-y-2">
@@ -85,8 +87,8 @@ export default function DormTabMusyrif({
                                         <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 bg-[var(--color-surface)] px-1.5 py-0.5 rounded">{log.shift}</span>
                                     </div>
                                     <div className="text-[10px] space-y-1 text-[var(--color-text-muted)] leading-relaxed">
-                                        <p><strong>Catatan:</strong> {log.notes}</p>
-                                        <p><strong>Temuan Masalah:</strong> <span className={log.issues !== 'Nihil' ? 'text-red-500 font-bold' : ''}>{log.issues}</span></p>
+                                        <p><strong>{t('dorms.musyrif.notes')}:</strong> {log.notes}</p>
+                                        <p><strong>{t('dorms.musyrif.findings')}:</strong> <span className={log.issues !== 'Nihil' ? 'text-red-500 font-bold' : ''}>{log.issues === 'Nihil' ? t('dorms.musyrif.findingsNihil') : log.issues}</span></p>
                                     </div>
                                     <div className="text-[8px] text-[var(--color-text-muted)] opacity-50 text-right">{log.date}</div>
                                 </div>

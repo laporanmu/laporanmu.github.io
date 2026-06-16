@@ -1,5 +1,6 @@
 import React from 'react'
 import Modal from '@shared/components/Modal'
+import { useLanguage } from '@context/Language'
 import { Search, X, Check, Bed, User } from 'lucide-react'
 
 export default function DormsAssignModal({
@@ -17,6 +18,7 @@ export default function DormsAssignModal({
     onSave,
     submitting
 }) {
+    const { t, tNum } = useLanguage()
     const [localQuery, setLocalQuery] = React.useState('')
 
     // Reset search query when modal opens/closes
@@ -37,8 +39,8 @@ export default function DormsAssignModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={assignStep === 1 ? "Pilih Santri untuk Kamar" : "Atur Plotting Kamar"}
-            description={assignStep === 1 ? "Cari dan pilih santri yang akan ditempatkan di kamar" : "Tentukan penempatan kamar santri terpilih"}
+            title={assignStep === 1 ? t('dorms.assign.titleSelect') : t('dorms.assign.titlePlotting')}
+            description={assignStep === 1 ? t('dorms.assign.descSelect') : t('dorms.assign.descPlotting')}
             icon={Bed}
             size="md"
             footer={
@@ -48,7 +50,7 @@ export default function DormsAssignModal({
                             onClick={onClose}
                             className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                         >
-                            Batal
+                            {t('dorms.assign.cancel')}
                         </button>
                     ) : (
                         <>
@@ -57,14 +59,14 @@ export default function DormsAssignModal({
                                     onClick={() => setAssignStep(1)}
                                     className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                                 >
-                                    Kembali
+                                    {t('dorms.assign.back')}
                                 </button>
                             ) : (
                                 <button
                                     onClick={onClose}
                                     className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                                 >
-                                    Batal
+                                    {t('dorms.assign.cancel')}
                                 </button>
                             )}
                             <div className="flex-1" />
@@ -78,7 +80,7 @@ export default function DormsAssignModal({
                                 ) : (
                                     <Check className="w-3.5 h-3.5" />
                                 )}
-                                Simpan Plotting
+                                {t('dorms.assign.save')}
                             </button>
                         </>
                     )}
@@ -96,7 +98,7 @@ export default function DormsAssignModal({
                                 type="text"
                                 value={localQuery}
                                 onChange={(e) => setLocalQuery(e.target.value)}
-                                placeholder="Cari nama santri..."
+                                placeholder={t('dorms.assign.search')}
                                 className="w-full h-10 pl-9 pr-8 text-xs bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:outline-none transition-all rounded-xl font-bold"
                             />
                             {localQuery && (
@@ -112,7 +114,7 @@ export default function DormsAssignModal({
                             <div className="grid grid-cols-1 gap-1.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
                                 {filteredAssignStudents.length === 0 ? (
                                     <p className="text-[11px] text-[var(--color-text-muted)] text-center py-6 font-bold">
-                                        Tidak ada santri ditemukan
+                                        {t('dorms.assign.notFound')}
                                     </p>
                                 ) : (
                                     <>
@@ -131,7 +133,7 @@ export default function DormsAssignModal({
                                                     <div>
                                                         <p className="text-[11.5px] font-black text-[var(--color-text)]">{student.name}</p>
                                                         <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-wider mt-0.5">
-                                                            {student.classes?.name || 'Kelas —'}
+                                                            {student.classes?.name || t('dorms.plotting.classEmpty')}
                                                         </p>
                                                     </div>
                                                     <div>
@@ -141,7 +143,7 @@ export default function DormsAssignModal({
                                                             </span>
                                                         ) : (
                                                             <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-dashed border-amber-500/20">
-                                                                Belum Diplot
+                                                                {t('dorms.assign.unassigned')}
                                                             </span>
                                                         )}
                                                     </div>
@@ -150,7 +152,7 @@ export default function DormsAssignModal({
                                         })}
                                         {filteredAssignStudents.length > 20 && (
                                             <p className="text-[9px] text-center text-[var(--color-text-muted)] py-2.5 font-black uppercase tracking-widest border-t border-[var(--color-border)]/30 mt-2 bg-[var(--color-surface-alt)]/20 rounded-lg">
-                                                Menampilkan 20 dari {filteredAssignStudents.length} santri. Silakan ketik nama lebih spesifik...
+                                                {t('dorms.assign.showingLimit').replace('{total}', tNum(filteredAssignStudents.length))}
                                             </p>
                                         )}
                                     </>
@@ -167,13 +169,13 @@ export default function DormsAssignModal({
                             <div>
                                 <p className="text-[12px] font-black text-[var(--color-text)]">{studentToAssign?.name}</p>
                                 <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">
-                                    {studentToAssign?.classes?.name || 'Kelas —'}
+                                    {studentToAssign?.classes?.name || t('dorms.plotting.classEmpty')}
                                 </p>
                             </div>
                         </div>
 
                         <div>
-                            <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-2">Pilih Kamar Tujuan</label>
+                            <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-2">{t('dorms.assign.selectTargetRoom')}</label>
                             <div className="bg-[var(--color-surface-alt)]/30 border border-[var(--color-border)]/50 rounded-2xl p-2">
                                 <div className="grid grid-cols-1 gap-1.5 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
                                     <button
@@ -185,7 +187,7 @@ export default function DormsAssignModal({
                                     >
                                         <span className="flex items-center gap-2">
                                             <X className="w-3.5 h-3.5 shrink-0" />
-                                            Batalkan Plotting (Kosongkan)
+                                            {t('dorms.assign.evictAction')}
                                         </span>
                                         {!selectedTargetRoom && <Check className="w-3.5 h-3.5 stroke-[3px] text-amber-600" />}
                                     </button>

@@ -188,6 +188,7 @@ export function TeacherSearch({ teacherList, value, onChange, label, icon }) {
         searchable={true}
         icon={icon}
         className="w-full"
+        buttonClassName="h-10 rounded-xl"
       />
     </div>
   )

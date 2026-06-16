@@ -1,5 +1,6 @@
 import React from 'react'
 import Modal from '@shared/components/Modal'
+import { useLanguage } from '@context/Language'
 import { Bed, Check } from 'lucide-react'
 
 export default function DormsBulkAssignModal({
@@ -12,12 +13,13 @@ export default function DormsBulkAssignModal({
     onSave,
     submitting
 }) {
+    const { t, tNum } = useLanguage()
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Plotting Kamar Massal"
-            description={`Alokasikan ${selectedCount || 0} santri terpilih ke kamar baru`}
+            title={t('dorms.bulkAssign.title')}
+            description={t('dorms.bulkAssign.desc').replace('{count}', tNum(selectedCount || 0))}
             icon={Bed}
             size="md"
             footer={
@@ -26,7 +28,7 @@ export default function DormsBulkAssignModal({
                         onClick={onClose}
                         className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                     >
-                        Batal
+                        {t('dorms.bulkAssign.cancel')}
                     </button>
                     <div className="flex-1" />
                     <button
@@ -39,14 +41,14 @@ export default function DormsBulkAssignModal({
                         ) : (
                             <Check className="w-3.5 h-3.5" />
                         )}
-                        Simpan Plotting Massal
+                        {t('dorms.bulkAssign.save')}
                     </button>
                 </div>
             }
         >
             <div className="space-y-4">
                 <div>
-                    <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">Pilih Kamar Tujuan</label>
+                    <label className="text-[9.5px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block mb-1.5">{t('dorms.bulkAssign.selectTargetRoom')}</label>
                     <div className="bg-[var(--color-surface-alt)]/30 border border-[var(--color-border)]/50 rounded-2xl p-2">
                         <div className="grid grid-cols-2 gap-1.5 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
                             {(dorms || []).map((room) => {
