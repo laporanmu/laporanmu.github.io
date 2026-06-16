@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { useToast } from '@context/Toast'
-import { useLanguage } from '@context/Language'
+import { useToast, useLanguage } from '@context'
 import DashboardLayout from '@core/layouts/DashboardLayout'
 import PageHeader from '@shared/components/PageHeader'
 import { StatCard } from '@shared/components/DataDisplay'

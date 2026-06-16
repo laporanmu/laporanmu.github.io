@@ -33,7 +33,7 @@ import {
     faCheckSquare
 } from '@fortawesome/free-solid-svg-icons'
 import Modal from '@shared/components/Modal'
-import { useLanguage } from '@context/Language'
+import { useLanguage } from '@context'
 import { buildPrintHTML, openPrintWindow } from '@shared/utils/printTemplate'
 
 // Column definitions for each dataset
